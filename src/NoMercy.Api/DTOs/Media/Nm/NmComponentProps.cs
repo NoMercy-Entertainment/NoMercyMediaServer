@@ -85,44 +85,44 @@ public static class NmComponents
 /// </summary>
 public record NMAvatarProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Alt text for image (required for type="image")
@@ -173,44 +173,44 @@ public record NMAvatarProps
 /// </summary>
 public record NMBadgeProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Show status dot indicator
@@ -249,44 +249,44 @@ public record NMBadgeProps
 /// </summary>
 public record NMDividerProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Text label content
@@ -313,44 +313,44 @@ public record NMDividerProps
 /// </summary>
 public record NMFormLabelProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Disabled state
@@ -395,44 +395,44 @@ public record NMFormLabelProps
 /// </summary>
 public record NMHelperProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Helper text content
@@ -465,44 +465,44 @@ public record NMHelperProps
 /// </summary>
 public record NMImageProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Alt text for accessibility
@@ -559,44 +559,44 @@ public record NMImageProps
 /// </summary>
 public record NMLinkProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Disable link interaction
@@ -647,44 +647,44 @@ public record NMLinkProps
 /// </summary>
 public record NMProgressProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Accessible label
@@ -717,44 +717,44 @@ public record NMProgressProps
 /// </summary>
 public record NMSkeletonProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Skeleton shape
@@ -769,44 +769,44 @@ public record NMSkeletonProps
 /// </summary>
 public record NMSpinnerProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Accessible label
@@ -827,44 +827,44 @@ public record NMSpinnerProps
 /// </summary>
 public record NMTagProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Show leading avatar
@@ -921,44 +921,44 @@ public record NMTagProps
 /// </summary>
 public record NMButtonProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Accessible label for icon-only buttons
@@ -1003,44 +1003,44 @@ public record NMButtonProps
 /// </summary>
 public record NMCheckboxProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Accessible name, used when there is no labelText
@@ -1085,44 +1085,44 @@ public record NMCheckboxProps
 /// </summary>
 public record NMInputProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Whether the input is disabled
@@ -1161,44 +1161,44 @@ public record NMInputProps
 /// </summary>
 public record NMRadioProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Accessible name, used when there is no labelText
@@ -1255,44 +1255,44 @@ public record NMRadioProps
 /// </summary>
 public record NMRatingProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Review count shown in parentheses next to label
@@ -1343,44 +1343,44 @@ public record NMRatingProps
 /// </summary>
 public record NMSliderProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Accessible label
@@ -1431,44 +1431,44 @@ public record NMSliderProps
 /// </summary>
 public record NMTextareaProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Whether the textarea is disabled
@@ -1519,44 +1519,44 @@ public record NMTextareaProps
 /// </summary>
 public record NMToggleProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Accessible name, used when there is no labelText
@@ -1601,44 +1601,44 @@ public record NMToggleProps
 /// </summary>
 public record NMBadgeGroupProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Badge position relative to text
@@ -1665,44 +1665,44 @@ public record NMBadgeGroupProps
 /// </summary>
 public record NMBreadcrumbProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Separator style
@@ -1717,44 +1717,44 @@ public record NMBreadcrumbProps
 /// </summary>
 public record NMButtonGroupProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
 }
 
@@ -1763,44 +1763,44 @@ public record NMButtonGroupProps
 /// </summary>
 public record NMCheckboxGroupProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Disabled state for the group
@@ -1833,44 +1833,44 @@ public record NMCheckboxGroupProps
 /// </summary>
 public record NMPaginationProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Current page number
@@ -1897,44 +1897,44 @@ public record NMPaginationProps
 /// </summary>
 public record NMRadioGroupProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Disabled state for the group
@@ -1967,44 +1967,44 @@ public record NMRadioGroupProps
 /// </summary>
 public record NMSegmentedProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Disable all segments
@@ -2037,44 +2037,44 @@ public record NMSegmentedProps
 /// </summary>
 public record NMStepIndicatorProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Zero-based index of current step
@@ -2107,44 +2107,44 @@ public record NMStepIndicatorProps
 /// </summary>
 public record NMTogglesProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Disabled state
@@ -2177,44 +2177,44 @@ public record NMTogglesProps
 /// </summary>
 public record NMAlertProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Show close button
@@ -2253,44 +2253,44 @@ public record NMAlertProps
 /// </summary>
 public record NMCardProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Footer variant
@@ -2317,44 +2317,44 @@ public record NMCardProps
 /// </summary>
 public record NMChatProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
 }
 
@@ -2363,44 +2363,44 @@ public record NMChatProps
 /// </summary>
 public record NMContentFooterProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Footer variant
@@ -2415,44 +2415,44 @@ public record NMContentFooterProps
 /// </summary>
 public record NMContentHeaderProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Show close button
@@ -2473,44 +2473,44 @@ public record NMContentHeaderProps
 /// </summary>
 public record NMEmptyStateProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Empty state layout variant
@@ -2525,44 +2525,44 @@ public record NMEmptyStateProps
 /// </summary>
 public record NMListProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Bullet style for unordered lists
@@ -2601,44 +2601,44 @@ public record NMListProps
 /// </summary>
 public record NMMetricsProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Change indicator
@@ -2683,44 +2683,44 @@ public record NMMetricsProps
 /// </summary>
 public record NMTableProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Row hover effect
@@ -2753,44 +2753,44 @@ public record NMTableProps
 /// </summary>
 public record NMColorPickerProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Disable the swatch trigger
@@ -2835,44 +2835,44 @@ public record NMColorPickerProps
 /// </summary>
 public record NMComboboxProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Current filter / typed text
@@ -2917,44 +2917,44 @@ public record NMComboboxProps
 /// </summary>
 public record NMCommandPaletteProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Search input value
@@ -2969,44 +2969,44 @@ public record NMCommandPaletteProps
 /// </summary>
 public record NMDatePickerProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Date picker mode
@@ -3027,44 +3027,44 @@ public record NMDatePickerProps
 /// </summary>
 public record NMDrawerProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Show backdrop overlay
@@ -3097,44 +3097,44 @@ public record NMDrawerProps
 /// </summary>
 public record NMDropdownProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Dropdown size
@@ -3149,44 +3149,44 @@ public record NMDropdownProps
 /// </summary>
 public record NMModalProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Footer variant
@@ -3207,44 +3207,44 @@ public record NMModalProps
 /// </summary>
 public record NMPopoverProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Open
@@ -3283,44 +3283,44 @@ public record NMPopoverProps
 /// </summary>
 public record NMSearchInputProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Placeholder text
@@ -3347,44 +3347,44 @@ public record NMSearchInputProps
 /// </summary>
 public record NMSelectProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Whether the select is disabled
@@ -3417,44 +3417,44 @@ public record NMSelectProps
 /// </summary>
 public record NMToastProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Show close button
@@ -3517,44 +3517,44 @@ public record NMToastProps
 /// </summary>
 public record NMTooltipProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Tooltip position relative to trigger
@@ -3569,44 +3569,44 @@ public record NMTooltipProps
 /// </summary>
 public record NMAccordionProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Allow Multiple Open
@@ -3639,44 +3639,44 @@ public record NMAccordionProps
 /// </summary>
 public record NMCarouselProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Position nav arrows outside viewport
@@ -3715,44 +3715,44 @@ public record NMCarouselProps
 /// </summary>
 public record NMFileUploadProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Upload progress percentage
@@ -3767,44 +3767,44 @@ public record NMFileUploadProps
 /// </summary>
 public record NMNavigationProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Currently active item index
@@ -3825,44 +3825,44 @@ public record NMNavigationProps
 /// </summary>
 public record NMStepperProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Zero-based index of the current active step
@@ -3889,44 +3889,44 @@ public record NMStepperProps
 /// </summary>
 public record NMTabsProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Currently active tab index
@@ -3967,44 +3967,44 @@ public record NMTabsProps
 /// </summary>
 public record NMTreeViewProps
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
     public List<NmContextMenuItem> ContextMenuItems { get; set; } = [];
 
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
     /// <summary>
     /// Show vertical indent guide lines

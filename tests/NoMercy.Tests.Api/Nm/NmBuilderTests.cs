@@ -30,9 +30,10 @@ public class NmBuilderTests
             Text = "4K"
         });
 
-        Assert.NotNull(badge.Props);
-        Assert.Equal("plum", badge.Props!["color"]);
-        Assert.Equal("4K", badge.Props["text"]);
+        string json = Json(badge);
+
+        Assert.Contains("\"color\":\"plum\"", json);
+        Assert.Contains("\"text\":\"4K\"", json);
     }
 
     [Fact]
@@ -43,8 +44,10 @@ public class NmBuilderTests
         // default.
         NmComponent badge = NmBuilder.Badge(new() { Id = "b" });
 
-        Assert.DoesNotContain("\"color\":null", Json(badge));
-        Assert.False(badge.Props!.ContainsKey("color"));
+        string json = Json(badge);
+
+        Assert.DoesNotContain("\"color\":null", json);
+        Assert.DoesNotContain("\"color\"", json);
     }
 
     [Fact]

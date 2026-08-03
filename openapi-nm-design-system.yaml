@@ -499,6 +499,7 @@ components:
           description: Component type discriminator, such as NMButton or NMCard.
         props:
           type: object
+          additionalProperties: true
           description: The component's props, extending NMComponentBase.
         update:
           $ref: '#/components/schemas/DesignUpdate'

@@ -166,25 +166,25 @@ public static class NmSurfaceKind
 /// </summary>
 public record NmSpacing
 {
-    [JsonProperty("all")]
+    [JsonProperty("all", NullValueHandling = NullValueHandling.Ignore)]
     public string? All { get; set; }
 
-    [JsonProperty("x")]
+    [JsonProperty("x", NullValueHandling = NullValueHandling.Ignore)]
     public string? X { get; set; }
 
-    [JsonProperty("y")]
+    [JsonProperty("y", NullValueHandling = NullValueHandling.Ignore)]
     public string? Y { get; set; }
 
-    [JsonProperty("top")]
+    [JsonProperty("top", NullValueHandling = NullValueHandling.Ignore)]
     public string? Top { get; set; }
 
-    [JsonProperty("right")]
+    [JsonProperty("right", NullValueHandling = NullValueHandling.Ignore)]
     public string? Right { get; set; }
 
-    [JsonProperty("bottom")]
+    [JsonProperty("bottom", NullValueHandling = NullValueHandling.Ignore)]
     public string? Bottom { get; set; }
 
-    [JsonProperty("left")]
+    [JsonProperty("left", NullValueHandling = NullValueHandling.Ignore)]
     public string? Left { get; set; }
 
 }
@@ -195,13 +195,13 @@ public record NmSpacing
 /// </summary>
 public record NmGap
 {
-    [JsonProperty("all")]
+    [JsonProperty("all", NullValueHandling = NullValueHandling.Ignore)]
     public string? All { get; set; }
 
-    [JsonProperty("x")]
+    [JsonProperty("x", NullValueHandling = NullValueHandling.Ignore)]
     public string? X { get; set; }
 
-    [JsonProperty("y")]
+    [JsonProperty("y", NullValueHandling = NullValueHandling.Ignore)]
     public string? Y { get; set; }
 
 }
@@ -222,70 +222,70 @@ public record NmGap
 /// </summary>
 public record NmBox
 {
-    [JsonProperty("margin")]
+    [JsonProperty("margin", NullValueHandling = NullValueHandling.Ignore)]
     public NmSpacing? Margin { get; set; }
 
-    [JsonProperty("width")]
+    [JsonProperty("width", NullValueHandling = NullValueHandling.Ignore)]
     public string? Width { get; set; }
 
-    [JsonProperty("height")]
+    [JsonProperty("height", NullValueHandling = NullValueHandling.Ignore)]
     public string? Height { get; set; }
 
-    [JsonProperty("min_width")]
+    [JsonProperty("min_width", NullValueHandling = NullValueHandling.Ignore)]
     public string? MinWidth { get; set; }
 
-    [JsonProperty("max_width")]
+    [JsonProperty("max_width", NullValueHandling = NullValueHandling.Ignore)]
     public string? MaxWidth { get; set; }
 
-    [JsonProperty("min_height")]
+    [JsonProperty("min_height", NullValueHandling = NullValueHandling.Ignore)]
     public string? MinHeight { get; set; }
 
-    [JsonProperty("max_height")]
+    [JsonProperty("max_height", NullValueHandling = NullValueHandling.Ignore)]
     public string? MaxHeight { get; set; }
 
     /// <summary>
     /// How much of the leftover space along the parent's axis this takes.
     /// </summary>
-    [JsonProperty("grow")]
+    [JsonProperty("grow", NullValueHandling = NullValueHandling.Ignore)]
     public int? Grow { get; set; }
 
     /// <summary>
     /// How readily this gives up space when the parent runs short.
     /// </summary>
-    [JsonProperty("shrink")]
+    [JsonProperty("shrink", NullValueHandling = NullValueHandling.Ignore)]
     public int? Shrink { get; set; }
 
-    [JsonProperty("basis")]
+    [JsonProperty("basis", NullValueHandling = NullValueHandling.Ignore)]
     public string? Basis { get; set; }
 
-    [JsonProperty("align_self")]
+    [JsonProperty("align_self", NullValueHandling = NullValueHandling.Ignore)]
     public string? AlignSelf { get; set; }
 
     /// <summary>
     /// Visual position among siblings, independent of payload order.
     /// </summary>
-    [JsonProperty("order")]
+    [JsonProperty("order", NullValueHandling = NullValueHandling.Ignore)]
     public int? Order { get; set; }
 
     /// <summary>
     /// Columns this occupies when the parent is a grid.
     /// </summary>
-    [JsonProperty("column_span")]
+    [JsonProperty("column_span", NullValueHandling = NullValueHandling.Ignore)]
     public int? ColumnSpan { get; set; }
 
     /// <summary>
     /// Rows this occupies when the parent is a grid.
     /// </summary>
-    [JsonProperty("row_span")]
+    [JsonProperty("row_span", NullValueHandling = NullValueHandling.Ignore)]
     public int? RowSpan { get; set; }
 
-    [JsonProperty("position")]
+    [JsonProperty("position", NullValueHandling = NullValueHandling.Ignore)]
     public string? Position { get; set; }
 
-    [JsonProperty("inset")]
+    [JsonProperty("inset", NullValueHandling = NullValueHandling.Ignore)]
     public NmSpacing? Inset { get; set; }
 
-    [JsonProperty("layer")]
+    [JsonProperty("layer", NullValueHandling = NullValueHandling.Ignore)]
     public string? Layer { get; set; }
 
     /// <summary>
@@ -296,31 +296,31 @@ public record NmBox
     [JsonProperty("hidden_on")]
     public List<string> HiddenOn { get; set; } = [];
 
-    [JsonProperty("padding")]
+    [JsonProperty("padding", NullValueHandling = NullValueHandling.Ignore)]
     public NmSpacing? Padding { get; set; }
 
-    [JsonProperty("gap")]
+    [JsonProperty("gap", NullValueHandling = NullValueHandling.Ignore)]
     public NmGap? Gap { get; set; }
 
-    [JsonProperty("direction")]
+    [JsonProperty("direction", NullValueHandling = NullValueHandling.Ignore)]
     public string? Direction { get; set; }
 
-    [JsonProperty("align")]
+    [JsonProperty("align", NullValueHandling = NullValueHandling.Ignore)]
     public string? Align { get; set; }
 
-    [JsonProperty("justify")]
+    [JsonProperty("justify", NullValueHandling = NullValueHandling.Ignore)]
     public string? Justify { get; set; }
 
-    [JsonProperty("wrap")]
+    [JsonProperty("wrap", NullValueHandling = NullValueHandling.Ignore)]
     public string? Wrap { get; set; }
 
     /// <summary>
     /// Fixed column count when this component lays its children out as a grid.
     /// </summary>
-    [JsonProperty("columns")]
+    [JsonProperty("columns", NullValueHandling = NullValueHandling.Ignore)]
     public int? Columns { get; set; }
 
-    [JsonProperty("overflow")]
+    [JsonProperty("overflow", NullValueHandling = NullValueHandling.Ignore)]
     public string? Overflow { get; set; }
 
 }
@@ -334,32 +334,32 @@ public record NmBox
 /// </summary>
 public record NmSurface
 {
-    [JsonProperty("background")]
+    [JsonProperty("background", NullValueHandling = NullValueHandling.Ignore)]
     public string? Background { get; set; }
 
-    [JsonProperty("foreground")]
+    [JsonProperty("foreground", NullValueHandling = NullValueHandling.Ignore)]
     public string? Foreground { get; set; }
 
-    [JsonProperty("border_color")]
+    [JsonProperty("border_color", NullValueHandling = NullValueHandling.Ignore)]
     public string? BorderColor { get; set; }
 
-    [JsonProperty("border_width")]
+    [JsonProperty("border_width", NullValueHandling = NullValueHandling.Ignore)]
     public string? BorderWidth { get; set; }
 
-    [JsonProperty("radius")]
+    [JsonProperty("radius", NullValueHandling = NullValueHandling.Ignore)]
     public string? Radius { get; set; }
 
-    [JsonProperty("shadow")]
+    [JsonProperty("shadow", NullValueHandling = NullValueHandling.Ignore)]
     public string? Shadow { get; set; }
 
-    [JsonProperty("opacity")]
+    [JsonProperty("opacity", NullValueHandling = NullValueHandling.Ignore)]
     public int? Opacity { get; set; }
 
     /// <summary>
     /// How the component lifts when it takes focus. This is the tv surface's
     /// equivalent of hover, which does not exist there.
     /// </summary>
-    [JsonProperty("elevation")]
+    [JsonProperty("elevation", NullValueHandling = NullValueHandling.Ignore)]
     public string? Elevation { get; set; }
 
 }
@@ -375,22 +375,22 @@ public record NmAction
     /// <summary>
     /// The intent, such as navigate, play, mutate, dismiss or submit.
     /// </summary>
-    [JsonProperty("kind")]
+    [JsonProperty("kind", NullValueHandling = NullValueHandling.Ignore)]
     public string? Kind { get; set; }
 
     /// <summary>
     /// What the intent applies to, usually a link or a component id.
     /// </summary>
-    [JsonProperty("target")]
+    [JsonProperty("target", NullValueHandling = NullValueHandling.Ignore)]
     public string? Target { get; set; }
 
-    [JsonProperty("body")]
-    public Dictionary<string, object>? Body { get; set; }
+    [JsonProperty("body", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Body { get; set; }
 
     /// <summary>
     /// When set, the client confirms with this message before acting.
     /// </summary>
-    [JsonProperty("confirm")]
+    [JsonProperty("confirm", NullValueHandling = NullValueHandling.Ignore)]
     public string? Confirm { get; set; }
 
 }
@@ -403,16 +403,16 @@ public record NmAction
 /// </summary>
 public record NmAccessibility
 {
-    [JsonProperty("label")]
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
     public string? Label { get; set; }
 
-    [JsonProperty("described_by")]
+    [JsonProperty("described_by", NullValueHandling = NullValueHandling.Ignore)]
     public string? DescribedBy { get; set; }
 
-    [JsonProperty("role")]
+    [JsonProperty("role", NullValueHandling = NullValueHandling.Ignore)]
     public string? Role { get; set; }
 
-    [JsonProperty("live")]
+    [JsonProperty("live", NullValueHandling = NullValueHandling.Ignore)]
     public string? Live { get; set; }
 
 }
@@ -422,32 +422,32 @@ public record NmAccessibility
 /// </summary>
 public record NmUpdate
 {
-    [JsonProperty("when")]
+    [JsonProperty("when", NullValueHandling = NullValueHandling.Ignore)]
     public string? When { get; set; }
 
-    [JsonProperty("link")]
+    [JsonProperty("link", NullValueHandling = NullValueHandling.Ignore)]
     public string? Link { get; set; }
 
-    [JsonProperty("body")]
-    public Dictionary<string, object>? Body { get; set; }
+    [JsonProperty("body", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Body { get; set; }
 
 }
 
 public record NmContextMenuItem
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
-    [JsonProperty("title")]
+    [JsonProperty("title", NullValueHandling = NullValueHandling.Ignore)]
     public string? Title { get; set; }
 
-    [JsonProperty("icon")]
+    [JsonProperty("icon", NullValueHandling = NullValueHandling.Ignore)]
     public string? Icon { get; set; }
 
-    [JsonProperty("destructive")]
+    [JsonProperty("destructive", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Destructive { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
 }
@@ -463,22 +463,22 @@ public record NmContextMenuItem
 /// </summary>
 public record NmComponent
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     /// <summary>
     /// Component type discriminator, such as NMButton or NMCard.
     /// </summary>
-    [JsonProperty("component")]
+    [JsonProperty("component", NullValueHandling = NullValueHandling.Ignore)]
     public string? Component { get; set; }
 
     /// <summary>
     /// The component's props, extending NMComponentBase.
     /// </summary>
-    [JsonProperty("props")]
-    public Dictionary<string, object>? Props { get; set; }
+    [JsonProperty("props", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Props { get; set; }
 
-    [JsonProperty("update")]
+    [JsonProperty("update", NullValueHandling = NullValueHandling.Ignore)]
     public NmUpdate? Update { get; set; }
 
 }
@@ -491,7 +491,7 @@ public record NmComponent
 /// </summary>
 public record NmComponentBase
 {
-    [JsonProperty("id")]
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 
     /// <summary>
@@ -500,10 +500,10 @@ public record NmComponentBase
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
-    [JsonProperty("box")]
+    [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
-    [JsonProperty("surface")]
+    [JsonProperty("surface", NullValueHandling = NullValueHandling.Ignore)]
     public NmSurface? Surface { get; set; }
 
     /// <summary>
@@ -515,13 +515,13 @@ public record NmComponentBase
     /// almost always. Naming one here is for the case where a single component
     /// has to stand apart from the rest of the interface.
     /// </summary>
-    [JsonProperty("color")]
+    [JsonProperty("color", NullValueHandling = NullValueHandling.Ignore)]
     public string? Color { get; set; }
 
-    [JsonProperty("action")]
+    [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
 
-    [JsonProperty("accessibility")]
+    [JsonProperty("accessibility", NullValueHandling = NullValueHandling.Ignore)]
     public NmAccessibility? Accessibility { get; set; }
 
     /// <summary>
@@ -529,16 +529,16 @@ public record NmComponentBase
     /// through this, which is why it is part of the contract rather than
     /// something each client invents.
     /// </summary>
-    [JsonProperty("test_id")]
+    [JsonProperty("test_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? TestId { get; set; }
 
     /// <summary>
     /// The component focus moves to next, for D-pad traversal.
     /// </summary>
-    [JsonProperty("next_id")]
+    [JsonProperty("next_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? NextId { get; set; }
 
-    [JsonProperty("previous_id")]
+    [JsonProperty("previous_id", NullValueHandling = NullValueHandling.Ignore)]
     public string? PreviousId { get; set; }
 
     [JsonProperty("context_menu_items")]
@@ -547,7 +547,7 @@ public record NmComponentBase
     /// <summary>
     /// Where this component's data is fetched or refreshed from.
     /// </summary>
-    [JsonProperty("url")]
+    [JsonProperty("url", NullValueHandling = NullValueHandling.Ignore)]
     public string? Url { get; set; }
 
     /// <summary>
@@ -555,7 +555,7 @@ public record NmComponentBase
     /// keeps an older client alive against a newer server, and it is not a
     /// place to put something that deserves a name.
     /// </summary>
-    [JsonProperty("properties")]
-    public Dictionary<string, object>? Properties { get; set; }
+    [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
+    public object? Properties { get; set; }
 
 }
