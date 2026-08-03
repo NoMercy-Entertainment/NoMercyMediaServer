@@ -46,6 +46,13 @@ public interface IPluginContext
     IPluginLibraryQuery Library { get; }
 
     /// <summary>
+    /// Playback, gated by <see cref="PluginGrantKind.PlayerControl" /> and
+    /// <see cref="PluginGrantKind.PlayerSource" />. Null when the host offers
+    /// none, which existing hosts do not have to change to keep compiling.
+    /// </summary>
+    IPluginPlayer? Player => null;
+
+    /// <summary>
     /// Writing to the library. Present only when the plugin declared
     /// <see cref="PluginHookCapability.LibraryWrite"/> and the owner granted at
     /// least one library; null otherwise, so the absence is checkable rather

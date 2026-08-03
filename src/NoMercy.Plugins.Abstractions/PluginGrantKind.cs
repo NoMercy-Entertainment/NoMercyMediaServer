@@ -41,6 +41,21 @@ public static class PluginGrantKind
     public const string NetworkHost = "network.host";
 
     /// <summary>
+    /// Driving playback: play, pause, skip. Separate from the source grant
+    /// below, because pausing what a viewer chose and putting something else on
+    /// are different amounts of trust.
+    /// </summary>
+    public const string PlayerControl = "player.control";
+
+    /// <summary>
+    /// Playing something the library does not own, by URL. This is the grant a
+    /// radio plugin needs, and it is the one that matters: it is the difference
+    /// between a plugin arranging a viewer's own media and a plugin choosing
+    /// what comes out of their speakers.
+    /// </summary>
+    public const string PlayerSource = "player.source";
+
+    /// <summary>
     /// One library the plugin may write to and delete within, by library id.
     /// The value is a library id, or <see cref="PluginGrant.Everything"/> for
     /// every library the server has.
