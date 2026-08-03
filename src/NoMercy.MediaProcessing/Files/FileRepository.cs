@@ -725,9 +725,14 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                         }
                         catch (Exception ex)
                         {
+                            // Scoring a file is how a release earns the match, so a file
+                            // that throws here silently lowers the score and the album
+                            // stops being recognised. A bare ex.Message named neither the
+                            // frame nor the release, which made a NullReferenceException
+                            // per file unactionable.
                             Logger.MusicBrainz(
-                                $"Error processing file {file.Path}: {ex.Message}",
-                                LogEventLevel.Verbose
+                                $"Error scoring {file.Path} against release {release.Id}: {ex}",
+                                LogEventLevel.Error
                             );
                         }
                     }
