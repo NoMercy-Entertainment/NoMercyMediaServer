@@ -22,7 +22,7 @@ public class NmBuilderTests
             .Color("plum")
             .Add(
                 Nm.Badge("quality").Text("4K"),
-                Nm.Button("play").Text("Play")
+                Nm.Button("play").AriaLabel("Play")
             );
 
         string json = Json(card);
@@ -32,7 +32,7 @@ public class NmBuilderTests
         Assert.Contains("\"all\":\"4\"", json);
         Assert.Contains("NMBadge", json);
         Assert.Contains("NMButton", json);
-        Assert.Contains("\"text\":\"Play\"", json);
+        Assert.Contains("\"text\":\"4K\"", json);
     }
 
     [Fact]
@@ -47,68 +47,26 @@ public class NmBuilderTests
     }
 
     [Fact]
-    public void NamesTheComponentTheClientDispatchesOn()
-    {
-        NmComponent button = NmBuilder.Button(new() { Id = "play" });
-
-        Assert.Equal("NMButton", button.Component);
-        Assert.Equal("play", button.Id);
-    }
-
-    [Fact]
-    public void CarriesTheTypedPropsOntoTheWire()
-    {
-        NmComponent badge = NmBuilder.Badge(new()
-        {
-            Id = "quality",
-            Color = "plum",
-            Text = "4K"
-        });
-
-        string json = Json(badge);
-
-        Assert.Contains("\"color\":\"plum\"", json);
-        Assert.Contains("\"text\":\"4K\"", json);
-    }
-
-    [Fact]
     public void OmitsWhatThePayloadDoesNotName()
     {
         // A null written onto the wire is not the same as saying nothing: the
         // client would take it as an instruction and lose the component's own
         // default.
-        NmComponent badge = NmBuilder.Badge(new() { Id = "b" });
+        NmComponent badge = Nm.Badge("b").Text("x");
 
-        string json = Json(badge);
-
-        Assert.DoesNotContain("\"color\":null", json);
-        Assert.DoesNotContain("\"color\"", json);
-    }
-
-    [Fact]
-    public void NestsChildrenSoAComponentCanHoldComponents()
-    {
-        NmComponent card = NmBuilder.Card(
-            new() { Id = "movie" },
-            NmBuilder.Badge(new() { Id = "quality", Text = "4K" }),
-            NmBuilder.Button(new() { Id = "play" })
-        );
-
-        string json = Json(card);
-
-        Assert.Contains("NMBadge", json);
-        Assert.Contains("NMButton", json);
+        Assert.DoesNotContain("\"color\"", Json(badge));
+        Assert.DoesNotContain("null", Json(badge));
     }
 
     [Fact]
     public void AppendsChildrenRatherThanReplacingThem()
     {
-        // Props carrying items and a call passing more must end with both, or
-        // whichever the caller wrote second silently wins.
-        NmComponent first = NmBuilder.Badge(new() { Id = "a" });
-        NmComponent second = NmBuilder.Badge(new() { Id = "b" });
+        // Two Add calls must both survive, or whichever was written second
+        // silently wins.
+        NmComponent card = Nm.Card("c")
+            .Add(Nm.Badge("a").Text("1"))
+            .Add(Nm.Badge("b").Text("2"));
 
-        NmComponent card = NmBuilder.Card(new() { Id = "c", Items = [first] }, second);
         string json = Json(card);
 
         Assert.Contains("\"id\":\"a\"", json);
@@ -116,15 +74,33 @@ public class NmBuilderTests
     }
 
     [Fact]
+    public void NestsToAnyDepth()
+    {
+        NmComponent tree = Nm.Card("outer")
+            .Add(Nm.Card("middle")
+                .Add(Nm.Badge("inner").Text("deep")));
+
+        Assert.Contains("\"id\":\"inner\"", Json(tree));
+        Assert.Contains("\"text\":\"deep\"", Json(tree));
+    }
+
+    [Fact]
     public void CarriesTheBoxSoTheServerOwnsTheLayout()
     {
-        NmComponent card = NmBuilder.Card(new()
-        {
-            Id = "c",
-            Box = new() { Padding = new() { All = "4" } }
-        });
+        NmComponent card = Nm.Card("c").Pad("4").Margin("2");
 
-        Assert.Contains("\"padding\"", Json(card));
-        Assert.Contains("\"all\":\"4\"", Json(card));
+        string json = Json(card);
+
+        Assert.Contains("\"padding\"", json);
+        Assert.Contains("\"margin\"", json);
+    }
+
+    [Fact]
+    public void TakesEveryPaletteFamilyRatherThanAListedFew()
+    {
+        // The families a component enumerates are the designer's recommendation.
+        // The wire accepts any the palette ships.
+        Assert.Contains("\"color\":\"bronze\"", Json(Nm.Badge("b").Text("x").Color("bronze")));
+        Assert.Contains("\"color\":\"mint\"", Json(Nm.Badge("b").Text("x").Color("mint")));
     }
 }

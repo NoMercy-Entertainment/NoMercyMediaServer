@@ -181,43 +181,43 @@ public record NMAvatarProps : NmProps
     /// <summary>
     /// Alt text for image (required for type="image")
     /// </summary>
-    [JsonProperty("alt")]
+    [JsonProperty("alt", NullValueHandling = NullValueHandling.Ignore)]
     public string? Alt { get; set; }
 
     /// <summary>
     /// ARIA Label
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// The size of the avatar
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Use square shape instead of circular
     /// </summary>
-    [JsonProperty("square")]
+    [JsonProperty("square", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Square { get; set; }
 
     /// <summary>
     /// Image URL (for type="image")
     /// </summary>
-    [JsonProperty("src")]
+    [JsonProperty("src", NullValueHandling = NullValueHandling.Ignore)]
     public string? Src { get; set; }
 
     /// <summary>
     /// Status indicator
     /// </summary>
-    [JsonProperty("status")]
+    [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
     public string? Status { get; set; }
 
     /// <summary>
     /// The type of avatar content
     /// </summary>
-    [JsonProperty("type")]
+    [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
     public string? Type { get; set; }
 
 }
@@ -233,31 +233,31 @@ public record NMBadgeProps : NmProps
     /// <summary>
     /// Show status dot indicator
     /// </summary>
-    [JsonProperty("dot")]
+    [JsonProperty("dot", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Dot { get; set; }
 
     /// <summary>
     /// Display mode
     /// </summary>
-    [JsonProperty("mode")]
+    [JsonProperty("mode", NullValueHandling = NullValueHandling.Ignore)]
     public string? Mode { get; set; }
 
     /// <summary>
     /// Badge size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Badge text content
     /// </summary>
-    [JsonProperty("text")]
+    [JsonProperty("text", NullValueHandling = NullValueHandling.Ignore)]
     public string? Text { get; set; }
 
     /// <summary>
     /// Visual style variant
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -273,19 +273,19 @@ public record NMDividerProps : NmProps
     /// <summary>
     /// Text label content
     /// </summary>
-    [JsonProperty("labelText")]
+    [JsonProperty("labelText", NullValueHandling = NullValueHandling.Ignore)]
     public string? LabelText { get; set; }
 
     /// <summary>
     /// Line style
     /// </summary>
-    [JsonProperty("line")]
+    [JsonProperty("line", NullValueHandling = NullValueHandling.Ignore)]
     public string? Line { get; set; }
 
     /// <summary>
     /// Content placement
     /// </summary>
-    [JsonProperty("placement")]
+    [JsonProperty("placement", NullValueHandling = NullValueHandling.Ignore)]
     public string? Placement { get; set; }
 
 }
@@ -301,37 +301,37 @@ public record NMFormLabelProps : NmProps
     /// <summary>
     /// Disabled state
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Show info icon
     /// </summary>
-    [JsonProperty("infoIcon")]
+    [JsonProperty("infoIcon", NullValueHandling = NullValueHandling.Ignore)]
     public bool? InfoIcon { get; set; }
 
     /// <summary>
     /// Info icon tooltip
     /// </summary>
-    [JsonProperty("infoTooltip")]
+    [JsonProperty("infoTooltip", NullValueHandling = NullValueHandling.Ignore)]
     public string? InfoTooltip { get; set; }
 
     /// <summary>
     /// Label text
     /// </summary>
-    [JsonProperty("labelText")]
+    [JsonProperty("labelText", NullValueHandling = NullValueHandling.Ignore)]
     public string? LabelText { get; set; }
 
     /// <summary>
     /// Label marker type
     /// </summary>
-    [JsonProperty("marker")]
+    [JsonProperty("marker", NullValueHandling = NullValueHandling.Ignore)]
     public string? Marker { get; set; }
 
     /// <summary>
     /// Custom marker text
     /// </summary>
-    [JsonProperty("markerText")]
+    [JsonProperty("markerText", NullValueHandling = NullValueHandling.Ignore)]
     public string? MarkerText { get; set; }
 
 }
@@ -347,25 +347,25 @@ public record NMHelperProps : NmProps
     /// <summary>
     /// Helper text content
     /// </summary>
-    [JsonProperty("helperText")]
+    [JsonProperty("helperText", NullValueHandling = NullValueHandling.Ignore)]
     public string? HelperText { get; set; }
 
     /// <summary>
     /// Show icon
     /// </summary>
-    [JsonProperty("icon")]
+    [JsonProperty("icon", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Icon { get; set; }
 
     /// <summary>
     /// Icon tooltip text
     /// </summary>
-    [JsonProperty("iconTooltip")]
+    [JsonProperty("iconTooltip", NullValueHandling = NullValueHandling.Ignore)]
     public string? IconTooltip { get; set; }
 
     /// <summary>
     /// Helper status
     /// </summary>
-    [JsonProperty("status")]
+    [JsonProperty("status", NullValueHandling = NullValueHandling.Ignore)]
     public string? Status { get; set; }
 
 }
@@ -381,49 +381,49 @@ public record NMImageProps : NmProps
     /// <summary>
     /// Alt text for accessibility
     /// </summary>
-    [JsonProperty("alt")]
+    [JsonProperty("alt", NullValueHandling = NullValueHandling.Ignore)]
     public string? Alt { get; set; }
 
     /// <summary>
     /// Image aspect ratio
     /// </summary>
-    [JsonProperty("aspectRatio")]
+    [JsonProperty("aspectRatio", NullValueHandling = NullValueHandling.Ignore)]
     public string? AspectRatio { get; set; }
 
     /// <summary>
     /// Show border
     /// </summary>
-    [JsonProperty("border")]
+    [JsonProperty("border", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Border { get; set; }
 
     /// <summary>
     /// Enable hover zoom effect
     /// </summary>
-    [JsonProperty("clickable")]
+    [JsonProperty("clickable", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Clickable { get; set; }
 
     /// <summary>
     /// Object fit behavior
     /// </summary>
-    [JsonProperty("fit")]
+    [JsonProperty("fit", NullValueHandling = NullValueHandling.Ignore)]
     public string? Fit { get; set; }
 
     /// <summary>
     /// Border radius
     /// </summary>
-    [JsonProperty("rounded")]
+    [JsonProperty("rounded", NullValueHandling = NullValueHandling.Ignore)]
     public string? Rounded { get; set; }
 
     /// <summary>
     /// Shadow elevation
     /// </summary>
-    [JsonProperty("shadow")]
+    [JsonProperty("shadow", NullValueHandling = NullValueHandling.Ignore)]
     public string? Shadow { get; set; }
 
     /// <summary>
     /// Image source URL
     /// </summary>
-    [JsonProperty("src")]
+    [JsonProperty("src", NullValueHandling = NullValueHandling.Ignore)]
     public string? Src { get; set; }
 
 }
@@ -439,43 +439,43 @@ public record NMLinkProps : NmProps
     /// <summary>
     /// Disable link interaction
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Open in new tab
     /// </summary>
-    [JsonProperty("external")]
+    [JsonProperty("external", NullValueHandling = NullValueHandling.Ignore)]
     public bool? External { get; set; }
 
     /// <summary>
     /// Show icon
     /// </summary>
-    [JsonProperty("icon")]
+    [JsonProperty("icon", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Icon { get; set; }
 
     /// <summary>
     /// Icon position
     /// </summary>
-    [JsonProperty("iconPosition")]
+    [JsonProperty("iconPosition", NullValueHandling = NullValueHandling.Ignore)]
     public string? IconPosition { get; set; }
 
     /// <summary>
     /// Link size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Link text content
     /// </summary>
-    [JsonProperty("text")]
+    [JsonProperty("text", NullValueHandling = NullValueHandling.Ignore)]
     public string? Text { get; set; }
 
     /// <summary>
     /// Link visual style
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -491,25 +491,25 @@ public record NMProgressProps : NmProps
     /// <summary>
     /// Accessible label
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Label position
     /// </summary>
-    [JsonProperty("labelPos")]
+    [JsonProperty("labelPos", NullValueHandling = NullValueHandling.Ignore)]
     public string? LabelPos { get; set; }
 
     /// <summary>
     /// Track height
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Progress value (0-100)
     /// </summary>
-    [JsonProperty("value")]
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
     public int? Value { get; set; }
 
 }
@@ -525,7 +525,7 @@ public record NMSkeletonProps : NmProps
     /// <summary>
     /// Skeleton shape
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -541,13 +541,13 @@ public record NMSpinnerProps : NmProps
     /// <summary>
     /// Accessible label
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Spinner size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -563,49 +563,49 @@ public record NMTagProps : NmProps
     /// <summary>
     /// Show leading avatar
     /// </summary>
-    [JsonProperty("avatar")]
+    [JsonProperty("avatar", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Avatar { get; set; }
 
     /// <summary>
     /// Show leading checkbox
     /// </summary>
-    [JsonProperty("checkbox")]
+    [JsonProperty("checkbox", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Checkbox { get; set; }
 
     /// <summary>
     /// Show count pill
     /// </summary>
-    [JsonProperty("count")]
+    [JsonProperty("count", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Count { get; set; }
 
     /// <summary>
     /// Count value
     /// </summary>
-    [JsonProperty("countText")]
+    [JsonProperty("countText", NullValueHandling = NullValueHandling.Ignore)]
     public string? CountText { get; set; }
 
     /// <summary>
     /// Show leading icon
     /// </summary>
-    [JsonProperty("icon")]
+    [JsonProperty("icon", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Icon { get; set; }
 
     /// <summary>
     /// Tag size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Tag label text
     /// </summary>
-    [JsonProperty("text")]
+    [JsonProperty("text", NullValueHandling = NullValueHandling.Ignore)]
     public string? Text { get; set; }
 
     /// <summary>
     /// Show close button
     /// </summary>
-    [JsonProperty("xclose")]
+    [JsonProperty("xclose", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Xclose { get; set; }
 
 }
@@ -621,37 +621,37 @@ public record NMButtonProps : NmProps
     /// <summary>
     /// Accessible label for icon-only buttons
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Whether the button is disabled
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Whether to render as icon-only (hides label)
     /// </summary>
-    [JsonProperty("iconOnly")]
+    [JsonProperty("iconOnly", NullValueHandling = NullValueHandling.Ignore)]
     public bool? IconOnly { get; set; }
 
     /// <summary>
     /// Whether the button is in a loading state
     /// </summary>
-    [JsonProperty("loading")]
+    [JsonProperty("loading", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Loading { get; set; }
 
     /// <summary>
     /// The size of the button
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// The visual style variant of the button
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -667,37 +667,37 @@ public record NMCheckboxProps : NmProps
     /// <summary>
     /// Accessible name, used when there is no labelText
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Whether the checkbox is checked or indeterminate
     /// </summary>
-    [JsonProperty("checked")]
+    [JsonProperty("checked", NullValueHandling = NullValueHandling.Ignore)]
     public string? Checked { get; set; }
 
     /// <summary>
     /// Whether the checkbox is disabled
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Optional helper text below label
     /// </summary>
-    [JsonProperty("helperText")]
+    [JsonProperty("helperText", NullValueHandling = NullValueHandling.Ignore)]
     public string? HelperText { get; set; }
 
     /// <summary>
     /// Optional label text
     /// </summary>
-    [JsonProperty("labelText")]
+    [JsonProperty("labelText", NullValueHandling = NullValueHandling.Ignore)]
     public string? LabelText { get; set; }
 
     /// <summary>
     /// The size of the checkbox
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -713,31 +713,31 @@ public record NMInputProps : NmProps
     /// <summary>
     /// Whether the input is disabled
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Whether the input has a validation error
     /// </summary>
-    [JsonProperty("error")]
+    [JsonProperty("error", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Error { get; set; }
 
     /// <summary>
     /// Leading text value
     /// </summary>
-    [JsonProperty("leadingTextValue")]
+    [JsonProperty("leadingTextValue", NullValueHandling = NullValueHandling.Ignore)]
     public string? LeadingTextValue { get; set; }
 
     /// <summary>
     /// Placeholder text shown when empty
     /// </summary>
-    [JsonProperty("placeholder")]
+    [JsonProperty("placeholder", NullValueHandling = NullValueHandling.Ignore)]
     public string? Placeholder { get; set; }
 
     /// <summary>
     /// The size of the input field
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -753,49 +753,49 @@ public record NMRadioProps : NmProps
     /// <summary>
     /// Accessible name, used when there is no labelText
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Whether the radio is selected
     /// </summary>
-    [JsonProperty("checked")]
+    [JsonProperty("checked", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Checked { get; set; }
 
     /// <summary>
     /// Whether the radio is disabled
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Optional helper text below label
     /// </summary>
-    [JsonProperty("helperText")]
+    [JsonProperty("helperText", NullValueHandling = NullValueHandling.Ignore)]
     public string? HelperText { get; set; }
 
     /// <summary>
     /// Optional label text
     /// </summary>
-    [JsonProperty("labelText")]
+    [JsonProperty("labelText", NullValueHandling = NullValueHandling.Ignore)]
     public string? LabelText { get; set; }
 
     /// <summary>
     /// Group name for mutual exclusivity
     /// </summary>
-    [JsonProperty("name")]
+    [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
     public string? Name { get; set; }
 
     /// <summary>
     /// The size of the radio button
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Value submitted with form
     /// </summary>
-    [JsonProperty("value")]
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
     public string? Value { get; set; }
 
 }
@@ -811,43 +811,43 @@ public record NMRatingProps : NmProps
     /// <summary>
     /// Review count shown in parentheses next to label
     /// </summary>
-    [JsonProperty("count")]
+    [JsonProperty("count", NullValueHandling = NullValueHandling.Ignore)]
     public int? Count { get; set; }
 
     /// <summary>
     /// Disable interaction
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Maximum rating (number of stars)
     /// </summary>
-    [JsonProperty("max")]
+    [JsonProperty("max", NullValueHandling = NullValueHandling.Ignore)]
     public string? Max { get; set; }
 
     /// <summary>
     /// Read-only display or interactive input
     /// </summary>
-    [JsonProperty("mode")]
+    [JsonProperty("mode", NullValueHandling = NullValueHandling.Ignore)]
     public string? Mode { get; set; }
 
     /// <summary>
     /// Show numeric value label
     /// </summary>
-    [JsonProperty("showLabel")]
+    [JsonProperty("showLabel", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowLabel { get; set; }
 
     /// <summary>
     /// Star icon size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Current rating value (supports 0.5 increments)
     /// </summary>
-    [JsonProperty("value")]
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
     public string? Value { get; set; }
 
 }
@@ -863,43 +863,43 @@ public record NMSliderProps : NmProps
     /// <summary>
     /// Accessible label
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Disable slider interaction
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Enable range mode with two thumbs
     /// </summary>
-    [JsonProperty("isBiValue")]
+    [JsonProperty("isBiValue", NullValueHandling = NullValueHandling.Ignore)]
     public bool? IsBiValue { get; set; }
 
     /// <summary>
     /// Label display mode
     /// </summary>
-    [JsonProperty("labelMode")]
+    [JsonProperty("labelMode", NullValueHandling = NullValueHandling.Ignore)]
     public string? LabelMode { get; set; }
 
     /// <summary>
     /// Track height
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Current value (0-100)
     /// </summary>
-    [JsonProperty("value")]
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
     public int? Value { get; set; }
 
     /// <summary>
     /// Second value for range mode
     /// </summary>
-    [JsonProperty("value2")]
+    [JsonProperty("value2", NullValueHandling = NullValueHandling.Ignore)]
     public int? Value2 { get; set; }
 
 }
@@ -915,43 +915,43 @@ public record NMTextareaProps : NmProps
     /// <summary>
     /// Whether the textarea is disabled
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Whether the textarea has a validation error
     /// </summary>
-    [JsonProperty("error")]
+    [JsonProperty("error", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Error { get; set; }
 
     /// <summary>
     /// Maximum character limit
     /// </summary>
-    [JsonProperty("maxChars")]
+    [JsonProperty("maxChars", NullValueHandling = NullValueHandling.Ignore)]
     public int? MaxChars { get; set; }
 
     /// <summary>
     /// Placeholder text shown when empty
     /// </summary>
-    [JsonProperty("placeholder")]
+    [JsonProperty("placeholder", NullValueHandling = NullValueHandling.Ignore)]
     public string? Placeholder { get; set; }
 
     /// <summary>
     /// Resize behavior
     /// </summary>
-    [JsonProperty("resize")]
+    [JsonProperty("resize", NullValueHandling = NullValueHandling.Ignore)]
     public string? Resize { get; set; }
 
     /// <summary>
     /// Show character counter
     /// </summary>
-    [JsonProperty("showCounter")]
+    [JsonProperty("showCounter", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowCounter { get; set; }
 
     /// <summary>
     /// The size of the textarea
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -967,37 +967,37 @@ public record NMToggleProps : NmProps
     /// <summary>
     /// Accessible name, used when there is no labelText
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Whether the switch is on
     /// </summary>
-    [JsonProperty("checked")]
+    [JsonProperty("checked", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Checked { get; set; }
 
     /// <summary>
     /// Whether the switch is disabled
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Optional helper text below label
     /// </summary>
-    [JsonProperty("helperText")]
+    [JsonProperty("helperText", NullValueHandling = NullValueHandling.Ignore)]
     public string? HelperText { get; set; }
 
     /// <summary>
     /// Optional label text
     /// </summary>
-    [JsonProperty("labelText")]
+    [JsonProperty("labelText", NullValueHandling = NullValueHandling.Ignore)]
     public string? LabelText { get; set; }
 
     /// <summary>
     /// The size of the switch
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1013,19 +1013,19 @@ public record NMBadgeGroupProps : NmProps
     /// <summary>
     /// Badge position relative to text
     /// </summary>
-    [JsonProperty("badgePos")]
+    [JsonProperty("badgePos", NullValueHandling = NullValueHandling.Ignore)]
     public string? BadgePos { get; set; }
 
     /// <summary>
     /// Badge group size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Badge visual style
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1041,7 +1041,7 @@ public record NMBreadcrumbProps : NmProps
     /// <summary>
     /// Separator style
     /// </summary>
-    [JsonProperty("separator")]
+    [JsonProperty("separator", NullValueHandling = NullValueHandling.Ignore)]
     public string? Separator { get; set; }
 
 }
@@ -1067,25 +1067,25 @@ public record NMCheckboxGroupProps : NmProps
     /// <summary>
     /// Disabled state for the group
     /// </summary>
-    [JsonProperty("groupDisabled")]
+    [JsonProperty("groupDisabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? GroupDisabled { get; set; }
 
     /// <summary>
     /// Error state for the group
     /// </summary>
-    [JsonProperty("groupError")]
+    [JsonProperty("groupError", NullValueHandling = NullValueHandling.Ignore)]
     public bool? GroupError { get; set; }
 
     /// <summary>
     /// Layout direction
     /// </summary>
-    [JsonProperty("layout")]
+    [JsonProperty("layout", NullValueHandling = NullValueHandling.Ignore)]
     public string? Layout { get; set; }
 
     /// <summary>
     /// Checkbox group size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1101,19 +1101,19 @@ public record NMPaginationProps : NmProps
     /// <summary>
     /// Current page number
     /// </summary>
-    [JsonProperty("currentPage")]
+    [JsonProperty("currentPage", NullValueHandling = NullValueHandling.Ignore)]
     public int? CurrentPage { get; set; }
 
     /// <summary>
     /// Pagination size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Total number of pages
     /// </summary>
-    [JsonProperty("totalPages")]
+    [JsonProperty("totalPages", NullValueHandling = NullValueHandling.Ignore)]
     public int? TotalPages { get; set; }
 
 }
@@ -1129,25 +1129,25 @@ public record NMRadioGroupProps : NmProps
     /// <summary>
     /// Disabled state for the group
     /// </summary>
-    [JsonProperty("groupDisabled")]
+    [JsonProperty("groupDisabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? GroupDisabled { get; set; }
 
     /// <summary>
     /// Error state for the group
     /// </summary>
-    [JsonProperty("groupError")]
+    [JsonProperty("groupError", NullValueHandling = NullValueHandling.Ignore)]
     public bool? GroupError { get; set; }
 
     /// <summary>
     /// Layout direction
     /// </summary>
-    [JsonProperty("layout")]
+    [JsonProperty("layout", NullValueHandling = NullValueHandling.Ignore)]
     public string? Layout { get; set; }
 
     /// <summary>
     /// Radio group size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1163,25 +1163,25 @@ public record NMSegmentedProps : NmProps
     /// <summary>
     /// Disable all segments
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Expand to full container width
     /// </summary>
-    [JsonProperty("fullWidth")]
+    [JsonProperty("fullWidth", NullValueHandling = NullValueHandling.Ignore)]
     public bool? FullWidth { get; set; }
 
     /// <summary>
     /// Segmented control size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Currently selected value
     /// </summary>
-    [JsonProperty("value")]
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
     public string? Value { get; set; }
 
 }
@@ -1197,25 +1197,25 @@ public record NMStepIndicatorProps : NmProps
     /// <summary>
     /// Zero-based index of current step
     /// </summary>
-    [JsonProperty("activeIndex")]
+    [JsonProperty("activeIndex", NullValueHandling = NullValueHandling.Ignore)]
     public string? ActiveIndex { get; set; }
 
     /// <summary>
     /// Indicator size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Total number of steps
     /// </summary>
-    [JsonProperty("steps")]
+    [JsonProperty("steps", NullValueHandling = NullValueHandling.Ignore)]
     public string? Steps { get; set; }
 
     /// <summary>
     /// Visual variant
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1231,25 +1231,25 @@ public record NMTogglesProps : NmProps
     /// <summary>
     /// Disabled state
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Toggle size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Toggle state
     /// </summary>
-    [JsonProperty("state")]
+    [JsonProperty("state", NullValueHandling = NullValueHandling.Ignore)]
     public string? State { get; set; }
 
     /// <summary>
     /// Toggle type
     /// </summary>
-    [JsonProperty("type")]
+    [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
     public string? Type { get; set; }
 
 }
@@ -1265,31 +1265,31 @@ public record NMAlertProps : NmProps
     /// <summary>
     /// Show close button
     /// </summary>
-    [JsonProperty("closable")]
+    [JsonProperty("closable", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Closable { get; set; }
 
     /// <summary>
     /// Enable glow effect (accent style only)
     /// </summary>
-    [JsonProperty("glow")]
+    [JsonProperty("glow", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Glow { get; set; }
 
     /// <summary>
     /// Semantic severity level
     /// </summary>
-    [JsonProperty("severity")]
+    [JsonProperty("severity", NullValueHandling = NullValueHandling.Ignore)]
     public string? Severity { get; set; }
 
     /// <summary>
     /// Alert size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Visual style
     /// </summary>
-    [JsonProperty("style")]
+    [JsonProperty("style", NullValueHandling = NullValueHandling.Ignore)]
     public string? Style { get; set; }
 
 }
@@ -1305,19 +1305,19 @@ public record NMCardProps : NmProps
     /// <summary>
     /// Footer variant
     /// </summary>
-    [JsonProperty("footerVariant")]
+    [JsonProperty("footerVariant", NullValueHandling = NullValueHandling.Ignore)]
     public string? FooterVariant { get; set; }
 
     /// <summary>
     /// Internal padding size
     /// </summary>
-    [JsonProperty("padding")]
+    [JsonProperty("padding", NullValueHandling = NullValueHandling.Ignore)]
     public string? Padding { get; set; }
 
     /// <summary>
     /// Card visual style
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1343,7 +1343,7 @@ public record NMContentFooterProps : NmProps
     /// <summary>
     /// Footer variant
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1359,13 +1359,13 @@ public record NMContentHeaderProps : NmProps
     /// <summary>
     /// Show close button
     /// </summary>
-    [JsonProperty("canClose")]
+    [JsonProperty("canClose", NullValueHandling = NullValueHandling.Ignore)]
     public bool? CanClose { get; set; }
 
     /// <summary>
     /// id put on the title, for a dialog to reference with aria-labelledby
     /// </summary>
-    [JsonProperty("titleId")]
+    [JsonProperty("titleId", NullValueHandling = NullValueHandling.Ignore)]
     public string? TitleId { get; set; }
 
 }
@@ -1381,7 +1381,7 @@ public record NMEmptyStateProps : NmProps
     /// <summary>
     /// Empty state layout variant
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1397,31 +1397,31 @@ public record NMListProps : NmProps
     /// <summary>
     /// Bullet style for unordered lists
     /// </summary>
-    [JsonProperty("bullet")]
+    [JsonProperty("bullet", NullValueHandling = NullValueHandling.Ignore)]
     public string? Bullet { get; set; }
 
     /// <summary>
     /// Horizontal layout
     /// </summary>
-    [JsonProperty("horizontal")]
+    [JsonProperty("horizontal", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Horizontal { get; set; }
 
     /// <summary>
     /// Numbering style for ordered lists
     /// </summary>
-    [JsonProperty("order")]
+    [JsonProperty("order", NullValueHandling = NullValueHandling.Ignore)]
     public string? Order { get; set; }
 
     /// <summary>
     /// List size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// List type
     /// </summary>
-    [JsonProperty("type")]
+    [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
     public string? Type { get; set; }
 
 }
@@ -1437,37 +1437,37 @@ public record NMMetricsProps : NmProps
     /// <summary>
     /// Change indicator
     /// </summary>
-    [JsonProperty("change")]
+    [JsonProperty("change", NullValueHandling = NullValueHandling.Ignore)]
     public string? Change { get; set; }
 
     /// <summary>
     /// Metric label
     /// </summary>
-    [JsonProperty("label")]
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
     public string? Label { get; set; }
 
     /// <summary>
     /// Show decorative icon
     /// </summary>
-    [JsonProperty("showIcon")]
+    [JsonProperty("showIcon", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowIcon { get; set; }
 
     /// <summary>
     /// Trend direction
     /// </summary>
-    [JsonProperty("trend")]
+    [JsonProperty("trend", NullValueHandling = NullValueHandling.Ignore)]
     public string? Trend { get; set; }
 
     /// <summary>
     /// Metric value
     /// </summary>
-    [JsonProperty("value")]
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
     public string? Value { get; set; }
 
     /// <summary>
     /// Metric visual style
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1483,25 +1483,25 @@ public record NMTableProps : NmProps
     /// <summary>
     /// Row hover effect
     /// </summary>
-    [JsonProperty("hover")]
+    [JsonProperty("hover", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Hover { get; set; }
 
     /// <summary>
     /// Table size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Alternate row background colors
     /// </summary>
-    [JsonProperty("striped")]
+    [JsonProperty("striped", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Striped { get; set; }
 
     /// <summary>
     /// Table visual style
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1517,37 +1517,37 @@ public record NMColorPickerProps : NmProps
     /// <summary>
     /// Disable the swatch trigger
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Optional label text above the swatch
     /// </summary>
-    [JsonProperty("label")]
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
     public string? Label { get; set; }
 
     /// <summary>
     /// Current hex colour value
     /// </summary>
-    [JsonProperty("selected")]
+    [JsonProperty("selected", NullValueHandling = NullValueHandling.Ignore)]
     public string? Selected { get; set; }
 
     /// <summary>
     /// Show hex input row in panel
     /// </summary>
-    [JsonProperty("showInput")]
+    [JsonProperty("showInput", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowInput { get; set; }
 
     /// <summary>
     /// Show the colour picker panel
     /// </summary>
-    [JsonProperty("showPanel")]
+    [JsonProperty("showPanel", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowPanel { get; set; }
 
     /// <summary>
     /// Trigger and palette option size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1563,37 +1563,37 @@ public record NMComboboxProps : NmProps
     /// <summary>
     /// Current filter / typed text
     /// </summary>
-    [JsonProperty("filterText")]
+    [JsonProperty("filterText", NullValueHandling = NullValueHandling.Ignore)]
     public string? FilterText { get; set; }
 
     /// <summary>
     /// Show spinner instead of chevron
     /// </summary>
-    [JsonProperty("isLoading")]
+    [JsonProperty("isLoading", NullValueHandling = NullValueHandling.Ignore)]
     public bool? IsLoading { get; set; }
 
     /// <summary>
     /// Enable multi-select tag mode
     /// </summary>
-    [JsonProperty("multiple")]
+    [JsonProperty("multiple", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Multiple { get; set; }
 
     /// <summary>
     /// Input placeholder text
     /// </summary>
-    [JsonProperty("placeholder")]
+    [JsonProperty("placeholder", NullValueHandling = NullValueHandling.Ignore)]
     public string? Placeholder { get; set; }
 
     /// <summary>
     /// Currently selected option (single-select mode)
     /// </summary>
-    [JsonProperty("selected")]
+    [JsonProperty("selected", NullValueHandling = NullValueHandling.Ignore)]
     public string? Selected { get; set; }
 
     /// <summary>
     /// Field and option item size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1609,7 +1609,7 @@ public record NMCommandPaletteProps : NmProps
     /// <summary>
     /// Search input value
     /// </summary>
-    [JsonProperty("searchText")]
+    [JsonProperty("searchText", NullValueHandling = NullValueHandling.Ignore)]
     public string? SearchText { get; set; }
 
 }
@@ -1625,13 +1625,13 @@ public record NMDatePickerProps : NmProps
     /// <summary>
     /// Date picker mode
     /// </summary>
-    [JsonProperty("mode")]
+    [JsonProperty("mode", NullValueHandling = NullValueHandling.Ignore)]
     public string? Mode { get; set; }
 
     /// <summary>
     /// Calendar size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1647,25 +1647,25 @@ public record NMDrawerProps : NmProps
     /// <summary>
     /// Show backdrop overlay
     /// </summary>
-    [JsonProperty("hasOverlay")]
+    [JsonProperty("hasOverlay", NullValueHandling = NullValueHandling.Ignore)]
     public bool? HasOverlay { get; set; }
 
     /// <summary>
     /// Open
     /// </summary>
-    [JsonProperty("isOpen")]
+    [JsonProperty("isOpen", NullValueHandling = NullValueHandling.Ignore)]
     public bool? IsOpen { get; set; }
 
     /// <summary>
     /// Edge to anchor the drawer
     /// </summary>
-    [JsonProperty("position")]
+    [JsonProperty("position", NullValueHandling = NullValueHandling.Ignore)]
     public string? Position { get; set; }
 
     /// <summary>
     /// Drawer width (left/right) or height (top/bottom)
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1681,7 +1681,7 @@ public record NMDropdownProps : NmProps
     /// <summary>
     /// Dropdown size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1697,13 +1697,13 @@ public record NMModalProps : NmProps
     /// <summary>
     /// Footer variant
     /// </summary>
-    [JsonProperty("footerVariant")]
+    [JsonProperty("footerVariant", NullValueHandling = NullValueHandling.Ignore)]
     public string? FooterVariant { get; set; }
 
     /// <summary>
     /// Modal width
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1719,31 +1719,31 @@ public record NMPopoverProps : NmProps
     /// <summary>
     /// Open
     /// </summary>
-    [JsonProperty("isOpen")]
+    [JsonProperty("isOpen", NullValueHandling = NullValueHandling.Ignore)]
     public bool? IsOpen { get; set; }
 
     /// <summary>
     /// Popover position relative to trigger
     /// </summary>
-    [JsonProperty("position")]
+    [JsonProperty("position", NullValueHandling = NullValueHandling.Ignore)]
     public string? Position { get; set; }
 
     /// <summary>
     /// Show arrow pointing to trigger
     /// </summary>
-    [JsonProperty("showArrow")]
+    [JsonProperty("showArrow", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowArrow { get; set; }
 
     /// <summary>
     /// Show close button
     /// </summary>
-    [JsonProperty("showClose")]
+    [JsonProperty("showClose", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowClose { get; set; }
 
     /// <summary>
     /// Popover panel width
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1759,19 +1759,19 @@ public record NMSearchInputProps : NmProps
     /// <summary>
     /// Placeholder text
     /// </summary>
-    [JsonProperty("placeholder")]
+    [JsonProperty("placeholder", NullValueHandling = NullValueHandling.Ignore)]
     public string? Placeholder { get; set; }
 
     /// <summary>
     /// Field height and font size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Current input value — shows clear button when non-empty
     /// </summary>
-    [JsonProperty("value")]
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
     public string? Value { get; set; }
 
 }
@@ -1787,25 +1787,25 @@ public record NMSelectProps : NmProps
     /// <summary>
     /// Whether the select is disabled
     /// </summary>
-    [JsonProperty("disabled")]
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Disabled { get; set; }
 
     /// <summary>
     /// Whether the select has a validation error
     /// </summary>
-    [JsonProperty("error")]
+    [JsonProperty("error", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Error { get; set; }
 
     /// <summary>
     /// Placeholder text shown when no option is selected
     /// </summary>
-    [JsonProperty("placeholder")]
+    [JsonProperty("placeholder", NullValueHandling = NullValueHandling.Ignore)]
     public string? Placeholder { get; set; }
 
     /// <summary>
     /// The size of the select field
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -1821,55 +1821,55 @@ public record NMToastProps : NmProps
     /// <summary>
     /// Show close button
     /// </summary>
-    [JsonProperty("closable")]
+    [JsonProperty("closable", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Closable { get; set; }
 
     /// <summary>
     /// Auto-dismiss duration (ms)
     /// </summary>
-    [JsonProperty("duration")]
+    [JsonProperty("duration", NullValueHandling = NullValueHandling.Ignore)]
     public int? Duration { get; set; }
 
     /// <summary>
     /// Toast message
     /// </summary>
-    [JsonProperty("message")]
+    [JsonProperty("message", NullValueHandling = NullValueHandling.Ignore)]
     public string? Message { get; set; }
 
     /// <summary>
     /// Screen position
     /// </summary>
-    [JsonProperty("position")]
+    [JsonProperty("position", NullValueHandling = NullValueHandling.Ignore)]
     public string? Position { get; set; }
 
     /// <summary>
     /// Show action button
     /// </summary>
-    [JsonProperty("showAction")]
+    [JsonProperty("showAction", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowAction { get; set; }
 
     /// <summary>
     /// Show variant icon
     /// </summary>
-    [JsonProperty("showIcon")]
+    [JsonProperty("showIcon", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowIcon { get; set; }
 
     /// <summary>
     /// Show progress bar
     /// </summary>
-    [JsonProperty("showProgress")]
+    [JsonProperty("showProgress", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowProgress { get; set; }
 
     /// <summary>
     /// Toast title
     /// </summary>
-    [JsonProperty("title")]
+    [JsonProperty("title", NullValueHandling = NullValueHandling.Ignore)]
     public string? Title { get; set; }
 
     /// <summary>
     /// Toast variant
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1885,7 +1885,7 @@ public record NMTooltipProps : NmProps
     /// <summary>
     /// Tooltip position relative to trigger
     /// </summary>
-    [JsonProperty("position")]
+    [JsonProperty("position", NullValueHandling = NullValueHandling.Ignore)]
     public string? Position { get; set; }
 
 }
@@ -1901,25 +1901,25 @@ public record NMAccordionProps : NmProps
     /// <summary>
     /// Allow Multiple Open
     /// </summary>
-    [JsonProperty("allowMultiple")]
+    [JsonProperty("allowMultiple", NullValueHandling = NullValueHandling.Ignore)]
     public bool? AllowMultiple { get; set; }
 
     /// <summary>
     /// Show chevron indicator
     /// </summary>
-    [JsonProperty("showChevron")]
+    [JsonProperty("showChevron", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowChevron { get; set; }
 
     /// <summary>
     /// Accordion size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Accordion visual style
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -1935,31 +1935,31 @@ public record NMCarouselProps : NmProps
     /// <summary>
     /// Position nav arrows outside viewport
     /// </summary>
-    [JsonProperty("navOutside")]
+    [JsonProperty("navOutside", NullValueHandling = NullValueHandling.Ignore)]
     public bool? NavOutside { get; set; }
 
     /// <summary>
     /// Show dot pagination
     /// </summary>
-    [JsonProperty("showDots")]
+    [JsonProperty("showDots", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowDots { get; set; }
 
     /// <summary>
     /// Show navigation arrows
     /// </summary>
-    [JsonProperty("showNav")]
+    [JsonProperty("showNav", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowNav { get; set; }
 
     /// <summary>
     /// Carousel size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
     /// Enable scroll snap
     /// </summary>
-    [JsonProperty("snap")]
+    [JsonProperty("snap", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Snap { get; set; }
 
 }
@@ -1975,7 +1975,7 @@ public record NMFileUploadProps : NmProps
     /// <summary>
     /// Upload progress percentage
     /// </summary>
-    [JsonProperty("uploadPct")]
+    [JsonProperty("uploadPct", NullValueHandling = NullValueHandling.Ignore)]
     public int? UploadPct { get; set; }
 
 }
@@ -1991,13 +1991,13 @@ public record NMNavigationProps : NmProps
     /// <summary>
     /// Currently active item index
     /// </summary>
-    [JsonProperty("activeIndex")]
+    [JsonProperty("activeIndex", NullValueHandling = NullValueHandling.Ignore)]
     public string? ActiveIndex { get; set; }
 
     /// <summary>
     /// Navigation layout style
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -2013,19 +2013,19 @@ public record NMStepperProps : NmProps
     /// <summary>
     /// Zero-based index of the current active step
     /// </summary>
-    [JsonProperty("activeIndex")]
+    [JsonProperty("activeIndex", NullValueHandling = NullValueHandling.Ignore)]
     public string? ActiveIndex { get; set; }
 
     /// <summary>
     /// Layout direction
     /// </summary>
-    [JsonProperty("orientation")]
+    [JsonProperty("orientation", NullValueHandling = NullValueHandling.Ignore)]
     public string? Orientation { get; set; }
 
     /// <summary>
     /// Circle and text size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
@@ -2041,19 +2041,19 @@ public record NMTabsProps : NmProps
     /// <summary>
     /// Currently active tab index
     /// </summary>
-    [JsonProperty("activeIndex")]
+    [JsonProperty("activeIndex", NullValueHandling = NullValueHandling.Ignore)]
     public string? ActiveIndex { get; set; }
 
     /// <summary>
     /// Accessible name for the tablist
     /// </summary>
-    [JsonProperty("ariaLabel")]
+    [JsonProperty("ariaLabel", NullValueHandling = NullValueHandling.Ignore)]
     public string? AriaLabel { get; set; }
 
     /// <summary>
     /// Tab size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
     /// <summary>
@@ -2061,13 +2061,13 @@ public record NMTabsProps : NmProps
     /// aria-controls="{tablistId}-panel-{index}", which is the id your panel
     /// needs
     /// </summary>
-    [JsonProperty("tablistId")]
+    [JsonProperty("tablistId", NullValueHandling = NullValueHandling.Ignore)]
     public string? TablistId { get; set; }
 
     /// <summary>
     /// Tab visual style
     /// </summary>
-    [JsonProperty("variant")]
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
     public string? Variant { get; set; }
 
 }
@@ -2083,13 +2083,13 @@ public record NMTreeViewProps : NmProps
     /// <summary>
     /// Show vertical indent guide lines
     /// </summary>
-    [JsonProperty("showLines")]
+    [JsonProperty("showLines", NullValueHandling = NullValueHandling.Ignore)]
     public bool? ShowLines { get; set; }
 
     /// <summary>
     /// Row spacing and icon size
     /// </summary>
-    [JsonProperty("size")]
+    [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
 }
