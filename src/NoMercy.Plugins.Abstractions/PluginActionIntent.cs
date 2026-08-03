@@ -35,6 +35,15 @@ public class PluginActionIntent
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PluginConfirmation? Confirm { get; init; }
 
+    /// <summary>
+    /// Newtonsoft's way of asking, and Newtonsoft is what writes every response
+    /// here. The attribute above says the same thing to
+    /// <c>System.Text.Json</c>, which is not in this path, so a plain action
+    /// was going out carrying <c>"confirm": null</c> — a key the contract says
+    /// is absent unless there is something to confirm.
+    /// </summary>
+    public bool ShouldSerializeConfirm() => Confirm is not null;
+
     public static PluginActionIntent PlayMedia(
         string streamUrl,
         string title,

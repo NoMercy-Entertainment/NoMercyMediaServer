@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Text.Json.Serialization;
+using System.Runtime.Serialization;
 
 namespace NoMercy.Plugins.Abstractions;
 
@@ -24,19 +24,64 @@ namespace NoMercy.Plugins.Abstractions;
 /// </summary>
 public class PluginComponent
 {
-    [JsonPropertyName("id")]
+    private readonly Dictionary<string, object?> _props = new();
+
     public required string Id { get; init; }
 
-    [JsonPropertyName("component")]
     public required string Component { get; init; }
 
-    [JsonPropertyName("props")]
-    public Dictionary<string, object?> Props { get; init; } = new();
+    /// <summary>
+    /// The bag every client renders from, children and action included.
+    /// <para>
+    /// The design system's contract keeps both inside a component's props,
+    /// because both belong to every component rather than to a container kind —
+    /// <c>NmComponentBase</c> is where they are declared. A second envelope
+    /// shape would mean the components a plugin names cannot draw what it sends
+    /// them, which is exactly what happened: every card arrived with an empty
+    /// body.
+    /// </para>
+    /// <para>
+    /// The merge happens on read rather than on write so an object initializer
+    /// can name <see cref="Props"/>, <see cref="Items"/> and <see cref="Action"/>
+    /// in any order. Written into the bag as they were set, whichever came last
+    /// would erase the others.
+    /// </para>
+    /// </summary>
+    public Dictionary<string, object?> Props
+    {
+        get
+        {
+            Dictionary<string, object?> wire = new(_props);
 
-    [JsonPropertyName("items")]
+            if (Items.Count > 0)
+                wire["items"] = Items;
+
+            if (Action is not null)
+                wire["action"] = Action;
+
+            return wire;
+        }
+        init => _props = value;
+    }
+
+    /// <summary>
+    /// Children, as an author writes them — readable so a plugin can keep
+    /// building a card after constructing it.
+    /// <para>
+    /// <c>IgnoreDataMember</c> and not <c>System.Text.Json</c>'s
+    /// <c>JsonIgnore</c>: every response in this server is written by
+    /// Newtonsoft, which cannot see that attribute and dutifully sent this
+    /// beside <see cref="Props"/> — a second copy of the children in a place no
+    /// client reads. Newtonsoft is deliberately kept out of this assembly (see
+    /// <see cref="PluginHubMessage"/>) because a plugin's own copy takes a
+    /// distinct identity in its load context, so the attribute used here has to
+    /// be one the shared framework already carries.
+    /// </para>
+    /// </summary>
+    [IgnoreDataMember]
     public List<PluginComponent> Items { get; init; } = [];
 
-    [JsonPropertyName("action")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    /// <inheritdoc cref="Items"/>
+    [IgnoreDataMember]
     public PluginActionIntent? Action { get; init; }
 }

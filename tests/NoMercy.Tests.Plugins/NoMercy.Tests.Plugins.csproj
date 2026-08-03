@@ -21,6 +21,13 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Moq" />
+    <!--
+      So the wire assertions can serialize the way the API does. They used
+      System.Text.Json, which writes no response in this server, and passed
+      while the real payload carried a second copy of every child under a key
+      no client reads.
+    -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
   </ItemGroup>
 
   <ItemGroup>

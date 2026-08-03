@@ -9,8 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Text.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using NoMercy.Plugins.Abstractions;
 using Xunit;
 
@@ -26,7 +27,19 @@ namespace NoMercy.Tests.Plugins;
 [Trait("Category", "Unit")]
 public class PluginViewContractTests
 {
-    private static string Serialize(object value) => JsonSerializer.Serialize(value);
+    /// <summary>
+    /// The settings MVC builds for the pipeline this server registers, so a
+    /// claim about the wire is a claim about the wire. This used
+    /// <c>System.Text.Json</c>, which writes no response here: it honoured
+    /// attributes Newtonsoft cannot see, so these assertions passed while every
+    /// payload went out carrying a second copy of each component's children
+    /// beside its props, and every card in the app drew an empty body.
+    /// </summary>
+    private static readonly JsonSerializerSettings ApiSettings =
+        new MvcNewtonsoftJsonOptions().SerializerSettings;
+
+    private static string Serialize(object value) =>
+        JsonConvert.SerializeObject(value, ApiSettings);
 
     [Fact]
     public void PlayMedia_CarriesAStableTypeAndPayload()

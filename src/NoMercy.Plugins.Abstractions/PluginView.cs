@@ -31,6 +31,9 @@ public class PluginView
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PluginWebViewRef? WebView { get; init; }
 
+    /// <inheritdoc cref="PluginActionIntent.ShouldSerializeConfirm" />
+    public bool ShouldSerializeWebView() => WebView is not null;
+
     /// <summary>
     /// How often the client should re-fetch this route, in seconds. Zero means
     /// never — a view that changes on its own says so here instead of every

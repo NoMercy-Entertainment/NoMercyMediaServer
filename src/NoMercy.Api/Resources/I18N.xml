@@ -817,4 +817,8 @@
     <Key>Plugin installed successfully</Key>
     <Value lang="nl">Plugin installed successfully</Value>
   </Entry>
+  <Entry>
+    <Key>Plugin consent granted</Key>
+    <Value lang="nl">Plugin consent granted</Value>
+  </Entry>
 </I18N>
