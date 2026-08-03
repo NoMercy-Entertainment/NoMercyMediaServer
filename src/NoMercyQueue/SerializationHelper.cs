@@ -28,22 +28,88 @@ internal sealed class NoMercySerializationBinder : DefaultSerializationBinder
         "NoMercyQueue.Core.",
     ];
 
+    /// <summary>
+    /// The framework types a job payload legitimately carries. TypeNameHandling.Objects
+    /// writes a $type for a dictionary or list nested in a job, and rejecting those
+    /// outright meant any job holding one serialized fine and then died on reserve with
+    /// "Deserialization of type … is not allowed" — MusicEncodeJob carries a
+    /// Dictionary&lt;string, Guid&gt;, so every music encode failed and no track was ever
+    /// written. These are data containers and primitives; none is a gadget, and the
+    /// element types are checked on their own turn.
+    /// </summary>
+    private static readonly HashSet<string> AllowedSystemTypes = new(StringComparer.Ordinal)
+    {
+        "System.Boolean",
+        "System.Byte",
+        "System.Char",
+        "System.Collections.Generic.Dictionary`2",
+        "System.Collections.Generic.HashSet`1",
+        "System.Collections.Generic.KeyValuePair`2",
+        "System.Collections.Generic.List`1",
+        "System.Collections.Generic.Queue`1",
+        "System.Collections.Generic.SortedDictionary`2",
+        "System.Collections.Generic.Stack`1",
+        "System.DateTime",
+        "System.DateTimeOffset",
+        "System.Decimal",
+        "System.Double",
+        "System.Guid",
+        "System.Int16",
+        "System.Int32",
+        "System.Int64",
+        "System.Nullable`1",
+        "System.Single",
+        "System.String",
+        "System.TimeSpan",
+        "System.Uri",
+        "System.Version",
+    };
+
     public override Type BindToType(string? assemblyName, string typeName)
     {
-        // Strip generic arguments before prefix check (e.g. "System.Collections.Generic.List`1")
-        string rootTypeName = typeName.Contains('[') ? typeName[..typeName.IndexOf('[')] : typeName;
+        // Every type named anywhere in the string is checked, not only the root: a
+        // permitted List`1 must not become a way to smuggle a forbidden element type in.
+        foreach (string candidate in NamedTypes(typeName))
+        {
+            bool isAllowed =
+                AllowedNamespacePrefixes.Any(prefix =>
+                    candidate.StartsWith(prefix, StringComparison.Ordinal)
+                ) || AllowedSystemTypes.Contains(candidate);
 
-        bool isAllowed = AllowedNamespacePrefixes.Any(prefix =>
-            rootTypeName.StartsWith(prefix, StringComparison.Ordinal)
-        );
-
-        if (!isAllowed)
-            throw new JsonSerializationException(
-                $"Deserialization of type '{typeName}' is not allowed. "
-                    + "Only NoMercy.* and NoMercyQueue.* types are permitted."
-            );
+            if (!isAllowed)
+                throw new JsonSerializationException(
+                    $"Deserialization of type '{candidate}' is not allowed. "
+                        + "Only NoMercy.* types and plain framework collections are permitted."
+                );
+        }
 
         return base.BindToType(assemblyName, typeName);
+    }
+
+    /// <summary>
+    /// Each type name in an assembly-qualified name. A generic name nests its arguments
+    /// in brackets and suffixes each with its assembly, so the separators are '[', ']'
+    /// and ',', and the assembly/version/culture tokens that follow are not type names.
+    /// </summary>
+    private static IEnumerable<string> NamedTypes(string typeName)
+    {
+        foreach (string segment in typeName.Split(['[', ']'], StringSplitOptions.TrimEntries))
+        {
+            if (segment.Length == 0)
+                continue;
+
+            // Only the first comma-separated token of a segment is a type; the
+            // assembly name, version, culture and key token follow it and are not.
+            int assemblySeparator = segment.IndexOf(',');
+            string candidate = (
+                assemblySeparator < 0 ? segment : segment[..assemblySeparator]
+            ).Trim();
+
+            if (candidate.Length == 0)
+                continue;
+
+            yield return candidate.EndsWith('&') ? candidate[..^1] : candidate;
+        }
     }
 }
 
