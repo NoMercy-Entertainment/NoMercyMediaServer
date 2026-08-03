@@ -41,20 +41,16 @@ public class RealPluginCompatibilityTests
     }
 
     [Fact]
-    public void PlacesAMountThatNamesASectionTheServerDoesNotKnow()
+    public void PlacesTheSectionAPublishedPluginAlreadyUses()
     {
-        // The torrent plugin mounts under "settings", which is not one of the
-        // kinds. It predates them, and dropping it would remove a working
-        // plugin's only screen. It lands in the administrative area instead.
+        // The torrent plugin mounts under "settings". The spec follows what a
+        // real plugin needed rather than the other way round, so settings is a
+        // kind: where a plugin is set up, as opposed to where it does its work.
         PluginUiMount mount = Load("torrent.plugin.json").Capabilities!.Ui!.Mounts[0];
 
         Assert.Equal("settings", mount.Section);
-        Assert.False(PluginKind.IsKnown(mount.Section));
-
-        string kind = PluginKind.IsKnown(mount.Section) ? mount.Section : PluginKind.Dashboard;
-
-        Assert.Equal(PluginKind.Dashboard, kind);
-        Assert.True(PluginKind.DrawsUi(kind));
+        Assert.True(PluginKind.IsKnown(mount.Section));
+        Assert.True(PluginKind.DrawsUi(mount.Section));
     }
 
     [Fact]

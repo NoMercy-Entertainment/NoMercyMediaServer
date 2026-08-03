@@ -432,6 +432,10 @@ public class AudioImportJob : AbstractMusicFolderJob
         MusicBrainzRecordingClient musicBrainzRecordingClient,
         RecordingManager recordingManager
     )
+    // Storing a release needs one of its files to anchor the album to, and the old
+    // .First() threw "Sequence contains no elements" when the folder scan came back
+    // empty — a message that names neither the folder nor the release, which is what
+    // made a failed music import unreadable in the queue.
     {
         CoverArtImageManagerManager.CoverPalette? coverPalette =
             await CoverArtImageManagerManager.Add(release.MusicBrainzReleaseGroup.Id, true);
@@ -445,6 +449,18 @@ public class AudioImportJob : AbstractMusicFolderJob
         await AddGenres(release.Genres, musicGenreManager);
 
         await releaseGroupManager.Store(release.MusicBrainzReleaseGroup, LibraryId, coverPalette);
+
+        if (audioFiles.Count == 0)
+        {
+            Log.LogWarning(
+                "AudioImportJob: no audio files resolved under {InputFolder} for release {Title} ({ReleaseId}); nothing to store",
+                InputFolder,
+                release.Title,
+                release.Id
+            );
+            return;
+        }
+
         await releaseManager.Store(
             release,
             albumLibrary,

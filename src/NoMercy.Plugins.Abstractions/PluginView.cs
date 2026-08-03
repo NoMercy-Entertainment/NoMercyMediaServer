@@ -44,7 +44,7 @@ public class PluginView
     /// is what lets one declaration look right with a pointer and with a remote.
     /// </summary>
     [JsonPropertyName("layout")]
-    public string Layout { get; init; } = PluginLayout.Standard;
+    public string Layout { get; set; } = PluginLayout.Standard;
 
     [JsonPropertyName("refreshInterval")]
     public int RefreshInterval { get; init; }

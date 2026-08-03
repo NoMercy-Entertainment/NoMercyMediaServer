@@ -170,6 +170,15 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
         try
         {
             PluginView view = await plugin.GetViewAsync(request, ct);
+
+            // A declared route names the shell its page wants, and the plugin
+            // should not have to repeat it on every view it builds. A view that
+            // named one itself keeps it.
+            PluginRouteMatch? declared = plugin.Routes.Resolve(request.Route);
+
+            if (declared is not null && view.Layout == PluginLayout.Standard)
+                view.Layout = declared.Route.LayoutFor(request.Surface);
+
             return Ok(new DataResponseDto<PluginView> { Data = view });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

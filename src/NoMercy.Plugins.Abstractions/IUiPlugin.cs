@@ -31,5 +31,15 @@ public interface IUiPlugin : IPlugin
     /// The view for one route. Called per request, so a plugin returns current
     /// state rather than caching a tree and going stale.
     /// </summary>
+    /// <summary>
+    /// The pages this plugin serves.
+    ///
+    /// Empty by default, which is what a plugin that string-matches its own
+    /// paths has always done and keeps doing. Declaring the table instead lets
+    /// the server list the pages a viewer can reach, hand the client the shell
+    /// each page wants, and refuse a link to a page that does not exist.
+    /// </summary>
+    PluginRouteTable Routes => new();
+
     Task<PluginView> GetViewAsync(PluginViewRequest request, CancellationToken ct);
 }

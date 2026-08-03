@@ -27,12 +27,19 @@ public static class PluginKind
     public const string Dashboard = "dashboard";
 
     /// <summary>
+    /// Configuration for the plugin itself. Distinct from the dashboard, which
+    /// is where a plugin does its work rather than where it is set up, and the
+    /// place a viewer looks first when a plugin needs a key or a folder.
+    /// </summary>
+    public const string Settings = "settings";
+
+    /// <summary>
     /// Big enough to stand on its own, with a button in the main navigation
     /// beside the app's own sections rather than tucked inside one of them.
     /// </summary>
     public const string Addon = "addon";
 
-    public static readonly string[] All = [Music, Video, Library, Dashboard, Addon];
+    public static readonly string[] All = [Music, Video, Library, Dashboard, Settings, Addon];
 
     /// <summary>
     /// A plugin with no interface declares no mounts. There is no `backend`
