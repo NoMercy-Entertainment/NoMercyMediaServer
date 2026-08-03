@@ -26,6 +26,7 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
 {
     private readonly Func<Task>? _checkTunnelAvailability;
     private readonly IConnectivityStatus _connectivityStatus;
+    private readonly Func<bool> _binaryExists;
     private Process? _tunnelProcess;
     private bool _disposed;
 
@@ -53,6 +54,16 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
     /// </summary>
     public bool IsStillEstablished => _tunnelProcess is { HasExited: false };
 
+    /// <summary>
+    /// False only when a tunnel is assigned but the binary that runs it has not landed on
+    /// disk yet. cloudflared is downloaded at runtime, sixth in a sequential queue, so on an
+    /// early boot this is routinely still false for a few seconds — that is a "not yet", not
+    /// evidence the tunnel does not work. Reads the same file-presence check TryEstablishAsync
+    /// uses, so there is exactly one definition of "the binary is here" in this strategy.
+    /// </summary>
+    public bool IsReady =>
+        string.IsNullOrEmpty(_connectivityStatus.CloudflareTunnelToken) || _binaryExists();
+
     public string Name => "CloudflareTunnel";
     public int Priority => 3;
     public ConnectivityType Type => ConnectivityType.CloudflareTunnel;
@@ -62,12 +73,14 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
     public CloudflareTunnelStrategy(
         ILogger<CloudflareTunnelStrategy> logger,
         IConnectivityStatus connectivityStatus,
-        Func<Task>? checkTunnelAvailability = null
+        Func<Task>? checkTunnelAvailability = null,
+        Func<bool>? binaryExists = null
     )
     {
         _logger = logger;
         _checkTunnelAvailability = checkTunnelAvailability;
         _connectivityStatus = connectivityStatus;
+        _binaryExists = binaryExists ?? (() => File.Exists(AppFiles.CloudflareDPath));
     }
 
     public async Task<ConnectivityResult> TryEstablishAsync(CancellationToken ct)
@@ -113,8 +126,11 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
         // The binary is downloaded at runtime, sixth in a sequential queue that includes
         // ffmpeg, so on an early boot it is routinely not there yet. Starting it anyway threw
         // a Win32Exception that read like a generic failure; saying plainly that the download
-        // has not landed is the difference between "retry shortly" and "this is broken".
-        if (!File.Exists(AppFiles.CloudflareDPath))
+        // has not landed is the difference between "retry shortly" and "this is broken". The
+        // manager already defers this strategy via IsReady while the binary is missing; this
+        // check remains as the same source of truth for the forced attempt once the bounded
+        // deferral window elapses.
+        if (!_binaryExists())
         {
             _logger.LogInformation(
                 "Cloudflare tunnel is assigned but cloudflared is not installed yet at {Path} — will retry once the download finishes",

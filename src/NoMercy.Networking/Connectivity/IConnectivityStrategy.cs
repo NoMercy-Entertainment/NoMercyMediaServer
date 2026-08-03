@@ -26,6 +26,17 @@ public interface IConnectivityStrategy
     /// the server would keep advertising it for the rest of its uptime.
     /// </summary>
     bool IsStillEstablished => true;
+
+    /// <summary>
+    /// Whether this strategy's preconditions are met well enough to attempt it at all.
+    /// Defaults to true for strategies with nothing to check first. This must stay
+    /// synchronous and side-effect-free — a check that can itself fail for a network
+    /// reason (a probe, an HTTP call) is not a precondition, it is another attempt wearing
+    /// a different name, and collapses back into the same "not yet" vs "no" confusion this
+    /// exists to remove. A strategy that is not ready is not evidence about the network;
+    /// the caller must defer it rather than counting a skipped attempt as a failure.
+    /// </summary>
+    bool IsReady => true;
 }
 
 /// <summary>

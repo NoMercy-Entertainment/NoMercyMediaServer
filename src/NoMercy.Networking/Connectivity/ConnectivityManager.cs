@@ -41,6 +41,15 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
     // 30s-to-5min backoff.
     private readonly TimeSpan? _delayOverride;
 
+    // A strategy that says "not ready" is deferred, not misjudged. This bounds how long that
+    // deferral lasts before the strategy is attempted anyway and its real result is counted as
+    // evidence — a wrong precondition (or one that never resolves) can never permanently hide
+    // a transport. 90s comfortably covers a cloudflared download that has not landed yet
+    // without leaving a broken precondition silent forever.
+    private static readonly TimeSpan DefaultReadinessPollInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan DefaultReadinessDeferralWindow = TimeSpan.FromSeconds(90);
+    private readonly TimeSpan _readinessDeferralWindow;
+
     private readonly ILogger<ConnectivityManager> _logger;
 
     public ConnectivityManager(
@@ -51,7 +60,8 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         IBootStatus bootStatus,
         IConnectivityStatus connectivityStatus,
         Func<Task>? tunnelAvailability = null,
-        TimeSpan? delayOverride = null
+        TimeSpan? delayOverride = null,
+        TimeSpan? readinessDeferralWindow = null
     )
     {
         _logger = logger;
@@ -62,6 +72,7 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         _connectivityStatus = connectivityStatus;
         _tunnelAvailability = tunnelAvailability;
         _delayOverride = delayOverride;
+        _readinessDeferralWindow = readinessDeferralWindow ?? DefaultReadinessDeferralWindow;
     }
 
     /// <summary>
@@ -103,8 +114,10 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
             if (_authTokenStore.AccessToken is null)
             {
+                const int maxWaitSeconds = 30;
+
                 _logger.LogDebug("ConnectivityManager waiting for authentication...");
-                int maxWait = 30;
+                int maxWait = maxWaitSeconds;
                 while (
                     _authTokenStore.AccessToken is null
                     && maxWait-- > 0
@@ -114,7 +127,13 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
 
                 if (_authTokenStore.AccessToken is null)
                 {
-                    _logger.LogDebug("ConnectivityManager skipped — no authentication available");
+                    // A server that boots before auth settles must not go unreachable in
+                    // silence. This used to log at Debug, so a server stuck here for its whole
+                    // run said nothing at any log level anyone actually reads.
+                    _logger.LogWarning(
+                        "ConnectivityManager giving up after {Seconds}s — no authentication available yet, connectivity will not be evaluated this run",
+                        maxWaitSeconds
+                    );
                     return;
                 }
             }
@@ -178,6 +197,8 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
                 continue;
             }
 
+            await WaitUntilReadyAsync(strategy, ct);
+
             try
             {
                 _logger.LogInformation("Trying connectivity strategy: {Name}", strategy.Name);
@@ -221,13 +242,56 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
                 "Nothing could prove remote reachability — falling back to {Name}",
                 unverified.Name
             );
-            await unverified.TryEstablishAsync(ct);
-            Activate(unverified);
-            return;
+
+            // The first Failed() this returns must not be read as success. Discarding it and
+            // activating unconditionally is exactly how DirectAccess got entered on a fallback
+            // that had just failed its own re-establish.
+            ConnectivityResult fallbackResult = await unverified.TryEstablishAsync(ct);
+            if (fallbackResult.Established)
+            {
+                Activate(unverified);
+                return;
+            }
+
+            _logger.LogWarning(
+                "Fallback strategy {Name} could not be re-established on retry",
+                unverified.Name
+            );
         }
 
         SetState(ConnectivityState.LocalOnly);
         _logger.LogWarning("No remote connectivity strategy succeeded — server is local-only");
+    }
+
+    /// <summary>
+    /// Gives a strategy whose preconditions are not met a bounded window to become ready
+    /// before it is judged at all. Skipping straight to TryEstablishAsync while a strategy
+    /// reports IsReady false is what turned "cloudflared has not finished downloading" into
+    /// "the tunnel does not work" — the same Failed() shape for two unrelated situations. Once
+    /// the window elapses the strategy is attempted anyway so a precondition that never
+    /// resolves (or was wrong) cannot hide a transport forever.
+    /// </summary>
+    private async Task WaitUntilReadyAsync(IConnectivityStrategy strategy, CancellationToken ct)
+    {
+        if (strategy.IsReady)
+            return;
+
+        TimeSpan pollInterval = _delayOverride ?? DefaultReadinessPollInterval;
+        DateTime deadline = DateTime.UtcNow + _readinessDeferralWindow;
+
+        _logger.LogInformation(
+            "{Name} is not ready yet — deferring for up to {Seconds}s rather than counting this as a failed attempt",
+            [strategy.Name, _readinessDeferralWindow.TotalSeconds]
+        );
+
+        while (!strategy.IsReady && DateTime.UtcNow < deadline)
+            await Task.Delay(pollInterval, ct);
+
+        if (!strategy.IsReady)
+            _logger.LogWarning(
+                "{Name} was still not ready after {Seconds}s — attempting anyway so a wrong precondition can't hide it forever",
+                [strategy.Name, _readinessDeferralWindow.TotalSeconds]
+            );
     }
 
     private static readonly TimeSpan[] RetryBackoff =
@@ -255,14 +319,30 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         {
             if (CurrentState is ConnectivityState.LocalOnly)
             {
-                TimeSpan delay =
-                    _delayOverride ?? RetryBackoff[Math.Min(attempt, RetryBackoff.Length - 1)];
-                attempt++;
+                // LocalOnly means two different things and only one of them is a retry
+                // candidate: the operator pinning the mode is a real terminal choice, while
+                // "nothing worked this pass" is not. Backing off and logging "retrying" for a
+                // pinned choice implied the server was still hunting for connectivity when it
+                // had deliberately stopped looking.
+                bool pinned =
+                    RuntimeServerSettings.Current.ConnectivityMode is ConnectivityMode.LocalOnly;
 
-                _logger.LogInformation(
-                    "No remote connectivity — retrying in {Seconds}s",
-                    delay.TotalSeconds
-                );
+                TimeSpan delay = pinned
+                    ? _delayOverride ?? SupervisionInterval
+                    : _delayOverride ?? RetryBackoff[Math.Min(attempt, RetryBackoff.Length - 1)];
+
+                if (pinned)
+                {
+                    attempt = 0;
+                }
+                else
+                {
+                    attempt++;
+                    _logger.LogInformation(
+                        "No remote connectivity — retrying in {Seconds}s",
+                        delay.TotalSeconds
+                    );
+                }
 
                 await Task.Delay(delay, ct);
                 await EvaluateAsync(ct);

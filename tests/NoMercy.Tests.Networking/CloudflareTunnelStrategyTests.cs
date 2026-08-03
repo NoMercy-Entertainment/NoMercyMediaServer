@@ -23,10 +23,68 @@ public sealed class CloudflareTunnelStrategyTests
 {
     private static CloudflareTunnelStrategy BuildStrategy(
         ConnectivityStatus status,
-        Func<Task>? checkAvailability = null
+        Func<Task>? checkAvailability = null,
+        Func<bool>? binaryExists = null
     )
     {
-        return new(NullLogger<CloudflareTunnelStrategy>.Instance, status, checkAvailability);
+        return new(
+            NullLogger<CloudflareTunnelStrategy>.Instance,
+            status,
+            checkAvailability,
+            binaryExists
+        );
+    }
+
+    // ── IsReady (precondition) ───────────────────────────────────────────────
+    //
+    // The defect: TryEstablishAsync was the only way to learn the binary was missing, so a
+    // missing download and a genuine tunnel failure returned the same Failed() shape and the
+    // manager could not tell "not yet" from "no". IsReady is synchronous and side-effect-free
+    // so the manager can defer without spending an attempt.
+
+    [Fact]
+    public void IsReady_WhenNoTokenIsAssigned_IsTrueRegardlessOfTheBinary()
+    {
+        ConnectivityStatus status = new() { CloudflareTunnelToken = null };
+        CloudflareTunnelStrategy strategy = BuildStrategy(status, binaryExists: () => false);
+
+        Assert.True(strategy.IsReady);
+    }
+
+    [Fact]
+    public void IsReady_WhenTokenAssigned_ButBinaryMissing_IsFalse()
+    {
+        ConnectivityStatus status = new() { CloudflareTunnelToken = "assigned-token" };
+        CloudflareTunnelStrategy strategy = BuildStrategy(status, binaryExists: () => false);
+
+        Assert.False(strategy.IsReady);
+    }
+
+    [Fact]
+    public void IsReady_WhenTokenAssigned_AndBinaryPresent_IsTrue()
+    {
+        ConnectivityStatus status = new() { CloudflareTunnelToken = "assigned-token" };
+        CloudflareTunnelStrategy strategy = BuildStrategy(status, binaryExists: () => true);
+
+        Assert.True(strategy.IsReady);
+    }
+
+    [Fact]
+    public async Task TryEstablishAsync_UsesTheSameInjectedBinaryCheckAsIsReady()
+    {
+        bool binaryPresent = false;
+        ConnectivityStatus status = new() { CloudflareTunnelToken = "assigned-token" };
+        CloudflareTunnelStrategy strategy = BuildStrategy(
+            status,
+            binaryExists: () => binaryPresent
+        );
+
+        Assert.False(strategy.IsReady);
+        ConnectivityResult result = await strategy.TryEstablishAsync(CancellationToken.None);
+        Assert.False(result.Established);
+
+        binaryPresent = true;
+        Assert.True(strategy.IsReady);
     }
 
     [Fact]
