@@ -96,3 +96,68 @@ public class PluginNavigationTests
         Assert.Equal(PluginKind.Dashboard, Plugin.NavEntries.First(entry => entry.Route == "/settings").Section);
     }
 }
+
+public class PluginSurfaceViewsTests
+{
+    private static PluginView Named(string id)
+    {
+        return new() { Components = [new() { Id = id, Component = "NMCard" }] };
+    }
+
+    private static string IdOf(PluginView view)
+    {
+        return view.Components![0].Id;
+    }
+
+    [Fact]
+    public void GivesEachPlatformTheResponseItWasWrittenFor()
+    {
+        PluginSurfaceViews views = new()
+        {
+            Fallback = Named("fallback"),
+            Mobile = Named("phone"),
+            Tv = Named("television")
+        };
+
+        Assert.Equal("phone", IdOf(views.For(PluginSurface.Mobile)));
+        Assert.Equal("television", IdOf(views.For(PluginSurface.Tv)));
+    }
+
+    [Fact]
+    public void FallsBackForAPlatformNobodyAdapted()
+    {
+        // A blank page reads as a broken plugin rather than as one that was
+        // never adapted, so there is no case where nothing renders.
+        PluginSurfaceViews views = new() { Fallback = Named("fallback"), Tv = Named("television") };
+
+        Assert.Equal("fallback", IdOf(views.For(PluginSurface.Web)));
+        Assert.Equal("fallback", IdOf(views.For("something-nobody-serves")));
+    }
+
+    [Fact]
+    public void SaysWhichPlatformsWereActuallyAdapted()
+    {
+        PluginSurfaceViews views = new() { Fallback = Named("fallback"), Tv = Named("television") };
+
+        Assert.Equal([PluginSurface.Tv], views.Adapted());
+    }
+
+    [Fact]
+    public async Task LetsTheSampleAnswerEachScreenOnItsOwnTerms()
+    {
+        DashboardSamplePlugin plugin = new();
+
+        PluginView phone = await plugin.GetViewAsync(
+            new() { Route = "/", Surface = PluginSurface.Mobile }, CancellationToken.None);
+        PluginView television = await plugin.GetViewAsync(
+            new() { Route = "/", Surface = PluginSurface.Tv }, CancellationToken.None);
+
+        Assert.NotEqual(Columns(phone), Columns(television));
+    }
+
+    private static int Columns(PluginView view)
+    {
+        Dictionary<string, object?> box = (Dictionary<string, object?>)view.Components![0].Props["box"]!;
+        return (int)box["columns"]!;
+    }
+}

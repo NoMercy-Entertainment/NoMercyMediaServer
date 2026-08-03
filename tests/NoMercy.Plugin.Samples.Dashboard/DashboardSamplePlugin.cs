@@ -66,12 +66,15 @@ public class DashboardSamplePlugin : IUiPlugin
         {
             "/settings" => SettingsScreen(),
             var route when route.StartsWith("/details/") => DetailScreen(route["/details/".Length..]),
-            _ => request.Surface switch
-            {
-                PluginSurface.Tv => Screen(columns: 4, showDetails: false),
-                PluginSurface.Mobile => Screen(columns: 1, showDetails: false),
-                _ => Screen(columns: 3, showDetails: true)
-            }
+            // Declared rather than branched. The platforms sit beside each
+            // other, so one left unadapted is visible instead of falling
+            // through to whichever branch happened to be last.
+            _ => PluginViews.PerSurface(
+                request.Surface,
+                fallback: Screen(columns: 3, showDetails: true),
+                mobile: Screen(columns: 1, showDetails: false),
+                tv: Screen(columns: 4, showDetails: false)
+            )
         });
     }
 

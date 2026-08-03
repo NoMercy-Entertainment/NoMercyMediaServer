@@ -32,6 +32,28 @@ public static class PluginViews
         params PluginComponent[] components
     ) => new() { Components = [.. components], RefreshInterval = refreshInterval };
 
+    /// <summary>
+    /// Answer one surface from a set declared per platform.
+    ///
+    /// The shape a plugin should reach for instead of a switch: the platforms
+    /// sit beside each other, an unadapted one is visible rather than implied,
+    /// and the fallback is named rather than being whichever branch came last.
+    /// </summary>
+    public static PluginView PerSurface(
+        string surface,
+        PluginView fallback,
+        PluginView? web = null,
+        PluginView? mobile = null,
+        PluginView? tv = null
+    ) =>
+        new PluginSurfaceViews
+        {
+            Fallback = fallback,
+            Web = web,
+            Mobile = mobile,
+            Tv = tv
+        }.For(surface);
+
     public static PluginView WebView(string entryUrl) =>
         new() { WebView = new() { EntryUrl = entryUrl } };
 
