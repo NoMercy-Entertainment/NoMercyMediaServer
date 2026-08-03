@@ -674,12 +674,12 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             }
         );
 
-        // A track counts only when its name, number and duration all agree, and the name
-        // test is a substring one — so a single retitled track ("Call Me" against "Call Me
-        // (Theme from American Gigolo)") used to cost the release the whole match and the
-        // folder came back with no best match at all. The best-scoring release wins now,
-        // provided most of the folder actually backs it.
-        return highestScore * 2 > mediaFiles.Count ? bestRelease : null;
+        // Every track in the folder has to land on the release before it is called the
+        // match. A partial match is a guess, and this answer names folders on disk — an
+        // album the user never confirmed must never be the one that renames their files.
+        // Releases below the bar still come back as candidates to choose from; they just
+        // do not get to claim they are the album.
+        return highestScore == mediaFiles.Count ? bestRelease : null;
     }
 
     private static async Task<int> CalculateMatchScoreAsync(
