@@ -167,25 +167,25 @@ public static class NmSurfaceKind
 public record NmSpacing
 {
     [JsonProperty("all")]
-    public NmSpace All { get; set; }
+    public string? All { get; set; }
 
     [JsonProperty("x")]
-    public NmSpace X { get; set; }
+    public string? X { get; set; }
 
     [JsonProperty("y")]
-    public NmSpace Y { get; set; }
+    public string? Y { get; set; }
 
     [JsonProperty("top")]
-    public NmSpace Top { get; set; }
+    public string? Top { get; set; }
 
     [JsonProperty("right")]
-    public NmSpace Right { get; set; }
+    public string? Right { get; set; }
 
     [JsonProperty("bottom")]
-    public NmSpace Bottom { get; set; }
+    public string? Bottom { get; set; }
 
     [JsonProperty("left")]
-    public NmSpace Left { get; set; }
+    public string? Left { get; set; }
 
 }
 
@@ -196,13 +196,13 @@ public record NmSpacing
 public record NmGap
 {
     [JsonProperty("all")]
-    public NmSpace All { get; set; }
+    public string? All { get; set; }
 
     [JsonProperty("x")]
-    public NmSpace X { get; set; }
+    public string? X { get; set; }
 
     [JsonProperty("y")]
-    public NmSpace Y { get; set; }
+    public string? Y { get; set; }
 
 }
 
@@ -223,25 +223,25 @@ public record NmGap
 public record NmBox
 {
     [JsonProperty("margin")]
-    public NmSpacing Margin { get; set; }
+    public NmSpacing? Margin { get; set; }
 
     [JsonProperty("width")]
-    public NmSize Width { get; set; }
+    public string? Width { get; set; }
 
     [JsonProperty("height")]
-    public NmSize Height { get; set; }
+    public string? Height { get; set; }
 
     [JsonProperty("min_width")]
-    public NmSize MinWidth { get; set; }
+    public string? MinWidth { get; set; }
 
     [JsonProperty("max_width")]
-    public NmSize MaxWidth { get; set; }
+    public string? MaxWidth { get; set; }
 
     [JsonProperty("min_height")]
-    public NmSize MinHeight { get; set; }
+    public string? MinHeight { get; set; }
 
     [JsonProperty("max_height")]
-    public NmSize MaxHeight { get; set; }
+    public string? MaxHeight { get; set; }
 
     /// <summary>
     /// How much of the leftover space along the parent's axis this takes.
@@ -256,10 +256,10 @@ public record NmBox
     public int? Shrink { get; set; }
 
     [JsonProperty("basis")]
-    public NmSize Basis { get; set; }
+    public string? Basis { get; set; }
 
     [JsonProperty("align_self")]
-    public NmAlign AlignSelf { get; set; }
+    public string? AlignSelf { get; set; }
 
     /// <summary>
     /// Visual position among siblings, independent of payload order.
@@ -280,13 +280,13 @@ public record NmBox
     public int? RowSpan { get; set; }
 
     [JsonProperty("position")]
-    public NmPosition Position { get; set; }
+    public string? Position { get; set; }
 
     [JsonProperty("inset")]
-    public NmSpacing Inset { get; set; }
+    public NmSpacing? Inset { get; set; }
 
     [JsonProperty("layer")]
-    public NmLayer Layer { get; set; }
+    public string? Layer { get; set; }
 
     /// <summary>
     /// Surfaces this component is not rendered on at all. A component hidden on
@@ -294,25 +294,25 @@ public record NmBox
     /// merely invisible, and is what D-pad traversal needs.
     /// </summary>
     [JsonProperty("hidden_on")]
-    public List<NmSurfaceKind> HiddenOn { get; set; } = [];
+    public List<string> HiddenOn { get; set; } = [];
 
     [JsonProperty("padding")]
-    public NmSpacing Padding { get; set; }
+    public NmSpacing? Padding { get; set; }
 
     [JsonProperty("gap")]
-    public NmGap Gap { get; set; }
+    public NmGap? Gap { get; set; }
 
     [JsonProperty("direction")]
-    public NmDirection Direction { get; set; }
+    public string? Direction { get; set; }
 
     [JsonProperty("align")]
-    public NmAlign Align { get; set; }
+    public string? Align { get; set; }
 
     [JsonProperty("justify")]
-    public NmJustify Justify { get; set; }
+    public string? Justify { get; set; }
 
     [JsonProperty("wrap")]
-    public NmWrap Wrap { get; set; }
+    public string? Wrap { get; set; }
 
     /// <summary>
     /// Fixed column count when this component lays its children out as a grid.
@@ -321,7 +321,7 @@ public record NmBox
     public int? Columns { get; set; }
 
     [JsonProperty("overflow")]
-    public NmOverflow Overflow { get; set; }
+    public string? Overflow { get; set; }
 
 }
 
@@ -335,13 +335,13 @@ public record NmBox
 public record NmSurface
 {
     [JsonProperty("background")]
-    public NmColor Background { get; set; }
+    public string? Background { get; set; }
 
     [JsonProperty("foreground")]
-    public NmColor Foreground { get; set; }
+    public string? Foreground { get; set; }
 
     [JsonProperty("border_color")]
-    public NmColor BorderColor { get; set; }
+    public string? BorderColor { get; set; }
 
     [JsonProperty("border_width")]
     public string? BorderWidth { get; set; }
@@ -448,7 +448,7 @@ public record NmContextMenuItem
     public bool? Destructive { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
 }
 
@@ -479,7 +479,7 @@ public record NmComponent
     public Dictionary<string, object>? Props { get; set; }
 
     [JsonProperty("update")]
-    public NmUpdate Update { get; set; }
+    public NmUpdate? Update { get; set; }
 
 }
 
@@ -501,16 +501,28 @@ public record NmComponentBase
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    /// <summary>
+    /// The palette family this component draws its accent from, such as
+    /// `violet` or `red`. Any family the design system ships is accepted, not
+    /// only the handful a given component enumerates: those are the designer's
+    /// recommendation rather than the limit. Absent, the component follows the
+    /// accent the app is set to, which is the behaviour a payload should want
+    /// almost always. Naming one here is for the case where a single component
+    /// has to stand apart from the rest of the interface.
+    /// </summary>
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     /// <summary>
     /// A stable handle for tests. The box suites read the rendered geometry

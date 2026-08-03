@@ -81,7 +81,7 @@ public static class NmComponents
 }
 
 /// <summary>
-/// Avatar. Four types: image, icon, single initial, or initials
+/// Avatar.
 /// </summary>
 public record NMAvatarProps
 {
@@ -92,16 +92,19 @@ public record NMAvatarProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -132,12 +135,6 @@ public record NMAvatarProps
     /// </summary>
     [JsonProperty("ariaLabel")]
     public string? AriaLabel { get; set; }
-
-    /// <summary>
-    /// Background color
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
 
     /// <summary>
     /// The size of the avatar
@@ -172,7 +169,7 @@ public record NMAvatarProps
 }
 
 /// <summary>
-/// Badge. Three variants: ghost, solid, and outline
+/// Badge.
 /// </summary>
 public record NMBadgeProps
 {
@@ -183,16 +180,19 @@ public record NMBadgeProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -211,12 +211,6 @@ public record NMBadgeProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Badge color
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
 
     /// <summary>
     /// Show status dot indicator
@@ -251,8 +245,7 @@ public record NMBadgeProps
 }
 
 /// <summary>
-/// Divider. Two orientations: horizontal (default) and vertical via
-/// mom-divider--vertical on hr
+/// Divider.
 /// </summary>
 public record NMDividerProps
 {
@@ -263,16 +256,19 @@ public record NMDividerProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -291,48 +287,6 @@ public record NMDividerProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Badge color
-    /// </summary>
-    [JsonProperty("badgeColor")]
-    public object? BadgeColor { get; set; }
-
-    /// <summary>
-    /// Badge size
-    /// </summary>
-    [JsonProperty("badgeSize")]
-    public string? BadgeSize { get; set; }
-
-    /// <summary>
-    /// Badge variant
-    /// </summary>
-    [JsonProperty("badgeVariant")]
-    public string? BadgeVariant { get; set; }
-
-    /// <summary>
-    /// Button size
-    /// </summary>
-    [JsonProperty("btnSize")]
-    public string? BtnSize { get; set; }
-
-    /// <summary>
-    /// Button state
-    /// </summary>
-    [JsonProperty("btnState")]
-    public string? BtnState { get; set; }
-
-    /// <summary>
-    /// Button variant
-    /// </summary>
-    [JsonProperty("btnVariant")]
-    public string? BtnVariant { get; set; }
-
-    /// <summary>
-    /// Type of content
-    /// </summary>
-    [JsonProperty("content")]
-    public string? Content { get; set; }
 
     /// <summary>
     /// Text label content
@@ -355,7 +309,7 @@ public record NMDividerProps
 }
 
 /// <summary>
-/// Label. Form field labels with required or optional markers
+/// Label.
 /// </summary>
 public record NMFormLabelProps
 {
@@ -366,16 +320,19 @@ public record NMFormLabelProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -434,7 +391,7 @@ public record NMFormLabelProps
 }
 
 /// <summary>
-/// Helper. Helper text for form fields, labels, cards, or sections
+/// Helper.
 /// </summary>
 public record NMHelperProps
 {
@@ -445,16 +402,19 @@ public record NMHelperProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -501,8 +461,7 @@ public record NMHelperProps
 }
 
 /// <summary>
-/// Image. Multiple aspect ratios: auto, square, video (16:9), portrait
-/// (3:4), landscape
+/// Image.
 /// </summary>
 public record NMImageProps
 {
@@ -513,16 +472,19 @@ public record NMImageProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -604,16 +566,19 @@ public record NMLinkProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -632,12 +597,6 @@ public record NMLinkProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Link color
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
 
     /// <summary>
     /// Disable link interaction
@@ -684,7 +643,7 @@ public record NMLinkProps
 }
 
 /// <summary>
-/// Progress. Three sizes: sm (4px), md (8px), and lg (12px) track height
+/// Progress.
 /// </summary>
 public record NMProgressProps
 {
@@ -695,16 +654,19 @@ public record NMProgressProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -731,12 +693,6 @@ public record NMProgressProps
     public string? AriaLabel { get; set; }
 
     /// <summary>
-    /// Fill color
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
-
-    /// <summary>
     /// Label position
     /// </summary>
     [JsonProperty("labelPos")]
@@ -757,8 +713,7 @@ public record NMProgressProps
 }
 
 /// <summary>
-/// Skeleton. Three variants: text, circle, and rectangle for different
-/// content types
+/// Skeleton.
 /// </summary>
 public record NMSkeletonProps
 {
@@ -769,16 +724,19 @@ public record NMSkeletonProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -807,7 +765,7 @@ public record NMSkeletonProps
 }
 
 /// <summary>
-/// Spinner. Four sizes: sm, md, lg, and xl for flexible layout scaling
+/// Spinner.
 /// </summary>
 public record NMSpinnerProps
 {
@@ -818,16 +776,19 @@ public record NMSpinnerProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -854,12 +815,6 @@ public record NMSpinnerProps
     public string? AriaLabel { get; set; }
 
     /// <summary>
-    /// Spinner color
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
-
-    /// <summary>
     /// Spinner size
     /// </summary>
     [JsonProperty("size")]
@@ -868,7 +823,7 @@ public record NMSpinnerProps
 }
 
 /// <summary>
-/// Tag. Three sizes: sm, md, and lg (Figma-aligned)
+/// Tag.
 /// </summary>
 public record NMTagProps
 {
@@ -879,16 +834,19 @@ public record NMTagProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -959,8 +917,7 @@ public record NMTagProps
 }
 
 /// <summary>
-/// Button. Multiple variants: primary, secondary, tertiary, link, and
-/// destructive
+/// Button.
 /// </summary>
 public record NMButtonProps
 {
@@ -971,16 +928,19 @@ public record NMButtonProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1039,7 +999,7 @@ public record NMButtonProps
 }
 
 /// <summary>
-/// Checkbox. Three sizes: sm (14px), md (16px), lg (20px)
+/// Checkbox.
 /// </summary>
 public record NMCheckboxProps
 {
@@ -1050,16 +1010,19 @@ public record NMCheckboxProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1092,12 +1055,6 @@ public record NMCheckboxProps
     public string? Checked { get; set; }
 
     /// <summary>
-    /// State
-    /// </summary>
-    [JsonProperty("checkState")]
-    public string? CheckState { get; set; }
-
-    /// <summary>
     /// Whether the checkbox is disabled
     /// </summary>
     [JsonProperty("disabled")]
@@ -1124,7 +1081,7 @@ public record NMCheckboxProps
 }
 
 /// <summary>
-/// Input. Three sizes: sm (32px), md (40px), lg (48px)
+/// Input.
 /// </summary>
 public record NMInputProps
 {
@@ -1135,16 +1092,19 @@ public record NMInputProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1165,30 +1125,6 @@ public record NMInputProps
     public Dictionary<string, object>? Properties { get; set; }
 
     /// <summary>
-    /// Show left action button
-    /// </summary>
-    [JsonProperty("actionLeft")]
-    public bool? ActionLeft { get; set; }
-
-    /// <summary>
-    /// Show right action button
-    /// </summary>
-    [JsonProperty("actionRight")]
-    public bool? ActionRight { get; set; }
-
-    /// <summary>
-    /// Addon left
-    /// </summary>
-    [JsonProperty("addonLeft")]
-    public bool? AddonLeft { get; set; }
-
-    /// <summary>
-    /// Addon right
-    /// </summary>
-    [JsonProperty("addonRight")]
-    public bool? AddonRight { get; set; }
-
-    /// <summary>
     /// Whether the input is disabled
     /// </summary>
     [JsonProperty("disabled")]
@@ -1199,102 +1135,6 @@ public record NMInputProps
     /// </summary>
     [JsonProperty("error")]
     public bool? Error { get; set; }
-
-    /// <summary>
-    /// Filled text
-    /// </summary>
-    [JsonProperty("filledText")]
-    public string? FilledText { get; set; }
-
-    /// <summary>
-    /// Helper icon
-    /// </summary>
-    [JsonProperty("helperIcon")]
-    public bool? HelperIcon { get; set; }
-
-    /// <summary>
-    /// Helper icon tooltip
-    /// </summary>
-    [JsonProperty("helperIconTooltip")]
-    public string? HelperIconTooltip { get; set; }
-
-    /// <summary>
-    /// Helper status
-    /// </summary>
-    [JsonProperty("helperStatus")]
-    public string? HelperStatus { get; set; }
-
-    /// <summary>
-    /// Helper text
-    /// </summary>
-    [JsonProperty("helperText")]
-    public string? HelperText { get; set; }
-
-    /// <summary>
-    /// Help icon
-    /// </summary>
-    [JsonProperty("helpIcon")]
-    public bool? HelpIcon { get; set; }
-
-    /// <summary>
-    /// Help icon tooltip
-    /// </summary>
-    [JsonProperty("helpIconTooltip")]
-    public string? HelpIconTooltip { get; set; }
-
-    /// <summary>
-    /// Leading icon HTML
-    /// </summary>
-    [JsonProperty("iconLeft")]
-    public bool? IconLeft { get; set; }
-
-    /// <summary>
-    /// Trailing icon HTML
-    /// </summary>
-    [JsonProperty("iconRight")]
-    public bool? IconRight { get; set; }
-
-    /// <summary>
-    /// Label disabled
-    /// </summary>
-    [JsonProperty("labelDisabled")]
-    public bool? LabelDisabled { get; set; }
-
-    /// <summary>
-    /// Label info icon
-    /// </summary>
-    [JsonProperty("labelInfoIcon")]
-    public bool? LabelInfoIcon { get; set; }
-
-    /// <summary>
-    /// Label info tooltip
-    /// </summary>
-    [JsonProperty("labelInfoTooltip")]
-    public string? LabelInfoTooltip { get; set; }
-
-    /// <summary>
-    /// Marker
-    /// </summary>
-    [JsonProperty("labelMarker")]
-    public string? LabelMarker { get; set; }
-
-    /// <summary>
-    /// Marker text
-    /// </summary>
-    [JsonProperty("labelMarkerText")]
-    public string? LabelMarkerText { get; set; }
-
-    /// <summary>
-    /// Label text
-    /// </summary>
-    [JsonProperty("labelText")]
-    public string? LabelText { get; set; }
-
-    /// <summary>
-    /// Prefix text (e.g., "$" for currency)
-    /// </summary>
-    [JsonProperty("leadingText")]
-    public string? LeadingText { get; set; }
 
     /// <summary>
     /// Leading text value
@@ -1309,18 +1149,6 @@ public record NMInputProps
     public string? Placeholder { get; set; }
 
     /// <summary>
-    /// Helper
-    /// </summary>
-    [JsonProperty("showHelper")]
-    public bool? ShowHelper { get; set; }
-
-    /// <summary>
-    /// Label
-    /// </summary>
-    [JsonProperty("showLabel")]
-    public bool? ShowLabel { get; set; }
-
-    /// <summary>
     /// The size of the input field
     /// </summary>
     [JsonProperty("size")]
@@ -1329,7 +1157,7 @@ public record NMInputProps
 }
 
 /// <summary>
-/// Radio. Two sizes: sm (16px), md (20px)
+/// Radio.
 /// </summary>
 public record NMRadioProps
 {
@@ -1340,16 +1168,19 @@ public record NMRadioProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1420,7 +1251,7 @@ public record NMRadioProps
 }
 
 /// <summary>
-/// Rating. Readonly mode for displaying existing scores
+/// Rating.
 /// </summary>
 public record NMRatingProps
 {
@@ -1431,16 +1262,19 @@ public record NMRatingProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1459,12 +1293,6 @@ public record NMRatingProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Star fill color
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
 
     /// <summary>
     /// Review count shown in parentheses next to label
@@ -1511,7 +1339,7 @@ public record NMRatingProps
 }
 
 /// <summary>
-/// Sliders &amp; Ranges. Three sizes: sm, md, and lg track height
+/// Sliders &amp; Ranges.
 /// </summary>
 public record NMSliderProps
 {
@@ -1522,16 +1350,19 @@ public record NMSliderProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1596,7 +1427,7 @@ public record NMSliderProps
 }
 
 /// <summary>
-/// Textarea. Three sizes: sm, md, lg
+/// Textarea.
 /// </summary>
 public record NMTextareaProps
 {
@@ -1607,16 +1438,19 @@ public record NMTextareaProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1649,72 +1483,6 @@ public record NMTextareaProps
     public bool? Error { get; set; }
 
     /// <summary>
-    /// Filled text
-    /// </summary>
-    [JsonProperty("filledText")]
-    public string? FilledText { get; set; }
-
-    /// <summary>
-    /// Helper icon
-    /// </summary>
-    [JsonProperty("helperIcon")]
-    public bool? HelperIcon { get; set; }
-
-    /// <summary>
-    /// Helper icon tooltip
-    /// </summary>
-    [JsonProperty("helperIconTooltip")]
-    public string? HelperIconTooltip { get; set; }
-
-    /// <summary>
-    /// Helper status
-    /// </summary>
-    [JsonProperty("helperStatus")]
-    public string? HelperStatus { get; set; }
-
-    /// <summary>
-    /// Helper text
-    /// </summary>
-    [JsonProperty("helperText")]
-    public string? HelperText { get; set; }
-
-    /// <summary>
-    /// Label disabled
-    /// </summary>
-    [JsonProperty("labelDisabled")]
-    public bool? LabelDisabled { get; set; }
-
-    /// <summary>
-    /// Label info icon
-    /// </summary>
-    [JsonProperty("labelInfoIcon")]
-    public bool? LabelInfoIcon { get; set; }
-
-    /// <summary>
-    /// Label info tooltip
-    /// </summary>
-    [JsonProperty("labelInfoTooltip")]
-    public string? LabelInfoTooltip { get; set; }
-
-    /// <summary>
-    /// Marker
-    /// </summary>
-    [JsonProperty("labelMarker")]
-    public string? LabelMarker { get; set; }
-
-    /// <summary>
-    /// Marker text
-    /// </summary>
-    [JsonProperty("labelMarkerText")]
-    public string? LabelMarkerText { get; set; }
-
-    /// <summary>
-    /// Label text
-    /// </summary>
-    [JsonProperty("labelText")]
-    public string? LabelText { get; set; }
-
-    /// <summary>
     /// Maximum character limit
     /// </summary>
     [JsonProperty("maxChars")]
@@ -1739,18 +1507,6 @@ public record NMTextareaProps
     public bool? ShowCounter { get; set; }
 
     /// <summary>
-    /// Helper
-    /// </summary>
-    [JsonProperty("showHelper")]
-    public bool? ShowHelper { get; set; }
-
-    /// <summary>
-    /// Label
-    /// </summary>
-    [JsonProperty("showLabel")]
-    public bool? ShowLabel { get; set; }
-
-    /// <summary>
     /// The size of the textarea
     /// </summary>
     [JsonProperty("size")]
@@ -1759,7 +1515,7 @@ public record NMTextareaProps
 }
 
 /// <summary>
-/// Switch. Two sizes: sm (36×20px), md (44×24px)
+/// Switch.
 /// </summary>
 public record NMToggleProps
 {
@@ -1770,16 +1526,19 @@ public record NMToggleProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1838,7 +1597,7 @@ public record NMToggleProps
 }
 
 /// <summary>
-/// Badge Group. Grouped badge with shared container and descriptive text
+/// Badge Group.
 /// </summary>
 public record NMBadgeGroupProps
 {
@@ -1849,16 +1608,19 @@ public record NMBadgeGroupProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1885,24 +1647,6 @@ public record NMBadgeGroupProps
     public string? BadgePos { get; set; }
 
     /// <summary>
-    /// Badge text content
-    /// </summary>
-    [JsonProperty("badgeText")]
-    public string? BadgeText { get; set; }
-
-    /// <summary>
-    /// Badge color from Radix palette
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
-
-    /// <summary>
-    /// Descriptive text content
-    /// </summary>
-    [JsonProperty("groupText")]
-    public string? GroupText { get; set; }
-
-    /// <summary>
     /// Badge group size
     /// </summary>
     [JsonProperty("size")]
@@ -1917,7 +1661,7 @@ public record NMBadgeGroupProps
 }
 
 /// <summary>
-/// Breadcrumb. Three separator styles: slash (/), chevron (›), and dot (·)
+/// Breadcrumb.
 /// </summary>
 public record NMBreadcrumbProps
 {
@@ -1928,16 +1672,19 @@ public record NMBreadcrumbProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -1956,18 +1703,6 @@ public record NMBreadcrumbProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Number of items to display
-    /// </summary>
-    [JsonProperty("itemCount")]
-    public string? ItemCount { get; set; }
-
-    /// <summary>
-    /// Array of breadcrumb labels
-    /// </summary>
-    [JsonProperty("labels")]
-    public object? Labels { get; set; }
 
     /// <summary>
     /// Separator style
@@ -1978,7 +1713,7 @@ public record NMBreadcrumbProps
 }
 
 /// <summary>
-/// Button Group. Horizontally grouped buttons with shared borders
+/// Button Group.
 /// </summary>
 public record NMButtonGroupProps
 {
@@ -1989,16 +1724,19 @@ public record NMButtonGroupProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2018,29 +1756,10 @@ public record NMButtonGroupProps
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
 
-    /// <summary>
-    /// Number of buttons in the group
-    /// </summary>
-    [JsonProperty("count")]
-    public int? Count { get; set; }
-
-    /// <summary>
-    /// Icon Position
-    /// </summary>
-    [JsonProperty("iconPosition")]
-    public string? IconPosition { get; set; }
-
-    /// <summary>
-    /// Mode
-    /// </summary>
-    [JsonProperty("mode")]
-    public string? Mode { get; set; }
-
 }
 
 /// <summary>
-/// Checkbox Group. Composes mom-field-label for group label (with
-/// required/optional/info markers)
+/// Checkbox Group.
 /// </summary>
 public record NMCheckboxGroupProps
 {
@@ -2051,16 +1770,19 @@ public record NMCheckboxGroupProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2093,70 +1815,10 @@ public record NMCheckboxGroupProps
     public bool? GroupError { get; set; }
 
     /// <summary>
-    /// Helper icon
-    /// </summary>
-    [JsonProperty("helperIcon")]
-    public bool? HelperIcon { get; set; }
-
-    /// <summary>
-    /// Icon tooltip
-    /// </summary>
-    [JsonProperty("helperIconTooltip")]
-    public string? HelperIconTooltip { get; set; }
-
-    /// <summary>
-    /// Helper text (via mom-field-helper)
-    /// </summary>
-    [JsonProperty("helperText")]
-    public string? HelperText { get; set; }
-
-    /// <summary>
-    /// Label info icon
-    /// </summary>
-    [JsonProperty("labelInfoIcon")]
-    public bool? LabelInfoIcon { get; set; }
-
-    /// <summary>
-    /// Info tooltip
-    /// </summary>
-    [JsonProperty("labelInfoTooltip")]
-    public string? LabelInfoTooltip { get; set; }
-
-    /// <summary>
-    /// Marker
-    /// </summary>
-    [JsonProperty("labelMarker")]
-    public string? LabelMarker { get; set; }
-
-    /// <summary>
-    /// Marker text
-    /// </summary>
-    [JsonProperty("labelMarkerText")]
-    public string? LabelMarkerText { get; set; }
-
-    /// <summary>
-    /// Label text (via mom-field-label)
-    /// </summary>
-    [JsonProperty("labelText")]
-    public string? LabelText { get; set; }
-
-    /// <summary>
     /// Layout direction
     /// </summary>
     [JsonProperty("layout")]
     public string? Layout { get; set; }
-
-    /// <summary>
-    /// Show helper
-    /// </summary>
-    [JsonProperty("showHelper")]
-    public bool? ShowHelper { get; set; }
-
-    /// <summary>
-    /// Show label
-    /// </summary>
-    [JsonProperty("showLabel")]
-    public bool? ShowLabel { get; set; }
 
     /// <summary>
     /// Checkbox group size
@@ -2167,7 +1829,7 @@ public record NMCheckboxGroupProps
 }
 
 /// <summary>
-/// Pagination. Three sizes: sm, md, and lg for different layout densities
+/// Pagination.
 /// </summary>
 public record NMPaginationProps
 {
@@ -2178,16 +1840,19 @@ public record NMPaginationProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2228,8 +1893,7 @@ public record NMPaginationProps
 }
 
 /// <summary>
-/// Radio Group. Composes mom-field-label for group label (with
-/// required/optional/info markers)
+/// Radio Group.
 /// </summary>
 public record NMRadioGroupProps
 {
@@ -2240,16 +1904,19 @@ public record NMRadioGroupProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2282,70 +1949,10 @@ public record NMRadioGroupProps
     public bool? GroupError { get; set; }
 
     /// <summary>
-    /// Helper icon
-    /// </summary>
-    [JsonProperty("helperIcon")]
-    public bool? HelperIcon { get; set; }
-
-    /// <summary>
-    /// Icon tooltip
-    /// </summary>
-    [JsonProperty("helperIconTooltip")]
-    public string? HelperIconTooltip { get; set; }
-
-    /// <summary>
-    /// Helper text (via mom-field-helper)
-    /// </summary>
-    [JsonProperty("helperText")]
-    public string? HelperText { get; set; }
-
-    /// <summary>
-    /// Label info icon
-    /// </summary>
-    [JsonProperty("labelInfoIcon")]
-    public bool? LabelInfoIcon { get; set; }
-
-    /// <summary>
-    /// Info tooltip
-    /// </summary>
-    [JsonProperty("labelInfoTooltip")]
-    public string? LabelInfoTooltip { get; set; }
-
-    /// <summary>
-    /// Marker
-    /// </summary>
-    [JsonProperty("labelMarker")]
-    public string? LabelMarker { get; set; }
-
-    /// <summary>
-    /// Marker text
-    /// </summary>
-    [JsonProperty("labelMarkerText")]
-    public string? LabelMarkerText { get; set; }
-
-    /// <summary>
-    /// Label text (via mom-field-label)
-    /// </summary>
-    [JsonProperty("labelText")]
-    public string? LabelText { get; set; }
-
-    /// <summary>
     /// Layout direction
     /// </summary>
     [JsonProperty("layout")]
     public string? Layout { get; set; }
-
-    /// <summary>
-    /// Show helper
-    /// </summary>
-    [JsonProperty("showHelper")]
-    public bool? ShowHelper { get; set; }
-
-    /// <summary>
-    /// Show label
-    /// </summary>
-    [JsonProperty("showLabel")]
-    public bool? ShowLabel { get; set; }
 
     /// <summary>
     /// Radio group size
@@ -2356,7 +1963,7 @@ public record NMRadioGroupProps
 }
 
 /// <summary>
-/// Segmented. Three sizes: sm, md, lg
+/// Segmented.
 /// </summary>
 public record NMSegmentedProps
 {
@@ -2367,16 +1974,19 @@ public record NMSegmentedProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2409,12 +2019,6 @@ public record NMSegmentedProps
     public bool? FullWidth { get; set; }
 
     /// <summary>
-    /// Number of segments (2, 3, or 4)
-    /// </summary>
-    [JsonProperty("options")]
-    public string? Options { get; set; }
-
-    /// <summary>
     /// Segmented control size
     /// </summary>
     [JsonProperty("size")]
@@ -2429,7 +2033,7 @@ public record NMSegmentedProps
 }
 
 /// <summary>
-/// Step Indicator. Three variants: dots, bars, and numbers
+/// Step Indicator.
 /// </summary>
 public record NMStepIndicatorProps
 {
@@ -2440,16 +2044,19 @@ public record NMStepIndicatorProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2476,12 +2083,6 @@ public record NMStepIndicatorProps
     public string? ActiveIndex { get; set; }
 
     /// <summary>
-    /// Active and completed colour
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
-
-    /// <summary>
     /// Indicator size
     /// </summary>
     [JsonProperty("size")]
@@ -2502,7 +2103,7 @@ public record NMStepIndicatorProps
 }
 
 /// <summary>
-/// Toggles. Checkbox, Radio, and Switch with shared layout structure
+/// Toggles.
 /// </summary>
 public record NMTogglesProps
 {
@@ -2513,16 +2114,19 @@ public record NMTogglesProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2549,24 +2153,6 @@ public record NMTogglesProps
     public bool? Disabled { get; set; }
 
     /// <summary>
-    /// Helper text
-    /// </summary>
-    [JsonProperty("helperText")]
-    public string? HelperText { get; set; }
-
-    /// <summary>
-    /// Label text
-    /// </summary>
-    [JsonProperty("labelText")]
-    public string? LabelText { get; set; }
-
-    /// <summary>
-    /// Helper text
-    /// </summary>
-    [JsonProperty("showHelper")]
-    public bool? ShowHelper { get; set; }
-
-    /// <summary>
     /// Toggle size
     /// </summary>
     [JsonProperty("size")]
@@ -2587,7 +2173,7 @@ public record NMTogglesProps
 }
 
 /// <summary>
-/// Notification. Four severity variants: info, success, warning, error
+/// Notification.
 /// </summary>
 public record NMAlertProps
 {
@@ -2598,16 +2184,19 @@ public record NMAlertProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2628,22 +2217,10 @@ public record NMAlertProps
     public Dictionary<string, object>? Properties { get; set; }
 
     /// <summary>
-    /// Alert body text (full size only)
-    /// </summary>
-    [JsonProperty("bodyText")]
-    public string? BodyText { get; set; }
-
-    /// <summary>
     /// Show close button
     /// </summary>
     [JsonProperty("closable")]
     public bool? Closable { get; set; }
-
-    /// <summary>
-    /// Accent color (when style="accent")
-    /// </summary>
-    [JsonProperty("color")]
-    public string? Color { get; set; }
 
     /// <summary>
     /// Enable glow effect (accent style only)
@@ -2658,30 +2235,6 @@ public record NMAlertProps
     public string? Severity { get; set; }
 
     /// <summary>
-    /// Actions
-    /// </summary>
-    [JsonProperty("showActions")]
-    public bool? ShowActions { get; set; }
-
-    /// <summary>
-    /// Body text
-    /// </summary>
-    [JsonProperty("showBody")]
-    public bool? ShowBody { get; set; }
-
-    /// <summary>
-    /// Show leading icon
-    /// </summary>
-    [JsonProperty("showIcon")]
-    public bool? ShowIcon { get; set; }
-
-    /// <summary>
-    /// Timestamp
-    /// </summary>
-    [JsonProperty("showTime")]
-    public bool? ShowTime { get; set; }
-
-    /// <summary>
     /// Alert size
     /// </summary>
     [JsonProperty("size")]
@@ -2693,23 +2246,10 @@ public record NMAlertProps
     [JsonProperty("style")]
     public string? Style { get; set; }
 
-    /// <summary>
-    /// Timestamp
-    /// </summary>
-    [JsonProperty("timeText")]
-    public string? TimeText { get; set; }
-
-    /// <summary>
-    /// Alert title
-    /// </summary>
-    [JsonProperty("titleText")]
-    public string? TitleText { get; set; }
-
 }
 
 /// <summary>
-/// Card. Three variants: default, elevated (with shadow), and ghost
-/// (minimal border)
+/// Card.
 /// </summary>
 public record NMCardProps
 {
@@ -2720,16 +2260,19 @@ public record NMCardProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2750,112 +2293,16 @@ public record NMCardProps
     public Dictionary<string, object>? Properties { get; set; }
 
     /// <summary>
-    /// Header close button
-    /// </summary>
-    [JsonProperty("canClose")]
-    public bool? CanClose { get; set; }
-
-    /// <summary>
-    /// Destructive text
-    /// </summary>
-    [JsonProperty("destructiveText")]
-    public string? DestructiveText { get; set; }
-
-    /// <summary>
-    /// Use ContentFooter
-    /// </summary>
-    [JsonProperty("enhancedFooter")]
-    public bool? EnhancedFooter { get; set; }
-
-    /// <summary>
-    /// Use ContentHeader
-    /// </summary>
-    [JsonProperty("enhancedHeader")]
-    public bool? EnhancedHeader { get; set; }
-
-    /// <summary>
     /// Footer variant
     /// </summary>
     [JsonProperty("footerVariant")]
     public string? FooterVariant { get; set; }
 
     /// <summary>
-    /// Footer destructive
-    /// </summary>
-    [JsonProperty("hasDestructive")]
-    public bool? HasDestructive { get; set; }
-
-    /// <summary>
-    /// Footer helper
-    /// </summary>
-    [JsonProperty("hasHelper")]
-    public bool? HasHelper { get; set; }
-
-    /// <summary>
-    /// Header icon
-    /// </summary>
-    [JsonProperty("hasIcon")]
-    public bool? HasIcon { get; set; }
-
-    /// <summary>
-    /// Footer secondary
-    /// </summary>
-    [JsonProperty("hasSecondary")]
-    public bool? HasSecondary { get; set; }
-
-    /// <summary>
-    /// Header subtitle
-    /// </summary>
-    [JsonProperty("hasSubtitle")]
-    public bool? HasSubtitle { get; set; }
-
-    /// <summary>
-    /// Subtitle text
-    /// </summary>
-    [JsonProperty("headerSubtitle")]
-    public string? HeaderSubtitle { get; set; }
-
-    /// <summary>
-    /// Header title text
-    /// </summary>
-    [JsonProperty("headerTitle")]
-    public string? HeaderTitle { get; set; }
-
-    /// <summary>
-    /// Helper text
-    /// </summary>
-    [JsonProperty("helperText")]
-    public string? HelperText { get; set; }
-
-    /// <summary>
     /// Internal padding size
     /// </summary>
     [JsonProperty("padding")]
     public string? Padding { get; set; }
-
-    /// <summary>
-    /// Primary text
-    /// </summary>
-    [JsonProperty("primaryText")]
-    public string? PrimaryText { get; set; }
-
-    /// <summary>
-    /// Secondary text
-    /// </summary>
-    [JsonProperty("secondaryText")]
-    public string? SecondaryText { get; set; }
-
-    /// <summary>
-    /// Show footer section
-    /// </summary>
-    [JsonProperty("showFooter")]
-    public bool? ShowFooter { get; set; }
-
-    /// <summary>
-    /// Show header section
-    /// </summary>
-    [JsonProperty("showHeader")]
-    public bool? ShowHeader { get; set; }
 
     /// <summary>
     /// Card visual style
@@ -2866,7 +2313,7 @@ public record NMCardProps
 }
 
 /// <summary>
-/// Chat. Three message variants: sent, received, and system
+/// Chat.
 /// </summary>
 public record NMChatProps
 {
@@ -2877,16 +2324,19 @@ public record NMChatProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2906,34 +2356,10 @@ public record NMChatProps
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
 
-    /// <summary>
-    /// Messages
-    /// </summary>
-    [JsonProperty("messageCount")]
-    public string? MessageCount { get; set; }
-
-    /// <summary>
-    /// Show avatar circles next to messages
-    /// </summary>
-    [JsonProperty("showAvatars")]
-    public bool? ShowAvatars { get; set; }
-
-    /// <summary>
-    /// Show the composer area
-    /// </summary>
-    [JsonProperty("showInput")]
-    public bool? ShowInput { get; set; }
-
-    /// <summary>
-    /// Show timestamps inside bubbles
-    /// </summary>
-    [JsonProperty("showTimestamps")]
-    public bool? ShowTimestamps { get; set; }
-
 }
 
 /// <summary>
-/// ContentFooter. Modal and card footer with action buttons
+/// ContentFooter.
 /// </summary>
 public record NMContentFooterProps
 {
@@ -2944,16 +2370,19 @@ public record NMContentFooterProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -2974,48 +2403,6 @@ public record NMContentFooterProps
     public Dictionary<string, object>? Properties { get; set; }
 
     /// <summary>
-    /// Destructive button text
-    /// </summary>
-    [JsonProperty("destructiveText")]
-    public string? DestructiveText { get; set; }
-
-    /// <summary>
-    /// Show destructive button
-    /// </summary>
-    [JsonProperty("hasDestructive")]
-    public bool? HasDestructive { get; set; }
-
-    /// <summary>
-    /// Has helper
-    /// </summary>
-    [JsonProperty("hasHelper")]
-    public bool? HasHelper { get; set; }
-
-    /// <summary>
-    /// Show secondary button
-    /// </summary>
-    [JsonProperty("hasSecondary")]
-    public bool? HasSecondary { get; set; }
-
-    /// <summary>
-    /// Helper text
-    /// </summary>
-    [JsonProperty("helperText")]
-    public string? HelperText { get; set; }
-
-    /// <summary>
-    /// Primary button text
-    /// </summary>
-    [JsonProperty("primaryText")]
-    public string? PrimaryText { get; set; }
-
-    /// <summary>
-    /// Secondary button text
-    /// </summary>
-    [JsonProperty("secondaryText")]
-    public string? SecondaryText { get; set; }
-
-    /// <summary>
     /// Footer variant
     /// </summary>
     [JsonProperty("variant")]
@@ -3024,7 +2411,7 @@ public record NMContentFooterProps
 }
 
 /// <summary>
-/// ContentHeader. Title and optional subtitle for modal or card headers
+/// ContentHeader.
 /// </summary>
 public record NMContentHeaderProps
 {
@@ -3035,16 +2422,19 @@ public record NMContentHeaderProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3071,30 +2461,6 @@ public record NMContentHeaderProps
     public bool? CanClose { get; set; }
 
     /// <summary>
-    /// Show decorative icon
-    /// </summary>
-    [JsonProperty("hasIcon")]
-    public bool? HasIcon { get; set; }
-
-    /// <summary>
-    /// Show subtitle
-    /// </summary>
-    [JsonProperty("hasSubtitle")]
-    public bool? HasSubtitle { get; set; }
-
-    /// <summary>
-    /// Header subtitle
-    /// </summary>
-    [JsonProperty("subtitle")]
-    public string? Subtitle { get; set; }
-
-    /// <summary>
-    /// Header title
-    /// </summary>
-    [JsonProperty("title")]
-    public string? Title { get; set; }
-
-    /// <summary>
     /// id put on the title, for a dialog to reference with aria-labelledby
     /// </summary>
     [JsonProperty("titleId")]
@@ -3103,8 +2469,7 @@ public record NMContentHeaderProps
 }
 
 /// <summary>
-/// Empty States. Three variants: default, compact, and card for different
-/// layout contexts
+/// Empty States.
 /// </summary>
 public record NMEmptyStateProps
 {
@@ -3115,16 +2480,19 @@ public record NMEmptyStateProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3143,30 +2511,6 @@ public record NMEmptyStateProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Description text
-    /// </summary>
-    [JsonProperty("descriptionText")]
-    public string? DescriptionText { get; set; }
-
-    /// <summary>
-    /// Decorative icon
-    /// </summary>
-    [JsonProperty("icon")]
-    public string? Icon { get; set; }
-
-    /// <summary>
-    /// Show action buttons
-    /// </summary>
-    [JsonProperty("showActions")]
-    public bool? ShowActions { get; set; }
-
-    /// <summary>
-    /// Title text
-    /// </summary>
-    [JsonProperty("titleText")]
-    public string? TitleText { get; set; }
 
     /// <summary>
     /// Empty state layout variant
@@ -3188,16 +2532,19 @@ public record NMListProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3250,8 +2597,7 @@ public record NMListProps
 }
 
 /// <summary>
-/// Metrics. Three variants: default, card (bordered container), and compact
-/// (dense layout)
+/// Metrics.
 /// </summary>
 public record NMMetricsProps
 {
@@ -3262,16 +2608,19 @@ public record NMMetricsProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3330,7 +2679,7 @@ public record NMMetricsProps
 }
 
 /// <summary>
-/// Table. Sortable columns with aria-sort and contextual sort buttons
+/// Table.
 /// </summary>
 public record NMTableProps
 {
@@ -3341,16 +2690,19 @@ public record NMTableProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3377,30 +2729,6 @@ public record NMTableProps
     public bool? Hover { get; set; }
 
     /// <summary>
-    /// Actions column
-    /// </summary>
-    [JsonProperty("showActions")]
-    public bool? ShowActions { get; set; }
-
-    /// <summary>
-    /// Avatar column
-    /// </summary>
-    [JsonProperty("showAvatar")]
-    public bool? ShowAvatar { get; set; }
-
-    /// <summary>
-    /// Checkbox column
-    /// </summary>
-    [JsonProperty("showCheckbox")]
-    public bool? ShowCheckbox { get; set; }
-
-    /// <summary>
-    /// Rating column
-    /// </summary>
-    [JsonProperty("showRating")]
-    public bool? ShowRating { get; set; }
-
-    /// <summary>
     /// Table size
     /// </summary>
     [JsonProperty("size")]
@@ -3421,7 +2749,7 @@ public record NMTableProps
 }
 
 /// <summary>
-/// Color Picker. Circular swatch trigger reflects the current colour
+/// Color Picker.
 /// </summary>
 public record NMColorPickerProps
 {
@@ -3432,16 +2760,19 @@ public record NMColorPickerProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3500,7 +2831,7 @@ public record NMColorPickerProps
 }
 
 /// <summary>
-/// Combobox. Type-to-filter — options narrow as the user types
+/// Combobox.
 /// </summary>
 public record NMComboboxProps
 {
@@ -3511,16 +2842,19 @@ public record NMComboboxProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3547,28 +2881,10 @@ public record NMComboboxProps
     public string? FilterText { get; set; }
 
     /// <summary>
-    /// Helper hint text below field
-    /// </summary>
-    [JsonProperty("hint")]
-    public string? Hint { get; set; }
-
-    /// <summary>
-    /// Visual state override
-    /// </summary>
-    [JsonProperty("inputState")]
-    public string? InputState { get; set; }
-
-    /// <summary>
     /// Show spinner instead of chevron
     /// </summary>
     [JsonProperty("isLoading")]
     public bool? IsLoading { get; set; }
-
-    /// <summary>
-    /// Field label text
-    /// </summary>
-    [JsonProperty("label")]
-    public string? Label { get; set; }
 
     /// <summary>
     /// Enable multi-select tag mode
@@ -3589,18 +2905,6 @@ public record NMComboboxProps
     public string? Selected { get; set; }
 
     /// <summary>
-    /// Currently selected options (multi-select mode)
-    /// </summary>
-    [JsonProperty("selectedItems")]
-    public object? SelectedItems { get; set; }
-
-    /// <summary>
-    /// Show the dropdown listbox
-    /// </summary>
-    [JsonProperty("showListbox")]
-    public bool? ShowListbox { get; set; }
-
-    /// <summary>
     /// Field and option item size
     /// </summary>
     [JsonProperty("size")]
@@ -3609,7 +2913,7 @@ public record NMComboboxProps
 }
 
 /// <summary>
-/// Ctrl + K. Keyboard-driven interface for quick command access (Ctrl+K)
+/// Ctrl + K.
 /// </summary>
 public record NMCommandPaletteProps
 {
@@ -3620,16 +2924,19 @@ public record NMCommandPaletteProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3655,29 +2962,10 @@ public record NMCommandPaletteProps
     [JsonProperty("searchText")]
     public string? SearchText { get; set; }
 
-    /// <summary>
-    /// Show grouped sections
-    /// </summary>
-    [JsonProperty("showGroups")]
-    public bool? ShowGroups { get; set; }
-
-    /// <summary>
-    /// Show item icons
-    /// </summary>
-    [JsonProperty("showIcons")]
-    public bool? ShowIcons { get; set; }
-
-    /// <summary>
-    /// Show keyboard shortcuts
-    /// </summary>
-    [JsonProperty("showShortcuts")]
-    public bool? ShowShortcuts { get; set; }
-
 }
 
 /// <summary>
-/// Date Picker. Four modes: single date, range selection, year-month
-/// picker, and dual calendar
+/// Date Picker.
 /// </summary>
 public record NMDatePickerProps
 {
@@ -3688,16 +2976,19 @@ public record NMDatePickerProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3732,7 +3023,7 @@ public record NMDatePickerProps
 }
 
 /// <summary>
-/// Drawer. Four positions: left, right, top, and bottom edge anchoring
+/// Drawer.
 /// </summary>
 public record NMDrawerProps
 {
@@ -3743,16 +3034,19 @@ public record NMDrawerProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3771,12 +3065,6 @@ public record NMDrawerProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Body content text
-    /// </summary>
-    [JsonProperty("bodyText")]
-    public string? BodyText { get; set; }
 
     /// <summary>
     /// Show backdrop overlay
@@ -3797,27 +3085,15 @@ public record NMDrawerProps
     public string? Position { get; set; }
 
     /// <summary>
-    /// Show footer with action buttons
-    /// </summary>
-    [JsonProperty("showFooter")]
-    public bool? ShowFooter { get; set; }
-
-    /// <summary>
     /// Drawer width (left/right) or height (top/bottom)
     /// </summary>
     [JsonProperty("size")]
     public string? Size { get; set; }
 
-    /// <summary>
-    /// Header title text
-    /// </summary>
-    [JsonProperty("title")]
-    public string? Title { get; set; }
-
 }
 
 /// <summary>
-/// Dropdown. Three sizes: sm, md, and lg for compact to spacious density
+/// Dropdown.
 /// </summary>
 public record NMDropdownProps
 {
@@ -3828,16 +3104,19 @@ public record NMDropdownProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3856,66 +3135,6 @@ public record NMDropdownProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Number of items to display
-    /// </summary>
-    [JsonProperty("itemCount")]
-    public int? ItemCount { get; set; }
-
-    /// <summary>
-    /// Show check marks for active items
-    /// </summary>
-    [JsonProperty("showCheck")]
-    public bool? ShowCheck { get; set; }
-
-    /// <summary>
-    /// Show item descriptions
-    /// </summary>
-    [JsonProperty("showDesc")]
-    public bool? ShowDesc { get; set; }
-
-    /// <summary>
-    /// Destructive item
-    /// </summary>
-    [JsonProperty("showDestructive")]
-    public bool? ShowDestructive { get; set; }
-
-    /// <summary>
-    /// Disabled item
-    /// </summary>
-    [JsonProperty("showDisabled")]
-    public bool? ShowDisabled { get; set; }
-
-    /// <summary>
-    /// Header
-    /// </summary>
-    [JsonProperty("showHeader")]
-    public bool? ShowHeader { get; set; }
-
-    /// <summary>
-    /// Show item icons
-    /// </summary>
-    [JsonProperty("showIcons")]
-    public bool? ShowIcons { get; set; }
-
-    /// <summary>
-    /// Section titles
-    /// </summary>
-    [JsonProperty("showSectionTitles")]
-    public bool? ShowSectionTitles { get; set; }
-
-    /// <summary>
-    /// Show separator between groups
-    /// </summary>
-    [JsonProperty("showSeparator")]
-    public bool? ShowSeparator { get; set; }
-
-    /// <summary>
-    /// Show keyboard shortcuts
-    /// </summary>
-    [JsonProperty("showShortcuts")]
-    public bool? ShowShortcuts { get; set; }
 
     /// <summary>
     /// Dropdown size
@@ -3926,7 +3145,7 @@ public record NMDropdownProps
 }
 
 /// <summary>
-/// Modal. Dialog overlay with backdrop for focus and context
+/// Modal.
 /// </summary>
 public record NMModalProps
 {
@@ -3937,16 +3156,19 @@ public record NMModalProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -3967,118 +3189,10 @@ public record NMModalProps
     public Dictionary<string, object>? Properties { get; set; }
 
     /// <summary>
-    /// Cover image URL
-    /// </summary>
-    [JsonProperty("coverImage")]
-    public string? CoverImage { get; set; }
-
-    /// <summary>
-    /// Body description text
-    /// </summary>
-    [JsonProperty("descriptionText")]
-    public string? DescriptionText { get; set; }
-
-    /// <summary>
-    /// Field 1 label
-    /// </summary>
-    [JsonProperty("field1Label")]
-    public string? Field1Label { get; set; }
-
-    /// <summary>
-    /// Field 1 placeholder
-    /// </summary>
-    [JsonProperty("field1Placeholder")]
-    public string? Field1Placeholder { get; set; }
-
-    /// <summary>
-    /// Field 2 label
-    /// </summary>
-    [JsonProperty("field2Label")]
-    public string? Field2Label { get; set; }
-
-    /// <summary>
-    /// Field 2 placeholder
-    /// </summary>
-    [JsonProperty("field2Placeholder")]
-    public string? Field2Placeholder { get; set; }
-
-    /// <summary>
     /// Footer variant
     /// </summary>
     [JsonProperty("footerVariant")]
     public string? FooterVariant { get; set; }
-
-    /// <summary>
-    /// Show cover image
-    /// </summary>
-    [JsonProperty("hasCover")]
-    public bool? HasCover { get; set; }
-
-    /// <summary>
-    /// Show description
-    /// </summary>
-    [JsonProperty("hasDescription")]
-    public bool? HasDescription { get; set; }
-
-    /// <summary>
-    /// Footer destructive
-    /// </summary>
-    [JsonProperty("hasDestructive")]
-    public bool? HasDestructive { get; set; }
-
-    /// <summary>
-    /// Show first field
-    /// </summary>
-    [JsonProperty("hasField1")]
-    public bool? HasField1 { get; set; }
-
-    /// <summary>
-    /// Show second field
-    /// </summary>
-    [JsonProperty("hasField2")]
-    public bool? HasField2 { get; set; }
-
-    /// <summary>
-    /// Footer helper
-    /// </summary>
-    [JsonProperty("hasHelper")]
-    public bool? HasHelper { get; set; }
-
-    /// <summary>
-    /// Header icon
-    /// </summary>
-    [JsonProperty("hasIcon")]
-    public bool? HasIcon { get; set; }
-
-    /// <summary>
-    /// Footer secondary
-    /// </summary>
-    [JsonProperty("hasSecondary")]
-    public bool? HasSecondary { get; set; }
-
-    /// <summary>
-    /// Header subtitle
-    /// </summary>
-    [JsonProperty("hasSubtitle")]
-    public bool? HasSubtitle { get; set; }
-
-    /// <summary>
-    /// Primary button text
-    /// </summary>
-    [JsonProperty("primaryText")]
-    public string? PrimaryText { get; set; }
-
-    /// <summary>
-    /// Show footer section
-    /// </summary>
-    [JsonProperty("showFooter")]
-    public bool? ShowFooter { get; set; }
-
-    /// <summary>
-    /// Show header section
-    /// </summary>
-    [JsonProperty("showHeader")]
-    public bool? ShowHeader { get; set; }
 
     /// <summary>
     /// Modal width
@@ -4086,23 +3200,10 @@ public record NMModalProps
     [JsonProperty("size")]
     public string? Size { get; set; }
 
-    /// <summary>
-    /// Optional subtitle
-    /// </summary>
-    [JsonProperty("subtitle")]
-    public string? Subtitle { get; set; }
-
-    /// <summary>
-    /// Modal title
-    /// </summary>
-    [JsonProperty("title")]
-    public string? Title { get; set; }
-
 }
 
 /// <summary>
-/// Popover. Four positions: top, right, bottom, and left for flexible
-/// placement
+/// Popover.
 /// </summary>
 public record NMPopoverProps
 {
@@ -4113,16 +3214,19 @@ public record NMPopoverProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4141,12 +3245,6 @@ public record NMPopoverProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Body content text
-    /// </summary>
-    [JsonProperty("content")]
-    public string? Content { get; set; }
 
     /// <summary>
     /// Open
@@ -4178,22 +3276,10 @@ public record NMPopoverProps
     [JsonProperty("size")]
     public string? Size { get; set; }
 
-    /// <summary>
-    /// Optional header title text
-    /// </summary>
-    [JsonProperty("title")]
-    public string? Title { get; set; }
-
-    /// <summary>
-    /// Trigger button text
-    /// </summary>
-    [JsonProperty("triggerText")]
-    public string? TriggerText { get; set; }
-
 }
 
 /// <summary>
-/// Search Input. Search icon in leading slot for immediate recognition
+/// Search Input.
 /// </summary>
 public record NMSearchInputProps
 {
@@ -4204,16 +3290,19 @@ public record NMSearchInputProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4232,24 +3321,6 @@ public record NMSearchInputProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Optional helper text below the field
-    /// </summary>
-    [JsonProperty("hint")]
-    public string? Hint { get; set; }
-
-    /// <summary>
-    /// Visual state override
-    /// </summary>
-    [JsonProperty("inputState")]
-    public string? InputState { get; set; }
-
-    /// <summary>
-    /// Optional label above the field
-    /// </summary>
-    [JsonProperty("label")]
-    public string? Label { get; set; }
 
     /// <summary>
     /// Placeholder text
@@ -4272,7 +3343,7 @@ public record NMSearchInputProps
 }
 
 /// <summary>
-/// Select. Three sizes: sm (32px), md (40px), lg (48px)
+/// Select.
 /// </summary>
 public record NMSelectProps
 {
@@ -4283,16 +3354,19 @@ public record NMSelectProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4325,106 +3399,10 @@ public record NMSelectProps
     public bool? Error { get; set; }
 
     /// <summary>
-    /// Helper icon
-    /// </summary>
-    [JsonProperty("helperIcon")]
-    public bool? HelperIcon { get; set; }
-
-    /// <summary>
-    /// Helper icon tooltip
-    /// </summary>
-    [JsonProperty("helperIconTooltip")]
-    public string? HelperIconTooltip { get; set; }
-
-    /// <summary>
-    /// Helper status
-    /// </summary>
-    [JsonProperty("helperStatus")]
-    public string? HelperStatus { get; set; }
-
-    /// <summary>
-    /// Helper text
-    /// </summary>
-    [JsonProperty("helperText")]
-    public string? HelperText { get; set; }
-
-    /// <summary>
-    /// Leading icon HTML
-    /// </summary>
-    [JsonProperty("iconLeft")]
-    public bool? IconLeft { get; set; }
-
-    /// <summary>
-    /// Label disabled
-    /// </summary>
-    [JsonProperty("labelDisabled")]
-    public bool? LabelDisabled { get; set; }
-
-    /// <summary>
-    /// Label info icon
-    /// </summary>
-    [JsonProperty("labelInfoIcon")]
-    public bool? LabelInfoIcon { get; set; }
-
-    /// <summary>
-    /// Label info tooltip
-    /// </summary>
-    [JsonProperty("labelInfoTooltip")]
-    public string? LabelInfoTooltip { get; set; }
-
-    /// <summary>
-    /// Marker
-    /// </summary>
-    [JsonProperty("labelMarker")]
-    public string? LabelMarker { get; set; }
-
-    /// <summary>
-    /// Marker text
-    /// </summary>
-    [JsonProperty("labelMarkerText")]
-    public string? LabelMarkerText { get; set; }
-
-    /// <summary>
-    /// Label text
-    /// </summary>
-    [JsonProperty("labelText")]
-    public string? LabelText { get; set; }
-
-    /// <summary>
-    /// Array of selectable options
-    /// </summary>
-    [JsonProperty("options")]
-    public object? Options { get; set; }
-
-    /// <summary>
     /// Placeholder text shown when no option is selected
     /// </summary>
     [JsonProperty("placeholder")]
     public string? Placeholder { get; set; }
-
-    /// <summary>
-    /// Selected value
-    /// </summary>
-    [JsonProperty("selectedValue")]
-    public string? SelectedValue { get; set; }
-
-    /// <summary>
-    /// Helper
-    /// </summary>
-    [JsonProperty("showHelper")]
-    public bool? ShowHelper { get; set; }
-
-    /// <summary>
-    /// Label
-    /// </summary>
-    [JsonProperty("showLabel")]
-    public bool? ShowLabel { get; set; }
-
-    /// <summary>
-    /// Show menu panel
-    /// </summary>
-    [JsonProperty("showMenu")]
-    public bool? ShowMenu { get; set; }
 
     /// <summary>
     /// The size of the select field
@@ -4435,7 +3413,7 @@ public record NMSelectProps
 }
 
 /// <summary>
-/// Toast. Four variants: info, success, warning, and error
+/// Toast.
 /// </summary>
 public record NMToastProps
 {
@@ -4446,16 +3424,19 @@ public record NMToastProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4474,12 +3455,6 @@ public record NMToastProps
 
     [JsonProperty("properties")]
     public Dictionary<string, object>? Properties { get; set; }
-
-    /// <summary>
-    /// Action button text
-    /// </summary>
-    [JsonProperty("actionText")]
-    public string? ActionText { get; set; }
 
     /// <summary>
     /// Show close button
@@ -4538,8 +3513,7 @@ public record NMToastProps
 }
 
 /// <summary>
-/// Tooltip. Four positions: top, right, bottom, and left for flexible
-/// placement
+/// Tooltip.
 /// </summary>
 public record NMTooltipProps
 {
@@ -4550,16 +3524,19 @@ public record NMTooltipProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4585,23 +3562,10 @@ public record NMTooltipProps
     [JsonProperty("position")]
     public string? Position { get; set; }
 
-    /// <summary>
-    /// Tooltip content text
-    /// </summary>
-    [JsonProperty("text")]
-    public string? Text { get; set; }
-
-    /// <summary>
-    /// Trigger element text
-    /// </summary>
-    [JsonProperty("triggerText")]
-    public string? TriggerText { get; set; }
-
 }
 
 /// <summary>
-/// Accordion. Two variants: default (unified) and bordered/ghost
-/// (separated)
+/// Accordion.
 /// </summary>
 public record NMAccordionProps
 {
@@ -4612,16 +3576,19 @@ public record NMAccordionProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4648,30 +3615,6 @@ public record NMAccordionProps
     public bool? AllowMultiple { get; set; }
 
     /// <summary>
-    /// Array of content for each item
-    /// </summary>
-    [JsonProperty("content")]
-    public object? Content { get; set; }
-
-    /// <summary>
-    /// Object mapping item indices to disabled state
-    /// </summary>
-    [JsonProperty("disabledItems")]
-    public object? DisabledItems { get; set; }
-
-    /// <summary>
-    /// Disable Second Item
-    /// </summary>
-    [JsonProperty("disableSecond")]
-    public bool? DisableSecond { get; set; }
-
-    /// <summary>
-    /// Object mapping item indices to open state
-    /// </summary>
-    [JsonProperty("openItems")]
-    public object? OpenItems { get; set; }
-
-    /// <summary>
     /// Show chevron indicator
     /// </summary>
     [JsonProperty("showChevron")]
@@ -4692,8 +3635,7 @@ public record NMAccordionProps
 }
 
 /// <summary>
-/// Carousel. Contained carousel showing one slide at a time with smooth
-/// transitions
+/// Carousel.
 /// </summary>
 public record NMCarouselProps
 {
@@ -4704,16 +3646,19 @@ public record NMCarouselProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4766,8 +3711,7 @@ public record NMCarouselProps
 }
 
 /// <summary>
-/// File Upload. Dropzone built with &lt;label&gt; and &lt;input type="file"&gt; for
-/// native accessibility
+/// File Upload.
 /// </summary>
 public record NMFileUploadProps
 {
@@ -4778,16 +3722,19 @@ public record NMFileUploadProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4808,36 +3755,6 @@ public record NMFileUploadProps
     public Dictionary<string, object>? Properties { get; set; }
 
     /// <summary>
-    /// Component mode
-    /// </summary>
-    [JsonProperty("activeTab")]
-    public string? ActiveTab { get; set; }
-
-    /// <summary>
-    /// Dropzone dragover state
-    /// </summary>
-    [JsonProperty("dragover")]
-    public bool? Dragover { get; set; }
-
-    /// <summary>
-    /// File metadata
-    /// </summary>
-    [JsonProperty("fileMeta")]
-    public string? FileMeta { get; set; }
-
-    /// <summary>
-    /// File name
-    /// </summary>
-    [JsonProperty("fileName")]
-    public string? FileName { get; set; }
-
-    /// <summary>
-    /// File item state
-    /// </summary>
-    [JsonProperty("itemState")]
-    public string? ItemState { get; set; }
-
-    /// <summary>
     /// Upload progress percentage
     /// </summary>
     [JsonProperty("uploadPct")]
@@ -4846,7 +3763,7 @@ public record NMFileUploadProps
 }
 
 /// <summary>
-/// Navigation. Three layout variants: horizontal, vertical, and pills
+/// Navigation.
 /// </summary>
 public record NMNavigationProps
 {
@@ -4857,16 +3774,19 @@ public record NMNavigationProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4893,24 +3813,6 @@ public record NMNavigationProps
     public string? ActiveIndex { get; set; }
 
     /// <summary>
-    /// Icons
-    /// </summary>
-    [JsonProperty("icons")]
-    public bool? Icons { get; set; }
-
-    /// <summary>
-    /// Number of navigation items
-    /// </summary>
-    [JsonProperty("itemCount")]
-    public string? ItemCount { get; set; }
-
-    /// <summary>
-    /// Show icons before each item
-    /// </summary>
-    [JsonProperty("showIcons")]
-    public bool? ShowIcons { get; set; }
-
-    /// <summary>
     /// Navigation layout style
     /// </summary>
     [JsonProperty("variant")]
@@ -4919,7 +3821,7 @@ public record NMNavigationProps
 }
 
 /// <summary>
-/// Stepper. Horizontal and vertical orientations
+/// Stepper.
 /// </summary>
 public record NMStepperProps
 {
@@ -4930,16 +3832,19 @@ public record NMStepperProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -4972,27 +3877,15 @@ public record NMStepperProps
     public string? Orientation { get; set; }
 
     /// <summary>
-    /// Show step descriptions
-    /// </summary>
-    [JsonProperty("showDesc")]
-    public bool? ShowDesc { get; set; }
-
-    /// <summary>
     /// Circle and text size
     /// </summary>
     [JsonProperty("size")]
     public string? Size { get; set; }
 
-    /// <summary>
-    /// Array of step objects with label and optional description
-    /// </summary>
-    [JsonProperty("steps")]
-    public object? Steps { get; set; }
-
 }
 
 /// <summary>
-/// Tabs. Three variants: line (default), pill, and enclosed
+/// Tabs.
 /// </summary>
 public record NMTabsProps
 {
@@ -5003,16 +3896,19 @@ public record NMTabsProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
@@ -5051,12 +3947,6 @@ public record NMTabsProps
     public string? Size { get; set; }
 
     /// <summary>
-    /// Array of tab labels
-    /// </summary>
-    [JsonProperty("tabLabels")]
-    public object? TabLabels { get; set; }
-
-    /// <summary>
     /// Base id for the tabs. Pass one and each tab gets
     /// aria-controls="{tablistId}-panel-{index}", which is the id your panel
     /// needs
@@ -5073,7 +3963,7 @@ public record NMTabsProps
 }
 
 /// <summary>
-/// Tree View. Branch (folder) items expand/collapse child groups
+/// Tree View.
 /// </summary>
 public record NMTreeViewProps
 {
@@ -5084,16 +3974,19 @@ public record NMTreeViewProps
     public List<NmComponent> Items { get; set; } = [];
 
     [JsonProperty("box")]
-    public NmBox Box { get; set; }
+    public NmBox? Box { get; set; }
 
     [JsonProperty("surface")]
-    public NmSurface Surface { get; set; }
+    public NmSurface? Surface { get; set; }
+
+    [JsonProperty("color")]
+    public string? Color { get; set; }
 
     [JsonProperty("action")]
-    public NmAction Action { get; set; }
+    public NmAction? Action { get; set; }
 
     [JsonProperty("accessibility")]
-    public NmAccessibility Accessibility { get; set; }
+    public NmAccessibility? Accessibility { get; set; }
 
     [JsonProperty("test_id")]
     public string? TestId { get; set; }
