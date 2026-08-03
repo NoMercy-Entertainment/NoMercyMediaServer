@@ -81,19 +81,8 @@ public static class ServiceRegistration
                 rs.CpuEncoderWorkers.Key,
             };
 
-            // Encoder queues must not run until GPU/encoder detection
-            // (BootStage.Hardware) completes. Detection is deferred to run after
-            // the server is ready (BootStage.All), so these queues wait on both and
-            // surface as paused in the dashboard until detection finishes.
-            NmSystem.Lifecycle.BootStage encoderReady =
-                NmSystem.Lifecycle.BootStage.All | NmSystem.Lifecycle.BootStage.Hardware;
             IReadOnlyDictionary<string, NmSystem.Lifecycle.BootStage> queueReadyStages =
-                new Dictionary<string, NmSystem.Lifecycle.BootStage>
-                {
-                    [rs.EncoderWorkers.Key] = encoderReady,
-                    [rs.GpuEncoderWorkers.Key] = encoderReady,
-                    [rs.CpuEncoderWorkers.Key] = encoderReady,
-                };
+                BuildQueueReadyStages(rs);
 
             return new(
                 queueContext,
@@ -127,5 +116,89 @@ public static class ServiceRegistration
         services.AddHostedService<StuckReservationReaperHostedService>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Every queue used to default to <c>BootStage.All</c> — Essential | Auth |
+    /// Binaries | Network | Registered — regardless of what its jobs actually
+    /// touch. Auth, Network and Registered describe this server's relationship
+    /// with nomercy-tv (login, IP discovery, cloud registration); most queues
+    /// never call any of that. Binaries now marks the moment ffmpeg/ffprobe are
+    /// on disk (see <c>FfmpegBinaryReadinessService</c> in NoMercy.Encoder), not
+    /// when the whole binary bundle — including a multi-gigabyte whisper model
+    /// and tesseract language data — finishes, so listing it below no longer
+    /// means "wait for everything".
+    /// <para>
+    /// Essential (schema/settings) is the one dependency every queue genuinely
+    /// shares — a worker cannot reserve a job before the queue.db schema exists.
+    /// </para>
+    /// </summary>
+    /// <remarks>Internal (not private) so <c>NoMercy.Tests.Queue</c> can assert the
+    /// exact per-queue combination without building the full DI graph this method
+    /// is normally called from.</remarks>
+    internal static IReadOnlyDictionary<string, NmSystem.Lifecycle.BootStage> BuildQueueReadyStages(
+        RuntimeServerSettings rs
+    )
+    {
+        NmSystem.Lifecycle.BootStage essential = NmSystem.Lifecycle.BootStage.Essential;
+        NmSystem.Lifecycle.BootStage ffprobe = essential | NmSystem.Lifecycle.BootStage.Binaries;
+        NmSystem.Lifecycle.BootStage remoteMetadata =
+            essential | NmSystem.Lifecycle.BootStage.Auth | NmSystem.Lifecycle.BootStage.Network;
+
+        // library: MediaScan calls FfProbe.CreateAsync on every candidate file and
+        // ScanVideoFolder/ScanAudioFolder search TMDB — needs both ffprobe and the
+        // server's own auth+network to reach it.
+        NmSystem.Lifecycle.BootStage libraryReady = ffprobe | remoteMetadata;
+
+        // import: TMDB/TVDB metadata only (append_to_response) — no local file I/O,
+        // downstream ffprobe work (chapters, colors, file matching) runs on its own
+        // queues under their own gate.
+        NmSystem.Lifecycle.BootStage importReady = remoteMetadata;
+
+        // file: FileRepository/FileListService match files to DB entries via
+        // FfProbe.CreateAsync — local-only, no remote calls.
+        NmSystem.Lifecycle.BootStage fileReady = ffprobe;
+
+        // extras: chapter/color extraction shells out to ffmpeg; subtitle
+        // acquisition (OpenSubtitles) needs network. No server auth token is used
+        // by either.
+        NmSystem.Lifecycle.BootStage extrasReady = ffprobe | NmSystem.Lifecycle.BootStage.Network;
+
+        // music: MusicLogic probes files via FfProbe.CreateAsync and looks up
+        // MusicBrainz/AcoustID — same shape as library.
+        NmSystem.Lifecycle.BootStage musicReady = ffprobe | remoteMetadata;
+
+        // image: downloads artwork from TMDB/FanArt/CoverArt — remote calls, no
+        // local media file ever touches ffmpeg.
+        NmSystem.Lifecycle.BootStage imageReady = remoteMetadata;
+
+        // palette: reads an already-downloaded image off disk and extracts a color
+        // palette in managed code — needs only the schema.
+        NmSystem.Lifecycle.BootStage paletteReady = essential;
+
+        // cron: dispatches scheduled jobs onto their own queues; it does not itself
+        // call TMDB, ffprobe or the registration API — the job it fires does, under
+        // that job's own queue's gate.
+        NmSystem.Lifecycle.BootStage cronReady = essential;
+
+        // Encoder queues need ffmpeg on disk and GPU/encoder detection
+        // (BootStage.Hardware) — not this server's auth/network/registration
+        // state, which has nothing to do with spawning a local ffmpeg process.
+        NmSystem.Lifecycle.BootStage encoderReady = ffprobe | NmSystem.Lifecycle.BootStage.Hardware;
+
+        return new Dictionary<string, NmSystem.Lifecycle.BootStage>
+        {
+            [rs.LibraryWorkers.Key] = libraryReady,
+            [rs.ImportWorkers.Key] = importReady,
+            [rs.ExtrasWorkers.Key] = extrasReady,
+            [rs.FileWorkers.Key] = fileReady,
+            [rs.MusicWorkers.Key] = musicReady,
+            [rs.ImageWorkers.Key] = imageReady,
+            [rs.PaletteWorkers.Key] = paletteReady,
+            [rs.CronWorkers.Key] = cronReady,
+            [rs.EncoderWorkers.Key] = encoderReady,
+            [rs.GpuEncoderWorkers.Key] = encoderReady,
+            [rs.CpuEncoderWorkers.Key] = encoderReady,
+        };
     }
 }
