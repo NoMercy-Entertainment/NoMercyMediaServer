@@ -29,4 +29,19 @@ public class PluginViewRequest
     /// </summary>
     [JsonPropertyName("userId")]
     public string? UserId { get; init; }
+
+    /// <summary>
+    /// Which kind of screen is asking, from <see cref="PluginSurface" />.
+    ///
+    /// A television is not a narrow desktop. Some views differ by a hidden
+    /// column, which a component handles itself through its box, and some are a
+    /// different page entirely — a grid of posters on a TV where the desktop
+    /// shows a table. A plugin that cannot tell them apart has to pick one and
+    /// be wrong on the other two.
+    ///
+    /// Defaults to the roomiest surface, so a caller that says nothing gets the
+    /// view with the most in it rather than the most stripped down.
+    /// </summary>
+    [JsonPropertyName("surface")]
+    public string Surface { get; init; } = PluginSurface.Web;
 }
