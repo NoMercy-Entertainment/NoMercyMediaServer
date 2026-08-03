@@ -39,6 +39,57 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// <summary>
     /// Every plugin the caller's client should show in its navigation.
     /// </summary>
+    /// <summary>
+    /// Every plugin screen the server can place, grouped by the area it lands in.
+    ///
+    /// This is what the addons page browses. The client does not work out where
+    /// anything goes: the route is resolved here from the mount's kind, so the
+    /// web app, a phone and a television all navigate to the same place without
+    /// agreeing on anything but the word.
+    /// </summary>
+    [HttpGet("api/v{version:apiVersion}/plugins/ui/browse")]
+    public IActionResult Browse()
+    {
+        var groups = pluginManager
+            .GetInstalledPlugins()
+            .Where(HasUi)
+            .SelectMany(info =>
+                (pluginManager.GetPluginInstance(info.Id) as IUiPlugin)?.NavEntries.Select(entry => new
+                {
+                    PluginId = info.Id,
+                    PluginName = info.Name,
+                    entry.Label,
+                    entry.Icon,
+                    Kind = PluginKind.IsKnown(entry.Section) ? entry.Section : PluginKind.Dashboard,
+                    entry.Route
+                }) ?? []
+            )
+            // A kind the server does not place is dropped rather than listed
+            // with a route nothing answers, which would read as a broken plugin.
+            .Where(entry => PluginKind.DrawsUi(entry.Kind))
+            .GroupBy(entry => entry.Kind)
+            .OrderBy(group => Array.IndexOf(PluginKind.All, group.Key))
+            .Select(group => new
+            {
+                Kind = group.Key,
+                Entries = group
+                    .Select(entry => new
+                    {
+                        entry.PluginId,
+                        entry.PluginName,
+                        entry.Label,
+                        entry.Icon,
+                        Path = PluginRoutes.PrefixFor(entry.Kind, entry.PluginId).TrimEnd('/')
+                            + (entry.Route == "/" ? string.Empty : entry.Route)
+                    })
+                    .OrderBy(entry => entry.PluginName)
+                    .ToList()
+            })
+            .ToList();
+
+        return Ok(new DataResponseDto<object> { Data = groups });
+    }
+
     [HttpGet("api/v{version:apiVersion}/plugins/ui")]
     public IActionResult Discover()
     {
