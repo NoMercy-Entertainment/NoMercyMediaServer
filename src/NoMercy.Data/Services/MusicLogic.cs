@@ -140,7 +140,12 @@ public partial class MusicLogic : IAsyncDisposable
 
                             try
                             {
-                                await ProcessRelease(mediaContext, release, file);
+                                await ProcessRelease(
+                                    mediaContext,
+                                    release,
+                                    file,
+                                    fingerPrintRecording
+                                );
                             }
                             catch (Exception e)
                             {
@@ -175,7 +180,8 @@ public partial class MusicLogic : IAsyncDisposable
     private async Task ProcessRelease(
         MediaContext mediaContext,
         AcoustIdFingerprintReleaseGroups release,
-        MediaFile mediaFile
+        MediaFile mediaFile,
+        AcoustIdFingerprintRecording? matchedRecording = null
     )
     {
         _logger.LogTrace("Processing release: {Title} with id: {Id}", [release.Title, release.Id]);
@@ -211,6 +217,12 @@ public partial class MusicLogic : IAsyncDisposable
         await LinkReleaseToReleaseGroup(mediaContext, releaseAppends);
         await LinkReleaseToLibrary(mediaContext, releaseAppends);
 
+        MusicBrainzTrack? encodableTrack = ResolveTrackForFile(
+            releaseAppends,
+            mediaFile,
+            matchedRecording
+        );
+
         foreach (MusicBrainzMedia media in releaseAppends.Media)
         foreach (MusicBrainzTrack track in media.Tracks)
         {
@@ -218,6 +230,9 @@ public partial class MusicLogic : IAsyncDisposable
                 continue;
 
             await LinkTrackToRelease(mediaContext, track, releaseAppends);
+
+            if (encodableTrack is not null && track.Id == encodableTrack.Id)
+                DispatchEncode(releaseAppends, track, mediaFile);
 
             foreach (ReleaseArtistCredit artist in track.ArtistCredit)
             {
@@ -280,6 +295,102 @@ public partial class MusicLogic : IAsyncDisposable
         }
 
         return fingerPrintRecording;
+    }
+
+    /// <summary>
+    /// Which single track of the release this one file IS.
+    /// <para>
+    /// The fingerprint answers it outright when it identified a recording, because a
+    /// MusicBrainz track carries the recording id it was pressed from. Only when the
+    /// fingerprint found nothing does this fall back to the less certain reading of the
+    /// file's own tags — the track number the file claims, then its title.
+    /// </para>
+    /// <para>
+    /// Returning null is a real answer: the file was not identified, so it is stored but
+    /// never encoded. Guessing here would write a file to disk under another track's name.
+    /// </para>
+    /// </summary>
+    private MusicBrainzTrack? ResolveTrackForFile(
+        MusicBrainzReleaseAppends release,
+        MediaFile file,
+        AcoustIdFingerprintRecording? matchedRecording
+    )
+    {
+        MusicBrainzTrack[] tracks = release.Media.SelectMany(media => media.Tracks).ToArray();
+
+        if (matchedRecording is not null && matchedRecording.Id != Guid.Empty)
+        {
+            MusicBrainzTrack? byRecording = tracks.FirstOrDefault(track =>
+                track.Recording.Id == matchedRecording.Id
+            );
+
+            if (byRecording is not null)
+                return byRecording;
+        }
+
+        int taggedNumber = (int)(file.TagFile?.Tag?.Track ?? 0);
+        if (taggedNumber > 0)
+        {
+            MusicBrainzTrack? byNumber = tracks.FirstOrDefault(track =>
+                track.Position == taggedNumber
+            );
+
+            if (byNumber is not null)
+                return byNumber;
+        }
+
+        string taggedTitle = (
+            file.TagFile?.Tag?.Title ?? Path.GetFileNameWithoutExtension(file.Name) ?? string.Empty
+        )
+            .RemoveDiacritics()
+            .RemoveNonAlphaNumericCharacters();
+
+        if (string.IsNullOrWhiteSpace(taggedTitle))
+            return null;
+
+        return tracks.FirstOrDefault(track =>
+            track
+                .Title.RemoveDiacritics()
+                .RemoveNonAlphaNumericCharacters()
+                .Equals(taggedTitle, StringComparison.OrdinalIgnoreCase)
+        );
+    }
+
+    /// <summary>
+    /// Hands the identified track to the encoder, which resolves the destination folder's
+    /// presets and asks the model for its own sanitized filename fragment
+    /// (<see cref="Track.CreateTitle"/>) rather than assembling a path here.
+    /// </summary>
+    private void DispatchEncode(
+        MusicBrainzReleaseAppends release,
+        MusicBrainzTrack track,
+        MediaFile file
+    )
+    {
+        if (Folder is null)
+            return;
+
+        QueueRunner.Current!.Dispatcher.Dispatch(
+            new MusicEncodeJob
+            {
+                LibraryId = Library.Id,
+                FolderId = Folder.Id,
+                Id = release.Id,
+                FoundTrack = track,
+                MediaFile = file,
+                InputFolder = ListPath.Path,
+                InputFile = file.Path,
+                FolderMetaData = new()
+                {
+                    MusicBrainzRelease = release,
+                    BasePath = ListPath.Path,
+                    Files = (Files ?? []).ToList(),
+                    ArtistName = ArtistName,
+                    ReleaseName = AlbumName,
+                    Year = Year,
+                },
+            }
+        );
     }
 
     private AcoustIdFingerprintReleaseGroups? FallbackParser(
