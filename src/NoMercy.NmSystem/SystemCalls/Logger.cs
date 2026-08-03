@@ -306,9 +306,14 @@ public static class Logger
             // No attached console; fall through to a sensible default.
         }
 
+        // Redirected output has no width to measure — docker logs, a pipe, a file.
+        // Guessing one and hard-wrapping to it is worse than not wrapping: the
+        // reader's terminal is the only thing that knows how wide it is, and it
+        // wraps for free. A guessed 120 is what made container logs fold at 120
+        // columns inside a 190-column terminal. 0 means leave the lines alone.
         return int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols) && cols > 0
             ? cols
-            : 120;
+            : 0;
     }
 
     private static Microsoft.Extensions.Logging.LogLevel ToMelLevel(LogEventLevel level) =>

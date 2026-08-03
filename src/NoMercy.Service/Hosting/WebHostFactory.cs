@@ -56,14 +56,19 @@ public static class WebHostFactory
                         // as a service): fall through to a sensible default.
                     }
 
-                    // Redirected/headless: assume a standard width so long
-                    // lines still wrap and hang under the gutter instead of the
-                    // consumer terminal hard-wrapping them flush-left.
+                    // Redirected/headless: the width is genuinely unknowable here.
+                    // `docker logs` renders in a terminal on someone else's machine,
+                    // and nothing about it reaches this process. Wrapping to a guess
+                    // buys hanging continuation lines at the price of folding every
+                    // line at 120 columns in a terminal twice that wide, which is
+                    // what container logs actually looked like. 0 leaves the lines
+                    // whole; the reader's terminal is the only thing that knows.
+                    // COLUMNS still wins when it is set deliberately.
                     return
                         int.TryParse(Environment.GetEnvironmentVariable("COLUMNS"), out int cols)
                         && cols > 0
                         ? cols
-                        : 120;
+                        : 0;
                 },
             }
         );
