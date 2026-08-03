@@ -13,7 +13,15 @@ namespace NoMercy.NmSystem.Configuration;
 
 public class EncoderResourceConfig
 {
-    public double EncoderCpuHeadroomPercent { get; set; } = 90.0;
+    // TryAcquire refuses a new encoder lease once host CPU is at or above this,
+    // so it is the point the box stops being usable for anything else. At 90 two
+    // CPU tasks pin the machine and the gate still says yes; ResourceBudgetOptions
+    // documents 75 as the "leave headroom for the user's other work" figure and
+    // this is what actually reaches the gate.
+    public double EncoderCpuHeadroomPercent { get; set; } = 75.0;
+
+    // The GPU is the one piece we do want saturated: it is dedicated to encoding
+    // and nothing else on the host competes for its encoder blocks.
     public double EncoderGpuHeadroomPercent { get; set; } = 95.0;
     public long EncoderMinFreeMemoryMb { get; set; } = 1024;
 }
