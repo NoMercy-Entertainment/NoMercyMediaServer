@@ -41,17 +41,18 @@ public static class PluginGrantKind
     public const string NetworkHost = "network.host";
 
     /// <summary>
-    /// Driving playback: play, pause, skip. Separate from the source grant
-    /// below, because pausing what a viewer chose and putting something else on
-    /// are different amounts of trust.
+    /// One mediated capability, as `capability.&lt;name&gt;`. Built from the
+    /// capability rather than listed beside it, so a new one cannot be added and
+    /// left ungated by someone who forgot the second list.
     /// </summary>
-    public const string PlayerControl = "player.control";
+    public static string ForCapability(string capability) => PluginCapability.GrantFor(capability);
 
     /// <summary>
-    /// Playing something the library does not own, by URL. This is the grant a
-    /// radio plugin needs, and it is the one that matters: it is the difference
-    /// between a plugin arranging a viewer's own media and a plugin choosing
-    /// what comes out of their speakers.
+    /// Playing something the library does not own, by URL.
+    ///
+    /// Finer than the player capability as a whole, because arranging a viewer's
+    /// own media and choosing what comes out of their speakers are different
+    /// amounts of trust, and only the second one needs asking about.
     /// </summary>
     public const string PlayerSource = "player.source";
 

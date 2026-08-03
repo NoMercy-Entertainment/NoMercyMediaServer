@@ -46,9 +46,17 @@ public interface IPluginContext
     IPluginLibraryQuery Library { get; }
 
     /// <summary>
-    /// Playback, gated by <see cref="PluginGrantKind.PlayerControl" /> and
-    /// <see cref="PluginGrantKind.PlayerSource" />. Null when the host offers
-    /// none, which existing hosts do not have to change to keep compiling.
+    /// Everything the plugin can reach that it does not own, by name.
+    ///
+    /// The general way in. A host grows a capability without this contract
+    /// moving, and a plugin asks whether one exists before depending on it.
+    /// Null when the host mediates nothing, so existing hosts keep compiling.
+    /// </summary>
+    IPluginSystem? System => null;
+
+    /// <summary>
+    /// Playback, as a typed surface over <see cref="PluginCapability.Player" />.
+    /// One capability made convenient, never the only way to reach it.
     /// </summary>
     IPluginPlayer? Player => null;
 

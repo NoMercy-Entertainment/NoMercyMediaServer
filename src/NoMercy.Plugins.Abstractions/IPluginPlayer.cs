@@ -16,6 +16,11 @@ namespace NoMercy.Plugins.Abstractions;
 /// or goes to a cast device, and an intent arriving at that client goes wherever
 /// its audio was already going. A plugin handed a real player would have bound
 /// itself to one output and broken the moment the viewer cast.
+///
+/// Typed convenience over <see cref="PluginCapability.Player" /> rather than a
+/// mechanism of its own. Nothing here does anything an InvokeAsync call cannot,
+/// which is deliberate: a capability reachable only through its own interface
+/// would be one that older plugins could never discover.
 /// </summary>
 public interface IPluginPlayer
 {
@@ -68,6 +73,9 @@ public class PluginPlaybackSource
 
 /// <summary>
 /// The commands a plugin may send, matching what a viewer can already do.
+///
+/// Named here so a plugin reaching the player through the generic bus and one
+/// using the typed surface send the same words.
 /// </summary>
 public static class PluginPlaybackCommand
 {

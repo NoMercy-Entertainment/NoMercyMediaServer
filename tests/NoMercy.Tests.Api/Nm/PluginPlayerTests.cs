@@ -8,10 +8,14 @@ public class PluginPlayerTests
     [Fact]
     public void SeparatesDrivingPlaybackFromChoosingWhatPlays()
     {
-        // Pausing what a viewer chose and putting something else on are
-        // different amounts of trust, so they are different grants.
-        Assert.NotEqual(PluginGrantKind.PlayerControl, PluginGrantKind.PlayerSource);
-        Assert.Equal("player.control", PluginGrantKind.PlayerControl);
+        // The capability grant covers reaching the player at all. Choosing what
+        // comes out of a viewer's speakers is finer than that and asks
+        // separately, because it is a different amount of trust.
+        Assert.NotEqual(
+            PluginGrantKind.PlayerSource,
+            PluginGrantKind.ForCapability(PluginCapability.Player));
+
+        Assert.Equal("capability.player", PluginGrantKind.ForCapability(PluginCapability.Player));
         Assert.Equal("player.source", PluginGrantKind.PlayerSource);
     }
 
@@ -22,6 +26,7 @@ public class PluginPlayerTests
         // player it was never given finds null rather than a stub that silently
         // does nothing.
         Assert.Null(((IPluginContext)new BareContext()).Player);
+        Assert.Null(((IPluginContext)new BareContext()).System);
     }
 
     [Fact]
