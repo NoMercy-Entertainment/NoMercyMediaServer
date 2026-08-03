@@ -70,7 +70,8 @@ public interface IPluginManager
     // it ships nothing for the one asked for. A default returning null keeps
     // existing implementers compiling; a manager that knows where a plugin lives
     // on disk overrides it.
-    Dictionary<string, string>? ReadTranslations(Guid pluginId, string locale) => null;
+    Task<Dictionary<string, string>?> ReadTranslationsAsync(Guid pluginId, string locale, CancellationToken ct) =>
+        Task.FromResult<Dictionary<string, string>?>(null);
 
     // The live instance, for the platform endpoints that have to call into a
     // plugin (IUiPlugin.GetViewAsync). Null when nothing is loaded under that id.

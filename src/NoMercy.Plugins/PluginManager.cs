@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Text.Json;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
@@ -492,6 +493,56 @@ public class PluginManager : IPluginManager, IDisposable
 
     public PluginInfo? GetPluginInfo(Guid pluginId) =>
         _registry.TryGetValue(pluginId, out LoadedPlugin? loaded) ? loaded.Info : null;
+
+    public async Task<Dictionary<string, string>?> ReadTranslationsAsync(Guid pluginId, string locale, CancellationToken ct)
+    {
+        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded)) return null;
+
+        string? manifestPath = loaded.Info.ManifestPath;
+        if (string.IsNullOrWhiteSpace(manifestPath) || !_storage.Exists(manifestPath)) return null;
+
+        PluginTranslations? declared;
+        try
+        {
+            declared = JsonSerializer
+                .Deserialize<PluginManifest>(await _storage.ReadAllTextAsync(manifestPath, ct), TranslationJson)
+                ?.Translations;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        if (declared is null) return null;
+
+        string? root = Path.GetDirectoryName(manifestPath);
+        if (root is null) return null;
+
+        // Falls back to the locale the plugin was authored in. A viewer whose
+        // language a plugin does not ship should read it in the language it was
+        // written in, never in empty labels.
+        string wanted = declared.Locales.Contains(locale) ? locale : declared.Source;
+
+        return await ReadLocaleFileAsync(Path.Combine(root, declared.Path), wanted, ct);
+    }
+
+    private static readonly JsonSerializerOptions TranslationJson = new() { PropertyNameCaseInsensitive = true };
+
+    private async Task<Dictionary<string, string>?> ReadLocaleFileAsync(string directory, string locale, CancellationToken ct)
+    {
+        string path = Path.Combine(directory, $"{locale}.json");
+
+        if (!_storage.Exists(path)) return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(await _storage.ReadAllTextAsync(path, ct));
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     public IEnumerable<T> GetPluginsOfType<T>()
         where T : IPlugin

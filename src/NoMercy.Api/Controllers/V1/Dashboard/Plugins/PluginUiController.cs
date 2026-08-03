@@ -68,7 +68,7 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// namespace, which is what keeps two plugins using the same key apart.
     /// </summary>
     [HttpGet("api/v{version:apiVersion}/plugins/{id:guid}/translations/{locale}")]
-    public IActionResult Translations(Guid id, string locale)
+    public async Task<IActionResult> Translations(Guid id, string locale, CancellationToken ct)
     {
         PluginInfo? info = pluginManager.GetPluginInfo(id);
 
@@ -78,7 +78,7 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
         // The manager owns the fallback because it is the thing holding the
         // manifest: a viewer whose language the plugin does not ship reads it in
         // the language it was written in, never in empty labels.
-        Dictionary<string, string>? strings = pluginManager.ReadTranslations(id, locale);
+        Dictionary<string, string>? strings = await pluginManager.ReadTranslationsAsync(id, locale, ct);
 
         return Ok(new DataResponseDto<Dictionary<string, string>> { Data = strings ?? [] });
     }
