@@ -100,6 +100,8 @@ internal sealed class PluginLoader(
                 _storage,
                 ct
             );
+            ReportKindProblems(manifest, manifestPath);
+
             await ReportTranslationProblemsAsync(manifest, pluginDir, manifestPath, ct);
 
             string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
@@ -648,4 +650,23 @@ internal sealed class PluginLoader(
                 [manifestPath, problem.ToString()]
             );
     }
+
+    /// <summary>
+    /// Checks that every mount lands somewhere the clients actually place.
+    ///
+    /// A kind nobody recognises is quiet: the plugin loads, and its screen
+    /// simply never appears anywhere.
+    /// </summary>
+    private void ReportKindProblems(PluginManifest manifest, string manifestPath)
+    {
+        foreach (PluginUiMount mount in manifest.Capabilities?.Ui?.Mounts ?? [])
+        {
+            if (!PluginKind.IsKnown(mount.Kind))
+                _logger.LogWarning(
+                    "Plugin manifest {ManifestPath} mounts '{Label}' as kind '{Kind}', which is not one this server places. It will not appear.",
+                    [manifestPath, mount.Label, mount.Kind]
+                );
+        }
+    }
+
 }

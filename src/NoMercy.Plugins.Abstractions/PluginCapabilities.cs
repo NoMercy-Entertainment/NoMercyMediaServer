@@ -56,4 +56,26 @@ public class PluginUiMount
 
     [JsonPropertyName("route")]
     public required string Route { get; init; }
+
+    /// <summary>
+    /// Which area of the app this mount lands in, from <see cref="PluginKind" />.
+    ///
+    /// On the mount rather than on the plugin, because a plugin is rarely one
+    /// thing: a subtitle plugin belongs with video and with the library, and a
+    /// scrobbler wants a page in music and its settings in the dashboard. One
+    /// kind for the whole plugin would force a choice that has no right answer.
+    /// </summary>
+    [JsonPropertyName("kind")]
+    public string Kind { get; init; } = PluginKind.Dashboard;
+
+    /// <summary>
+    /// Asks for a place in the main navigation beside the app's own sections.
+    ///
+    /// A request rather than a setting. If every plugin could take a top-level
+    /// slot the navigation becomes a junk drawer and the plugin installed last
+    /// wins the most prominent place, so the viewer decides which ones are
+    /// promoted and none are by default.
+    /// </summary>
+    [JsonPropertyName("requestsTopLevel")]
+    public bool RequestsTopLevel { get; init; }
 }
