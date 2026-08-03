@@ -47,6 +47,30 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// web app, a phone and a television all navigate to the same place without
     /// agreeing on anything but the word.
     /// </summary>
+    /// <summary>
+    /// A plugin's declared pages on one surface, with the shell each wants and
+    /// the path already resolved. A plugin declaring none reports none, and its
+    /// screens stay reachable through the wildcard.
+    /// </summary>
+    private List<object> Pages(Guid pluginId, string kind, string surface)
+    {
+        if (pluginManager.GetPluginInstance(pluginId) is not IUiPlugin plugin)
+            return [];
+
+        string prefix = PluginRoutes.PrefixFor(kind, pluginId).TrimEnd('/');
+
+        return plugin
+            .Routes.On(surface)
+            .Select(object (route) => new
+            {
+                route.Name,
+                route.Label,
+                Layout = route.LayoutFor(surface),
+                Path = prefix + (route.Path == "/" ? string.Empty : route.Path)
+            })
+            .ToList();
+    }
+
     [HttpGet("api/v{version:apiVersion}/plugins/ui/browse")]
     public IActionResult Browse([FromQuery] string? surface)
     {
@@ -85,7 +109,11 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
                         entry.Label,
                         entry.Icon,
                         Path = PluginRoutes.PrefixFor(entry.Kind, entry.PluginId).TrimEnd('/')
-                            + (entry.Route == "/" ? string.Empty : entry.Route)
+                            + (entry.Route == "/" ? string.Empty : entry.Route),
+                        // Every page the plugin declares, so a client registers a
+                        // named route for each when a server is chosen rather than
+                        // discovering them one navigation at a time.
+                        Pages = Pages(entry.PluginId, entry.Kind, asking)
                     })
                     .OrderBy(entry => entry.PluginName)
                     .ToList()
