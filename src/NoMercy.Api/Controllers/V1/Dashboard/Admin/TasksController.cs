@@ -243,8 +243,12 @@ public class TasksController(
     {
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
 
+        // This panel polls, and the encoder queue is thousands of rows deep on a
+        // library mid-encode. Tracking every one of them per poll is pure cost:
+        // nothing here is written back.
         ImmutableList<QueueJob> jobs = queueContext
-            .QueueJobs.Where(j => j.Queue == "encoder")
+            .QueueJobs.AsNoTracking()
+            .Where(j => j.Queue == "encoder")
             .OrderByDescending(j => j.Priority)
             .ThenBy(j => j.CreatedAt)
             .ThenBy(j => j.Id)
