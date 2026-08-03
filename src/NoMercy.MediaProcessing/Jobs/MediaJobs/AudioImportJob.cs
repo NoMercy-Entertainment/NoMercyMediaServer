@@ -20,6 +20,7 @@ using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.Dto;
+using NoMercy.MediaProcessing.Music;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.MediaProcessing.Recordings;
 using NoMercy.MediaProcessing.ReleaseGroups;
@@ -550,6 +551,17 @@ public class AudioImportJob : AbstractMusicFolderJob
                 mediaFile,
                 folderLibrary,
                 coverPalette
+            );
+
+            MusicEncodeDispatcher.Dispatch(
+                StorageFactory,
+                albumLibrary,
+                folderLibrary,
+                release,
+                musicBrainzTrack,
+                mediaFile,
+                InputFolder,
+                audioFiles.Select(audioFile => audioFile.MediaFile).ToList()
             );
 
             foreach (MusicBrainzArtistCredit artistCredit in musicBrainzRecording.ArtistCredit)

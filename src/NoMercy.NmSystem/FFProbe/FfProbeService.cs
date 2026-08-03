@@ -483,7 +483,12 @@ public class FfProbeService : IFfProbeService
                 RedirectStandardInput = true,
             };
 
+            // Every child is tied to the server's job object, so a shutdown takes the
+            // whole tree with it. Killing the process on the way out only covers the
+            // paths that reach their own cleanup; a crash or a stop mid-probe left
+            // ffmpeg and ffprobe running with nothing left to reap them.
             process.Start();
+            Shell.ChildProcessManager.Attach(process);
 
             string stdOut = await process.StandardOutput.ReadToEndAsync(linkedCts.Token);
 
@@ -624,7 +629,12 @@ public class FfProbeService : IFfProbeService
                 CreateNoWindow = true,
             };
 
+            // Every child is tied to the server's job object, so a shutdown takes the
+            // whole tree with it. Killing the process on the way out only covers the
+            // paths that reach their own cleanup; a crash or a stop mid-probe left
+            // ffmpeg and ffprobe running with nothing left to reap them.
             process.Start();
+            Shell.ChildProcessManager.Attach(process);
 
             Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(linkedCts.Token);
             Task pumpTask = PumpStdinAsync(driver, file, process, linkedCts.Token);

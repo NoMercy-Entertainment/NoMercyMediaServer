@@ -21,6 +21,7 @@ using NoMercy.Database.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Music;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -318,51 +319,11 @@ public partial class MusicLogic : IAsyncDisposable
     /// never encoded. Guessing here would write a file to disk under another track's name.
     /// </para>
     /// </summary>
-    private MusicBrainzTrack? ResolveTrackForFile(
+    private static MusicBrainzTrack? ResolveTrackForFile(
         MusicBrainzReleaseAppends release,
         MediaFile file,
         AcoustIdFingerprintRecording? matchedRecording
-    )
-    {
-        MusicBrainzTrack[] tracks = release.Media.SelectMany(media => media.Tracks).ToArray();
-
-        if (matchedRecording is not null && matchedRecording.Id != Guid.Empty)
-        {
-            MusicBrainzTrack? byRecording = tracks.FirstOrDefault(track =>
-                track.Recording.Id == matchedRecording.Id
-            );
-
-            if (byRecording is not null)
-                return byRecording;
-        }
-
-        int taggedNumber = (int)(file.TagFile?.Tag?.Track ?? 0);
-        if (taggedNumber > 0)
-        {
-            MusicBrainzTrack? byNumber = tracks.FirstOrDefault(track =>
-                track.Position == taggedNumber
-            );
-
-            if (byNumber is not null)
-                return byNumber;
-        }
-
-        string taggedTitle = (
-            file.TagFile?.Tag?.Title ?? Path.GetFileNameWithoutExtension(file.Name) ?? string.Empty
-        )
-            .RemoveDiacritics()
-            .RemoveNonAlphaNumericCharacters();
-
-        if (string.IsNullOrWhiteSpace(taggedTitle))
-            return null;
-
-        return tracks.FirstOrDefault(track =>
-            track
-                .Title.RemoveDiacritics()
-                .RemoveNonAlphaNumericCharacters()
-                .Equals(taggedTitle, StringComparison.OrdinalIgnoreCase)
-        );
-    }
+    ) => MusicEncodeDispatcher.ResolveTrackForFile(release, file, matchedRecording);
 
     /// <summary>
     /// Hands the identified track to the encoder, which resolves the destination folder's
@@ -385,101 +346,16 @@ public partial class MusicLogic : IAsyncDisposable
             return;
         }
 
-        // Everything the encoder writes lands under BasePath. Pointing that at the source
-        // would leave the encode sitting in the download folder it came from, so it is the
-        // library destination, laid out by the Picard rules the library already follows.
-        IStorage destination = _storageFactory.For(Folder.Id, Folder.DriverId, string.Empty);
-        string libraryRoot = destination.Driver.GetFullPath(Folder.Path);
-        string albumFolder = PicardNaming.Sanitize(
-            PicardNaming.BuildDirectory(NamingContextFor(release, track))
+        MusicEncodeDispatcher.Dispatch(
+            _storageFactory,
+            Library,
+            Folder,
+            release,
+            track,
+            file,
+            ListPath.Path,
+            (Files ?? []).ToList()
         );
-
-        QueueRunner.Current!.Dispatcher.Dispatch(
-            new MusicEncodeJob
-            {
-                LibraryId = Library.Id,
-                FolderId = Folder.Id,
-                Id = release.Id,
-                FoundTrack = track,
-                MediaFile = file,
-                InputFolder = ListPath.Path,
-                InputFile = file.Path,
-                FolderMetaData = new()
-                {
-                    MusicBrainzRelease = release,
-                    BasePath = Path.Combine(libraryRoot, albumFolder).Replace('\\', '/'),
-                    Files = (Files ?? []).ToList(),
-                    ArtistName = ArtistName,
-                    ReleaseName = AlbumName,
-                    Year = Year,
-                },
-            }
-        );
-    }
-
-    /// <summary>
-    /// Reads the release the way the Picard script does: the album artist decides the
-    /// folder, the track's own credit decides whether a performer is named on the file,
-    /// and the disc and track totals decide the padding.
-    /// </summary>
-    private static MusicNamingContext NamingContextFor(
-        MusicBrainzReleaseAppends release,
-        MusicBrainzTrack track
-    )
-    {
-        MusicBrainzMedia? medium = release.Media.FirstOrDefault(m =>
-            m.Tracks.Any(t => t.Id == track.Id)
-        );
-
-        ReleaseArtistCredit? albumArtist = release.ArtistCredit.FirstOrDefault();
-        ReleaseArtistCredit? trackArtist = track.ArtistCredit.FirstOrDefault();
-
-        string credited = string.Join(
-            ", ",
-            track.ArtistCredit.Select(credit => credit.MusicBrainzArtist.Name)
-        );
-        string additional = string.Join(
-            ", ",
-            track.ArtistCredit.Skip(1).Select(credit => credit.MusicBrainzArtist.Name)
-        );
-
-        return new()
-        {
-            AlbumType = AlbumTypeFor(release),
-            AlbumName = release.Title,
-            Year = release.DateTime?.Year,
-            AlbumArtistId = albumArtist?.MusicBrainzArtist.Id.ToString(),
-            AlbumArtistSort =
-                albumArtist?.MusicBrainzArtist.SortName ?? albumArtist?.MusicBrainzArtist.Name,
-            AlbumArtistPrimary = albumArtist?.MusicBrainzArtist.Name,
-            TrackTitle = track.Title,
-            TrackArtistPrimary = trackArtist?.MusicBrainzArtist.Name,
-            TrackArtistsCredited = credited,
-            TrackArtistsAdditional = additional,
-            TrackNumber = track.Position,
-            TotalTracks = medium?.TrackCount ?? release.Media.Sum(m => m.TrackCount),
-            DiscNumber = medium?.Position ?? 1,
-            TotalDiscs = release.Media.Length,
-        };
-    }
-
-    private static MusicAlbumType AlbumTypeFor(MusicBrainzReleaseAppends release)
-    {
-        string primary = release.MusicBrainzReleaseGroup?.PrimaryType ?? string.Empty;
-        string[] secondary = release.MusicBrainzReleaseGroup?.SecondaryTypes ?? [];
-
-        if (secondary.Any(type => type.Contains("soundtrack", StringComparison.OrdinalIgnoreCase)))
-            return MusicAlbumType.Soundtrack;
-
-        if (primary.Contains("other", StringComparison.OrdinalIgnoreCase))
-            return MusicAlbumType.Other;
-
-        bool single =
-            release.Media.Length <= 1
-            && release.Media.Sum(medium => medium.TrackCount) <= 1
-            && primary.Contains("single", StringComparison.OrdinalIgnoreCase);
-
-        return single ? MusicAlbumType.Single : MusicAlbumType.Standard;
     }
 
     private AcoustIdFingerprintReleaseGroups? FallbackParser(
