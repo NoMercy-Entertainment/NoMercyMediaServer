@@ -100,6 +100,8 @@ internal sealed class PluginLoader(
                 _storage,
                 ct
             );
+            await ReportTranslationProblemsAsync(manifest, pluginDir, manifestPath, ct);
+
             string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
 
             if (!_storage.Exists(assemblyPath))
@@ -607,5 +609,43 @@ internal sealed class PluginLoader(
     private string ToLocalAssemblyPath(string storagePath)
     {
         return Path.GetFullPath(Path.Combine(_pluginsPath, storagePath));
+    }
+
+    /// <summary>
+    /// Checks a plugin's translations against the locale it was authored in.
+    ///
+    /// A warning rather than a refusal: a plugin missing one Dutch string is
+    /// still a working plugin, and refusing to load it would punish every viewer
+    /// for a gap that affects some of them. The author sees it on their own
+    /// machine, which is the point.
+    /// </summary>
+    private async Task ReportTranslationProblemsAsync(
+        PluginManifest manifest,
+        string pluginDir,
+        string manifestPath,
+        CancellationToken ct
+    )
+    {
+        if (manifest.Translations is null) return;
+
+        string directory = Path.Combine(pluginDir, manifest.Translations.Path);
+        Dictionary<string, string?> files = new();
+
+        foreach (string locale in manifest.Translations.Locales.Append(manifest.Translations.Source).Distinct())
+        {
+            string path = Path.Combine(directory, $"{locale}.json");
+            files[locale] = _storage.Exists(path) ? await _storage.ReadAllTextAsync(path, ct) : null;
+        }
+
+        List<PluginTranslationProblem> problems = PluginTranslationValidator.Validate(
+            manifest.Translations,
+            locale => files.GetValueOrDefault(locale)
+        );
+
+        foreach (PluginTranslationProblem problem in problems)
+            _logger.LogWarning(
+                "Plugin manifest {ManifestPath} has a translation problem: {Problem}",
+                [manifestPath, problem.ToString()]
+            );
     }
 }
