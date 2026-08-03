@@ -624,7 +624,10 @@ nul
 # Architecture and design files (large, generated)
 openapi-*.yaml
 openapi-*.json
-!openapi-nm-components.yaml
+# The NM component contracts are hand-maintained and shared with every client,
+# so they are tracked. Matching on the prefix rather than listing each file
+# keeps a new contract from being silently ignored the day it is added.
+!openapi-nm-*.yaml
 
 # GPG keys (security sensitive)
 .gpg-keys/

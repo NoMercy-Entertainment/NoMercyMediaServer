@@ -1,0 +1,506 @@
+openapi: 3.0.3
+info:
+  title: NoMercy NM Design System Components
+  description: |
+    The server-driven component vocabulary, generated from the design system.
+
+    This file is a sibling of `openapi-nm-components.yaml` and follows the same
+    rules: an envelope carrying `id`, `component` and `props`, a discriminator on
+    `component`, nested children under `items`, and a free-form `properties` bag
+    for anything a payload needs to carry that the contract has not named yet.
+
+    What this file adds is the box. Every component here accepts an `NMBox` and
+    an `NMSurface`, which is what makes them compose: a parent can place a child
+    without the child knowing anything about where it was placed, and a plugin
+    can lay out a dashboard entirely from the payload.
+
+    The media-domain components in `openapi-nm-components.yaml` are unchanged.
+    They keep their existing shape and their existing clients keep working. The
+    versions of those components that adopt this box live here, under the same
+    names, and a client opts in by rendering from this vocabulary.
+
+    Nothing here carries a raw CSS value. Every length, colour and radius is a
+    token key resolved by the client, which is the only reason the same payload
+    can render on a platform that has no CSS.
+  version: 1.0.0
+
+components:
+  schemas:
+    # ===========================================
+    # The box
+    # ===========================================
+    NMBox:
+      type: object
+      description: |
+        Geometry, split by who owns it.
+
+        The outer group is what a parent decides about this component: its
+        margin, how it flexes, how it aligns itself, how many columns it spans,
+        how big it is. A parent sets these on a child it is placing.
+
+        The inner group is what this component decides about its own children:
+        padding, gap, direction, alignment. A component sets these on itself.
+
+        Both groups are optional and both are overridable by the payload. The
+        rule that makes this reliable is not in the shape of this object, it is
+        in the order the client applies it: a value from the payload is applied
+        after the component's own default, so the payload always wins. A client
+        that resolves them in the other order will look correct until the first
+        time a parent tries to override a child, which is the failure that would
+        otherwise ship silently.
+      properties:
+        # ---- outer: what the parent decides ----
+        margin:
+          $ref: '#/components/schemas/NMSpacing'
+        width:
+          $ref: '#/components/schemas/NMSize'
+        height:
+          $ref: '#/components/schemas/NMSize'
+        min_width:
+          $ref: '#/components/schemas/NMSize'
+        max_width:
+          $ref: '#/components/schemas/NMSize'
+        min_height:
+          $ref: '#/components/schemas/NMSize'
+        max_height:
+          $ref: '#/components/schemas/NMSize'
+        grow:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: How much of the leftover space along the parent's axis this takes.
+        shrink:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: How readily this gives up space when the parent runs short.
+        basis:
+          $ref: '#/components/schemas/NMSize'
+        align_self:
+          $ref: '#/components/schemas/NMAlign'
+        order:
+          type: integer
+          nullable: true
+          description: Visual position among siblings, independent of payload order.
+        column_span:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Columns this occupies when the parent is a grid.
+        row_span:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Rows this occupies when the parent is a grid.
+        position:
+          $ref: '#/components/schemas/NMPosition'
+        inset:
+          $ref: '#/components/schemas/NMSpacing'
+        layer:
+          $ref: '#/components/schemas/NMLayer'
+        hidden_on:
+          type: array
+          items:
+            $ref: '#/components/schemas/NMSurfaceKind'
+          default: []
+          description: |
+            Surfaces this component is not rendered on at all. A component hidden
+            on tv is never focusable there, which is different from a component
+            that is merely invisible, and is what D-pad traversal needs.
+
+        # ---- inner: what this component decides ----
+        padding:
+          $ref: '#/components/schemas/NMSpacing'
+        gap:
+          $ref: '#/components/schemas/NMGap'
+        direction:
+          $ref: '#/components/schemas/NMDirection'
+        align:
+          $ref: '#/components/schemas/NMAlign'
+        justify:
+          $ref: '#/components/schemas/NMJustify'
+        wrap:
+          $ref: '#/components/schemas/NMWrap'
+        columns:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Fixed column count when this component lays its children out as a grid.
+        overflow:
+          $ref: '#/components/schemas/NMOverflow'
+
+    NMSpacing:
+      type: object
+      description: |
+        A spacing value, expressed per side. Resolution runs from the most
+        general to the most specific: `all`, then `x` and `y`, then a named side.
+        A later value replaces an earlier one for the side it names.
+
+        Every value is a key on the spacing scale, not a length. `"4"` means the
+        scale's step 4, which the client resolves to its own unit. Writing a
+        length here is not supported, because a length cannot survive the trip to
+        a platform whose unit is not the one it was written in.
+      properties:
+        all:
+          $ref: '#/components/schemas/NMSpace'
+        x:
+          $ref: '#/components/schemas/NMSpace'
+        y:
+          $ref: '#/components/schemas/NMSpace'
+        top:
+          $ref: '#/components/schemas/NMSpace'
+        right:
+          $ref: '#/components/schemas/NMSpace'
+        bottom:
+          $ref: '#/components/schemas/NMSpace'
+        left:
+          $ref: '#/components/schemas/NMSpace'
+
+    NMGap:
+      type: object
+      description: |
+        The space between children, which can differ along each axis. `all` sets
+        both; `x` and `y` override it per axis.
+      properties:
+        all:
+          $ref: '#/components/schemas/NMSpace'
+        x:
+          $ref: '#/components/schemas/NMSpace'
+        y:
+          $ref: '#/components/schemas/NMSpace'
+
+    NMSpace:
+      type: string
+      nullable: true
+      description: |
+        A key on the spacing scale. The scale is the design system's, so a key
+        that is not on it is a payload error rather than something the client
+        should try to interpret.
+      enum:
+        - '0'
+        - px
+        - '0-5'
+        - '1'
+        - '1-5'
+        - '2'
+        - '2-5'
+        - '3'
+        - '3-5'
+        - '4'
+        - '4-5'
+        - '5'
+        - '6'
+        - '7'
+        - '8'
+        - '9'
+        - '10'
+        - '11'
+        - '12'
+        - '14'
+        - '15'
+        - '16'
+        - '20'
+        - '24'
+        - '28'
+        - '32'
+        - '36'
+        - '40'
+        - '44'
+        - '48'
+        - '52'
+        - '56'
+        - '60'
+        - '64'
+        - '72'
+        - '80'
+        - '96'
+
+    NMSize:
+      type: string
+      nullable: true
+      description: |
+        A size. Either a key on the spacing scale, a fraction of the parent, or a
+        keyword. Fractions are written as they read: `1/2`, `2/3`, `5/6`.
+
+        `content` sizes to what is inside. `available` fills what the parent
+        offers. `auto` lets the platform decide, which is the default when the
+        field is absent.
+      pattern: '^(0|px|\d+(-\d)?|\d+/\d+|auto|full|available|content|min|max|screen)$'
+
+    NMAlign:
+      type: string
+      nullable: true
+      description: Alignment across the axis that runs against the layout direction.
+      enum: [start, center, end, stretch, baseline]
+
+    NMJustify:
+      type: string
+      nullable: true
+      description: Distribution along the layout direction.
+      enum: [start, center, end, between, around, evenly]
+
+    NMDirection:
+      type: string
+      nullable: true
+      description: |
+        The axis children flow along. `row` and `column` are resolved against the
+        reading direction, so a right-to-left locale reverses `row` without the
+        payload saying anything about it.
+      enum: [row, column, row-reverse, column-reverse]
+
+    NMWrap:
+      type: string
+      nullable: true
+      enum: [nowrap, wrap, wrap-reverse]
+
+    NMOverflow:
+      type: string
+      nullable: true
+      description: |
+        What happens to children that do not fit. `scroll` on a tv surface means
+        the container scrolls to follow focus, since there is no pointer to drag
+        it with.
+      enum: [visible, hidden, scroll, clip]
+
+    NMPosition:
+      type: string
+      nullable: true
+      enum: [static, relative, absolute, sticky, fixed]
+
+    NMLayer:
+      type: string
+      nullable: true
+      description: |
+        Stacking order, named rather than numbered. A payload that could set a
+        raw z-index would eventually set one that beats the player chrome, so the
+        vocabulary is closed on purpose.
+      enum: [base, raised, sticky, overlay, modal, toast, tooltip]
+
+    NMSurfaceKind:
+      type: string
+      description: A rendering surface, used to vary or suppress a component per platform.
+      enum: [web, mobile, tv]
+
+    # ===========================================
+    # The skin
+    # ===========================================
+    NMSurface:
+      type: object
+      description: |
+        Appearance, kept apart from geometry so a component can be re-skinned
+        without touching its layout and re-laid-out without touching its skin.
+
+        Colours are token keys, never hex. A payload carrying hex would render
+        correctly in one theme and wrongly in the other, and would not respond
+        when the user switches.
+      properties:
+        background:
+          $ref: '#/components/schemas/NMColor'
+        foreground:
+          $ref: '#/components/schemas/NMColor'
+        border_color:
+          $ref: '#/components/schemas/NMColor'
+        border_width:
+          type: string
+          nullable: true
+          enum: ['0', px, '2', '4', '8']
+        radius:
+          type: string
+          nullable: true
+          enum: [none, sm, base, md, lg, xl, 2xl, 3xl, full]
+        shadow:
+          type: string
+          nullable: true
+          enum: [none, xs, sm, md, lg, xl, 2xl, inner]
+        opacity:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+        elevation:
+          type: string
+          nullable: true
+          description: |
+            How the component lifts when it takes focus. This is the tv surface's
+            equivalent of hover, which does not exist there.
+          enum: [none, subtle, raised, floating]
+
+    NMColor:
+      type: string
+      nullable: true
+      description: |
+        A colour token key from the design system, without the leading dashes.
+        Both a semantic name and a scale step are accepted, so `surface-1` and
+        `teal-9` are both valid, and both resolve per theme.
+
+    # ===========================================
+    # Behaviour shared by every component
+    # ===========================================
+    NMAction:
+      type: object
+      description: |
+        Something the client should do when the component is activated. An action
+        names an intent; it never carries code. A client that does not understand
+        an action ignores it rather than guessing, which is what lets a newer
+        server talk to an older client without breaking it.
+      required:
+        - kind
+      properties:
+        kind:
+          type: string
+          description: The intent, such as navigate, play, mutate, dismiss or submit.
+        target:
+          type: string
+          nullable: true
+          description: What the intent applies to, usually a link or a component id.
+        body:
+          type: object
+          additionalProperties: true
+          nullable: true
+        confirm:
+          type: string
+          nullable: true
+          description: When set, the client confirms with this message before acting.
+
+    NMAccessibility:
+      type: object
+      description: |
+        The accessible name and role a payload can set. Every component ships a
+        correct default, so this exists to override, not to supply what would
+        otherwise be missing. A component that needs this field filled in to be
+        accessible is a component with a bug.
+      properties:
+        label:
+          type: string
+          nullable: true
+        described_by:
+          type: string
+          nullable: true
+        role:
+          type: string
+          nullable: true
+        live:
+          type: string
+          nullable: true
+          enum: [off, polite, assertive]
+
+    # ===========================================
+    # The base every component's props extend
+    # ===========================================
+    NMComponentBase:
+      type: object
+      description: |
+        What every component in this vocabulary carries, whatever it draws.
+
+        `items` is here rather than on the container components alone, because a
+        brick that cannot hold children is not a brick. A component that has no
+        meaningful place to put children renders them after its own content.
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DesignComponent'
+          default: []
+          description: Nested children, rendered inside this component.
+        box:
+          $ref: '#/components/schemas/NMBox'
+        surface:
+          $ref: '#/components/schemas/NMSurface'
+        action:
+          $ref: '#/components/schemas/NMAction'
+        accessibility:
+          $ref: '#/components/schemas/NMAccessibility'
+        test_id:
+          type: string
+          nullable: true
+          description: |
+            A stable handle for tests. The box suites read the rendered geometry
+            through this, which is why it is part of the contract rather than
+            something each client invents.
+        next_id:
+          type: string
+          nullable: true
+          description: The component focus moves to next, for D-pad traversal.
+        previous_id:
+          type: string
+          nullable: true
+        context_menu_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DesignContextMenuItem'
+          default: []
+        url:
+          type: string
+          nullable: true
+          description: Where this component's data is fetched or refreshed from.
+        properties:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: |
+            Anything the contract has not named yet. This is the escape hatch that
+            keeps an older client alive against a newer server, and it is not a
+            place to put something that deserves a name.
+
+    DesignContextMenuItem:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        destructive:
+          type: boolean
+          default: false
+        action:
+          $ref: '#/components/schemas/NMAction'
+
+    DesignComponent:
+      type: object
+      description: |
+        The envelope, matching `Component` in `openapi-nm-components.yaml`. The
+        `component` field discriminates, and `props` is that component's own
+        schema, every one of which extends `NMComponentBase`.
+
+        The concrete component schemas are generated from the design system into
+        `openapi-nm-design-system.components.yaml` and are not hand-written here,
+        because a contract maintained by hand alongside a generated one drifts.
+      required:
+        - id
+        - component
+        - props
+      properties:
+        id:
+          type: string
+        component:
+          type: string
+          description: Component type discriminator, such as NMButton or NMCard.
+        props:
+          type: object
+          description: The component's props, extending NMComponentBase.
+        update:
+          $ref: '#/components/schemas/DesignUpdate'
+
+    DesignUpdate:
+      type: object
+      description: When and from where this component refreshes itself.
+      properties:
+        when:
+          type: string
+          nullable: true
+        link:
+          type: string
+          nullable: true
+        body:
+          type: object
+          additionalProperties: true
+          nullable: true
