@@ -410,6 +410,19 @@ components:
           $ref: '#/components/schemas/NMBox'
         surface:
           $ref: '#/components/schemas/NMSurface'
+        color:
+          type: string
+          nullable: true
+          description: |
+            The palette family this component draws its accent from, such as
+            `violet` or `red`. Any family the design system ships is accepted,
+            not only the handful a given component enumerates: those are the
+            designer's recommendation rather than the limit.
+
+            Absent, the component follows the accent the app is set to, which is
+            the behaviour a payload should want almost always. Naming one here
+            is for the case where a single component has to stand apart from the
+            rest of the interface.
         action:
           $ref: '#/components/schemas/NMAction'
         accessibility:
