@@ -2,13 +2,48 @@ using Newtonsoft.Json;
 using NoMercy.Api.DTOs.Media.Nm;
 using Xunit;
 
-namespace NoMercy.Tests.Api.Nm;
+namespace NoMercy.Tests.Api.NmComponents;
 
 public class NmBuilderTests
 {
     private static string Json(NmComponent component)
     {
         return JsonConvert.SerializeObject(component);
+    }
+
+    [Fact]
+    public void ReadsAsATreeAndSerialisesAsOne()
+    {
+        // The shape a developer is meant to write: outside in, one call per
+        // decision, nesting that looks like nesting.
+        NmComponent card = Nm.Card("movie")
+            .Pad("4")
+            .Gap("2")
+            .Color("plum")
+            .Add(
+                Nm.Badge("quality").Text("4K"),
+                Nm.Button("play").Text("Play")
+            );
+
+        string json = Json(card);
+
+        Assert.Equal("NMCard", card.Component);
+        Assert.Contains("\"color\":\"plum\"", json);
+        Assert.Contains("\"all\":\"4\"", json);
+        Assert.Contains("NMBadge", json);
+        Assert.Contains("NMButton", json);
+        Assert.Contains("\"text\":\"Play\"", json);
+    }
+
+    [Fact]
+    public void KnowsItsOwnNameWithoutBeingTold()
+    {
+        // The implicit conversion is what lets a built-up component sit directly
+        // in a parent's Add(), so the name has to come from the props themselves.
+        NmComponent badge = Nm.Badge("q").Text("4K");
+
+        Assert.Equal("NMBadge", badge.Component);
+        Assert.Equal("q", badge.Id);
     }
 
     [Fact]
