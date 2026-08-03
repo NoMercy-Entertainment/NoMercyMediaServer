@@ -224,6 +224,13 @@ public partial class MusicLogic : IAsyncDisposable
             matchedRecording
         );
 
+        if (encodableTrack is null)
+            _logger.LogWarning(
+                "No track on {Release} matched {File}, so it was stored but never encoded",
+                releaseAppends.Title,
+                mediaFile.Path
+            );
+
         foreach (MusicBrainzMedia media in releaseAppends.Media)
         foreach (MusicBrainzTrack track in media.Tracks)
         {
@@ -369,7 +376,14 @@ public partial class MusicLogic : IAsyncDisposable
     )
     {
         if (Folder is null)
+        {
+            _logger.LogWarning(
+                "No destination folder on this import, so {Track} from {File} was stored but never encoded",
+                track.Title,
+                file.Path
+            );
             return;
+        }
 
         // Everything the encoder writes lands under BasePath. Pointing that at the source
         // would leave the encode sitting in the download folder it came from, so it is the

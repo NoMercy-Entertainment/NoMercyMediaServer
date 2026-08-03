@@ -46,7 +46,16 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
     }
 
     public override string QueueName => "encoder";
-    public override int Priority => 3;
+
+    // The queue reserves by OrderByDescending(Priority), so 3 sat below VideoEncodeJob's
+    // 4 and an album import never got a worker while any video backlog was outstanding —
+    // on a library mid-encode that is days, and the operator who just picked a release
+    // sees nothing appear.
+    //
+    // Outranking the video coordinator costs it nothing: EncodeTaskJob does the actual
+    // ffmpeg work on encoder-gpu/encoder-cpu, so the only thing yielding here is an
+    // analyze-then-WaitChildren step.
+    public override int Priority => 5;
 
     public string Status { get; set; } = "pending";
 
