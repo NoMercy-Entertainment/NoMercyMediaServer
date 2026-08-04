@@ -50,12 +50,14 @@ Name: "{app}\binaries\tesseract"; Permissions: users-modify
 Name: "{app}\binaries\tesseract\tessdata"; Permissions: users-modify
 
 [Files]
-; Shared runtime and dependencies (always installed with server)
-Source: "..\..\installer-payload\*.dll"; DestDir: "{app}"; Components: server; Flags: ignoreversion
-Source: "..\..\installer-payload\*.json"; DestDir: "{app}"; Components: server; Flags: ignoreversion
+; Shared runtime and dependencies (always installed with server).
+; This must recurse: the payload's subdirectories carry runtimes\ (the libnfs
+; natives, without which NFS mounts fail with "Unable to load DLL 'nfs'"),
+; Assets\, BuildHost-*\ and the satellite resource folder for every language.
+; The optional executables are excluded here so they stay on their own components.
+Source: "..\..\installer-payload\*"; DestDir: "{app}"; Components: server; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "NoMercyApp.exe,NoMercyLauncher.exe,nomercy.exe"
 
 ; Main executables per component
-Source: "..\..\installer-payload\NoMercyMediaServer.exe"; DestDir: "{app}"; Components: server; Flags: ignoreversion
 Source: "..\..\installer-payload\NoMercyApp.exe"; DestDir: "{app}"; Components: app; Flags: ignoreversion
 Source: "..\..\installer-payload\NoMercyLauncher.exe"; DestDir: "{app}"; Components: service; Flags: ignoreversion
 Source: "..\..\installer-payload\nomercy.exe"; DestDir: "{app}"; Components: cli; Flags: ignoreversion
