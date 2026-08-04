@@ -54,7 +54,8 @@ public class CastProxyController(
     {
         Guid userId = User.UserId();
         logger.LogInformation(
-            "[CastProxy] {Method} device={DeviceId} path=/{Path} user={User}", [Request.Method, deviceId, path, userId]
+            "[CastProxy] {Method} device={DeviceId} path=/{Path} user={User}",
+            [Request.Method, deviceId, path, userId]
         );
 
         if (userId == Guid.Empty)
@@ -70,22 +71,31 @@ public class CastProxyController(
         if (tv is null)
         {
             logger.LogWarning(
-                "[CastProxy] no owned TV device '{DeviceId}' for user {User}", [deviceId, userId]
+                "[CastProxy] no owned TV device '{DeviceId}' for user {User}",
+                [deviceId, userId]
             );
             return NotFoundResponse($"No owned TV device '{deviceId}' found");
         }
 
-        if (string.IsNullOrWhiteSpace(tv.Ip))
+        // Device.Ip is the address the TV was last SEEN from — through the tunnel
+        // that is the household's public IP, which routes nowhere from inside the
+        // LAN and simply times out. The TV's own control server is only reachable
+        // at the address it advertises over mDNS, which is what LanIp holds.
+        string? host = !string.IsNullOrWhiteSpace(tv.LanIp) ? tv.LanIp : null;
+
+        if (host is null)
         {
             logger.LogWarning("[CastProxy] TV '{Name}' has no LAN IP", tv.Name);
             return ServiceUnavailableResponse("Target TV has no known LAN address");
         }
 
+        int port = tv.LanPort ?? TvControlPort;
+
         // Transparent passthrough: the caller already includes the TV's API
         // version in the path (e.g. "v1/launch"), so forward it verbatim rather
         // than re-prefixing "/v1/" — doubling it (…/v1/v1/launch) 404s the TV.
         string query = Request.QueryString.HasValue ? Request.QueryString.Value! : string.Empty;
-        string targetUrl = $"http://{tv.Ip}:{TvControlPort}/{path}{query}";
+        string targetUrl = $"http://{host}:{port}/{path}{query}";
         logger.LogInformation("[CastProxy] forwarding to {TargetUrl}", targetUrl);
 
         using HttpRequestMessage forward = new(new HttpMethod(Request.Method), targetUrl);
@@ -116,7 +126,8 @@ public class CastProxyController(
 
             byte[] body = await upstream.Content.ReadAsByteArrayAsync();
             logger.LogInformation(
-                "[CastProxy] TV {Ip} replied {Status} ({Bytes} bytes)", [tv.Ip, (int)upstream.StatusCode, body.Length]
+                "[CastProxy] TV {Ip} replied {Status} ({Bytes} bytes)",
+                [host, (int)upstream.StatusCode, body.Length]
             );
 
             Response.StatusCode = (int)upstream.StatusCode;
@@ -127,13 +138,14 @@ public class CastProxyController(
         }
         catch (TaskCanceledException)
         {
-            logger.LogWarning("[CastProxy] TV '{Name}' ({Ip}) timed out", [tv.Name, tv.Ip]);
+            logger.LogWarning("[CastProxy] TV '{Name}' ({Ip}) timed out", [tv.Name, host]);
             return GatewayTimeoutResponse($"TV '{tv.Name}' did not respond in time");
         }
         catch (HttpRequestException ex)
         {
             logger.LogWarning(
-                "[CastProxy] could not reach TV '{Name}' ({Ip}): {Message}", [tv.Name, tv.Ip, ex.Message]
+                "[CastProxy] could not reach TV '{Name}' ({Ip}): {Message}",
+                [tv.Name, host, ex.Message]
             );
             return ServiceUnavailableResponse($"Could not reach TV '{tv.Name}': {ex.Message}");
         }
