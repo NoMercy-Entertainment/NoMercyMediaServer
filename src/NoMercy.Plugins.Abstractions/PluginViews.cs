@@ -351,9 +351,145 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Table,
-            Props = new() { ["columns"] = columns.ToList(), ["emptyMessage"] = emptyMessage },
-            Items = [.. rows],
+            Props = new()
+            {
+                ["variant"] = "ghost",
+                ["accessibility"] = new Dictionary<string, object?> { ["role"] = "table" },
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = "column",
+                    ["width"] = "full",
+                    ["gap"] = new Dictionary<string, object?> { ["all"] = "1" },
+                },
+            },
+            Items =
+            [
+                HeaderRow(id, columns),
+                .. rows.Select(row => BodyRow(columns, row)),
+                .. rows.Count == 0 && emptyMessage is not null
+                    ? new[] { Text($"{id}-empty", emptyMessage, "caption") }
+                    : [],
+            ],
         };
+
+    /// <summary>
+    /// A row of column labels, announced as one.
+    /// <para>
+    /// Not an <c>NMTable</c>: that is a bare table element with a single slot,
+    /// and the design system generates no row or cell to put in it — anything
+    /// else placed there is hoisted straight back out by the parser, which is
+    /// why this screen drew a heading over an empty space. Rows and cells built
+    /// from boxes and given their ARIA roles are a table a reader announces as
+    /// one, which is the part that matters.
+    /// </para>
+    /// </summary>
+    private static PluginComponent HeaderRow(string id, IReadOnlyList<PluginTableColumn> columns) =>
+        TableRow(
+            $"{id}-head",
+            "row",
+            [
+                .. columns.Select(column =>
+                    Cell(
+                        $"{id}-head-{column.Key}",
+                        "columnheader",
+                        column.Align,
+                        Leaf($"{id}-head-{column.Key}-text", column.Label)
+                    )
+                ),
+            ]
+        );
+
+    /// <summary>One row's cells, in column order, each holding whatever that column asked for.</summary>
+    private static PluginComponent BodyRow(
+        IReadOnlyList<PluginTableColumn> columns,
+        PluginComponent row
+    ) =>
+        TableRow(
+            row.Id,
+            "row",
+            [
+                .. columns.Select(column =>
+                    Cell(
+                        $"{row.Id}-{column.Key}",
+                        "cell",
+                        column.Align,
+                        CellContent(
+                            $"{row.Id}-{column.Key}",
+                            column,
+                            row.Props.GetValueOrDefault(column.Key)
+                        )
+                    )
+                ),
+            ],
+            row.Action
+        );
+
+    private static PluginComponent TableRow(
+        string id,
+        string role,
+        IReadOnlyList<PluginComponent> cells,
+        PluginActionIntent? action = null
+    ) =>
+        new()
+        {
+            Id = id,
+            Component = PluginComponentType.Container,
+            Props = new()
+            {
+                ["variant"] = "ghost",
+                ["accessibility"] = new Dictionary<string, object?> { ["role"] = role },
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = "row",
+                    ["width"] = "full",
+                    ["align"] = "center",
+                    ["gap"] = new Dictionary<string, object?> { ["all"] = "3" },
+                },
+            },
+            Items = [.. cells],
+            Action = action,
+        };
+
+    private static PluginComponent Cell(
+        string id,
+        string role,
+        string? align,
+        PluginComponent content
+    ) =>
+        new()
+        {
+            Id = id,
+            Component = PluginComponentType.Container,
+            Props = new()
+            {
+                ["variant"] = "ghost",
+                ["accessibility"] = new Dictionary<string, object?> { ["role"] = role },
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = "row",
+                    ["grow"] = 1,
+                    ["justify"] = align == "right" ? "end" : "start",
+                },
+            },
+            Items = [content],
+        };
+
+    /// <summary>
+    /// What a cell draws, from what its column said it holds. A progress column
+    /// carrying a number is a bar; a badge column is a badge; everything else is
+    /// the value as text, because a cell with nothing in it reads as missing
+    /// data rather than an empty string.
+    /// </summary>
+    private static PluginComponent CellContent(string id, PluginTableColumn column, object? value)
+    {
+        if (column.Cell == PluginTableCellType.Progress && value is double fraction)
+            return Progress(id, fraction);
+
+        if (column.Cell == PluginTableCellType.Badge && value is not null)
+            return Badge(id, value.ToString() ?? string.Empty);
+
+        return Leaf(id, value?.ToString() ?? string.Empty);
+    }
 
     public static PluginComponent Row(
         string id,

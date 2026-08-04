@@ -78,7 +78,10 @@ public class UiPluginContractTests
         );
 
         view.Components.Should().ContainSingle();
-        view.Components![0].Items[0].Props["name"].Should().Be("/active");
+        // Items[0] is the header row now. The value is a text leaf in the body
+        // row's first cell, because a cell holds a component rather than a
+        // string keyed by column.
+        view.Components![0].Items[1].Items[0].Items[0].Props["text"].Should().Be("/active");
     }
 
     [Fact]

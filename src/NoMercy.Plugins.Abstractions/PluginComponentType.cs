@@ -51,7 +51,7 @@ public static class PluginComponentType
     /// two exist.
     /// </para>
     /// </summary>
-    public const string Table = "PluginTable";
+    public const string Table = "NMCard";
 
     /// <summary>Determinate when a value is set, indeterminate when it is not.</summary>
     public const string Progress = "NMProgress";

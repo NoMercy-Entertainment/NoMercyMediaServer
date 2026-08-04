@@ -171,11 +171,23 @@ public class PluginViewContractTests
             ]
         );
 
+        // A header row and one body row, built from boxes because the design
+        // system has no table row or cell — and announced as a table, which is
+        // the part a reader needs.
         table.Component.Should().Be(PluginComponentType.Table);
-        table.Props["columns"].Should().BeOfType<List<PluginTableColumn>>();
-        table.Items.Should().ContainSingle();
-        table.Items[0].Props["progress"].Should().Be(0.42);
-        table.Items[0].Action!.Type.Should().Be(PluginActionType.CallPlugin);
+        Dictionary<string, object?> access =
+            (Dictionary<string, object?>)table.Props["accessibility"]!;
+        access["role"].Should().Be("table");
+
+        table.Items.Should().HaveCount(2);
+        table.Items[0].Items.Should().HaveCount(3, "one cell per column");
+
+        PluginComponent body = table.Items[1];
+        body.Action!.Type.Should().Be(PluginActionType.CallPlugin);
+
+        // The progress column carries a bar, not the raw fraction as words.
+        body.Items[1].Items[0].Component.Should().Be(PluginComponentType.Progress);
+        body.Items[1].Items[0].Props["value"].Should().Be(42.0);
     }
 
     [Fact]
