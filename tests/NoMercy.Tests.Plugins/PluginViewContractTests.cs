@@ -70,8 +70,8 @@ public class PluginViewContractTests
 
         string json = Serialize(view);
 
-        json.Should().Contain("\"component\":\"PluginGrid\"");
-        json.Should().Contain("\"component\":\"PluginCard\"");
+        json.Should().Contain("\"component\":\"NMCard\"");
+        json.Should().Contain("\"component\":\"NMText\"");
         json.Should().Contain("\"playMedia\"");
         view.WebView.Should().BeNull();
     }
@@ -243,15 +243,20 @@ public class PluginViewContractTests
     {
         PluginComponent badge = PluginViews.Badge("state", "Seeding", PluginBadgeVariant.Success);
 
-        badge.Props["variant"].Should().Be("success");
-        PluginBadgeVariant.All.Should().Contain(badge.Props["variant"]!.ToString());
+        // The design system keeps semantic colour on the surface. NMBadge's own
+        // variant is its shape, so a payload still never names a colour.
+        badge.Props["variant"].Should().Be("solid");
+        Dictionary<string, object?> surface = (Dictionary<string, object?>)badge.Props["surface"]!;
+        surface["status"].Should().Be("success");
+        PluginBadgeVariant.All.Should().Contain(surface["status"]!.ToString());
     }
 
     [Fact]
     public void AnIndeterminateProgressHasNoValue()
     {
+        // The contract takes a fraction; NMProgress reads 0-100.
         PluginViews.Progress("p", null).Props["value"].Should().BeNull();
-        PluginViews.Progress("p", 0.25).Props["value"].Should().Be(0.25);
+        PluginViews.Progress("p", 0.25).Props["value"].Should().Be(25.0);
     }
 
     [Fact]

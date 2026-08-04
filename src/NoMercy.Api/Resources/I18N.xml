@@ -821,4 +821,8 @@
     <Key>Plugin consent granted</Key>
     <Value lang="nl">Plugin consent granted</Value>
   </Entry>
+  <Entry>
+    <Key>Plugin not found</Key>
+    <Value lang="nl">Plugin not found</Value>
+  </Entry>
 </I18N>

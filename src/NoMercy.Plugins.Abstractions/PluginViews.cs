@@ -51,26 +51,76 @@ public static class PluginViews
             Fallback = fallback,
             Web = web,
             Mobile = mobile,
-            Tv = tv
+            Tv = tv,
         }.For(surface);
 
     public static PluginView WebView(string entryUrl) =>
         new() { WebView = new() { EntryUrl = entryUrl } };
 
     public static PluginComponent Container(string id, params PluginComponent[] children) =>
+        Stack(id, "column", children);
+
+    /// <summary>
+    /// A ghost card laid out along one axis.
+    /// <para>
+    /// The design system ships no container, row or grid component, and does
+    /// not need one — <c>box</c> carries direction, wrap and gap, and resolves
+    /// to flex or grid on its own. A layout tag would be a component that
+    /// exists only to hold a style the box already holds.
+    /// </para>
+    /// </summary>
+    private static PluginComponent Stack(
+        string id,
+        string direction,
+        IReadOnlyList<PluginComponent> children,
+        bool wrap = false
+    ) =>
         new()
         {
             Id = id,
             Component = PluginComponentType.Container,
+            Props = new()
+            {
+                ["variant"] = "ghost",
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = direction,
+                    ["wrap"] = wrap ? "wrap" : null,
+                    ["gap"] = new Dictionary<string, object?> { ["all"] = "3" },
+                },
+            },
             Items = [.. children],
         };
 
     public static PluginComponent Text(string id, string value, string? variant = null) =>
+        variant switch
+        {
+            "title" or "subtitle" => new()
+            {
+                Id = id,
+                Component = "NMContentHeader",
+                Items = [Leaf($"{id}-text", value)],
+            },
+            "caption" or "muted" => new()
+            {
+                Id = id,
+                Component = "NMHelper",
+                Props = new() { ["helperText"] = value },
+            },
+            _ => Leaf(id, value),
+        };
+
+    /// <summary>
+    /// The one leaf the design system does not draw. Every component takes its
+    /// content from a slot and a payload can only put components in a slot, so
+    /// without this a server-built tree had no way to say a word.
+    /// </summary>
+    private static PluginComponent Leaf(string id, string value) =>
         new()
         {
             Id = id,
             Component = PluginComponentType.Text,
-            Props = new() { ["value"] = value, ["variant"] = variant },
+            Props = new() { ["text"] = value },
         };
 
     public static PluginComponent Image(string id, string url, string? alt = null) =>
@@ -78,32 +128,31 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Image,
-            Props = new() { ["url"] = url, ["alt"] = alt },
+            // A frame that holds its shape before the image arrives and keeps it
+            // when the image never does. Artwork urls rot, and a frame with no
+            // shape reserved collapses to a sliver.
+            Props = new()
+            {
+                ["src"] = url,
+                ["alt"] = alt,
+                ["fit"] = "contain",
+                ["aspectRatio"] = "square",
+            },
         };
 
     public static PluginComponent List(string id, params PluginComponent[] items) =>
-        new()
-        {
-            Id = id,
-            Component = PluginComponentType.List,
-            Items = [.. items],
-        };
+        Stack(id, "column", items);
 
     public static PluginComponent Row(string id, params PluginComponent[] items) =>
-        new()
-        {
-            Id = id,
-            Component = PluginComponentType.Row,
-            Items = [.. items],
-        };
+        Stack(id, "row", items, wrap: true);
 
+    /// <summary>
+    /// Tiles that wrap. A wrapping row rather than a fixed column count,
+    /// because the payload cannot know how wide the viewer's screen is and a
+    /// number chosen here would be wrong on most of them.
+    /// </summary>
     public static PluginComponent Grid(string id, params PluginComponent[] items) =>
-        new()
-        {
-            Id = id,
-            Component = PluginComponentType.Grid,
-            Items = [.. items],
-        };
+        Stack(id, "row", items, wrap: true);
 
     public static PluginComponent Card(
         string id,
@@ -118,10 +167,14 @@ public static class PluginViews
             Component = PluginComponentType.Card,
             Props = new()
             {
-                ["title"] = title,
-                ["subtitle"] = subtitle,
-                ["image"] = image,
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = "column",
+                    ["gap"] = new Dictionary<string, object?> { ["all"] = "2" },
+                    ["padding"] = new Dictionary<string, object?> { ["all"] = "3" },
+                },
             },
+            Items = [.. Face($"{id}", title, subtitle, image)],
             Action = action,
         };
 
@@ -138,11 +191,14 @@ public static class PluginViews
             Component = PluginComponentType.Detail,
             Props = new()
             {
-                ["title"] = title,
-                ["description"] = description,
-                ["image"] = image,
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = "column",
+                    ["gap"] = new Dictionary<string, object?> { ["all"] = "3" },
+                    ["padding"] = new Dictionary<string, object?> { ["all"] = "4" },
+                },
             },
-            Items = [.. children],
+            Items = [.. Face(id, title, description, image), .. children],
         };
 
     public static PluginComponent Button(
@@ -156,12 +212,16 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Button,
+            // A button reads its label from what is inside it. Setting only a
+            // label prop drew an empty square that a reader announced and a
+            // person could not.
             Props = new()
             {
-                ["label"] = label,
+                ["ariaLabel"] = label,
                 ["icon"] = icon,
-                ["variant"] = variant,
+                ["variant"] = variant ?? "secondary",
             },
+            Items = [Leaf($"{id}-label", label)],
             Action = action,
         };
 
@@ -182,7 +242,8 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Button,
-            Props = new() { ["label"] = label, ["variant"] = "danger" },
+            Props = new() { ["ariaLabel"] = label, ["variant"] = "destructive" },
+            Items = [Leaf($"{id}-label", label)],
             Action = new()
             {
                 Type = action.Type,
@@ -216,7 +277,9 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.EmptyState,
-            Props = new() { ["title"] = title, ["message"] = message },
+            Items = message is null
+                ? [Leaf($"{id}-title", title)]
+                : [Leaf($"{id}-title", title), Leaf($"{id}-message", message)],
         };
 
     public static PluginComponent Spinner(string id, string? label = null) =>
@@ -224,7 +287,7 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Spinner,
-            Props = new() { ["label"] = label },
+            Props = new() { ["ariaLabel"] = label },
         };
 
     /// <summary>
@@ -268,7 +331,13 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Progress,
-            Props = new() { ["value"] = value, ["label"] = label },
+            // NMProgress reads 0-100; the contract has always been a fraction.
+            Props = new()
+            {
+                ["value"] = value is null ? null : value * 100,
+                ["ariaLabel"] = label,
+                ["labelPos"] = label is null ? "none" : "label-right",
+            },
         };
 
     public static PluginComponent Badge(
@@ -280,6 +349,44 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Badge,
-            Props = new() { ["label"] = label, ["variant"] = variant },
+            // NMBadge's variant is its shape, not its meaning. The meaning
+            // travels on the surface, where the design system keeps semantic
+            // colour, so a payload still never names one.
+            Props = new()
+            {
+                ["text"] = label,
+                ["variant"] = "solid",
+                ["surface"] = new Dictionary<string, object?> { ["status"] = variant },
+            },
         };
+
+    /// <summary>Artwork, a heading, and the line under it — whichever exist.</summary>
+    private static IEnumerable<PluginComponent> Face(
+        string id,
+        string title,
+        string? secondary,
+        string? image
+    )
+    {
+        if (!string.IsNullOrWhiteSpace(image))
+            yield return Image($"{id}-art", image, title);
+
+        yield return new()
+        {
+            Id = $"{id}-heading",
+            Component = "NMContentHeader",
+            Items = [Leaf($"{id}-title", title)],
+        };
+
+        // A separate line rather than a second child of the header: the header
+        // lays its children out in one row, so both read as one run-on sentence
+        // when they share it.
+        if (!string.IsNullOrWhiteSpace(secondary))
+            yield return new()
+            {
+                Id = $"{id}-secondary",
+                Component = "NMHelper",
+                Props = new() { ["helperText"] = secondary },
+            };
+    }
 }
