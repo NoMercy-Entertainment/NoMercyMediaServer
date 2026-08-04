@@ -46,6 +46,25 @@ public interface IFileRepository
         string subtitlesJson,
         CancellationToken ct = default
     );
+
+    /// <summary>
+    /// Points a folder's registered preview tracks at the sprite sheet that is on
+    /// disk now.
+    ///
+    /// <para>A scan registers the pair it finds and, in the same pass, queues the
+    /// upgrade that replaces it. The upgrade deletes what it superseded, so the
+    /// registration went on naming a file the server itself had removed and every
+    /// client asked for it — a 404 on every scrub, on exactly the titles the
+    /// upgrade was meant to improve. Whoever rewrites the sidecar owns the
+    /// registration that names it.</para>
+    /// </summary>
+    /// <returns>How many video files were repointed.</returns>
+    Task<int> RepointPreviewTracksAsync(
+        string hostFolder,
+        string sheetFileName,
+        string vttFileName,
+        CancellationToken ct = default
+    );
     Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId);
     Task DeleteVideoFilesAndMetadataByTvIdAsync(int tvId);
 
