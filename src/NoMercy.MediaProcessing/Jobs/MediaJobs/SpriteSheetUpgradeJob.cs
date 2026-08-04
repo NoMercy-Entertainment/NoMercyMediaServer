@@ -14,6 +14,7 @@ using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
+using NoMercy.MediaProcessing.Files;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -50,6 +51,7 @@ public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector
 
     private ISpriteSheetRefresher? _refresher;
     private IStorageFactory? _storageFactory;
+    private IFileRepository? _fileRepository;
 
     public SpriteSheetUpgradeJob() { }
 
@@ -65,6 +67,7 @@ public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector
     {
         _refresher = serviceProvider.GetService<ISpriteSheetRefresher>();
         _storageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
+        _fileRepository = serviceProvider.GetService<IFileRepository>();
     }
 
     public async Task Handle()
@@ -145,9 +148,39 @@ public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector
 
         await PublishProgressAsync(100, "completed");
 
+        int repointed = await RepointRegistrationAsync(sheet);
+
         Logger.App(
-            $"[SpriteSheetUpgrade] {Title}: {string.Join(", ", undersized)} -> {sheet}",
+            $"[SpriteSheetUpgrade] {Title}: {string.Join(", ", undersized)} -> {sheet}"
+                + $" ({repointed} registration(s) repointed)",
             LogEventLevel.Information
+        );
+    }
+
+    /// <summary>
+    /// Names the new pair everywhere the old one was registered.
+    ///
+    /// <para>The sheet this job replaces is deleted, and the registration a scan
+    /// wrote still named it — so an upgraded title answered every scrub request
+    /// with a 404 until an unrelated scan happened to run. The rebuild is only
+    /// half the work; the record clients read is the other half.</para>
+    /// </summary>
+    private async Task<int> RepointRegistrationAsync(string sheet)
+    {
+        if (_fileRepository is null)
+        {
+            Logger.App(
+                $"[SpriteSheetUpgrade] {Title}: no file repository in this scope, "
+                    + $"{HostFolder} still names its old sheet",
+                LogEventLevel.Warning
+            );
+            return 0;
+        }
+
+        return await _fileRepository.RepointPreviewTracksAsync(
+            HostFolder,
+            sheet,
+            Path.ChangeExtension(sheet, ".vtt")
         );
     }
 

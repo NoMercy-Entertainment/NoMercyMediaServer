@@ -837,6 +837,60 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             );
     }
 
+    /// <inheritdoc />
+    public async Task<int> RepointPreviewTracksAsync(
+        string hostFolder,
+        string sheetFileName,
+        string vttFileName,
+        CancellationToken ct = default
+    )
+    {
+        // Stored normalised by the scan, so the driver-shaped path a job carries
+        // has to be brought to the same shape before it will match anything.
+        string folder = hostFolder.Replace("\\", "/");
+
+        List<VideoFile> videoFiles = await context
+            .VideoFiles.Where(videoFile => videoFile.HostFolder == folder)
+            .ToListAsync(ct);
+
+        int repointed = 0;
+
+        foreach (VideoFile videoFile in videoFiles)
+        {
+            // Read once: the property deserialises the column on every get, so
+            // editing what a second get returns would edit a different array.
+            VideoTrack[] tracks = videoFile.Tracks;
+            bool changed = false;
+
+            foreach (VideoTrack track in tracks)
+            {
+                string? fileName = track.Kind switch
+                {
+                    "sprite" => sheetFileName,
+                    "thumbnails" => vttFileName,
+                    _ => null,
+                };
+
+                if (fileName is null || track.File == $"/{fileName}")
+                    continue;
+
+                track.File = $"/{fileName}";
+                changed = true;
+            }
+
+            if (!changed)
+                continue;
+
+            videoFile.Tracks = tracks;
+            repointed++;
+        }
+
+        if (repointed > 0)
+            await context.SaveChangesAsync(ct);
+
+        return repointed;
+    }
+
     public async Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId)
     {
         List<Ulid> metadataIds = await context
