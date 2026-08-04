@@ -10,7 +10,6 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
-using System.Net;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Timers;
@@ -19,7 +18,6 @@ using Newtonsoft.Json;
 using NoMercy.Events;
 using NoMercy.Events.Cast;
 using NoMercy.Networking.Discovery;
-using NoMercy.Networking.Http;
 using NoMercy.NmSystem.Extensions;
 using Sharpcaster;
 using Sharpcaster.Models;
@@ -115,10 +113,7 @@ public class ChromeCastService : IChromeCastService
         // synthesized a receiver named after the WAN IP, and every device listing tried a
         // TCP connect to the owner's own router. Refusing the address here is the one
         // choke point all three callers share.
-        if (
-            !IPAddress.TryParse(ip, out IPAddress? parsed)
-            || !ClientIpResolver.IsPrivateNetwork(parsed)
-        )
+        if (!CastAddress.IsOnThisNetwork(ip))
         {
             _logger.LogDebug("Not a castable address, skipping Chromecast lookup: {Ip}", ip);
             return null;

@@ -90,9 +90,9 @@ public sealed class ChromeCastServiceGuardClauseTests
     // made the server rescan mDNS for it, synthesize a receiver named after the WAN IP,
     // and open a TCP connection to the owner's own router on every device listing.
     [Theory]
-    [InlineData("85.144.244.49")]
+    [InlineData("12.345.678.90")]
     [InlineData("8.8.8.8")]
-    [InlineData("2a02:a45f:6c1e::1")]
+    [InlineData("3a02:ab46f:6c1g::2")]
     [InlineData("not-an-ip")]
     public async Task FindReceiverNameByIpAsync_AddressOffThisNetwork_ReturnsNull(string ip)
     {

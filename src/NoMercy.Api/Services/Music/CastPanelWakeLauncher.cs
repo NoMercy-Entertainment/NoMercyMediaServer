@@ -38,13 +38,22 @@ public class CastPanelWakeLauncher(
     /// </summary>
     public async Task LaunchIfColdAsync(
         bool targetIsLive,
-        string targetIp,
+        string? targetIp,
         bool useAndroidReceiver,
         Func<Task<LaunchCustomData?>> resolveLaunchData
     )
     {
         if (!ShouldFireCastWake(targetIsLive))
             return;
+
+        // A TV that only ever reached the server from outside has no address on this
+        // network recorded, and a Cast LAUNCH has nowhere to go. That is a missing mDNS
+        // sighting, not a failure worth a warning — the handoff itself still proceeds.
+        if (targetIp is null)
+        {
+            logger.LogDebug("No LAN address recorded for the target TV — skipping panel wake");
+            return;
+        }
 
         try
         {
