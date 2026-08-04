@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Runtime.Serialization;
+using Newtonsoft.Json.Linq;
 
 namespace NoMercy.Plugins.Abstractions;
 
@@ -53,6 +54,14 @@ public class PluginComponent
         {
             Dictionary<string, object?> wire = new(_props);
 
+            if (Design is not null)
+            {
+                foreach (KeyValuePair<string, JToken?> option in JObject.FromObject(Design))
+                {
+                    wire[option.Key] = option.Value;
+                }
+            }
+
             if (Items.Count > 0)
                 wire["items"] = Items;
 
@@ -84,4 +93,24 @@ public class PluginComponent
     /// <inheritdoc cref="Items"/>
     [IgnoreDataMember]
     public PluginActionIntent? Action { get; init; }
+
+    /// <summary>
+    /// The design system's own props record for this component.
+    /// <para>
+    /// A plugin naming <c>NMAccordion</c> has an <c>NMAccordionProps</c> to fill
+    /// in, and every option on it is a compiler-checked field rather than a
+    /// string a typo turns into silence. Set this and its fields become the
+    /// props; <see cref="Props"/> stays for the handful of keys the design
+    /// system does not name, and children set through <see cref="Items"/> still
+    /// win, so a component can be built either way without knowing which.
+    /// </para>
+    /// <para>
+    /// Read through Newtonsoft rather than reflection because the record's own
+    /// <c>[JsonProperty]</c> attributes are what decide the wire names, and
+    /// those are generated from the same manifest the clients read. Spelling
+    /// them a second time here is how the two ends drift apart.
+    /// </para>
+    /// </summary>
+    [IgnoreDataMember]
+    public object? Design { get; init; }
 }
