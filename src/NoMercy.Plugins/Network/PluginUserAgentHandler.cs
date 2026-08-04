@@ -12,6 +12,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using NoMercy.NmSystem.Configuration;
 
 namespace NoMercy.Plugins.Network;
 
@@ -70,13 +71,19 @@ public partial class PluginUserAgentHandler(
         CancellationToken cancellationToken
     )
     {
-        // Only when the request carries none. Not even appended otherwise: a
-        // private tracker can ban on a user agent it does not expect exactly,
-        // and an indexer behind a browser check wants a browser string — adding
-        // a second product token to either is still changing it. A plugin that
-        // set its own had a reason, and it has taken on the attribution itself.
-        if (request.Headers.UserAgent.Count == 0)
-            request.Headers.UserAgent.ParseAdd(_product);
+        // Always, and replacing whatever the plugin set.
+        //
+        // This used to defer to a plugin's own user agent, on the reasoning that
+        // a private tracker bans on a string it does not expect and an indexer
+        // behind a browser check wants a browser one. That reasoning is
+        // overturned deliberately: it let a plugin choose the identity this
+        // server presents to a third party from the owner's address, which is
+        // the plugin picking who we are. Egress to a host we do not control
+        // carries the owner's configured identity and the plugin's attribution
+        // beside it, and neither is the plugin's to replace.
+        request.Headers.UserAgent.Clear();
+        request.Headers.UserAgent.ParseAdd(ExternalServicesConfig.Current.UserAgent);
+        request.Headers.UserAgent.ParseAdd(_product);
 
         return base.SendAsync(request, cancellationToken);
     }
