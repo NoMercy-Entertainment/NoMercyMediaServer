@@ -186,6 +186,7 @@ public record NmSpacing
 
     [JsonProperty("left", NullValueHandling = NullValueHandling.Ignore)]
     public string? Left { get; set; }
+
 }
 
 /// <summary>
@@ -202,6 +203,7 @@ public record NmGap
 
     [JsonProperty("y", NullValueHandling = NullValueHandling.Ignore)]
     public string? Y { get; set; }
+
 }
 
 /// <summary>
@@ -320,6 +322,7 @@ public record NmBox
 
     [JsonProperty("overflow", NullValueHandling = NullValueHandling.Ignore)]
     public string? Overflow { get; set; }
+
 }
 
 /// <summary>
@@ -358,6 +361,7 @@ public record NmSurface
     /// </summary>
     [JsonProperty("elevation", NullValueHandling = NullValueHandling.Ignore)]
     public string? Elevation { get; set; }
+
 }
 
 /// <summary>
@@ -388,6 +392,7 @@ public record NmAction
     /// </summary>
     [JsonProperty("confirm", NullValueHandling = NullValueHandling.Ignore)]
     public string? Confirm { get; set; }
+
 }
 
 /// <summary>
@@ -409,6 +414,7 @@ public record NmAccessibility
 
     [JsonProperty("live", NullValueHandling = NullValueHandling.Ignore)]
     public string? Live { get; set; }
+
 }
 
 /// <summary>
@@ -424,6 +430,7 @@ public record NmUpdate
 
     [JsonProperty("body", NullValueHandling = NullValueHandling.Ignore)]
     public object? Body { get; set; }
+
 }
 
 public record NmContextMenuItem
@@ -442,6 +449,7 @@ public record NmContextMenuItem
 
     [JsonProperty("action", NullValueHandling = NullValueHandling.Ignore)]
     public NmAction? Action { get; set; }
+
 }
 
 /// <summary>
@@ -472,6 +480,7 @@ public record NmComponent
 
     [JsonProperty("update", NullValueHandling = NullValueHandling.Ignore)]
     public NmUpdate? Update { get; set; }
+
 }
 
 /// <summary>
@@ -548,4 +557,5 @@ public record NmComponentBase
     /// </summary>
     [JsonProperty("properties", NullValueHandling = NullValueHandling.Ignore)]
     public object? Properties { get; set; }
+
 }

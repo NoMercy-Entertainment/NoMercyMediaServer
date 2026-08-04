@@ -62,231 +62,108 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "avatar-default",
-                    Label = "default",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-size-xs",
-                    Label = "size = xs",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "xs",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-size-sm",
-                    Label = "size = sm",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "sm",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-size-md",
-                    Label = "size = md",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-size-lg",
-                    Label = "size = lg",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "lg",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-size-xl",
-                    Label = "size = xl",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "xl",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-status-none",
-                    Label = "status = none",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-status-online",
-                    Label = "status = online",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "online",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-status-offline",
-                    Label = "status = offline",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "offline",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-status-away",
-                    Label = "status = away",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "away",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-status-busy",
-                    Label = "status = busy",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "busy",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-type-icon",
-                    Label = "type = icon",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "icon",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-type-initial",
-                    Label = "type = initial",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "initial",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-type-initials",
-                    Label = "type = initials",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "initials",
-                    },
-                },
-                new()
-                {
-                    Id = "avatar-type-image",
-                    Label = "type = image",
-                    Props = new NMAvatarProps
-                    {
-                        Alt = "Avatar example",
-                        AriaLabel = "User avatar",
-                        Size = "md",
-                        Square = false,
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                        Status = "none",
-                        Type = "image",
-                    },
-                },
+            new()
+            {
+                Id = "avatar-default",
+                Label = "default",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-size-xs",
+                Label = "size = xs",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "xs", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-size-sm",
+                Label = "size = sm",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "sm", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-size-md",
+                Label = "size = md",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-size-lg",
+                Label = "size = lg",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "lg", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-size-xl",
+                Label = "size = xl",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "xl", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-square-true",
+                Label = "square = true",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = true, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-square-false",
+                Label = "square = false",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-status-none",
+                Label = "status = none",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-status-online",
+                Label = "status = online",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "online", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-status-offline",
+                Label = "status = offline",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "offline", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-status-away",
+                Label = "status = away",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "away", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-status-busy",
+                Label = "status = busy",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "busy", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-type-icon",
+                Label = "type = icon",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "icon" },
+            },
+            new()
+            {
+                Id = "avatar-type-initial",
+                Label = "type = initial",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "initial" },
+            },
+            new()
+            {
+                Id = "avatar-type-initials",
+                Label = "type = initials",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "initials" },
+            },
+            new()
+            {
+                Id = "avatar-type-image",
+                Label = "type = image",
+                Props = new NMAvatarProps { Alt = "Avatar example", AriaLabel = "User avatar", Size = "md", Square = false, Src = "https://nomercy.tv/img/placeholder.png", Status = "none", Type = "image" },
+            },
             ],
         },
         new()
@@ -297,123 +174,72 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "badge-default",
-                    Label = "default",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "text",
-                        Size = "md",
-                        Text = "Label",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-mode-text",
-                    Label = "mode = text",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "text",
-                        Size = "md",
-                        Text = "Label",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-mode-icon-only",
-                    Label = "mode = icon-only",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "icon-only",
-                        Size = "md",
-                        Text = "Label",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-size-sm",
-                    Label = "size = sm",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "text",
-                        Size = "sm",
-                        Text = "Label",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-size-md",
-                    Label = "size = md",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "text",
-                        Size = "md",
-                        Text = "Label",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-size-lg",
-                    Label = "size = lg",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "text",
-                        Size = "lg",
-                        Text = "Label",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-variant-ghost",
-                    Label = "variant = ghost",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "text",
-                        Size = "md",
-                        Text = "Label",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-variant-solid",
-                    Label = "variant = solid",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "text",
-                        Size = "md",
-                        Text = "Label",
-                        Variant = "solid",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-variant-outline",
-                    Label = "variant = outline",
-                    Props = new NMBadgeProps
-                    {
-                        Dot = false,
-                        Mode = "text",
-                        Size = "md",
-                        Text = "Label",
-                        Variant = "outline",
-                    },
-                },
+            new()
+            {
+                Id = "badge-default",
+                Label = "default",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "md", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-dot-true",
+                Label = "dot = true",
+                Props = new NMBadgeProps { Dot = true, Mode = "text", Size = "md", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-dot-false",
+                Label = "dot = false",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "md", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-mode-text",
+                Label = "mode = text",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "md", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-mode-icon-only",
+                Label = "mode = icon-only",
+                Props = new NMBadgeProps { Dot = false, Mode = "icon-only", Size = "md", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-size-sm",
+                Label = "size = sm",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "sm", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-size-md",
+                Label = "size = md",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "md", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-size-lg",
+                Label = "size = lg",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "lg", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-variant-ghost",
+                Label = "variant = ghost",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "md", Text = "Label", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-variant-solid",
+                Label = "variant = solid",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "md", Text = "Label", Variant = "solid" },
+            },
+            new()
+            {
+                Id = "badge-variant-outline",
+                Label = "variant = outline",
+                Props = new NMBadgeProps { Dot = false, Mode = "text", Size = "md", Text = "Label", Variant = "outline" },
+            },
             ],
         },
         new()
@@ -424,83 +250,48 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "divider-default",
-                    Label = "default",
-                    Props = new NMDividerProps
-                    {
-                        LabelText = "Divider",
-                        Line = "solid",
-                        Placement = "center",
-                    },
-                },
-                new()
-                {
-                    Id = "divider-line-solid",
-                    Label = "line = solid",
-                    Props = new NMDividerProps
-                    {
-                        LabelText = "Divider",
-                        Line = "solid",
-                        Placement = "center",
-                    },
-                },
-                new()
-                {
-                    Id = "divider-line-dashed",
-                    Label = "line = dashed",
-                    Props = new NMDividerProps
-                    {
-                        LabelText = "Divider",
-                        Line = "dashed",
-                        Placement = "center",
-                    },
-                },
-                new()
-                {
-                    Id = "divider-line-dotted",
-                    Label = "line = dotted",
-                    Props = new NMDividerProps
-                    {
-                        LabelText = "Divider",
-                        Line = "dotted",
-                        Placement = "center",
-                    },
-                },
-                new()
-                {
-                    Id = "divider-placement-left",
-                    Label = "placement = left",
-                    Props = new NMDividerProps
-                    {
-                        LabelText = "Divider",
-                        Line = "solid",
-                        Placement = "left",
-                    },
-                },
-                new()
-                {
-                    Id = "divider-placement-center",
-                    Label = "placement = center",
-                    Props = new NMDividerProps
-                    {
-                        LabelText = "Divider",
-                        Line = "solid",
-                        Placement = "center",
-                    },
-                },
-                new()
-                {
-                    Id = "divider-placement-right",
-                    Label = "placement = right",
-                    Props = new NMDividerProps
-                    {
-                        LabelText = "Divider",
-                        Line = "solid",
-                        Placement = "right",
-                    },
-                },
+            new()
+            {
+                Id = "divider-default",
+                Label = "default",
+                Props = new NMDividerProps { LabelText = "Divider", Line = "solid", Placement = "center" },
+            },
+            new()
+            {
+                Id = "divider-line-solid",
+                Label = "line = solid",
+                Props = new NMDividerProps { LabelText = "Divider", Line = "solid", Placement = "center" },
+            },
+            new()
+            {
+                Id = "divider-line-dashed",
+                Label = "line = dashed",
+                Props = new NMDividerProps { LabelText = "Divider", Line = "dashed", Placement = "center" },
+            },
+            new()
+            {
+                Id = "divider-line-dotted",
+                Label = "line = dotted",
+                Props = new NMDividerProps { LabelText = "Divider", Line = "dotted", Placement = "center" },
+            },
+            new()
+            {
+                Id = "divider-placement-left",
+                Label = "placement = left",
+                Props = new NMDividerProps { LabelText = "Divider", Line = "solid", Placement = "left" },
+            },
+            new()
+            {
+                Id = "divider-placement-center",
+                Label = "placement = center",
+                Props = new NMDividerProps { LabelText = "Divider", Line = "solid", Placement = "center" },
+            },
+            new()
+            {
+                Id = "divider-placement-right",
+                Label = "placement = right",
+                Props = new NMDividerProps { LabelText = "Divider", Line = "solid", Placement = "right" },
+            },
             ],
         },
         new()
@@ -511,62 +302,54 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "form-label-default",
-                    Label = "default",
-                    Props = new NMFormLabelProps
-                    {
-                        Disabled = false,
-                        InfoIcon = false,
-                        InfoTooltip = "Label",
-                        LabelText = "Field label",
-                        Marker = "none",
-                        MarkerText = "(Optional)",
-                    },
-                },
-                new()
-                {
-                    Id = "form-label-marker-none",
-                    Label = "marker = none",
-                    Props = new NMFormLabelProps
-                    {
-                        Disabled = false,
-                        InfoIcon = false,
-                        InfoTooltip = "Label",
-                        LabelText = "Field label",
-                        Marker = "none",
-                        MarkerText = "(Optional)",
-                    },
-                },
-                new()
-                {
-                    Id = "form-label-marker-required",
-                    Label = "marker = required",
-                    Props = new NMFormLabelProps
-                    {
-                        Disabled = false,
-                        InfoIcon = false,
-                        InfoTooltip = "Label",
-                        LabelText = "Field label",
-                        Marker = "required",
-                        MarkerText = "(Optional)",
-                    },
-                },
-                new()
-                {
-                    Id = "form-label-marker-custom",
-                    Label = "marker = custom",
-                    Props = new NMFormLabelProps
-                    {
-                        Disabled = false,
-                        InfoIcon = false,
-                        InfoTooltip = "Label",
-                        LabelText = "Field label",
-                        Marker = "custom",
-                        MarkerText = "(Optional)",
-                    },
-                },
+            new()
+            {
+                Id = "form-label-default",
+                Label = "default",
+                Props = new NMFormLabelProps { Disabled = false, InfoIcon = false, InfoTooltip = "Label", LabelText = "Field label", Marker = "none", MarkerText = "(Optional)" },
+            },
+            new()
+            {
+                Id = "form-label-disabled-true",
+                Label = "disabled = true",
+                Props = new NMFormLabelProps { Disabled = true, InfoIcon = false, InfoTooltip = "Label", LabelText = "Field label", Marker = "none", MarkerText = "(Optional)" },
+            },
+            new()
+            {
+                Id = "form-label-disabled-false",
+                Label = "disabled = false",
+                Props = new NMFormLabelProps { Disabled = false, InfoIcon = false, InfoTooltip = "Label", LabelText = "Field label", Marker = "none", MarkerText = "(Optional)" },
+            },
+            new()
+            {
+                Id = "form-label-infoicon-true",
+                Label = "infoIcon = true",
+                Props = new NMFormLabelProps { Disabled = false, InfoIcon = true, InfoTooltip = "Label", LabelText = "Field label", Marker = "none", MarkerText = "(Optional)" },
+            },
+            new()
+            {
+                Id = "form-label-infoicon-false",
+                Label = "infoIcon = false",
+                Props = new NMFormLabelProps { Disabled = false, InfoIcon = false, InfoTooltip = "Label", LabelText = "Field label", Marker = "none", MarkerText = "(Optional)" },
+            },
+            new()
+            {
+                Id = "form-label-marker-none",
+                Label = "marker = none",
+                Props = new NMFormLabelProps { Disabled = false, InfoIcon = false, InfoTooltip = "Label", LabelText = "Field label", Marker = "none", MarkerText = "(Optional)" },
+            },
+            new()
+            {
+                Id = "form-label-marker-required",
+                Label = "marker = required",
+                Props = new NMFormLabelProps { Disabled = false, InfoIcon = false, InfoTooltip = "Label", LabelText = "Field label", Marker = "required", MarkerText = "(Optional)" },
+            },
+            new()
+            {
+                Id = "form-label-marker-custom",
+                Label = "marker = custom",
+                Props = new NMFormLabelProps { Disabled = false, InfoIcon = false, InfoTooltip = "Label", LabelText = "Field label", Marker = "custom", MarkerText = "(Optional)" },
+            },
             ],
         },
         new()
@@ -577,54 +360,42 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "helper-default",
-                    Label = "default",
-                    Props = new NMHelperProps
-                    {
-                        HelperText = "This is a helper message",
-                        Icon = false,
-                        IconTooltip = "star",
-                        Status = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "helper-status-default",
-                    Label = "status = default",
-                    Props = new NMHelperProps
-                    {
-                        HelperText = "This is a helper message",
-                        Icon = false,
-                        IconTooltip = "star",
-                        Status = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "helper-status-error",
-                    Label = "status = error",
-                    Props = new NMHelperProps
-                    {
-                        HelperText = "This is a helper message",
-                        Icon = false,
-                        IconTooltip = "star",
-                        Status = "error",
-                    },
-                },
-                new()
-                {
-                    Id = "helper-status-disabled",
-                    Label = "status = disabled",
-                    Props = new NMHelperProps
-                    {
-                        HelperText = "This is a helper message",
-                        Icon = false,
-                        IconTooltip = "star",
-                        Status = "disabled",
-                    },
-                },
+            new()
+            {
+                Id = "helper-default",
+                Label = "default",
+                Props = new NMHelperProps { HelperText = "This is a helper message", Icon = false, IconTooltip = "star", Status = "default" },
+            },
+            new()
+            {
+                Id = "helper-icon-true",
+                Label = "icon = true",
+                Props = new NMHelperProps { HelperText = "This is a helper message", Icon = true, IconTooltip = "star", Status = "default" },
+            },
+            new()
+            {
+                Id = "helper-icon-false",
+                Label = "icon = false",
+                Props = new NMHelperProps { HelperText = "This is a helper message", Icon = false, IconTooltip = "star", Status = "default" },
+            },
+            new()
+            {
+                Id = "helper-status-default",
+                Label = "status = default",
+                Props = new NMHelperProps { HelperText = "This is a helper message", Icon = false, IconTooltip = "star", Status = "default" },
+            },
+            new()
+            {
+                Id = "helper-status-error",
+                Label = "status = error",
+                Props = new NMHelperProps { HelperText = "This is a helper message", Icon = false, IconTooltip = "star", Status = "error" },
+            },
+            new()
+            {
+                Id = "helper-status-disabled",
+                Label = "status = disabled",
+                Props = new NMHelperProps { HelperText = "This is a helper message", Icon = false, IconTooltip = "star", Status = "disabled" },
+            },
             ],
         },
         new()
@@ -635,342 +406,156 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "image-default",
-                    Label = "default",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-aspectratio-auto",
-                    Label = "aspectRatio = auto",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-aspectratio-square",
-                    Label = "aspectRatio = square",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "square",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-aspectratio-video",
-                    Label = "aspectRatio = video",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "video",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-aspectratio-portrait",
-                    Label = "aspectRatio = portrait",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "portrait",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-aspectratio-landscape",
-                    Label = "aspectRatio = landscape",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "landscape",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-fit-cover",
-                    Label = "fit = cover",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-fit-contain",
-                    Label = "fit = contain",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "contain",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-fit-fill",
-                    Label = "fit = fill",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "fill",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-fit-none",
-                    Label = "fit = none",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "none",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-rounded-none",
-                    Label = "rounded = none",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "none",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-rounded-sm",
-                    Label = "rounded = sm",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "sm",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-rounded-md",
-                    Label = "rounded = md",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "md",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-rounded-lg",
-                    Label = "rounded = lg",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-rounded-xl",
-                    Label = "rounded = xl",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "xl",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-rounded-full",
-                    Label = "rounded = full",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "full",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-shadow-none",
-                    Label = "shadow = none",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "none",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-shadow-sm",
-                    Label = "shadow = sm",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "sm",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-shadow-md",
-                    Label = "shadow = md",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "md",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-shadow-lg",
-                    Label = "shadow = lg",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "lg",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
-                new()
-                {
-                    Id = "image-shadow-xl",
-                    Label = "shadow = xl",
-                    Props = new NMImageProps
-                    {
-                        Alt = "Image example",
-                        AspectRatio = "auto",
-                        Border = false,
-                        Clickable = false,
-                        Fit = "cover",
-                        Rounded = "lg",
-                        Shadow = "xl",
-                        Src = "https://nomercy.tv/img/placeholder.png",
-                    },
-                },
+            new()
+            {
+                Id = "image-default",
+                Label = "default",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-aspectratio-auto",
+                Label = "aspectRatio = auto",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-aspectratio-square",
+                Label = "aspectRatio = square",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "square", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-aspectratio-video",
+                Label = "aspectRatio = video",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "video", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-aspectratio-portrait",
+                Label = "aspectRatio = portrait",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "portrait", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-aspectratio-landscape",
+                Label = "aspectRatio = landscape",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "landscape", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-border-true",
+                Label = "border = true",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = true, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-border-false",
+                Label = "border = false",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-clickable-true",
+                Label = "clickable = true",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = true, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-clickable-false",
+                Label = "clickable = false",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-fit-cover",
+                Label = "fit = cover",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-fit-contain",
+                Label = "fit = contain",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "contain", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-fit-fill",
+                Label = "fit = fill",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "fill", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-fit-none",
+                Label = "fit = none",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "none", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-rounded-none",
+                Label = "rounded = none",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "none", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-rounded-sm",
+                Label = "rounded = sm",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "sm", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-rounded-md",
+                Label = "rounded = md",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "md", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-rounded-lg",
+                Label = "rounded = lg",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-rounded-xl",
+                Label = "rounded = xl",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "xl", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-rounded-full",
+                Label = "rounded = full",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "full", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-shadow-none",
+                Label = "shadow = none",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-shadow-sm",
+                Label = "shadow = sm",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "sm", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-shadow-md",
+                Label = "shadow = md",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "md", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-shadow-lg",
+                Label = "shadow = lg",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "lg", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
+            new()
+            {
+                Id = "image-shadow-xl",
+                Label = "shadow = xl",
+                Props = new NMImageProps { Alt = "Image example", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "xl", Src = "https://nomercy.tv/img/placeholder.png" },
+            },
             ],
         },
         new()
@@ -981,171 +566,108 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "link-default",
-                    Label = "default",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "md",
-                        Text = "Link",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "link-iconposition-left",
-                    Label = "iconPosition = left",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "left",
-                        Size = "md",
-                        Text = "Link",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "link-iconposition-right",
-                    Label = "iconPosition = right",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "md",
-                        Text = "Link",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "link-size-sm",
-                    Label = "size = sm",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "sm",
-                        Text = "Link",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "link-size-md",
-                    Label = "size = md",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "md",
-                        Text = "Link",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "link-size-lg",
-                    Label = "size = lg",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "lg",
-                        Text = "Link",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "link-size-inherit",
-                    Label = "size = inherit",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "inherit",
-                        Text = "Link",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "link-variant-default",
-                    Label = "variant = default",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "md",
-                        Text = "Link",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "link-variant-subtle",
-                    Label = "variant = subtle",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "md",
-                        Text = "Link",
-                        Variant = "subtle",
-                    },
-                },
-                new()
-                {
-                    Id = "link-variant-muted",
-                    Label = "variant = muted",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "md",
-                        Text = "Link",
-                        Variant = "muted",
-                    },
-                },
-                new()
-                {
-                    Id = "link-variant-animated",
-                    Label = "variant = animated",
-                    Props = new NMLinkProps
-                    {
-                        Disabled = false,
-                        External = false,
-                        Icon = false,
-                        IconPosition = "right",
-                        Size = "md",
-                        Text = "Link",
-                        Variant = "animated",
-                    },
-                },
+            new()
+            {
+                Id = "link-default",
+                Label = "default",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-disabled-true",
+                Label = "disabled = true",
+                Props = new NMLinkProps { Disabled = true, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-disabled-false",
+                Label = "disabled = false",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-external-true",
+                Label = "external = true",
+                Props = new NMLinkProps { Disabled = false, External = true, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-external-false",
+                Label = "external = false",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-icon-true",
+                Label = "icon = true",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = true, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-icon-false",
+                Label = "icon = false",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-iconposition-left",
+                Label = "iconPosition = left",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "left", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-iconposition-right",
+                Label = "iconPosition = right",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-size-sm",
+                Label = "size = sm",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "sm", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-size-md",
+                Label = "size = md",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-size-lg",
+                Label = "size = lg",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "lg", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-size-inherit",
+                Label = "size = inherit",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "inherit", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-variant-default",
+                Label = "variant = default",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "default" },
+            },
+            new()
+            {
+                Id = "link-variant-subtle",
+                Label = "variant = subtle",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "subtle" },
+            },
+            new()
+            {
+                Id = "link-variant-muted",
+                Label = "variant = muted",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "muted" },
+            },
+            new()
+            {
+                Id = "link-variant-animated",
+                Label = "variant = animated",
+                Props = new NMLinkProps { Disabled = false, External = false, Icon = false, IconPosition = "right", Size = "md", Text = "Link", Variant = "animated" },
+            },
             ],
         },
         new()
@@ -1156,138 +678,72 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "progress-default",
-                    Label = "default",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "none",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-labelpos-none",
-                    Label = "labelPos = none",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "none",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-labelpos-label-left",
-                    Label = "labelPos = label-left",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "label-left",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-labelpos-label-right",
-                    Label = "labelPos = label-right",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "label-right",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-labelpos-label-above-left",
-                    Label = "labelPos = label-above-left",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "label-above-left",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-labelpos-label-above-right",
-                    Label = "labelPos = label-above-right",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "label-above-right",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-labelpos-tooltip-above",
-                    Label = "labelPos = tooltip-above",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "tooltip-above",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-labelpos-tooltip-below",
-                    Label = "labelPos = tooltip-below",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "tooltip-below",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-size-sm",
-                    Label = "size = sm",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "none",
-                        Size = "sm",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-size-md",
-                    Label = "size = md",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "none",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "progress-size-lg",
-                    Label = "size = lg",
-                    Props = new NMProgressProps
-                    {
-                        AriaLabel = "Progress",
-                        LabelPos = "none",
-                        Size = "lg",
-                        Value = 0,
-                    },
-                },
+            new()
+            {
+                Id = "progress-default",
+                Label = "default",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-labelpos-none",
+                Label = "labelPos = none",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-labelpos-label-left",
+                Label = "labelPos = label-left",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-left", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-labelpos-label-right",
+                Label = "labelPos = label-right",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-right", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-labelpos-label-above-left",
+                Label = "labelPos = label-above-left",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-above-left", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-labelpos-label-above-right",
+                Label = "labelPos = label-above-right",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-above-right", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-labelpos-tooltip-above",
+                Label = "labelPos = tooltip-above",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "tooltip-above", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-labelpos-tooltip-below",
+                Label = "labelPos = tooltip-below",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "tooltip-below", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-size-sm",
+                Label = "size = sm",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "sm", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-size-md",
+                Label = "size = md",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "progress-size-lg",
+                Label = "size = lg",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "lg", Value = 0 },
+            },
             ],
         },
         new()
@@ -1298,30 +754,30 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "skeleton-default",
-                    Label = "default",
-                    Props = new NMSkeletonProps { Variant = "text" },
-                },
-                new()
-                {
-                    Id = "skeleton-variant-text",
-                    Label = "variant = text",
-                    Props = new NMSkeletonProps { Variant = "text" },
-                },
-                new()
-                {
-                    Id = "skeleton-variant-circle",
-                    Label = "variant = circle",
-                    Props = new NMSkeletonProps { Variant = "circle" },
-                },
-                new()
-                {
-                    Id = "skeleton-variant-rectangle",
-                    Label = "variant = rectangle",
-                    Props = new NMSkeletonProps { Variant = "rectangle" },
-                },
+            new()
+            {
+                Id = "skeleton-default",
+                Label = "default",
+                Props = new NMSkeletonProps { Variant = "text" },
+            },
+            new()
+            {
+                Id = "skeleton-variant-text",
+                Label = "variant = text",
+                Props = new NMSkeletonProps { Variant = "text" },
+            },
+            new()
+            {
+                Id = "skeleton-variant-circle",
+                Label = "variant = circle",
+                Props = new NMSkeletonProps { Variant = "circle" },
+            },
+            new()
+            {
+                Id = "skeleton-variant-rectangle",
+                Label = "variant = rectangle",
+                Props = new NMSkeletonProps { Variant = "rectangle" },
+            },
             ],
         },
         new()
@@ -1332,36 +788,36 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "spinner-default",
-                    Label = "default",
-                    Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "md" },
-                },
-                new()
-                {
-                    Id = "spinner-size-sm",
-                    Label = "size = sm",
-                    Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "sm" },
-                },
-                new()
-                {
-                    Id = "spinner-size-md",
-                    Label = "size = md",
-                    Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "md" },
-                },
-                new()
-                {
-                    Id = "spinner-size-lg",
-                    Label = "size = lg",
-                    Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "lg" },
-                },
-                new()
-                {
-                    Id = "spinner-size-xl",
-                    Label = "size = xl",
-                    Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "xl" },
-                },
+            new()
+            {
+                Id = "spinner-default",
+                Label = "default",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "md" },
+            },
+            new()
+            {
+                Id = "spinner-size-sm",
+                Label = "size = sm",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "sm" },
+            },
+            new()
+            {
+                Id = "spinner-size-md",
+                Label = "size = md",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "md" },
+            },
+            new()
+            {
+                Id = "spinner-size-lg",
+                Label = "size = lg",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "lg" },
+            },
+            new()
+            {
+                Id = "spinner-size-xl",
+                Label = "size = xl",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "xl" },
+            },
             ],
         },
         new()
@@ -1372,70 +828,90 @@ public static class NmKitchenSink
             Tier = 1,
             Cases =
             [
-                new()
-                {
-                    Id = "tag-default",
-                    Label = "default",
-                    Props = new NMTagProps
-                    {
-                        Avatar = false,
-                        Checkbox = false,
-                        Count = false,
-                        CountText = "0",
-                        Icon = false,
-                        Size = "sm",
-                        Text = "Label",
-                        Xclose = false,
-                    },
-                },
-                new()
-                {
-                    Id = "tag-size-sm",
-                    Label = "size = sm",
-                    Props = new NMTagProps
-                    {
-                        Avatar = false,
-                        Checkbox = false,
-                        Count = false,
-                        CountText = "0",
-                        Icon = false,
-                        Size = "sm",
-                        Text = "Label",
-                        Xclose = false,
-                    },
-                },
-                new()
-                {
-                    Id = "tag-size-md",
-                    Label = "size = md",
-                    Props = new NMTagProps
-                    {
-                        Avatar = false,
-                        Checkbox = false,
-                        Count = false,
-                        CountText = "0",
-                        Icon = false,
-                        Size = "md",
-                        Text = "Label",
-                        Xclose = false,
-                    },
-                },
-                new()
-                {
-                    Id = "tag-size-lg",
-                    Label = "size = lg",
-                    Props = new NMTagProps
-                    {
-                        Avatar = false,
-                        Checkbox = false,
-                        Count = false,
-                        CountText = "0",
-                        Icon = false,
-                        Size = "lg",
-                        Text = "Label",
-                        Xclose = false,
-                    },
-                },
+            new()
+            {
+                Id = "tag-default",
+                Label = "default",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-avatar-true",
+                Label = "avatar = true",
+                Props = new NMTagProps { Avatar = true, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-avatar-false",
+                Label = "avatar = false",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-checkbox-true",
+                Label = "checkbox = true",
+                Props = new NMTagProps { Avatar = false, Checkbox = true, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-checkbox-false",
+                Label = "checkbox = false",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-count-true",
+                Label = "count = true",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = true, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-count-false",
+                Label = "count = false",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-icon-true",
+                Label = "icon = true",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = true, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-icon-false",
+                Label = "icon = false",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-size-sm",
+                Label = "size = sm",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-size-md",
+                Label = "size = md",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "md", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-size-lg",
+                Label = "size = lg",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "lg", Text = "Label", Xclose = false },
+            },
+            new()
+            {
+                Id = "tag-xclose-true",
+                Label = "xclose = true",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = true },
+            },
+            new()
+            {
+                Id = "tag-xclose-false",
+                Label = "xclose = false",
+                Props = new NMTagProps { Avatar = false, Checkbox = false, Count = false, CountText = "0", Icon = false, Size = "sm", Text = "Label", Xclose = false },
+            },
             ],
         },
         new()
@@ -1446,216 +922,132 @@ public static class NmKitchenSink
             Tier = 2,
             Cases =
             [
-                new()
-                {
-                    Id = "button-default",
-                    Label = "default",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "primary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-size-sm",
-                    Label = "size = sm",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "sm",
-                        Variant = "primary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-size-md",
-                    Label = "size = md",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "primary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-size-lg",
-                    Label = "size = lg",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "lg",
-                        Variant = "primary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-size-xl",
-                    Label = "size = xl",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "xl",
-                        Variant = "primary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-size-2xl",
-                    Label = "size = 2xl",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "2xl",
-                        Variant = "primary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-primary",
-                    Label = "variant = primary",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "primary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-secondary",
-                    Label = "variant = secondary",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "secondary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-secondary-color",
-                    Label = "variant = secondary-color",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "secondary-color",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-tertiary",
-                    Label = "variant = tertiary",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "tertiary",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-tertiary-color",
-                    Label = "variant = tertiary-color",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "tertiary-color",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-link",
-                    Label = "variant = link",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "link",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-link-color",
-                    Label = "variant = link-color",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "link-color",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-destructive",
-                    Label = "variant = destructive",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "destructive",
-                    },
-                },
-                new()
-                {
-                    Id = "button-variant-ghost-destructive",
-                    Label = "variant = ghost-destructive",
-                    Props = new NMButtonProps
-                    {
-                        AriaLabel = "Button example",
-                        Disabled = false,
-                        IconOnly = false,
-                        Loading = false,
-                        Size = "md",
-                        Variant = "ghost-destructive",
-                    },
-                },
+            new()
+            {
+                Id = "button-default",
+                Label = "default",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-disabled-true",
+                Label = "disabled = true",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = true, IconOnly = false, Loading = false, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-disabled-false",
+                Label = "disabled = false",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-icononly-true",
+                Label = "iconOnly = true",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = true, Loading = false, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-icononly-false",
+                Label = "iconOnly = false",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-loading-true",
+                Label = "loading = true",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = true, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-loading-false",
+                Label = "loading = false",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-size-sm",
+                Label = "size = sm",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "sm", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-size-md",
+                Label = "size = md",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-size-lg",
+                Label = "size = lg",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "lg", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-size-xl",
+                Label = "size = xl",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "xl", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-size-2xl",
+                Label = "size = 2xl",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "2xl", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-variant-primary",
+                Label = "variant = primary",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "primary" },
+            },
+            new()
+            {
+                Id = "button-variant-secondary",
+                Label = "variant = secondary",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "secondary" },
+            },
+            new()
+            {
+                Id = "button-variant-secondary-color",
+                Label = "variant = secondary-color",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "secondary-color" },
+            },
+            new()
+            {
+                Id = "button-variant-tertiary",
+                Label = "variant = tertiary",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "tertiary" },
+            },
+            new()
+            {
+                Id = "button-variant-tertiary-color",
+                Label = "variant = tertiary-color",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "tertiary-color" },
+            },
+            new()
+            {
+                Id = "button-variant-link",
+                Label = "variant = link",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "link" },
+            },
+            new()
+            {
+                Id = "button-variant-link-color",
+                Label = "variant = link-color",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "link-color" },
+            },
+            new()
+            {
+                Id = "button-variant-destructive",
+                Label = "variant = destructive",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "destructive" },
+            },
+            new()
+            {
+                Id = "button-variant-ghost-destructive",
+                Label = "variant = ghost-destructive",
+                Props = new NMButtonProps { AriaLabel = "Button example", Disabled = false, IconOnly = false, Loading = false, Size = "md", Variant = "ghost-destructive" },
+            },
             ],
         },
         new()
@@ -1666,76 +1058,48 @@ public static class NmKitchenSink
             Tier = 2,
             Cases =
             [
-                new()
-                {
-                    Id = "checkbox-default",
-                    Label = "default",
-                    Props = new NMCheckboxProps
-                    {
-                        AriaLabel = "Checkbox example",
-                        Checked = "false",
-                        Disabled = false,
-                        HelperText = "Checkbox",
-                        LabelText = "Checkbox",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-checked-indeterminate",
-                    Label = "checked = indeterminate",
-                    Props = new NMCheckboxProps
-                    {
-                        AriaLabel = "Checkbox example",
-                        Checked = "indeterminate",
-                        Disabled = false,
-                        HelperText = "Checkbox",
-                        LabelText = "Checkbox",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-size-sm",
-                    Label = "size = sm",
-                    Props = new NMCheckboxProps
-                    {
-                        AriaLabel = "Checkbox example",
-                        Checked = "false",
-                        Disabled = false,
-                        HelperText = "Checkbox",
-                        LabelText = "Checkbox",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-size-md",
-                    Label = "size = md",
-                    Props = new NMCheckboxProps
-                    {
-                        AriaLabel = "Checkbox example",
-                        Checked = "false",
-                        Disabled = false,
-                        HelperText = "Checkbox",
-                        LabelText = "Checkbox",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-size-lg",
-                    Label = "size = lg",
-                    Props = new NMCheckboxProps
-                    {
-                        AriaLabel = "Checkbox example",
-                        Checked = "false",
-                        Disabled = false,
-                        HelperText = "Checkbox",
-                        LabelText = "Checkbox",
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "checkbox-default",
+                Label = "default",
+                Props = new NMCheckboxProps { AriaLabel = "Checkbox example", Checked = "false", Disabled = false, HelperText = "Checkbox", LabelText = "Checkbox", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-checked-indeterminate",
+                Label = "checked = indeterminate",
+                Props = new NMCheckboxProps { AriaLabel = "Checkbox example", Checked = "indeterminate", Disabled = false, HelperText = "Checkbox", LabelText = "Checkbox", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-disabled-true",
+                Label = "disabled = true",
+                Props = new NMCheckboxProps { AriaLabel = "Checkbox example", Checked = "false", Disabled = true, HelperText = "Checkbox", LabelText = "Checkbox", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-disabled-false",
+                Label = "disabled = false",
+                Props = new NMCheckboxProps { AriaLabel = "Checkbox example", Checked = "false", Disabled = false, HelperText = "Checkbox", LabelText = "Checkbox", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-size-sm",
+                Label = "size = sm",
+                Props = new NMCheckboxProps { AriaLabel = "Checkbox example", Checked = "false", Disabled = false, HelperText = "Checkbox", LabelText = "Checkbox", Size = "sm" },
+            },
+            new()
+            {
+                Id = "checkbox-size-md",
+                Label = "size = md",
+                Props = new NMCheckboxProps { AriaLabel = "Checkbox example", Checked = "false", Disabled = false, HelperText = "Checkbox", LabelText = "Checkbox", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-size-lg",
+                Label = "size = lg",
+                Props = new NMCheckboxProps { AriaLabel = "Checkbox example", Checked = "false", Disabled = false, HelperText = "Checkbox", LabelText = "Checkbox", Size = "lg" },
+            },
             ],
         },
         new()
@@ -1746,58 +1110,54 @@ public static class NmKitchenSink
             Tier = 2,
             Cases =
             [
-                new()
-                {
-                    Id = "input-default",
-                    Label = "default",
-                    Props = new NMInputProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        LeadingTextValue = "Input",
-                        Placeholder = "Input",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "input-size-sm",
-                    Label = "size = sm",
-                    Props = new NMInputProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        LeadingTextValue = "Input",
-                        Placeholder = "Input",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "input-size-md",
-                    Label = "size = md",
-                    Props = new NMInputProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        LeadingTextValue = "Input",
-                        Placeholder = "Input",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "input-size-lg",
-                    Label = "size = lg",
-                    Props = new NMInputProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        LeadingTextValue = "Input",
-                        Placeholder = "Input",
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "input-default",
+                Label = "default",
+                Props = new NMInputProps { Disabled = false, Error = false, LeadingTextValue = "Input", Placeholder = "Input", Size = "md" },
+            },
+            new()
+            {
+                Id = "input-disabled-true",
+                Label = "disabled = true",
+                Props = new NMInputProps { Disabled = true, Error = false, LeadingTextValue = "Input", Placeholder = "Input", Size = "md" },
+            },
+            new()
+            {
+                Id = "input-disabled-false",
+                Label = "disabled = false",
+                Props = new NMInputProps { Disabled = false, Error = false, LeadingTextValue = "Input", Placeholder = "Input", Size = "md" },
+            },
+            new()
+            {
+                Id = "input-error-true",
+                Label = "error = true",
+                Props = new NMInputProps { Disabled = false, Error = true, LeadingTextValue = "Input", Placeholder = "Input", Size = "md" },
+            },
+            new()
+            {
+                Id = "input-error-false",
+                Label = "error = false",
+                Props = new NMInputProps { Disabled = false, Error = false, LeadingTextValue = "Input", Placeholder = "Input", Size = "md" },
+            },
+            new()
+            {
+                Id = "input-size-sm",
+                Label = "size = sm",
+                Props = new NMInputProps { Disabled = false, Error = false, LeadingTextValue = "Input", Placeholder = "Input", Size = "sm" },
+            },
+            new()
+            {
+                Id = "input-size-md",
+                Label = "size = md",
+                Props = new NMInputProps { Disabled = false, Error = false, LeadingTextValue = "Input", Placeholder = "Input", Size = "md" },
+            },
+            new()
+            {
+                Id = "input-size-lg",
+                Label = "size = lg",
+                Props = new NMInputProps { Disabled = false, Error = false, LeadingTextValue = "Input", Placeholder = "Input", Size = "lg" },
+            },
             ],
         },
         new()
@@ -1808,54 +1168,48 @@ public static class NmKitchenSink
             Tier = 2,
             Cases =
             [
-                new()
-                {
-                    Id = "radio-default",
-                    Label = "default",
-                    Props = new NMRadioProps
-                    {
-                        AriaLabel = "Radio example",
-                        Checked = false,
-                        Disabled = false,
-                        HelperText = "Radio",
-                        LabelText = "Radio",
-                        Name = "Radio",
-                        Size = "md",
-                        Value = "Radio",
-                    },
-                },
-                new()
-                {
-                    Id = "radio-size-sm",
-                    Label = "size = sm",
-                    Props = new NMRadioProps
-                    {
-                        AriaLabel = "Radio example",
-                        Checked = false,
-                        Disabled = false,
-                        HelperText = "Radio",
-                        LabelText = "Radio",
-                        Name = "Radio",
-                        Size = "sm",
-                        Value = "Radio",
-                    },
-                },
-                new()
-                {
-                    Id = "radio-size-md",
-                    Label = "size = md",
-                    Props = new NMRadioProps
-                    {
-                        AriaLabel = "Radio example",
-                        Checked = false,
-                        Disabled = false,
-                        HelperText = "Radio",
-                        LabelText = "Radio",
-                        Name = "Radio",
-                        Size = "md",
-                        Value = "Radio",
-                    },
-                },
+            new()
+            {
+                Id = "radio-default",
+                Label = "default",
+                Props = new NMRadioProps { AriaLabel = "Radio example", Checked = false, Disabled = false, HelperText = "Radio", LabelText = "Radio", Name = "Radio", Size = "md", Value = "Radio" },
+            },
+            new()
+            {
+                Id = "radio-checked-true",
+                Label = "checked = true",
+                Props = new NMRadioProps { AriaLabel = "Radio example", Checked = true, Disabled = false, HelperText = "Radio", LabelText = "Radio", Name = "Radio", Size = "md", Value = "Radio" },
+            },
+            new()
+            {
+                Id = "radio-checked-false",
+                Label = "checked = false",
+                Props = new NMRadioProps { AriaLabel = "Radio example", Checked = false, Disabled = false, HelperText = "Radio", LabelText = "Radio", Name = "Radio", Size = "md", Value = "Radio" },
+            },
+            new()
+            {
+                Id = "radio-disabled-true",
+                Label = "disabled = true",
+                Props = new NMRadioProps { AriaLabel = "Radio example", Checked = false, Disabled = true, HelperText = "Radio", LabelText = "Radio", Name = "Radio", Size = "md", Value = "Radio" },
+            },
+            new()
+            {
+                Id = "radio-disabled-false",
+                Label = "disabled = false",
+                Props = new NMRadioProps { AriaLabel = "Radio example", Checked = false, Disabled = false, HelperText = "Radio", LabelText = "Radio", Name = "Radio", Size = "md", Value = "Radio" },
+            },
+            new()
+            {
+                Id = "radio-size-sm",
+                Label = "size = sm",
+                Props = new NMRadioProps { AriaLabel = "Radio example", Checked = false, Disabled = false, HelperText = "Radio", LabelText = "Radio", Name = "Radio", Size = "sm", Value = "Radio" },
+            },
+            new()
+            {
+                Id = "radio-size-md",
+                Label = "size = md",
+                Props = new NMRadioProps { AriaLabel = "Radio example", Checked = false, Disabled = false, HelperText = "Radio", LabelText = "Radio", Name = "Radio", Size = "md", Value = "Radio" },
+            },
             ],
         },
         new()
@@ -1866,351 +1220,168 @@ public static class NmKitchenSink
             Tier = 2,
             Cases =
             [
-                new()
-                {
-                    Id = "rating-default",
-                    Label = "default",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-max-3",
-                    Label = "max = 3",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "3",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-max-4",
-                    Label = "max = 4",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "4",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-max-5",
-                    Label = "max = 5",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-max-6",
-                    Label = "max = 6",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "6",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-max-7",
-                    Label = "max = 7",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "7",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-max-10",
-                    Label = "max = 10",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "10",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-mode-readonly",
-                    Label = "mode = readonly",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-mode-interactive",
-                    Label = "mode = interactive",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "interactive",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-size-sm",
-                    Label = "size = sm",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "sm",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-size-md",
-                    Label = "size = md",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-size-lg",
-                    Label = "size = lg",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "lg",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-0",
-                    Label = "value = 0",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "0",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-0-5",
-                    Label = "value = 0.5",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "0.5",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-1",
-                    Label = "value = 1",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "1",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-1-5",
-                    Label = "value = 1.5",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "1.5",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-2",
-                    Label = "value = 2",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "2",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-2-5",
-                    Label = "value = 2.5",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "2.5",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-3",
-                    Label = "value = 3",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-3-5",
-                    Label = "value = 3.5",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "3.5",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-4",
-                    Label = "value = 4",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "4",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-4-5",
-                    Label = "value = 4.5",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "4.5",
-                    },
-                },
-                new()
-                {
-                    Id = "rating-value-5",
-                    Label = "value = 5",
-                    Props = new NMRatingProps
-                    {
-                        Count = null,
-                        Disabled = false,
-                        Max = "5",
-                        Mode = "readonly",
-                        ShowLabel = true,
-                        Size = "md",
-                        Value = "5",
-                    },
-                },
+            new()
+            {
+                Id = "rating-default",
+                Label = "default",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-disabled-true",
+                Label = "disabled = true",
+                Props = new NMRatingProps { Count = null, Disabled = true, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-disabled-false",
+                Label = "disabled = false",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-max-3",
+                Label = "max = 3",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "3", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-max-4",
+                Label = "max = 4",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "4", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-max-5",
+                Label = "max = 5",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-max-6",
+                Label = "max = 6",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "6", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-max-7",
+                Label = "max = 7",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "7", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-max-10",
+                Label = "max = 10",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "10", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-mode-readonly",
+                Label = "mode = readonly",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-mode-interactive",
+                Label = "mode = interactive",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-showlabel-true",
+                Label = "showLabel = true",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-showlabel-false",
+                Label = "showLabel = false",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = false, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-size-sm",
+                Label = "size = sm",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "sm", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-size-md",
+                Label = "size = md",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-size-lg",
+                Label = "size = lg",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "lg", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-value-0",
+                Label = "value = 0",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "0" },
+            },
+            new()
+            {
+                Id = "rating-value-0-5",
+                Label = "value = 0.5",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "0.5" },
+            },
+            new()
+            {
+                Id = "rating-value-1",
+                Label = "value = 1",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "1" },
+            },
+            new()
+            {
+                Id = "rating-value-1-5",
+                Label = "value = 1.5",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "1.5" },
+            },
+            new()
+            {
+                Id = "rating-value-2",
+                Label = "value = 2",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "2" },
+            },
+            new()
+            {
+                Id = "rating-value-2-5",
+                Label = "value = 2.5",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "2.5" },
+            },
+            new()
+            {
+                Id = "rating-value-3",
+                Label = "value = 3",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3" },
+            },
+            new()
+            {
+                Id = "rating-value-3-5",
+                Label = "value = 3.5",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3.5" },
+            },
+            new()
+            {
+                Id = "rating-value-4",
+                Label = "value = 4",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "4" },
+            },
+            new()
+            {
+                Id = "rating-value-4-5",
+                Label = "value = 4.5",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "4.5" },
+            },
+            new()
+            {
+                Id = "rating-value-5",
+                Label = "value = 5",
+                Props = new NMRatingProps { Count = null, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "5" },
+            },
             ],
         },
         new()
@@ -2221,104 +1392,72 @@ public static class NmKitchenSink
             Tier = 2,
             Cases =
             [
-                new()
-                {
-                    Id = "slider-default",
-                    Label = "default",
-                    Props = new NMSliderProps
-                    {
-                        AriaLabel = "Sliders & Ranges example",
-                        Disabled = false,
-                        IsBiValue = false,
-                        LabelMode = "none",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "slider-labelmode-none",
-                    Label = "labelMode = none",
-                    Props = new NMSliderProps
-                    {
-                        AriaLabel = "Sliders & Ranges example",
-                        Disabled = false,
-                        IsBiValue = false,
-                        LabelMode = "none",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "slider-labelmode-bottom",
-                    Label = "labelMode = bottom",
-                    Props = new NMSliderProps
-                    {
-                        AriaLabel = "Sliders & Ranges example",
-                        Disabled = false,
-                        IsBiValue = false,
-                        LabelMode = "bottom",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "slider-labelmode-tooltip",
-                    Label = "labelMode = tooltip",
-                    Props = new NMSliderProps
-                    {
-                        AriaLabel = "Sliders & Ranges example",
-                        Disabled = false,
-                        IsBiValue = false,
-                        LabelMode = "tooltip",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "slider-size-sm",
-                    Label = "size = sm",
-                    Props = new NMSliderProps
-                    {
-                        AriaLabel = "Sliders & Ranges example",
-                        Disabled = false,
-                        IsBiValue = false,
-                        LabelMode = "none",
-                        Size = "sm",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "slider-size-md",
-                    Label = "size = md",
-                    Props = new NMSliderProps
-                    {
-                        AriaLabel = "Sliders & Ranges example",
-                        Disabled = false,
-                        IsBiValue = false,
-                        LabelMode = "none",
-                        Size = "md",
-                        Value = 0,
-                    },
-                },
-                new()
-                {
-                    Id = "slider-size-lg",
-                    Label = "size = lg",
-                    Props = new NMSliderProps
-                    {
-                        AriaLabel = "Sliders & Ranges example",
-                        Disabled = false,
-                        IsBiValue = false,
-                        LabelMode = "none",
-                        Size = "lg",
-                        Value = 0,
-                    },
-                },
+            new()
+            {
+                Id = "slider-default",
+                Label = "default",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-disabled-true",
+                Label = "disabled = true",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = true, IsBiValue = false, LabelMode = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-disabled-false",
+                Label = "disabled = false",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-isbivalue-true",
+                Label = "isBiValue = true",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = true, LabelMode = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-isbivalue-false",
+                Label = "isBiValue = false",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-labelmode-none",
+                Label = "labelMode = none",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-labelmode-bottom",
+                Label = "labelMode = bottom",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "bottom", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-labelmode-tooltip",
+                Label = "labelMode = tooltip",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "tooltip", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-size-sm",
+                Label = "size = sm",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "sm", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-size-md",
+                Label = "size = md",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 0 },
+            },
+            new()
+            {
+                Id = "slider-size-lg",
+                Label = "size = lg",
+                Props = new NMSliderProps { AriaLabel = "Sliders & Ranges example", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "lg", Value = 0 },
+            },
             ],
         },
         new()
@@ -2329,111 +1468,84 @@ public static class NmKitchenSink
             Tier = 2,
             Cases =
             [
-                new()
-                {
-                    Id = "textarea-default",
-                    Label = "default",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Textarea",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-resize-vertical",
-                    Label = "resize = vertical",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Textarea",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-resize-none",
-                    Label = "resize = none",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Textarea",
-                        Resize = "none",
-                        ShowCounter = false,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-resize-both",
-                    Label = "resize = both",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Textarea",
-                        Resize = "both",
-                        ShowCounter = false,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-size-sm",
-                    Label = "size = sm",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Textarea",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-size-md",
-                    Label = "size = md",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Textarea",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-size-lg",
-                    Label = "size = lg",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Textarea",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "textarea-default",
+                Label = "default",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-disabled-true",
+                Label = "disabled = true",
+                Props = new NMTextareaProps { Disabled = true, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-disabled-false",
+                Label = "disabled = false",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-error-true",
+                Label = "error = true",
+                Props = new NMTextareaProps { Disabled = false, Error = true, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-error-false",
+                Label = "error = false",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-resize-vertical",
+                Label = "resize = vertical",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-resize-none",
+                Label = "resize = none",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "none", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-resize-both",
+                Label = "resize = both",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "both", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-showcounter-true",
+                Label = "showCounter = true",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-showcounter-false",
+                Label = "showCounter = false",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-size-sm",
+                Label = "size = sm",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "sm" },
+            },
+            new()
+            {
+                Id = "textarea-size-md",
+                Label = "size = md",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "textarea-size-lg",
+                Label = "size = lg",
+                Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Textarea", Resize = "vertical", ShowCounter = false, Size = "lg" },
+            },
             ],
         },
         new()
@@ -2444,48 +1556,48 @@ public static class NmKitchenSink
             Tier = 2,
             Cases =
             [
-                new()
-                {
-                    Id = "toggle-default",
-                    Label = "default",
-                    Props = new NMToggleProps
-                    {
-                        AriaLabel = "Switch example",
-                        Checked = false,
-                        Disabled = false,
-                        HelperText = "Switch",
-                        LabelText = "Switch",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "toggle-size-sm",
-                    Label = "size = sm",
-                    Props = new NMToggleProps
-                    {
-                        AriaLabel = "Switch example",
-                        Checked = false,
-                        Disabled = false,
-                        HelperText = "Switch",
-                        LabelText = "Switch",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "toggle-size-md",
-                    Label = "size = md",
-                    Props = new NMToggleProps
-                    {
-                        AriaLabel = "Switch example",
-                        Checked = false,
-                        Disabled = false,
-                        HelperText = "Switch",
-                        LabelText = "Switch",
-                        Size = "md",
-                    },
-                },
+            new()
+            {
+                Id = "toggle-default",
+                Label = "default",
+                Props = new NMToggleProps { AriaLabel = "Switch example", Checked = false, Disabled = false, HelperText = "Switch", LabelText = "Switch", Size = "md" },
+            },
+            new()
+            {
+                Id = "toggle-checked-true",
+                Label = "checked = true",
+                Props = new NMToggleProps { AriaLabel = "Switch example", Checked = true, Disabled = false, HelperText = "Switch", LabelText = "Switch", Size = "md" },
+            },
+            new()
+            {
+                Id = "toggle-checked-false",
+                Label = "checked = false",
+                Props = new NMToggleProps { AriaLabel = "Switch example", Checked = false, Disabled = false, HelperText = "Switch", LabelText = "Switch", Size = "md" },
+            },
+            new()
+            {
+                Id = "toggle-disabled-true",
+                Label = "disabled = true",
+                Props = new NMToggleProps { AriaLabel = "Switch example", Checked = false, Disabled = true, HelperText = "Switch", LabelText = "Switch", Size = "md" },
+            },
+            new()
+            {
+                Id = "toggle-disabled-false",
+                Label = "disabled = false",
+                Props = new NMToggleProps { AriaLabel = "Switch example", Checked = false, Disabled = false, HelperText = "Switch", LabelText = "Switch", Size = "md" },
+            },
+            new()
+            {
+                Id = "toggle-size-sm",
+                Label = "size = sm",
+                Props = new NMToggleProps { AriaLabel = "Switch example", Checked = false, Disabled = false, HelperText = "Switch", LabelText = "Switch", Size = "sm" },
+            },
+            new()
+            {
+                Id = "toggle-size-md",
+                Label = "size = md",
+                Props = new NMToggleProps { AriaLabel = "Switch example", Checked = false, Disabled = false, HelperText = "Switch", LabelText = "Switch", Size = "md" },
+            },
             ],
         },
         new()
@@ -2496,94 +1608,54 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "badge-group-default",
-                    Label = "default",
-                    Props = new NMBadgeGroupProps
-                    {
-                        BadgePos = "left",
-                        Size = "md",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-group-badgepos-left",
-                    Label = "badgePos = left",
-                    Props = new NMBadgeGroupProps
-                    {
-                        BadgePos = "left",
-                        Size = "md",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-group-badgepos-right",
-                    Label = "badgePos = right",
-                    Props = new NMBadgeGroupProps
-                    {
-                        BadgePos = "right",
-                        Size = "md",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-group-size-md",
-                    Label = "size = md",
-                    Props = new NMBadgeGroupProps
-                    {
-                        BadgePos = "left",
-                        Size = "md",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-group-size-lg",
-                    Label = "size = lg",
-                    Props = new NMBadgeGroupProps
-                    {
-                        BadgePos = "left",
-                        Size = "lg",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-group-variant-ghost",
-                    Label = "variant = ghost",
-                    Props = new NMBadgeGroupProps
-                    {
-                        BadgePos = "left",
-                        Size = "md",
-                        Variant = "ghost",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-group-variant-solid",
-                    Label = "variant = solid",
-                    Props = new NMBadgeGroupProps
-                    {
-                        BadgePos = "left",
-                        Size = "md",
-                        Variant = "solid",
-                    },
-                },
-                new()
-                {
-                    Id = "badge-group-variant-outline",
-                    Label = "variant = outline",
-                    Props = new NMBadgeGroupProps
-                    {
-                        BadgePos = "left",
-                        Size = "md",
-                        Variant = "outline",
-                    },
-                },
+            new()
+            {
+                Id = "badge-group-default",
+                Label = "default",
+                Props = new NMBadgeGroupProps { BadgePos = "left", Size = "md", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-group-badgepos-left",
+                Label = "badgePos = left",
+                Props = new NMBadgeGroupProps { BadgePos = "left", Size = "md", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-group-badgepos-right",
+                Label = "badgePos = right",
+                Props = new NMBadgeGroupProps { BadgePos = "right", Size = "md", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-group-size-md",
+                Label = "size = md",
+                Props = new NMBadgeGroupProps { BadgePos = "left", Size = "md", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-group-size-lg",
+                Label = "size = lg",
+                Props = new NMBadgeGroupProps { BadgePos = "left", Size = "lg", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-group-variant-ghost",
+                Label = "variant = ghost",
+                Props = new NMBadgeGroupProps { BadgePos = "left", Size = "md", Variant = "ghost" },
+            },
+            new()
+            {
+                Id = "badge-group-variant-solid",
+                Label = "variant = solid",
+                Props = new NMBadgeGroupProps { BadgePos = "left", Size = "md", Variant = "solid" },
+            },
+            new()
+            {
+                Id = "badge-group-variant-outline",
+                Label = "variant = outline",
+                Props = new NMBadgeGroupProps { BadgePos = "left", Size = "md", Variant = "outline" },
+            },
             ],
         },
         new()
@@ -2594,30 +1666,30 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "breadcrumb-default",
-                    Label = "default",
-                    Props = new NMBreadcrumbProps { Separator = "chevron" },
-                },
-                new()
-                {
-                    Id = "breadcrumb-separator-slash",
-                    Label = "separator = slash",
-                    Props = new NMBreadcrumbProps { Separator = "slash" },
-                },
-                new()
-                {
-                    Id = "breadcrumb-separator-chevron",
-                    Label = "separator = chevron",
-                    Props = new NMBreadcrumbProps { Separator = "chevron" },
-                },
-                new()
-                {
-                    Id = "breadcrumb-separator-dot",
-                    Label = "separator = dot",
-                    Props = new NMBreadcrumbProps { Separator = "dot" },
-                },
+            new()
+            {
+                Id = "breadcrumb-default",
+                Label = "default",
+                Props = new NMBreadcrumbProps { Separator = "chevron" },
+            },
+            new()
+            {
+                Id = "breadcrumb-separator-slash",
+                Label = "separator = slash",
+                Props = new NMBreadcrumbProps { Separator = "slash" },
+            },
+            new()
+            {
+                Id = "breadcrumb-separator-chevron",
+                Label = "separator = chevron",
+                Props = new NMBreadcrumbProps { Separator = "chevron" },
+            },
+            new()
+            {
+                Id = "breadcrumb-separator-dot",
+                Label = "separator = dot",
+                Props = new NMBreadcrumbProps { Separator = "dot" },
+            },
             ],
         },
         new()
@@ -2628,12 +1700,12 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "button-group-default",
-                    Label = "default",
-                    Props = new NMButtonGroupProps(),
-                },
+            new()
+            {
+                Id = "button-group-default",
+                Label = "default",
+                Props = new NMButtonGroupProps(),
+            },
             ],
         },
         new()
@@ -2644,90 +1716,72 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "checkbox-group-default",
-                    Label = "default",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-layout-vertical",
-                    Label = "layout = vertical",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-layout-horizontal",
-                    Label = "layout = horizontal",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-layout-inline",
-                    Label = "layout = inline",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "inline",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-size-sm",
-                    Label = "size = sm",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-size-md",
-                    Label = "size = md",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-size-lg",
-                    Label = "size = lg",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "checkbox-group-default",
+                Label = "default",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-groupdisabled-true",
+                Label = "groupDisabled = true",
+                Props = new NMCheckboxGroupProps { GroupDisabled = true, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-groupdisabled-false",
+                Label = "groupDisabled = false",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-grouperror-true",
+                Label = "groupError = true",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = true, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-grouperror-false",
+                Label = "groupError = false",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-layout-vertical",
+                Label = "layout = vertical",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-layout-horizontal",
+                Label = "layout = horizontal",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-layout-inline",
+                Label = "layout = inline",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "inline", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-size-sm",
+                Label = "size = sm",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "sm" },
+            },
+            new()
+            {
+                Id = "checkbox-group-size-md",
+                Label = "size = md",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "checkbox-group-size-lg",
+                Label = "size = lg",
+                Props = new NMCheckboxGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "lg" },
+            },
             ],
         },
         new()
@@ -2738,50 +1792,30 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "pagination-default",
-                    Label = "default",
-                    Props = new NMPaginationProps
-                    {
-                        CurrentPage = 1,
-                        Size = "md",
-                        TotalPages = 1,
-                    },
-                },
-                new()
-                {
-                    Id = "pagination-size-sm",
-                    Label = "size = sm",
-                    Props = new NMPaginationProps
-                    {
-                        CurrentPage = 1,
-                        Size = "sm",
-                        TotalPages = 1,
-                    },
-                },
-                new()
-                {
-                    Id = "pagination-size-md",
-                    Label = "size = md",
-                    Props = new NMPaginationProps
-                    {
-                        CurrentPage = 1,
-                        Size = "md",
-                        TotalPages = 1,
-                    },
-                },
-                new()
-                {
-                    Id = "pagination-size-lg",
-                    Label = "size = lg",
-                    Props = new NMPaginationProps
-                    {
-                        CurrentPage = 1,
-                        Size = "lg",
-                        TotalPages = 1,
-                    },
-                },
+            new()
+            {
+                Id = "pagination-default",
+                Label = "default",
+                Props = new NMPaginationProps { CurrentPage = 1, Size = "md", TotalPages = 1 },
+            },
+            new()
+            {
+                Id = "pagination-size-sm",
+                Label = "size = sm",
+                Props = new NMPaginationProps { CurrentPage = 1, Size = "sm", TotalPages = 1 },
+            },
+            new()
+            {
+                Id = "pagination-size-md",
+                Label = "size = md",
+                Props = new NMPaginationProps { CurrentPage = 1, Size = "md", TotalPages = 1 },
+            },
+            new()
+            {
+                Id = "pagination-size-lg",
+                Label = "size = lg",
+                Props = new NMPaginationProps { CurrentPage = 1, Size = "lg", TotalPages = 1 },
+            },
             ],
         },
         new()
@@ -2792,90 +1826,72 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "radio-group-default",
-                    Label = "default",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-layout-vertical",
-                    Label = "layout = vertical",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-layout-horizontal",
-                    Label = "layout = horizontal",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-layout-inline",
-                    Label = "layout = inline",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "inline",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-size-sm",
-                    Label = "size = sm",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-size-md",
-                    Label = "size = md",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-size-lg",
-                    Label = "size = lg",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        Layout = "vertical",
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "radio-group-default",
+                Label = "default",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-groupdisabled-true",
+                Label = "groupDisabled = true",
+                Props = new NMRadioGroupProps { GroupDisabled = true, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-groupdisabled-false",
+                Label = "groupDisabled = false",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-grouperror-true",
+                Label = "groupError = true",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = true, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-grouperror-false",
+                Label = "groupError = false",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-layout-vertical",
+                Label = "layout = vertical",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-layout-horizontal",
+                Label = "layout = horizontal",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-layout-inline",
+                Label = "layout = inline",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "inline", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-size-sm",
+                Label = "size = sm",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "sm" },
+            },
+            new()
+            {
+                Id = "radio-group-size-md",
+                Label = "size = md",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "radio-group-size-lg",
+                Label = "size = lg",
+                Props = new NMRadioGroupProps { GroupDisabled = false, GroupError = false, Layout = "vertical", Size = "lg" },
+            },
             ],
         },
         new()
@@ -2886,42 +1902,48 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "segmented-default",
-                    Label = "default",
-                    Props = new NMSegmentedProps
-                    {
-                        Disabled = false,
-                        FullWidth = false,
-                        Size = "sm",
-                        Value = "week",
-                    },
-                },
-                new()
-                {
-                    Id = "segmented-size-sm",
-                    Label = "size = sm",
-                    Props = new NMSegmentedProps
-                    {
-                        Disabled = false,
-                        FullWidth = false,
-                        Size = "sm",
-                        Value = "week",
-                    },
-                },
-                new()
-                {
-                    Id = "segmented-size-md",
-                    Label = "size = md",
-                    Props = new NMSegmentedProps
-                    {
-                        Disabled = false,
-                        FullWidth = false,
-                        Size = "md",
-                        Value = "week",
-                    },
-                },
+            new()
+            {
+                Id = "segmented-default",
+                Label = "default",
+                Props = new NMSegmentedProps { Disabled = false, FullWidth = false, Size = "sm", Value = "week" },
+            },
+            new()
+            {
+                Id = "segmented-disabled-true",
+                Label = "disabled = true",
+                Props = new NMSegmentedProps { Disabled = true, FullWidth = false, Size = "sm", Value = "week" },
+            },
+            new()
+            {
+                Id = "segmented-disabled-false",
+                Label = "disabled = false",
+                Props = new NMSegmentedProps { Disabled = false, FullWidth = false, Size = "sm", Value = "week" },
+            },
+            new()
+            {
+                Id = "segmented-fullwidth-true",
+                Label = "fullWidth = true",
+                Props = new NMSegmentedProps { Disabled = false, FullWidth = true, Size = "sm", Value = "week" },
+            },
+            new()
+            {
+                Id = "segmented-fullwidth-false",
+                Label = "fullWidth = false",
+                Props = new NMSegmentedProps { Disabled = false, FullWidth = false, Size = "sm", Value = "week" },
+            },
+            new()
+            {
+                Id = "segmented-size-sm",
+                Label = "size = sm",
+                Props = new NMSegmentedProps { Disabled = false, FullWidth = false, Size = "sm", Value = "week" },
+            },
+            new()
+            {
+                Id = "segmented-size-md",
+                Label = "size = md",
+                Props = new NMSegmentedProps { Disabled = false, FullWidth = false, Size = "md", Value = "week" },
+            },
             ],
         },
         new()
@@ -2932,234 +1954,120 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "step-indicator-default",
-                    Label = "default",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-activeindex-0",
-                    Label = "activeIndex = 0",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "0",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-activeindex-1",
-                    Label = "activeIndex = 1",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-activeindex-2",
-                    Label = "activeIndex = 2",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "2",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-activeindex-3",
-                    Label = "activeIndex = 3",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "3",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-activeindex-4",
-                    Label = "activeIndex = 4",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "4",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-activeindex-5",
-                    Label = "activeIndex = 5",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "5",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-activeindex-6",
-                    Label = "activeIndex = 6",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "6",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-size-sm",
-                    Label = "size = sm",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "sm",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-size-md",
-                    Label = "size = md",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-size-lg",
-                    Label = "size = lg",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "lg",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-steps-3",
-                    Label = "steps = 3",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "3",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-steps-4",
-                    Label = "steps = 4",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-steps-5",
-                    Label = "steps = 5",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "5",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-steps-6",
-                    Label = "steps = 6",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "6",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-steps-7",
-                    Label = "steps = 7",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "7",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-variant-dots",
-                    Label = "variant = dots",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "dots",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-variant-bars",
-                    Label = "variant = bars",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "bars",
-                    },
-                },
-                new()
-                {
-                    Id = "step-indicator-variant-numbers",
-                    Label = "variant = numbers",
-                    Props = new NMStepIndicatorProps
-                    {
-                        ActiveIndex = "1",
-                        Size = "md",
-                        Steps = "4",
-                        Variant = "numbers",
-                    },
-                },
+            new()
+            {
+                Id = "step-indicator-default",
+                Label = "default",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-0",
+                Label = "activeIndex = 0",
+                Props = new NMStepIndicatorProps { ActiveIndex = "0", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-1",
+                Label = "activeIndex = 1",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-2",
+                Label = "activeIndex = 2",
+                Props = new NMStepIndicatorProps { ActiveIndex = "2", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-3",
+                Label = "activeIndex = 3",
+                Props = new NMStepIndicatorProps { ActiveIndex = "3", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-4",
+                Label = "activeIndex = 4",
+                Props = new NMStepIndicatorProps { ActiveIndex = "4", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-5",
+                Label = "activeIndex = 5",
+                Props = new NMStepIndicatorProps { ActiveIndex = "5", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-6",
+                Label = "activeIndex = 6",
+                Props = new NMStepIndicatorProps { ActiveIndex = "6", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-size-sm",
+                Label = "size = sm",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "sm", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-size-md",
+                Label = "size = md",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-size-lg",
+                Label = "size = lg",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "lg", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-steps-3",
+                Label = "steps = 3",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "3", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-steps-4",
+                Label = "steps = 4",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-steps-5",
+                Label = "steps = 5",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "5", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-steps-6",
+                Label = "steps = 6",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "6", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-steps-7",
+                Label = "steps = 7",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "7", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-variant-dots",
+                Label = "variant = dots",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-variant-bars",
+                Label = "variant = bars",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "bars" },
+            },
+            new()
+            {
+                Id = "step-indicator-variant-numbers",
+                Label = "variant = numbers",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "numbers" },
+            },
             ],
         },
         new()
@@ -3170,126 +2078,78 @@ public static class NmKitchenSink
             Tier = 3,
             Cases =
             [
-                new()
-                {
-                    Id = "toggles-default",
-                    Label = "default",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "md",
-                        State = "unchecked",
-                        Type = "checkbox",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-size-sm",
-                    Label = "size = sm",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "sm",
-                        State = "unchecked",
-                        Type = "checkbox",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-size-md",
-                    Label = "size = md",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "md",
-                        State = "unchecked",
-                        Type = "checkbox",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-size-lg",
-                    Label = "size = lg",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "lg",
-                        State = "unchecked",
-                        Type = "checkbox",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-state-unchecked",
-                    Label = "state = unchecked",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "md",
-                        State = "unchecked",
-                        Type = "checkbox",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-state-checked",
-                    Label = "state = checked",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "md",
-                        State = "checked",
-                        Type = "checkbox",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-state-indeterminate",
-                    Label = "state = indeterminate",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "md",
-                        State = "indeterminate",
-                        Type = "checkbox",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-type-checkbox",
-                    Label = "type = checkbox",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "md",
-                        State = "unchecked",
-                        Type = "checkbox",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-type-radio",
-                    Label = "type = radio",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "md",
-                        State = "unchecked",
-                        Type = "radio",
-                    },
-                },
-                new()
-                {
-                    Id = "toggles-type-switch",
-                    Label = "type = switch",
-                    Props = new NMTogglesProps
-                    {
-                        Disabled = false,
-                        Size = "md",
-                        State = "unchecked",
-                        Type = "switch",
-                    },
-                },
+            new()
+            {
+                Id = "toggles-default",
+                Label = "default",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-disabled-true",
+                Label = "disabled = true",
+                Props = new NMTogglesProps { Disabled = true, Size = "md", State = "unchecked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-disabled-false",
+                Label = "disabled = false",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-size-sm",
+                Label = "size = sm",
+                Props = new NMTogglesProps { Disabled = false, Size = "sm", State = "unchecked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-size-md",
+                Label = "size = md",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-size-lg",
+                Label = "size = lg",
+                Props = new NMTogglesProps { Disabled = false, Size = "lg", State = "unchecked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-state-unchecked",
+                Label = "state = unchecked",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-state-checked",
+                Label = "state = checked",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-state-indeterminate",
+                Label = "state = indeterminate",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "indeterminate", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-type-checkbox",
+                Label = "type = checkbox",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-type-radio",
+                Label = "type = radio",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "radio" },
+            },
+            new()
+            {
+                Id = "toggles-type-switch",
+                Label = "type = switch",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "switch" },
+            },
             ],
         },
         new()
@@ -3300,97 +2160,72 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "alert-default",
-                    Label = "default",
-                    Props = new NMAlertProps
-                    {
-                        Closable = true,
-                        Glow = false,
-                        Severity = "info",
-                        Size = "full",
-                        Style = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "alert-severity-info",
-                    Label = "severity = info",
-                    Props = new NMAlertProps
-                    {
-                        Closable = true,
-                        Glow = false,
-                        Severity = "info",
-                        Size = "full",
-                        Style = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "alert-severity-error",
-                    Label = "severity = error",
-                    Props = new NMAlertProps
-                    {
-                        Closable = true,
-                        Glow = false,
-                        Severity = "error",
-                        Size = "full",
-                        Style = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "alert-size-full",
-                    Label = "size = full",
-                    Props = new NMAlertProps
-                    {
-                        Closable = true,
-                        Glow = false,
-                        Severity = "info",
-                        Size = "full",
-                        Style = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "alert-size-compact",
-                    Label = "size = compact",
-                    Props = new NMAlertProps
-                    {
-                        Closable = true,
-                        Glow = false,
-                        Severity = "info",
-                        Size = "compact",
-                        Style = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "alert-style-default",
-                    Label = "style = default",
-                    Props = new NMAlertProps
-                    {
-                        Closable = true,
-                        Glow = false,
-                        Severity = "info",
-                        Size = "full",
-                        Style = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "alert-style-accent",
-                    Label = "style = accent",
-                    Props = new NMAlertProps
-                    {
-                        Closable = true,
-                        Glow = false,
-                        Severity = "info",
-                        Size = "full",
-                        Style = "accent",
-                    },
-                },
+            new()
+            {
+                Id = "alert-default",
+                Label = "default",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "info", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-closable-true",
+                Label = "closable = true",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "info", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-closable-false",
+                Label = "closable = false",
+                Props = new NMAlertProps { Closable = false, Glow = false, Severity = "info", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-glow-true",
+                Label = "glow = true",
+                Props = new NMAlertProps { Closable = true, Glow = true, Severity = "info", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-glow-false",
+                Label = "glow = false",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "info", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-severity-info",
+                Label = "severity = info",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "info", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-severity-error",
+                Label = "severity = error",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "error", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-size-full",
+                Label = "size = full",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "info", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-size-compact",
+                Label = "size = compact",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "info", Size = "compact", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-style-default",
+                Label = "style = default",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "info", Size = "full", Style = "default" },
+            },
+            new()
+            {
+                Id = "alert-style-accent",
+                Label = "style = accent",
+                Props = new NMAlertProps { Closable = true, Glow = false, Severity = "info", Size = "full", Style = "accent" },
+            },
             ],
         },
         new()
@@ -3401,105 +2236,60 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "card-default",
-                    Label = "default",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "actions",
-                        Padding = "md",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "card-footervariant-actions",
-                    Label = "footerVariant = actions",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "actions",
-                        Padding = "md",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "card-footervariant-helper",
-                    Label = "footerVariant = helper",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "helper",
-                        Padding = "md",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "card-padding-sm",
-                    Label = "padding = sm",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "actions",
-                        Padding = "sm",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "card-padding-md",
-                    Label = "padding = md",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "actions",
-                        Padding = "md",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "card-padding-lg",
-                    Label = "padding = lg",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "actions",
-                        Padding = "lg",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "card-variant-default",
-                    Label = "variant = default",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "actions",
-                        Padding = "md",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "card-variant-elevated",
-                    Label = "variant = elevated",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "actions",
-                        Padding = "md",
-                        Variant = "elevated",
-                    },
-                },
-                new()
-                {
-                    Id = "card-variant-ghost",
-                    Label = "variant = ghost",
-                    Props = new NMCardProps
-                    {
-                        FooterVariant = "actions",
-                        Padding = "md",
-                        Variant = "ghost",
-                    },
-                },
+            new()
+            {
+                Id = "card-default",
+                Label = "default",
+                Props = new NMCardProps { FooterVariant = "actions", Padding = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "card-footervariant-actions",
+                Label = "footerVariant = actions",
+                Props = new NMCardProps { FooterVariant = "actions", Padding = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "card-footervariant-helper",
+                Label = "footerVariant = helper",
+                Props = new NMCardProps { FooterVariant = "helper", Padding = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "card-padding-sm",
+                Label = "padding = sm",
+                Props = new NMCardProps { FooterVariant = "actions", Padding = "sm", Variant = "default" },
+            },
+            new()
+            {
+                Id = "card-padding-md",
+                Label = "padding = md",
+                Props = new NMCardProps { FooterVariant = "actions", Padding = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "card-padding-lg",
+                Label = "padding = lg",
+                Props = new NMCardProps { FooterVariant = "actions", Padding = "lg", Variant = "default" },
+            },
+            new()
+            {
+                Id = "card-variant-default",
+                Label = "variant = default",
+                Props = new NMCardProps { FooterVariant = "actions", Padding = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "card-variant-elevated",
+                Label = "variant = elevated",
+                Props = new NMCardProps { FooterVariant = "actions", Padding = "md", Variant = "elevated" },
+            },
+            new()
+            {
+                Id = "card-variant-ghost",
+                Label = "variant = ghost",
+                Props = new NMCardProps { FooterVariant = "actions", Padding = "md", Variant = "ghost" },
+            },
             ],
         },
         new()
@@ -3510,12 +2300,12 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "chat-default",
-                    Label = "default",
-                    Props = new NMChatProps(),
-                },
+            new()
+            {
+                Id = "chat-default",
+                Label = "default",
+                Props = new NMChatProps(),
+            },
             ],
         },
         new()
@@ -3526,24 +2316,24 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "content-footer-default",
-                    Label = "default",
-                    Props = new NMContentFooterProps { Variant = "actions" },
-                },
-                new()
-                {
-                    Id = "content-footer-variant-actions",
-                    Label = "variant = actions",
-                    Props = new NMContentFooterProps { Variant = "actions" },
-                },
-                new()
-                {
-                    Id = "content-footer-variant-helper",
-                    Label = "variant = helper",
-                    Props = new NMContentFooterProps { Variant = "helper" },
-                },
+            new()
+            {
+                Id = "content-footer-default",
+                Label = "default",
+                Props = new NMContentFooterProps { Variant = "actions" },
+            },
+            new()
+            {
+                Id = "content-footer-variant-actions",
+                Label = "variant = actions",
+                Props = new NMContentFooterProps { Variant = "actions" },
+            },
+            new()
+            {
+                Id = "content-footer-variant-helper",
+                Label = "variant = helper",
+                Props = new NMContentFooterProps { Variant = "helper" },
+            },
             ],
         },
         new()
@@ -3554,16 +2344,24 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "content-header-default",
-                    Label = "default",
-                    Props = new NMContentHeaderProps
-                    {
-                        CanClose = false,
-                        TitleId = "ContentHeader",
-                    },
-                },
+            new()
+            {
+                Id = "content-header-default",
+                Label = "default",
+                Props = new NMContentHeaderProps { CanClose = false, TitleId = "ContentHeader" },
+            },
+            new()
+            {
+                Id = "content-header-canclose-true",
+                Label = "canClose = true",
+                Props = new NMContentHeaderProps { CanClose = true, TitleId = "ContentHeader" },
+            },
+            new()
+            {
+                Id = "content-header-canclose-false",
+                Label = "canClose = false",
+                Props = new NMContentHeaderProps { CanClose = false, TitleId = "ContentHeader" },
+            },
             ],
         },
         new()
@@ -3574,30 +2372,30 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "empty-state-default",
-                    Label = "default",
-                    Props = new NMEmptyStateProps { Variant = "default" },
-                },
-                new()
-                {
-                    Id = "empty-state-variant-default",
-                    Label = "variant = default",
-                    Props = new NMEmptyStateProps { Variant = "default" },
-                },
-                new()
-                {
-                    Id = "empty-state-variant-compact",
-                    Label = "variant = compact",
-                    Props = new NMEmptyStateProps { Variant = "compact" },
-                },
-                new()
-                {
-                    Id = "empty-state-variant-card",
-                    Label = "variant = card",
-                    Props = new NMEmptyStateProps { Variant = "card" },
-                },
+            new()
+            {
+                Id = "empty-state-default",
+                Label = "default",
+                Props = new NMEmptyStateProps { Variant = "default" },
+            },
+            new()
+            {
+                Id = "empty-state-variant-default",
+                Label = "variant = default",
+                Props = new NMEmptyStateProps { Variant = "default" },
+            },
+            new()
+            {
+                Id = "empty-state-variant-compact",
+                Label = "variant = compact",
+                Props = new NMEmptyStateProps { Variant = "compact" },
+            },
+            new()
+            {
+                Id = "empty-state-variant-card",
+                Label = "variant = card",
+                Props = new NMEmptyStateProps { Variant = "card" },
+            },
             ],
         },
         new()
@@ -3608,227 +2406,120 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "list-default",
-                    Label = "default",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-bullet-disc",
-                    Label = "bullet = disc",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-bullet-circle",
-                    Label = "bullet = circle",
-                    Props = new NMListProps
-                    {
-                        Bullet = "circle",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-bullet-square",
-                    Label = "bullet = square",
-                    Props = new NMListProps
-                    {
-                        Bullet = "square",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-bullet-dash",
-                    Label = "bullet = dash",
-                    Props = new NMListProps
-                    {
-                        Bullet = "dash",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-order-decimal",
-                    Label = "order = decimal",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-order-decimal-leading-zero",
-                    Label = "order = decimal-leading-zero",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal-leading-zero",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-order-lower-alpha",
-                    Label = "order = lower-alpha",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "lower-alpha",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-order-upper-alpha",
-                    Label = "order = upper-alpha",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "upper-alpha",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-order-lower-roman",
-                    Label = "order = lower-roman",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "lower-roman",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-order-upper-roman",
-                    Label = "order = upper-roman",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "upper-roman",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-size-sm",
-                    Label = "size = sm",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "sm",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-size-md",
-                    Label = "size = md",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-size-lg",
-                    Label = "size = lg",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "lg",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-type-unordered",
-                    Label = "type = unordered",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "unordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-type-ordered",
-                    Label = "type = ordered",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "ordered",
-                    },
-                },
-                new()
-                {
-                    Id = "list-type-icon",
-                    Label = "type = icon",
-                    Props = new NMListProps
-                    {
-                        Bullet = "disc",
-                        Horizontal = false,
-                        Order = "decimal",
-                        Size = "md",
-                        Type = "icon",
-                    },
-                },
+            new()
+            {
+                Id = "list-default",
+                Label = "default",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-bullet-disc",
+                Label = "bullet = disc",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-bullet-circle",
+                Label = "bullet = circle",
+                Props = new NMListProps { Bullet = "circle", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-bullet-square",
+                Label = "bullet = square",
+                Props = new NMListProps { Bullet = "square", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-bullet-dash",
+                Label = "bullet = dash",
+                Props = new NMListProps { Bullet = "dash", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-horizontal-true",
+                Label = "horizontal = true",
+                Props = new NMListProps { Bullet = "disc", Horizontal = true, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-horizontal-false",
+                Label = "horizontal = false",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-order-decimal",
+                Label = "order = decimal",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-order-decimal-leading-zero",
+                Label = "order = decimal-leading-zero",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal-leading-zero", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-order-lower-alpha",
+                Label = "order = lower-alpha",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "lower-alpha", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-order-upper-alpha",
+                Label = "order = upper-alpha",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "upper-alpha", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-order-lower-roman",
+                Label = "order = lower-roman",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "lower-roman", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-order-upper-roman",
+                Label = "order = upper-roman",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "upper-roman", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-size-sm",
+                Label = "size = sm",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "sm", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-size-md",
+                Label = "size = md",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-size-lg",
+                Label = "size = lg",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "lg", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-type-unordered",
+                Label = "type = unordered",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "md", Type = "unordered" },
+            },
+            new()
+            {
+                Id = "list-type-ordered",
+                Label = "type = ordered",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "md", Type = "ordered" },
+            },
+            new()
+            {
+                Id = "list-type-icon",
+                Label = "type = icon",
+                Props = new NMListProps { Bullet = "disc", Horizontal = false, Order = "decimal", Size = "md", Type = "icon" },
+            },
             ],
         },
         new()
@@ -3839,104 +2530,60 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "metrics-default",
-                    Label = "default",
-                    Props = new NMMetricsProps
-                    {
-                        Change = "Metrics",
-                        Label = "Metrics",
-                        ShowIcon = false,
-                        Trend = "up",
-                        Value = "Metrics",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "metrics-trend-up",
-                    Label = "trend = up",
-                    Props = new NMMetricsProps
-                    {
-                        Change = "Metrics",
-                        Label = "Metrics",
-                        ShowIcon = false,
-                        Trend = "up",
-                        Value = "Metrics",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "metrics-trend-down",
-                    Label = "trend = down",
-                    Props = new NMMetricsProps
-                    {
-                        Change = "Metrics",
-                        Label = "Metrics",
-                        ShowIcon = false,
-                        Trend = "down",
-                        Value = "Metrics",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "metrics-trend-neutral",
-                    Label = "trend = neutral",
-                    Props = new NMMetricsProps
-                    {
-                        Change = "Metrics",
-                        Label = "Metrics",
-                        ShowIcon = false,
-                        Trend = "neutral",
-                        Value = "Metrics",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "metrics-variant-default",
-                    Label = "variant = default",
-                    Props = new NMMetricsProps
-                    {
-                        Change = "Metrics",
-                        Label = "Metrics",
-                        ShowIcon = false,
-                        Trend = "up",
-                        Value = "Metrics",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "metrics-variant-card",
-                    Label = "variant = card",
-                    Props = new NMMetricsProps
-                    {
-                        Change = "Metrics",
-                        Label = "Metrics",
-                        ShowIcon = false,
-                        Trend = "up",
-                        Value = "Metrics",
-                        Variant = "card",
-                    },
-                },
-                new()
-                {
-                    Id = "metrics-variant-compact",
-                    Label = "variant = compact",
-                    Props = new NMMetricsProps
-                    {
-                        Change = "Metrics",
-                        Label = "Metrics",
-                        ShowIcon = false,
-                        Trend = "up",
-                        Value = "Metrics",
-                        Variant = "compact",
-                    },
-                },
+            new()
+            {
+                Id = "metrics-default",
+                Label = "default",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = false, Trend = "up", Value = "Metrics", Variant = "default" },
+            },
+            new()
+            {
+                Id = "metrics-showicon-true",
+                Label = "showIcon = true",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = true, Trend = "up", Value = "Metrics", Variant = "default" },
+            },
+            new()
+            {
+                Id = "metrics-showicon-false",
+                Label = "showIcon = false",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = false, Trend = "up", Value = "Metrics", Variant = "default" },
+            },
+            new()
+            {
+                Id = "metrics-trend-up",
+                Label = "trend = up",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = false, Trend = "up", Value = "Metrics", Variant = "default" },
+            },
+            new()
+            {
+                Id = "metrics-trend-down",
+                Label = "trend = down",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = false, Trend = "down", Value = "Metrics", Variant = "default" },
+            },
+            new()
+            {
+                Id = "metrics-trend-neutral",
+                Label = "trend = neutral",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = false, Trend = "neutral", Value = "Metrics", Variant = "default" },
+            },
+            new()
+            {
+                Id = "metrics-variant-default",
+                Label = "variant = default",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = false, Trend = "up", Value = "Metrics", Variant = "default" },
+            },
+            new()
+            {
+                Id = "metrics-variant-card",
+                Label = "variant = card",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = false, Trend = "up", Value = "Metrics", Variant = "card" },
+            },
+            new()
+            {
+                Id = "metrics-variant-compact",
+                Label = "variant = compact",
+                Props = new NMMetricsProps { Change = "Metrics", Label = "Metrics", ShowIcon = false, Trend = "up", Value = "Metrics", Variant = "compact" },
+            },
             ],
         },
         new()
@@ -3947,90 +2594,72 @@ public static class NmKitchenSink
             Tier = 4,
             Cases =
             [
-                new()
-                {
-                    Id = "table-default",
-                    Label = "default",
-                    Props = new NMTableProps
-                    {
-                        Hover = true,
-                        Size = "md",
-                        Striped = true,
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "table-size-sm",
-                    Label = "size = sm",
-                    Props = new NMTableProps
-                    {
-                        Hover = true,
-                        Size = "sm",
-                        Striped = true,
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "table-size-md",
-                    Label = "size = md",
-                    Props = new NMTableProps
-                    {
-                        Hover = true,
-                        Size = "md",
-                        Striped = true,
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "table-size-lg",
-                    Label = "size = lg",
-                    Props = new NMTableProps
-                    {
-                        Hover = true,
-                        Size = "lg",
-                        Striped = true,
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "table-variant-default",
-                    Label = "variant = default",
-                    Props = new NMTableProps
-                    {
-                        Hover = true,
-                        Size = "md",
-                        Striped = true,
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "table-variant-bordered",
-                    Label = "variant = bordered",
-                    Props = new NMTableProps
-                    {
-                        Hover = true,
-                        Size = "md",
-                        Striped = true,
-                        Variant = "bordered",
-                    },
-                },
-                new()
-                {
-                    Id = "table-variant-minimal",
-                    Label = "variant = minimal",
-                    Props = new NMTableProps
-                    {
-                        Hover = true,
-                        Size = "md",
-                        Striped = true,
-                        Variant = "minimal",
-                    },
-                },
+            new()
+            {
+                Id = "table-default",
+                Label = "default",
+                Props = new NMTableProps { Hover = true, Size = "md", Striped = true, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-hover-true",
+                Label = "hover = true",
+                Props = new NMTableProps { Hover = true, Size = "md", Striped = true, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-hover-false",
+                Label = "hover = false",
+                Props = new NMTableProps { Hover = false, Size = "md", Striped = true, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-size-sm",
+                Label = "size = sm",
+                Props = new NMTableProps { Hover = true, Size = "sm", Striped = true, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-size-md",
+                Label = "size = md",
+                Props = new NMTableProps { Hover = true, Size = "md", Striped = true, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-size-lg",
+                Label = "size = lg",
+                Props = new NMTableProps { Hover = true, Size = "lg", Striped = true, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-striped-true",
+                Label = "striped = true",
+                Props = new NMTableProps { Hover = true, Size = "md", Striped = true, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-striped-false",
+                Label = "striped = false",
+                Props = new NMTableProps { Hover = true, Size = "md", Striped = false, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-variant-default",
+                Label = "variant = default",
+                Props = new NMTableProps { Hover = true, Size = "md", Striped = true, Variant = "default" },
+            },
+            new()
+            {
+                Id = "table-variant-bordered",
+                Label = "variant = bordered",
+                Props = new NMTableProps { Hover = true, Size = "md", Striped = true, Variant = "bordered" },
+            },
+            new()
+            {
+                Id = "table-variant-minimal",
+                Label = "variant = minimal",
+                Props = new NMTableProps { Hover = true, Size = "md", Striped = true, Variant = "minimal" },
+            },
             ],
         },
         new()
@@ -4041,62 +2670,66 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "color-picker-default",
-                    Label = "default",
-                    Props = new NMColorPickerProps
-                    {
-                        Disabled = false,
-                        Label = "Color Picker",
-                        Selected = "Color Picker",
-                        ShowInput = true,
-                        ShowPanel = true,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "color-picker-size-sm",
-                    Label = "size = sm",
-                    Props = new NMColorPickerProps
-                    {
-                        Disabled = false,
-                        Label = "Color Picker",
-                        Selected = "Color Picker",
-                        ShowInput = true,
-                        ShowPanel = true,
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "color-picker-size-md",
-                    Label = "size = md",
-                    Props = new NMColorPickerProps
-                    {
-                        Disabled = false,
-                        Label = "Color Picker",
-                        Selected = "Color Picker",
-                        ShowInput = true,
-                        ShowPanel = true,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "color-picker-size-lg",
-                    Label = "size = lg",
-                    Props = new NMColorPickerProps
-                    {
-                        Disabled = false,
-                        Label = "Color Picker",
-                        Selected = "Color Picker",
-                        ShowInput = true,
-                        ShowPanel = true,
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "color-picker-default",
+                Label = "default",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "color-picker-disabled-true",
+                Label = "disabled = true",
+                Props = new NMColorPickerProps { Disabled = true, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "color-picker-disabled-false",
+                Label = "disabled = false",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "color-picker-showinput-true",
+                Label = "showInput = true",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "color-picker-showinput-false",
+                Label = "showInput = false",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = false, ShowPanel = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "color-picker-showpanel-true",
+                Label = "showPanel = true",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "color-picker-showpanel-false",
+                Label = "showPanel = false",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "color-picker-size-sm",
+                Label = "size = sm",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = true, Size = "sm" },
+            },
+            new()
+            {
+                Id = "color-picker-size-md",
+                Label = "size = md",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "color-picker-size-lg",
+                Label = "size = lg",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Color Picker", Selected = "Color Picker", ShowInput = true, ShowPanel = true, Size = "lg" },
+            },
             ],
         },
         new()
@@ -4107,62 +2740,54 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "combobox-default",
-                    Label = "default",
-                    Props = new NMComboboxProps
-                    {
-                        FilterText = "Combobox",
-                        IsLoading = false,
-                        Multiple = false,
-                        Placeholder = "Search...",
-                        Selected = "Combobox",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "combobox-size-sm",
-                    Label = "size = sm",
-                    Props = new NMComboboxProps
-                    {
-                        FilterText = "Combobox",
-                        IsLoading = false,
-                        Multiple = false,
-                        Placeholder = "Search...",
-                        Selected = "Combobox",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "combobox-size-md",
-                    Label = "size = md",
-                    Props = new NMComboboxProps
-                    {
-                        FilterText = "Combobox",
-                        IsLoading = false,
-                        Multiple = false,
-                        Placeholder = "Search...",
-                        Selected = "Combobox",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "combobox-size-lg",
-                    Label = "size = lg",
-                    Props = new NMComboboxProps
-                    {
-                        FilterText = "Combobox",
-                        IsLoading = false,
-                        Multiple = false,
-                        Placeholder = "Search...",
-                        Selected = "Combobox",
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "combobox-default",
+                Label = "default",
+                Props = new NMComboboxProps { FilterText = "Combobox", IsLoading = false, Multiple = false, Placeholder = "Search...", Selected = "Combobox", Size = "md" },
+            },
+            new()
+            {
+                Id = "combobox-isloading-true",
+                Label = "isLoading = true",
+                Props = new NMComboboxProps { FilterText = "Combobox", IsLoading = true, Multiple = false, Placeholder = "Search...", Selected = "Combobox", Size = "md" },
+            },
+            new()
+            {
+                Id = "combobox-isloading-false",
+                Label = "isLoading = false",
+                Props = new NMComboboxProps { FilterText = "Combobox", IsLoading = false, Multiple = false, Placeholder = "Search...", Selected = "Combobox", Size = "md" },
+            },
+            new()
+            {
+                Id = "combobox-multiple-true",
+                Label = "multiple = true",
+                Props = new NMComboboxProps { FilterText = "Combobox", IsLoading = false, Multiple = true, Placeholder = "Search...", Selected = "Combobox", Size = "md" },
+            },
+            new()
+            {
+                Id = "combobox-multiple-false",
+                Label = "multiple = false",
+                Props = new NMComboboxProps { FilterText = "Combobox", IsLoading = false, Multiple = false, Placeholder = "Search...", Selected = "Combobox", Size = "md" },
+            },
+            new()
+            {
+                Id = "combobox-size-sm",
+                Label = "size = sm",
+                Props = new NMComboboxProps { FilterText = "Combobox", IsLoading = false, Multiple = false, Placeholder = "Search...", Selected = "Combobox", Size = "sm" },
+            },
+            new()
+            {
+                Id = "combobox-size-md",
+                Label = "size = md",
+                Props = new NMComboboxProps { FilterText = "Combobox", IsLoading = false, Multiple = false, Placeholder = "Search...", Selected = "Combobox", Size = "md" },
+            },
+            new()
+            {
+                Id = "combobox-size-lg",
+                Label = "size = lg",
+                Props = new NMComboboxProps { FilterText = "Combobox", IsLoading = false, Multiple = false, Placeholder = "Search...", Selected = "Combobox", Size = "lg" },
+            },
             ],
         },
         new()
@@ -4173,12 +2798,12 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "command-palette-default",
-                    Label = "default",
-                    Props = new NMCommandPaletteProps { SearchText = "Ctrl + K" },
-                },
+            new()
+            {
+                Id = "command-palette-default",
+                Label = "default",
+                Props = new NMCommandPaletteProps { SearchText = "Ctrl + K" },
+            },
             ],
         },
         new()
@@ -4189,54 +2814,54 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "date-picker-default",
-                    Label = "default",
-                    Props = new NMDatePickerProps { Mode = "single", Size = "md" },
-                },
-                new()
-                {
-                    Id = "date-picker-mode-single",
-                    Label = "mode = single",
-                    Props = new NMDatePickerProps { Mode = "single", Size = "md" },
-                },
-                new()
-                {
-                    Id = "date-picker-mode-range",
-                    Label = "mode = range",
-                    Props = new NMDatePickerProps { Mode = "range", Size = "md" },
-                },
-                new()
-                {
-                    Id = "date-picker-mode-year-month",
-                    Label = "mode = year-month",
-                    Props = new NMDatePickerProps { Mode = "year-month", Size = "md" },
-                },
-                new()
-                {
-                    Id = "date-picker-mode-dual",
-                    Label = "mode = dual",
-                    Props = new NMDatePickerProps { Mode = "dual", Size = "md" },
-                },
-                new()
-                {
-                    Id = "date-picker-size-sm",
-                    Label = "size = sm",
-                    Props = new NMDatePickerProps { Mode = "single", Size = "sm" },
-                },
-                new()
-                {
-                    Id = "date-picker-size-md",
-                    Label = "size = md",
-                    Props = new NMDatePickerProps { Mode = "single", Size = "md" },
-                },
-                new()
-                {
-                    Id = "date-picker-size-lg",
-                    Label = "size = lg",
-                    Props = new NMDatePickerProps { Mode = "single", Size = "lg" },
-                },
+            new()
+            {
+                Id = "date-picker-default",
+                Label = "default",
+                Props = new NMDatePickerProps { Mode = "single", Size = "md" },
+            },
+            new()
+            {
+                Id = "date-picker-mode-single",
+                Label = "mode = single",
+                Props = new NMDatePickerProps { Mode = "single", Size = "md" },
+            },
+            new()
+            {
+                Id = "date-picker-mode-range",
+                Label = "mode = range",
+                Props = new NMDatePickerProps { Mode = "range", Size = "md" },
+            },
+            new()
+            {
+                Id = "date-picker-mode-year-month",
+                Label = "mode = year-month",
+                Props = new NMDatePickerProps { Mode = "year-month", Size = "md" },
+            },
+            new()
+            {
+                Id = "date-picker-mode-dual",
+                Label = "mode = dual",
+                Props = new NMDatePickerProps { Mode = "dual", Size = "md" },
+            },
+            new()
+            {
+                Id = "date-picker-size-sm",
+                Label = "size = sm",
+                Props = new NMDatePickerProps { Mode = "single", Size = "sm" },
+            },
+            new()
+            {
+                Id = "date-picker-size-md",
+                Label = "size = md",
+                Props = new NMDatePickerProps { Mode = "single", Size = "md" },
+            },
+            new()
+            {
+                Id = "date-picker-size-lg",
+                Label = "size = lg",
+                Props = new NMDatePickerProps { Mode = "single", Size = "lg" },
+            },
             ],
         },
         new()
@@ -4247,114 +2872,84 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "drawer-default",
-                    Label = "default",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "right",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "drawer-position-left",
-                    Label = "position = left",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "left",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "drawer-position-right",
-                    Label = "position = right",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "right",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "drawer-position-top",
-                    Label = "position = top",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "top",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "drawer-position-bottom",
-                    Label = "position = bottom",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "bottom",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "drawer-size-sm",
-                    Label = "size = sm",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "right",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "drawer-size-md",
-                    Label = "size = md",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "right",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "drawer-size-lg",
-                    Label = "size = lg",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "right",
-                        Size = "lg",
-                    },
-                },
-                new()
-                {
-                    Id = "drawer-size-full",
-                    Label = "size = full",
-                    Props = new NMDrawerProps
-                    {
-                        HasOverlay = true,
-                        IsOpen = true,
-                        Position = "right",
-                        Size = "full",
-                    },
-                },
+            new()
+            {
+                Id = "drawer-default",
+                Label = "default",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "right", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-hasoverlay-true",
+                Label = "hasOverlay = true",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "right", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-hasoverlay-false",
+                Label = "hasOverlay = false",
+                Props = new NMDrawerProps { HasOverlay = false, IsOpen = true, Position = "right", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-isopen-true",
+                Label = "isOpen = true",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "right", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-isopen-false",
+                Label = "isOpen = false",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = false, Position = "right", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-position-left",
+                Label = "position = left",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "left", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-position-right",
+                Label = "position = right",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "right", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-position-top",
+                Label = "position = top",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "top", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-position-bottom",
+                Label = "position = bottom",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "bottom", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-size-sm",
+                Label = "size = sm",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "right", Size = "sm" },
+            },
+            new()
+            {
+                Id = "drawer-size-md",
+                Label = "size = md",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "right", Size = "md" },
+            },
+            new()
+            {
+                Id = "drawer-size-lg",
+                Label = "size = lg",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "right", Size = "lg" },
+            },
+            new()
+            {
+                Id = "drawer-size-full",
+                Label = "size = full",
+                Props = new NMDrawerProps { HasOverlay = true, IsOpen = true, Position = "right", Size = "full" },
+            },
             ],
         },
         new()
@@ -4365,30 +2960,30 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "dropdown-default",
-                    Label = "default",
-                    Props = new NMDropdownProps { Size = "md" },
-                },
-                new()
-                {
-                    Id = "dropdown-size-sm",
-                    Label = "size = sm",
-                    Props = new NMDropdownProps { Size = "sm" },
-                },
-                new()
-                {
-                    Id = "dropdown-size-md",
-                    Label = "size = md",
-                    Props = new NMDropdownProps { Size = "md" },
-                },
-                new()
-                {
-                    Id = "dropdown-size-lg",
-                    Label = "size = lg",
-                    Props = new NMDropdownProps { Size = "lg" },
-                },
+            new()
+            {
+                Id = "dropdown-default",
+                Label = "default",
+                Props = new NMDropdownProps { Size = "md" },
+            },
+            new()
+            {
+                Id = "dropdown-size-sm",
+                Label = "size = sm",
+                Props = new NMDropdownProps { Size = "sm" },
+            },
+            new()
+            {
+                Id = "dropdown-size-md",
+                Label = "size = md",
+                Props = new NMDropdownProps { Size = "md" },
+            },
+            new()
+            {
+                Id = "dropdown-size-lg",
+                Label = "size = lg",
+                Props = new NMDropdownProps { Size = "lg" },
+            },
             ],
         },
         new()
@@ -4399,42 +2994,42 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "modal-default",
-                    Label = "default",
-                    Props = new NMModalProps { FooterVariant = "actions", Size = "md" },
-                },
-                new()
-                {
-                    Id = "modal-footervariant-actions",
-                    Label = "footerVariant = actions",
-                    Props = new NMModalProps { FooterVariant = "actions", Size = "md" },
-                },
-                new()
-                {
-                    Id = "modal-footervariant-helper",
-                    Label = "footerVariant = helper",
-                    Props = new NMModalProps { FooterVariant = "helper", Size = "md" },
-                },
-                new()
-                {
-                    Id = "modal-size-sm",
-                    Label = "size = sm",
-                    Props = new NMModalProps { FooterVariant = "actions", Size = "sm" },
-                },
-                new()
-                {
-                    Id = "modal-size-md",
-                    Label = "size = md",
-                    Props = new NMModalProps { FooterVariant = "actions", Size = "md" },
-                },
-                new()
-                {
-                    Id = "modal-size-lg",
-                    Label = "size = lg",
-                    Props = new NMModalProps { FooterVariant = "actions", Size = "lg" },
-                },
+            new()
+            {
+                Id = "modal-default",
+                Label = "default",
+                Props = new NMModalProps { FooterVariant = "actions", Size = "md" },
+            },
+            new()
+            {
+                Id = "modal-footervariant-actions",
+                Label = "footerVariant = actions",
+                Props = new NMModalProps { FooterVariant = "actions", Size = "md" },
+            },
+            new()
+            {
+                Id = "modal-footervariant-helper",
+                Label = "footerVariant = helper",
+                Props = new NMModalProps { FooterVariant = "helper", Size = "md" },
+            },
+            new()
+            {
+                Id = "modal-size-sm",
+                Label = "size = sm",
+                Props = new NMModalProps { FooterVariant = "actions", Size = "sm" },
+            },
+            new()
+            {
+                Id = "modal-size-md",
+                Label = "size = md",
+                Props = new NMModalProps { FooterVariant = "actions", Size = "md" },
+            },
+            new()
+            {
+                Id = "modal-size-lg",
+                Label = "size = lg",
+                Props = new NMModalProps { FooterVariant = "actions", Size = "lg" },
+            },
             ],
         },
         new()
@@ -4445,110 +3040,90 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "popover-default",
-                    Label = "default",
-                    Props = new NMPopoverProps
-                    {
-                        IsOpen = true,
-                        Position = "bottom",
-                        ShowArrow = true,
-                        ShowClose = true,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "popover-position-top",
-                    Label = "position = top",
-                    Props = new NMPopoverProps
-                    {
-                        IsOpen = true,
-                        Position = "top",
-                        ShowArrow = true,
-                        ShowClose = true,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "popover-position-right",
-                    Label = "position = right",
-                    Props = new NMPopoverProps
-                    {
-                        IsOpen = true,
-                        Position = "right",
-                        ShowArrow = true,
-                        ShowClose = true,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "popover-position-bottom",
-                    Label = "position = bottom",
-                    Props = new NMPopoverProps
-                    {
-                        IsOpen = true,
-                        Position = "bottom",
-                        ShowArrow = true,
-                        ShowClose = true,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "popover-position-left",
-                    Label = "position = left",
-                    Props = new NMPopoverProps
-                    {
-                        IsOpen = true,
-                        Position = "left",
-                        ShowArrow = true,
-                        ShowClose = true,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "popover-size-sm",
-                    Label = "size = sm",
-                    Props = new NMPopoverProps
-                    {
-                        IsOpen = true,
-                        Position = "bottom",
-                        ShowArrow = true,
-                        ShowClose = true,
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "popover-size-md",
-                    Label = "size = md",
-                    Props = new NMPopoverProps
-                    {
-                        IsOpen = true,
-                        Position = "bottom",
-                        ShowArrow = true,
-                        ShowClose = true,
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "popover-size-lg",
-                    Label = "size = lg",
-                    Props = new NMPopoverProps
-                    {
-                        IsOpen = true,
-                        Position = "bottom",
-                        ShowArrow = true,
-                        ShowClose = true,
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "popover-default",
+                Label = "default",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-isopen-true",
+                Label = "isOpen = true",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-isopen-false",
+                Label = "isOpen = false",
+                Props = new NMPopoverProps { IsOpen = false, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-position-top",
+                Label = "position = top",
+                Props = new NMPopoverProps { IsOpen = true, Position = "top", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-position-right",
+                Label = "position = right",
+                Props = new NMPopoverProps { IsOpen = true, Position = "right", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-position-bottom",
+                Label = "position = bottom",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-position-left",
+                Label = "position = left",
+                Props = new NMPopoverProps { IsOpen = true, Position = "left", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-showarrow-true",
+                Label = "showArrow = true",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-showarrow-false",
+                Label = "showArrow = false",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = false, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-showclose-true",
+                Label = "showClose = true",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-showclose-false",
+                Label = "showClose = false",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-size-sm",
+                Label = "size = sm",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "sm" },
+            },
+            new()
+            {
+                Id = "popover-size-md",
+                Label = "size = md",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "popover-size-lg",
+                Label = "size = lg",
+                Props = new NMPopoverProps { IsOpen = true, Position = "bottom", ShowArrow = true, ShowClose = true, Size = "lg" },
+            },
             ],
         },
         new()
@@ -4559,50 +3134,30 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "search-input-default",
-                    Label = "default",
-                    Props = new NMSearchInputProps
-                    {
-                        Placeholder = "Search...",
-                        Size = "md",
-                        Value = "Search Input",
-                    },
-                },
-                new()
-                {
-                    Id = "search-input-size-sm",
-                    Label = "size = sm",
-                    Props = new NMSearchInputProps
-                    {
-                        Placeholder = "Search...",
-                        Size = "sm",
-                        Value = "Search Input",
-                    },
-                },
-                new()
-                {
-                    Id = "search-input-size-md",
-                    Label = "size = md",
-                    Props = new NMSearchInputProps
-                    {
-                        Placeholder = "Search...",
-                        Size = "md",
-                        Value = "Search Input",
-                    },
-                },
-                new()
-                {
-                    Id = "search-input-size-lg",
-                    Label = "size = lg",
-                    Props = new NMSearchInputProps
-                    {
-                        Placeholder = "Search...",
-                        Size = "lg",
-                        Value = "Search Input",
-                    },
-                },
+            new()
+            {
+                Id = "search-input-default",
+                Label = "default",
+                Props = new NMSearchInputProps { Placeholder = "Search...", Size = "md", Value = "Search Input" },
+            },
+            new()
+            {
+                Id = "search-input-size-sm",
+                Label = "size = sm",
+                Props = new NMSearchInputProps { Placeholder = "Search...", Size = "sm", Value = "Search Input" },
+            },
+            new()
+            {
+                Id = "search-input-size-md",
+                Label = "size = md",
+                Props = new NMSearchInputProps { Placeholder = "Search...", Size = "md", Value = "Search Input" },
+            },
+            new()
+            {
+                Id = "search-input-size-lg",
+                Label = "size = lg",
+                Props = new NMSearchInputProps { Placeholder = "Search...", Size = "lg", Value = "Search Input" },
+            },
             ],
         },
         new()
@@ -4613,54 +3168,54 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "select-default",
-                    Label = "default",
-                    Props = new NMSelectProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        Placeholder = "Select...",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "select-size-sm",
-                    Label = "size = sm",
-                    Props = new NMSelectProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        Placeholder = "Select...",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "select-size-md",
-                    Label = "size = md",
-                    Props = new NMSelectProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        Placeholder = "Select...",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "select-size-lg",
-                    Label = "size = lg",
-                    Props = new NMSelectProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        Placeholder = "Select...",
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "select-default",
+                Label = "default",
+                Props = new NMSelectProps { Disabled = false, Error = false, Placeholder = "Select...", Size = "md" },
+            },
+            new()
+            {
+                Id = "select-disabled-true",
+                Label = "disabled = true",
+                Props = new NMSelectProps { Disabled = true, Error = false, Placeholder = "Select...", Size = "md" },
+            },
+            new()
+            {
+                Id = "select-disabled-false",
+                Label = "disabled = false",
+                Props = new NMSelectProps { Disabled = false, Error = false, Placeholder = "Select...", Size = "md" },
+            },
+            new()
+            {
+                Id = "select-error-true",
+                Label = "error = true",
+                Props = new NMSelectProps { Disabled = false, Error = true, Placeholder = "Select...", Size = "md" },
+            },
+            new()
+            {
+                Id = "select-error-false",
+                Label = "error = false",
+                Props = new NMSelectProps { Disabled = false, Error = false, Placeholder = "Select...", Size = "md" },
+            },
+            new()
+            {
+                Id = "select-size-sm",
+                Label = "size = sm",
+                Props = new NMSelectProps { Disabled = false, Error = false, Placeholder = "Select...", Size = "sm" },
+            },
+            new()
+            {
+                Id = "select-size-md",
+                Label = "size = md",
+                Props = new NMSelectProps { Disabled = false, Error = false, Placeholder = "Select...", Size = "md" },
+            },
+            new()
+            {
+                Id = "select-size-lg",
+                Label = "size = lg",
+                Props = new NMSelectProps { Disabled = false, Error = false, Placeholder = "Select...", Size = "lg" },
+            },
             ],
         },
         new()
@@ -4671,210 +3226,126 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "toast-default",
-                    Label = "default",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-right",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "success",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-position-top-left",
-                    Label = "position = top-left",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "top-left",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "success",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-position-top-center",
-                    Label = "position = top-center",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "top-center",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "success",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-position-top-right",
-                    Label = "position = top-right",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "top-right",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "success",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-position-bottom-left",
-                    Label = "position = bottom-left",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-left",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "success",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-position-bottom-center",
-                    Label = "position = bottom-center",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-center",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "success",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-position-bottom-right",
-                    Label = "position = bottom-right",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-right",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "success",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-variant-default",
-                    Label = "variant = default",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-right",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-variant-info",
-                    Label = "variant = info",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-right",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "info",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-variant-success",
-                    Label = "variant = success",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-right",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "success",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-variant-warning",
-                    Label = "variant = warning",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-right",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "warning",
-                    },
-                },
-                new()
-                {
-                    Id = "toast-variant-error",
-                    Label = "variant = error",
-                    Props = new NMToastProps
-                    {
-                        Closable = true,
-                        Duration = 5000,
-                        Message = "Toast",
-                        Position = "bottom-right",
-                        ShowAction = false,
-                        ShowIcon = true,
-                        ShowProgress = true,
-                        Title = "Success",
-                        Variant = "error",
-                    },
-                },
+            new()
+            {
+                Id = "toast-default",
+                Label = "default",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-closable-true",
+                Label = "closable = true",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-closable-false",
+                Label = "closable = false",
+                Props = new NMToastProps { Closable = false, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-position-top-left",
+                Label = "position = top-left",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "top-left", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-position-top-center",
+                Label = "position = top-center",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "top-center", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-position-top-right",
+                Label = "position = top-right",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "top-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-position-bottom-left",
+                Label = "position = bottom-left",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-left", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-position-bottom-center",
+                Label = "position = bottom-center",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-center", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-position-bottom-right",
+                Label = "position = bottom-right",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-showaction-true",
+                Label = "showAction = true",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = true, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-showaction-false",
+                Label = "showAction = false",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-showicon-true",
+                Label = "showIcon = true",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-showicon-false",
+                Label = "showIcon = false",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = false, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-showprogress-true",
+                Label = "showProgress = true",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-showprogress-false",
+                Label = "showProgress = false",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = false, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-variant-default",
+                Label = "variant = default",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "default" },
+            },
+            new()
+            {
+                Id = "toast-variant-info",
+                Label = "variant = info",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "info" },
+            },
+            new()
+            {
+                Id = "toast-variant-success",
+                Label = "variant = success",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "success" },
+            },
+            new()
+            {
+                Id = "toast-variant-warning",
+                Label = "variant = warning",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "warning" },
+            },
+            new()
+            {
+                Id = "toast-variant-error",
+                Label = "variant = error",
+                Props = new NMToastProps { Closable = true, Duration = 5000, Message = "Toast", Position = "bottom-right", ShowAction = false, ShowIcon = true, ShowProgress = true, Title = "Success", Variant = "error" },
+            },
             ],
         },
         new()
@@ -4885,36 +3356,36 @@ public static class NmKitchenSink
             Tier = 5,
             Cases =
             [
-                new()
-                {
-                    Id = "tooltip-default",
-                    Label = "default",
-                    Props = new NMTooltipProps { Position = "top" },
-                },
-                new()
-                {
-                    Id = "tooltip-position-top",
-                    Label = "position = top",
-                    Props = new NMTooltipProps { Position = "top" },
-                },
-                new()
-                {
-                    Id = "tooltip-position-right",
-                    Label = "position = right",
-                    Props = new NMTooltipProps { Position = "right" },
-                },
-                new()
-                {
-                    Id = "tooltip-position-bottom",
-                    Label = "position = bottom",
-                    Props = new NMTooltipProps { Position = "bottom" },
-                },
-                new()
-                {
-                    Id = "tooltip-position-left",
-                    Label = "position = left",
-                    Props = new NMTooltipProps { Position = "left" },
-                },
+            new()
+            {
+                Id = "tooltip-default",
+                Label = "default",
+                Props = new NMTooltipProps { Position = "top" },
+            },
+            new()
+            {
+                Id = "tooltip-position-top",
+                Label = "position = top",
+                Props = new NMTooltipProps { Position = "top" },
+            },
+            new()
+            {
+                Id = "tooltip-position-right",
+                Label = "position = right",
+                Props = new NMTooltipProps { Position = "right" },
+            },
+            new()
+            {
+                Id = "tooltip-position-bottom",
+                Label = "position = bottom",
+                Props = new NMTooltipProps { Position = "bottom" },
+            },
+            new()
+            {
+                Id = "tooltip-position-left",
+                Label = "position = left",
+                Props = new NMTooltipProps { Position = "left" },
+            },
             ],
         },
         new()
@@ -4925,90 +3396,72 @@ public static class NmKitchenSink
             Tier = 6,
             Cases =
             [
-                new()
-                {
-                    Id = "accordion-default",
-                    Label = "default",
-                    Props = new NMAccordionProps
-                    {
-                        AllowMultiple = false,
-                        ShowChevron = true,
-                        Size = "md",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "accordion-size-sm",
-                    Label = "size = sm",
-                    Props = new NMAccordionProps
-                    {
-                        AllowMultiple = false,
-                        ShowChevron = true,
-                        Size = "sm",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "accordion-size-md",
-                    Label = "size = md",
-                    Props = new NMAccordionProps
-                    {
-                        AllowMultiple = false,
-                        ShowChevron = true,
-                        Size = "md",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "accordion-size-lg",
-                    Label = "size = lg",
-                    Props = new NMAccordionProps
-                    {
-                        AllowMultiple = false,
-                        ShowChevron = true,
-                        Size = "lg",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "accordion-variant-default",
-                    Label = "variant = default",
-                    Props = new NMAccordionProps
-                    {
-                        AllowMultiple = false,
-                        ShowChevron = true,
-                        Size = "md",
-                        Variant = "default",
-                    },
-                },
-                new()
-                {
-                    Id = "accordion-variant-bordered",
-                    Label = "variant = bordered",
-                    Props = new NMAccordionProps
-                    {
-                        AllowMultiple = false,
-                        ShowChevron = true,
-                        Size = "md",
-                        Variant = "bordered",
-                    },
-                },
-                new()
-                {
-                    Id = "accordion-variant-ghost",
-                    Label = "variant = ghost",
-                    Props = new NMAccordionProps
-                    {
-                        AllowMultiple = false,
-                        ShowChevron = true,
-                        Size = "md",
-                        Variant = "ghost",
-                    },
-                },
+            new()
+            {
+                Id = "accordion-default",
+                Label = "default",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-allowmultiple-true",
+                Label = "allowMultiple = true",
+                Props = new NMAccordionProps { AllowMultiple = true, ShowChevron = true, Size = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-allowmultiple-false",
+                Label = "allowMultiple = false",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-showchevron-true",
+                Label = "showChevron = true",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-showchevron-false",
+                Label = "showChevron = false",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = false, Size = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-size-sm",
+                Label = "size = sm",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "sm", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-size-md",
+                Label = "size = md",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-size-lg",
+                Label = "size = lg",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "lg", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-variant-default",
+                Label = "variant = default",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "md", Variant = "default" },
+            },
+            new()
+            {
+                Id = "accordion-variant-bordered",
+                Label = "variant = bordered",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "md", Variant = "bordered" },
+            },
+            new()
+            {
+                Id = "accordion-variant-ghost",
+                Label = "variant = ghost",
+                Props = new NMAccordionProps { AllowMultiple = false, ShowChevron = true, Size = "md", Variant = "ghost" },
+            },
             ],
         },
         new()
@@ -5019,71 +3472,84 @@ public static class NmKitchenSink
             Tier = 6,
             Cases =
             [
-                new()
-                {
-                    Id = "carousel-default",
-                    Label = "default",
-                    Props = new NMCarouselProps
-                    {
-                        NavOutside = false,
-                        ShowDots = true,
-                        ShowNav = true,
-                        Size = "md",
-                        Snap = false,
-                    },
-                },
-                new()
-                {
-                    Id = "carousel-size-sm",
-                    Label = "size = sm",
-                    Props = new NMCarouselProps
-                    {
-                        NavOutside = false,
-                        ShowDots = true,
-                        ShowNav = true,
-                        Size = "sm",
-                        Snap = false,
-                    },
-                },
-                new()
-                {
-                    Id = "carousel-size-md",
-                    Label = "size = md",
-                    Props = new NMCarouselProps
-                    {
-                        NavOutside = false,
-                        ShowDots = true,
-                        ShowNav = true,
-                        Size = "md",
-                        Snap = false,
-                    },
-                },
-                new()
-                {
-                    Id = "carousel-size-lg",
-                    Label = "size = lg",
-                    Props = new NMCarouselProps
-                    {
-                        NavOutside = false,
-                        ShowDots = true,
-                        ShowNav = true,
-                        Size = "lg",
-                        Snap = false,
-                    },
-                },
-                new()
-                {
-                    Id = "carousel-size-full",
-                    Label = "size = full",
-                    Props = new NMCarouselProps
-                    {
-                        NavOutside = false,
-                        ShowDots = true,
-                        ShowNav = true,
-                        Size = "full",
-                        Snap = false,
-                    },
-                },
+            new()
+            {
+                Id = "carousel-default",
+                Label = "default",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "md", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-navoutside-true",
+                Label = "navOutside = true",
+                Props = new NMCarouselProps { NavOutside = true, ShowDots = true, ShowNav = true, Size = "md", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-navoutside-false",
+                Label = "navOutside = false",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "md", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-showdots-true",
+                Label = "showDots = true",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "md", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-showdots-false",
+                Label = "showDots = false",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = false, ShowNav = true, Size = "md", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-shownav-true",
+                Label = "showNav = true",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "md", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-shownav-false",
+                Label = "showNav = false",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = false, Size = "md", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-size-sm",
+                Label = "size = sm",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "sm", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-size-md",
+                Label = "size = md",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "md", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-size-lg",
+                Label = "size = lg",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "lg", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-size-full",
+                Label = "size = full",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "full", Snap = false },
+            },
+            new()
+            {
+                Id = "carousel-snap-true",
+                Label = "snap = true",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "md", Snap = true },
+            },
+            new()
+            {
+                Id = "carousel-snap-false",
+                Label = "snap = false",
+                Props = new NMCarouselProps { NavOutside = false, ShowDots = true, ShowNav = true, Size = "md", Snap = false },
+            },
             ],
         },
         new()
@@ -5094,12 +3560,12 @@ public static class NmKitchenSink
             Tier = 6,
             Cases =
             [
-                new()
-                {
-                    Id = "file-upload-default",
-                    Label = "default",
-                    Props = new NMFileUploadProps { UploadPct = 40 },
-                },
+            new()
+            {
+                Id = "file-upload-default",
+                Label = "default",
+                Props = new NMFileUploadProps { UploadPct = 40 },
+            },
             ],
         },
         new()
@@ -5110,60 +3576,60 @@ public static class NmKitchenSink
             Tier = 6,
             Cases =
             [
-                new()
-                {
-                    Id = "navigation-default",
-                    Label = "default",
-                    Props = new NMNavigationProps { ActiveIndex = "0", Variant = "horizontal" },
-                },
-                new()
-                {
-                    Id = "navigation-activeindex-0",
-                    Label = "activeIndex = 0",
-                    Props = new NMNavigationProps { ActiveIndex = "0", Variant = "horizontal" },
-                },
-                new()
-                {
-                    Id = "navigation-activeindex-1",
-                    Label = "activeIndex = 1",
-                    Props = new NMNavigationProps { ActiveIndex = "1", Variant = "horizontal" },
-                },
-                new()
-                {
-                    Id = "navigation-activeindex-2",
-                    Label = "activeIndex = 2",
-                    Props = new NMNavigationProps { ActiveIndex = "2", Variant = "horizontal" },
-                },
-                new()
-                {
-                    Id = "navigation-activeindex-3",
-                    Label = "activeIndex = 3",
-                    Props = new NMNavigationProps { ActiveIndex = "3", Variant = "horizontal" },
-                },
-                new()
-                {
-                    Id = "navigation-activeindex-4",
-                    Label = "activeIndex = 4",
-                    Props = new NMNavigationProps { ActiveIndex = "4", Variant = "horizontal" },
-                },
-                new()
-                {
-                    Id = "navigation-variant-horizontal",
-                    Label = "variant = horizontal",
-                    Props = new NMNavigationProps { ActiveIndex = "0", Variant = "horizontal" },
-                },
-                new()
-                {
-                    Id = "navigation-variant-vertical",
-                    Label = "variant = vertical",
-                    Props = new NMNavigationProps { ActiveIndex = "0", Variant = "vertical" },
-                },
-                new()
-                {
-                    Id = "navigation-variant-pills",
-                    Label = "variant = pills",
-                    Props = new NMNavigationProps { ActiveIndex = "0", Variant = "pills" },
-                },
+            new()
+            {
+                Id = "navigation-default",
+                Label = "default",
+                Props = new NMNavigationProps { ActiveIndex = "0", Variant = "horizontal" },
+            },
+            new()
+            {
+                Id = "navigation-activeindex-0",
+                Label = "activeIndex = 0",
+                Props = new NMNavigationProps { ActiveIndex = "0", Variant = "horizontal" },
+            },
+            new()
+            {
+                Id = "navigation-activeindex-1",
+                Label = "activeIndex = 1",
+                Props = new NMNavigationProps { ActiveIndex = "1", Variant = "horizontal" },
+            },
+            new()
+            {
+                Id = "navigation-activeindex-2",
+                Label = "activeIndex = 2",
+                Props = new NMNavigationProps { ActiveIndex = "2", Variant = "horizontal" },
+            },
+            new()
+            {
+                Id = "navigation-activeindex-3",
+                Label = "activeIndex = 3",
+                Props = new NMNavigationProps { ActiveIndex = "3", Variant = "horizontal" },
+            },
+            new()
+            {
+                Id = "navigation-activeindex-4",
+                Label = "activeIndex = 4",
+                Props = new NMNavigationProps { ActiveIndex = "4", Variant = "horizontal" },
+            },
+            new()
+            {
+                Id = "navigation-variant-horizontal",
+                Label = "variant = horizontal",
+                Props = new NMNavigationProps { ActiveIndex = "0", Variant = "horizontal" },
+            },
+            new()
+            {
+                Id = "navigation-variant-vertical",
+                Label = "variant = vertical",
+                Props = new NMNavigationProps { ActiveIndex = "0", Variant = "vertical" },
+            },
+            new()
+            {
+                Id = "navigation-variant-pills",
+                Label = "variant = pills",
+                Props = new NMNavigationProps { ActiveIndex = "0", Variant = "pills" },
+            },
             ],
         },
         new()
@@ -5174,116 +3640,66 @@ public static class NmKitchenSink
             Tier = 6,
             Cases =
             [
-                new()
-                {
-                    Id = "stepper-default",
-                    Label = "default",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "0",
-                        Orientation = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-activeindex-0",
-                    Label = "activeIndex = 0",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "0",
-                        Orientation = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-activeindex-1",
-                    Label = "activeIndex = 1",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "1",
-                        Orientation = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-activeindex-2",
-                    Label = "activeIndex = 2",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "2",
-                        Orientation = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-activeindex-3",
-                    Label = "activeIndex = 3",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "3",
-                        Orientation = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-orientation-horizontal",
-                    Label = "orientation = horizontal",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "0",
-                        Orientation = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-orientation-vertical",
-                    Label = "orientation = vertical",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "0",
-                        Orientation = "vertical",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-size-sm",
-                    Label = "size = sm",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "0",
-                        Orientation = "horizontal",
-                        Size = "sm",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-size-md",
-                    Label = "size = md",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "0",
-                        Orientation = "horizontal",
-                        Size = "md",
-                    },
-                },
-                new()
-                {
-                    Id = "stepper-size-lg",
-                    Label = "size = lg",
-                    Props = new NMStepperProps
-                    {
-                        ActiveIndex = "0",
-                        Orientation = "horizontal",
-                        Size = "lg",
-                    },
-                },
+            new()
+            {
+                Id = "stepper-default",
+                Label = "default",
+                Props = new NMStepperProps { ActiveIndex = "0", Orientation = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "stepper-activeindex-0",
+                Label = "activeIndex = 0",
+                Props = new NMStepperProps { ActiveIndex = "0", Orientation = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "stepper-activeindex-1",
+                Label = "activeIndex = 1",
+                Props = new NMStepperProps { ActiveIndex = "1", Orientation = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "stepper-activeindex-2",
+                Label = "activeIndex = 2",
+                Props = new NMStepperProps { ActiveIndex = "2", Orientation = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "stepper-activeindex-3",
+                Label = "activeIndex = 3",
+                Props = new NMStepperProps { ActiveIndex = "3", Orientation = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "stepper-orientation-horizontal",
+                Label = "orientation = horizontal",
+                Props = new NMStepperProps { ActiveIndex = "0", Orientation = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "stepper-orientation-vertical",
+                Label = "orientation = vertical",
+                Props = new NMStepperProps { ActiveIndex = "0", Orientation = "vertical", Size = "md" },
+            },
+            new()
+            {
+                Id = "stepper-size-sm",
+                Label = "size = sm",
+                Props = new NMStepperProps { ActiveIndex = "0", Orientation = "horizontal", Size = "sm" },
+            },
+            new()
+            {
+                Id = "stepper-size-md",
+                Label = "size = md",
+                Props = new NMStepperProps { ActiveIndex = "0", Orientation = "horizontal", Size = "md" },
+            },
+            new()
+            {
+                Id = "stepper-size-lg",
+                Label = "size = lg",
+                Props = new NMStepperProps { ActiveIndex = "0", Orientation = "horizontal", Size = "lg" },
+            },
             ],
         },
         new()
@@ -5294,136 +3710,66 @@ public static class NmKitchenSink
             Tier = 6,
             Cases =
             [
-                new()
-                {
-                    Id = "tabs-default",
-                    Label = "default",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "0",
-                        AriaLabel = "Tabs example",
-                        Size = "md",
-                        TablistId = "Tabs",
-                        Variant = "line",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-activeindex-0",
-                    Label = "activeIndex = 0",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "0",
-                        AriaLabel = "Tabs example",
-                        Size = "md",
-                        TablistId = "Tabs",
-                        Variant = "line",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-activeindex-1",
-                    Label = "activeIndex = 1",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "1",
-                        AriaLabel = "Tabs example",
-                        Size = "md",
-                        TablistId = "Tabs",
-                        Variant = "line",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-activeindex-2",
-                    Label = "activeIndex = 2",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "2",
-                        AriaLabel = "Tabs example",
-                        Size = "md",
-                        TablistId = "Tabs",
-                        Variant = "line",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-size-sm",
-                    Label = "size = sm",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "0",
-                        AriaLabel = "Tabs example",
-                        Size = "sm",
-                        TablistId = "Tabs",
-                        Variant = "line",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-size-md",
-                    Label = "size = md",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "0",
-                        AriaLabel = "Tabs example",
-                        Size = "md",
-                        TablistId = "Tabs",
-                        Variant = "line",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-size-lg",
-                    Label = "size = lg",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "0",
-                        AriaLabel = "Tabs example",
-                        Size = "lg",
-                        TablistId = "Tabs",
-                        Variant = "line",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-variant-line",
-                    Label = "variant = line",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "0",
-                        AriaLabel = "Tabs example",
-                        Size = "md",
-                        TablistId = "Tabs",
-                        Variant = "line",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-variant-pill",
-                    Label = "variant = pill",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "0",
-                        AriaLabel = "Tabs example",
-                        Size = "md",
-                        TablistId = "Tabs",
-                        Variant = "pill",
-                    },
-                },
-                new()
-                {
-                    Id = "tabs-variant-enclosed",
-                    Label = "variant = enclosed",
-                    Props = new NMTabsProps
-                    {
-                        ActiveIndex = "0",
-                        AriaLabel = "Tabs example",
-                        Size = "md",
-                        TablistId = "Tabs",
-                        Variant = "enclosed",
-                    },
-                },
+            new()
+            {
+                Id = "tabs-default",
+                Label = "default",
+                Props = new NMTabsProps { ActiveIndex = "0", AriaLabel = "Tabs example", Size = "md", TablistId = "Tabs", Variant = "line" },
+            },
+            new()
+            {
+                Id = "tabs-activeindex-0",
+                Label = "activeIndex = 0",
+                Props = new NMTabsProps { ActiveIndex = "0", AriaLabel = "Tabs example", Size = "md", TablistId = "Tabs", Variant = "line" },
+            },
+            new()
+            {
+                Id = "tabs-activeindex-1",
+                Label = "activeIndex = 1",
+                Props = new NMTabsProps { ActiveIndex = "1", AriaLabel = "Tabs example", Size = "md", TablistId = "Tabs", Variant = "line" },
+            },
+            new()
+            {
+                Id = "tabs-activeindex-2",
+                Label = "activeIndex = 2",
+                Props = new NMTabsProps { ActiveIndex = "2", AriaLabel = "Tabs example", Size = "md", TablistId = "Tabs", Variant = "line" },
+            },
+            new()
+            {
+                Id = "tabs-size-sm",
+                Label = "size = sm",
+                Props = new NMTabsProps { ActiveIndex = "0", AriaLabel = "Tabs example", Size = "sm", TablistId = "Tabs", Variant = "line" },
+            },
+            new()
+            {
+                Id = "tabs-size-md",
+                Label = "size = md",
+                Props = new NMTabsProps { ActiveIndex = "0", AriaLabel = "Tabs example", Size = "md", TablistId = "Tabs", Variant = "line" },
+            },
+            new()
+            {
+                Id = "tabs-size-lg",
+                Label = "size = lg",
+                Props = new NMTabsProps { ActiveIndex = "0", AriaLabel = "Tabs example", Size = "lg", TablistId = "Tabs", Variant = "line" },
+            },
+            new()
+            {
+                Id = "tabs-variant-line",
+                Label = "variant = line",
+                Props = new NMTabsProps { ActiveIndex = "0", AriaLabel = "Tabs example", Size = "md", TablistId = "Tabs", Variant = "line" },
+            },
+            new()
+            {
+                Id = "tabs-variant-pill",
+                Label = "variant = pill",
+                Props = new NMTabsProps { ActiveIndex = "0", AriaLabel = "Tabs example", Size = "md", TablistId = "Tabs", Variant = "pill" },
+            },
+            new()
+            {
+                Id = "tabs-variant-enclosed",
+                Label = "variant = enclosed",
+                Props = new NMTabsProps { ActiveIndex = "0", AriaLabel = "Tabs example", Size = "md", TablistId = "Tabs", Variant = "enclosed" },
+            },
             ],
         },
         new()
@@ -5434,30 +3780,42 @@ public static class NmKitchenSink
             Tier = 6,
             Cases =
             [
-                new()
-                {
-                    Id = "tree-view-default",
-                    Label = "default",
-                    Props = new NMTreeViewProps { ShowLines = true, Size = "md" },
-                },
-                new()
-                {
-                    Id = "tree-view-size-sm",
-                    Label = "size = sm",
-                    Props = new NMTreeViewProps { ShowLines = true, Size = "sm" },
-                },
-                new()
-                {
-                    Id = "tree-view-size-md",
-                    Label = "size = md",
-                    Props = new NMTreeViewProps { ShowLines = true, Size = "md" },
-                },
-                new()
-                {
-                    Id = "tree-view-size-lg",
-                    Label = "size = lg",
-                    Props = new NMTreeViewProps { ShowLines = true, Size = "lg" },
-                },
+            new()
+            {
+                Id = "tree-view-default",
+                Label = "default",
+                Props = new NMTreeViewProps { ShowLines = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "tree-view-showlines-true",
+                Label = "showLines = true",
+                Props = new NMTreeViewProps { ShowLines = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "tree-view-showlines-false",
+                Label = "showLines = false",
+                Props = new NMTreeViewProps { ShowLines = false, Size = "md" },
+            },
+            new()
+            {
+                Id = "tree-view-size-sm",
+                Label = "size = sm",
+                Props = new NMTreeViewProps { ShowLines = true, Size = "sm" },
+            },
+            new()
+            {
+                Id = "tree-view-size-md",
+                Label = "size = md",
+                Props = new NMTreeViewProps { ShowLines = true, Size = "md" },
+            },
+            new()
+            {
+                Id = "tree-view-size-lg",
+                Label = "size = lg",
+                Props = new NMTreeViewProps { ShowLines = true, Size = "lg" },
+            },
             ],
         },
     ];

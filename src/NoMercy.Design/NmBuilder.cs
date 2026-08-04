@@ -19,172 +19,229 @@ namespace NoMercy.Design;
 public static class Nm
 {
     /// <summary>Starts a NMAvatar.</summary>
-    public static NMAvatarProps Avatar(string? id = null) => new() { Id = id };
+    public static NMAvatarProps Avatar(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMBadge.</summary>
-    public static NMBadgeProps Badge(string? id = null) => new() { Id = id };
+    public static NMBadgeProps Badge(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMDivider.</summary>
-    public static NMDividerProps Divider(string? id = null) => new() { Id = id };
+    public static NMDividerProps Divider(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMFormLabel.</summary>
-    public static NMFormLabelProps FormLabel(string? id = null) => new() { Id = id };
+    public static NMFormLabelProps FormLabel(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMHelper.</summary>
-    public static NMHelperProps Helper(string? id = null) => new() { Id = id };
+    public static NMHelperProps Helper(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMImage.</summary>
-    public static NMImageProps Image(string? id = null) => new() { Id = id };
+    public static NMImageProps Image(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMLink.</summary>
-    public static NMLinkProps Link(string? id = null) => new() { Id = id };
+    public static NMLinkProps Link(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMProgress.</summary>
-    public static NMProgressProps Progress(string? id = null) => new() { Id = id };
+    public static NMProgressProps Progress(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMSkeleton.</summary>
-    public static NMSkeletonProps Skeleton(string? id = null) => new() { Id = id };
+    public static NMSkeletonProps Skeleton(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMSpinner.</summary>
-    public static NMSpinnerProps Spinner(string? id = null) => new() { Id = id };
+    public static NMSpinnerProps Spinner(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMTag.</summary>
-    public static NMTagProps Tag(string? id = null) => new() { Id = id };
+    public static NMTagProps Tag(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMButton.</summary>
-    public static NMButtonProps Button(string? id = null) => new() { Id = id };
+    public static NMButtonProps Button(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMCheckbox.</summary>
-    public static NMCheckboxProps Checkbox(string? id = null) => new() { Id = id };
+    public static NMCheckboxProps Checkbox(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMInput.</summary>
-    public static NMInputProps Input(string? id = null) => new() { Id = id };
+    public static NMInputProps Input(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMRadio.</summary>
-    public static NMRadioProps Radio(string? id = null) => new() { Id = id };
+    public static NMRadioProps Radio(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMRating.</summary>
-    public static NMRatingProps Rating(string? id = null) => new() { Id = id };
+    public static NMRatingProps Rating(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMSlider.</summary>
-    public static NMSliderProps Slider(string? id = null) => new() { Id = id };
+    public static NMSliderProps Slider(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMTextarea.</summary>
-    public static NMTextareaProps Textarea(string? id = null) => new() { Id = id };
+    public static NMTextareaProps Textarea(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMToggle.</summary>
-    public static NMToggleProps Toggle(string? id = null) => new() { Id = id };
+    public static NMToggleProps Toggle(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMBadgeGroup.</summary>
-    public static NMBadgeGroupProps BadgeGroup(string? id = null) => new() { Id = id };
+    public static NMBadgeGroupProps BadgeGroup(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMBreadcrumb.</summary>
-    public static NMBreadcrumbProps Breadcrumb(string? id = null) => new() { Id = id };
+    public static NMBreadcrumbProps Breadcrumb(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMButtonGroup.</summary>
-    public static NMButtonGroupProps ButtonGroup(string? id = null) => new() { Id = id };
+    public static NMButtonGroupProps ButtonGroup(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMCheckboxGroup.</summary>
-    public static NMCheckboxGroupProps CheckboxGroup(string? id = null) => new() { Id = id };
+    public static NMCheckboxGroupProps CheckboxGroup(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMPagination.</summary>
-    public static NMPaginationProps Pagination(string? id = null) => new() { Id = id };
+    public static NMPaginationProps Pagination(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMRadioGroup.</summary>
-    public static NMRadioGroupProps RadioGroup(string? id = null) => new() { Id = id };
+    public static NMRadioGroupProps RadioGroup(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMSegmented.</summary>
-    public static NMSegmentedProps Segmented(string? id = null) => new() { Id = id };
+    public static NMSegmentedProps Segmented(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMStepIndicator.</summary>
-    public static NMStepIndicatorProps StepIndicator(string? id = null) => new() { Id = id };
+    public static NMStepIndicatorProps StepIndicator(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMToggles.</summary>
-    public static NMTogglesProps Toggles(string? id = null) => new() { Id = id };
+    public static NMTogglesProps Toggles(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMAlert.</summary>
-    public static NMAlertProps Alert(string? id = null) => new() { Id = id };
+    public static NMAlertProps Alert(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMCard.</summary>
-    public static NMCardProps Card(string? id = null) => new() { Id = id };
+    public static NMCardProps Card(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMChat.</summary>
-    public static NMChatProps Chat(string? id = null) => new() { Id = id };
+    public static NMChatProps Chat(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMContentFooter.</summary>
-    public static NMContentFooterProps ContentFooter(string? id = null) => new() { Id = id };
+    public static NMContentFooterProps ContentFooter(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMContentHeader.</summary>
-    public static NMContentHeaderProps ContentHeader(string? id = null) => new() { Id = id };
+    public static NMContentHeaderProps ContentHeader(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMEmptyState.</summary>
-    public static NMEmptyStateProps EmptyState(string? id = null) => new() { Id = id };
+    public static NMEmptyStateProps EmptyState(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMList.</summary>
-    public static NMListProps List(string? id = null) => new() { Id = id };
+    public static NMListProps List(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMMetrics.</summary>
-    public static NMMetricsProps Metrics(string? id = null) => new() { Id = id };
+    public static NMMetricsProps Metrics(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMTable.</summary>
-    public static NMTableProps Table(string? id = null) => new() { Id = id };
+    public static NMTableProps Table(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMColorPicker.</summary>
-    public static NMColorPickerProps ColorPicker(string? id = null) => new() { Id = id };
+    public static NMColorPickerProps ColorPicker(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMCombobox.</summary>
-    public static NMComboboxProps Combobox(string? id = null) => new() { Id = id };
+    public static NMComboboxProps Combobox(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMCommandPalette.</summary>
-    public static NMCommandPaletteProps CommandPalette(string? id = null) => new() { Id = id };
+    public static NMCommandPaletteProps CommandPalette(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMDatePicker.</summary>
-    public static NMDatePickerProps DatePicker(string? id = null) => new() { Id = id };
+    public static NMDatePickerProps DatePicker(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMDrawer.</summary>
-    public static NMDrawerProps Drawer(string? id = null) => new() { Id = id };
+    public static NMDrawerProps Drawer(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMDropdown.</summary>
-    public static NMDropdownProps Dropdown(string? id = null) => new() { Id = id };
+    public static NMDropdownProps Dropdown(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMModal.</summary>
-    public static NMModalProps Modal(string? id = null) => new() { Id = id };
+    public static NMModalProps Modal(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMPopover.</summary>
-    public static NMPopoverProps Popover(string? id = null) => new() { Id = id };
+    public static NMPopoverProps Popover(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMSearchInput.</summary>
-    public static NMSearchInputProps SearchInput(string? id = null) => new() { Id = id };
+    public static NMSearchInputProps SearchInput(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMSelect.</summary>
-    public static NMSelectProps Select(string? id = null) => new() { Id = id };
+    public static NMSelectProps Select(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMToast.</summary>
-    public static NMToastProps Toast(string? id = null) => new() { Id = id };
+    public static NMToastProps Toast(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMTooltip.</summary>
-    public static NMTooltipProps Tooltip(string? id = null) => new() { Id = id };
+    public static NMTooltipProps Tooltip(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMAccordion.</summary>
-    public static NMAccordionProps Accordion(string? id = null) => new() { Id = id };
+    public static NMAccordionProps Accordion(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMCarousel.</summary>
-    public static NMCarouselProps Carousel(string? id = null) => new() { Id = id };
+    public static NMCarouselProps Carousel(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMFileUpload.</summary>
-    public static NMFileUploadProps FileUpload(string? id = null) => new() { Id = id };
+    public static NMFileUploadProps FileUpload(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMNavigation.</summary>
-    public static NMNavigationProps Navigation(string? id = null) => new() { Id = id };
+    public static NMNavigationProps Navigation(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMStepper.</summary>
-    public static NMStepperProps Stepper(string? id = null) => new() { Id = id };
+    public static NMStepperProps Stepper(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMTabs.</summary>
-    public static NMTabsProps Tabs(string? id = null) => new() { Id = id };
+    public static NMTabsProps Tabs(string? id = null) =>
+        new() { Id = id };
 
     /// <summary>Starts a NMTreeView.</summary>
-    public static NMTreeViewProps TreeView(string? id = null) => new() { Id = id };
+    public static NMTreeViewProps TreeView(string? id = null) =>
+        new() { Id = id };
+
 }
 
 /// <summary>
@@ -193,32 +250,28 @@ public static class Nm
 public static class NmPropsExtensions
 {
     /// <summary>Nests components inside this one, appending to what is there.</summary>
-    public static T Add<T>(this T props, params NmComponent[] children)
-        where T : NmProps
+    public static T Add<T>(this T props, params NmComponent[] children) where T : NmProps
     {
         props.Items = [.. props.Items, .. children];
         return props;
     }
 
     /// <summary>The palette family this component draws its accent from.</summary>
-    public static T Color<T>(this T props, string family)
-        where T : NmProps
+    public static T Color<T>(this T props, string family) where T : NmProps
     {
         props.Color = family;
         return props;
     }
 
     /// <summary>The box: what the parent owns and what the component owns.</summary>
-    public static T Box<T>(this T props, NmBox box)
-        where T : NmProps
+    public static T Box<T>(this T props, NmBox box) where T : NmProps
     {
         props.Box = box;
         return props;
     }
 
     /// <summary>Padding on every side, as a key on the spacing scale.</summary>
-    public static T Pad<T>(this T props, string space)
-        where T : NmProps
+    public static T Pad<T>(this T props, string space) where T : NmProps
     {
         props.Box ??= new();
         props.Box.Padding = new() { All = space };
@@ -226,8 +279,7 @@ public static class NmPropsExtensions
     }
 
     /// <summary>Margin on every side, as a key on the spacing scale.</summary>
-    public static T Margin<T>(this T props, string space)
-        where T : NmProps
+    public static T Margin<T>(this T props, string space) where T : NmProps
     {
         props.Box ??= new();
         props.Box.Margin = new() { All = space };
@@ -235,8 +287,7 @@ public static class NmPropsExtensions
     }
 
     /// <summary>Space between the children this component holds.</summary>
-    public static T Gap<T>(this T props, string space)
-        where T : NmProps
+    public static T Gap<T>(this T props, string space) where T : NmProps
     {
         props.Box ??= new();
         props.Box.Gap = new() { All = space };
@@ -244,24 +295,21 @@ public static class NmPropsExtensions
     }
 
     /// <summary>How the component looks: its own surface treatment.</summary>
-    public static T Surface<T>(this T props, NmSurface surface)
-        where T : NmProps
+    public static T Surface<T>(this T props, NmSurface surface) where T : NmProps
     {
         props.Surface = surface;
         return props;
     }
 
     /// <summary>What happens when the viewer activates this component.</summary>
-    public static T Does<T>(this T props, NmAction action)
-        where T : NmProps
+    public static T Does<T>(this T props, NmAction action) where T : NmProps
     {
         props.Action = action;
         return props;
     }
 
     /// <summary>What assistive technology announces for this component.</summary>
-    public static T Describe<T>(this T props, NmAccessibility accessibility)
-        where T : NmProps
+    public static T Describe<T>(this T props, NmAccessibility accessibility) where T : NmProps
     {
         props.Accessibility = accessibility;
         return props;
@@ -333,6 +381,7 @@ public static class NMAvatarExtensions
         props.Type = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMBadge adds of its own.</summary>
@@ -382,6 +431,7 @@ public static class NMBadgeExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMDivider adds of its own.</summary>
@@ -413,6 +463,7 @@ public static class NMDividerExtensions
         props.Placement = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMFormLabel adds of its own.</summary>
@@ -471,6 +522,7 @@ public static class NMFormLabelExtensions
         props.MarkerText = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMHelper adds of its own.</summary>
@@ -511,6 +563,7 @@ public static class NMHelperExtensions
         props.Status = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMImage adds of its own.</summary>
@@ -587,6 +640,7 @@ public static class NMImageExtensions
         props.Src = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMLink adds of its own.</summary>
@@ -654,6 +708,7 @@ public static class NMLinkExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMProgress adds of its own.</summary>
@@ -694,6 +749,7 @@ public static class NMProgressExtensions
         props.Value = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMSkeleton adds of its own.</summary>
@@ -707,6 +763,7 @@ public static class NMSkeletonExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMSpinner adds of its own.</summary>
@@ -729,6 +786,7 @@ public static class NMSpinnerExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMTag adds of its own.</summary>
@@ -805,6 +863,7 @@ public static class NMTagExtensions
         props.Xclose = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMButton adds of its own.</summary>
@@ -863,6 +922,7 @@ public static class NMButtonExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMCheckbox adds of its own.</summary>
@@ -921,6 +981,7 @@ public static class NMCheckboxExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMInput adds of its own.</summary>
@@ -970,6 +1031,7 @@ public static class NMInputExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMRadio adds of its own.</summary>
@@ -1046,6 +1108,7 @@ public static class NMRadioExtensions
         props.Value = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMRating adds of its own.</summary>
@@ -1113,6 +1176,7 @@ public static class NMRatingExtensions
         props.Value = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMSlider adds of its own.</summary>
@@ -1180,6 +1244,7 @@ public static class NMSliderExtensions
         props.Value2 = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMTextarea adds of its own.</summary>
@@ -1247,6 +1312,7 @@ public static class NMTextareaExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMToggle adds of its own.</summary>
@@ -1305,6 +1371,7 @@ public static class NMToggleExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMBadgeGroup adds of its own.</summary>
@@ -1336,6 +1403,7 @@ public static class NMBadgeGroupExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMBreadcrumb adds of its own.</summary>
@@ -1349,6 +1417,7 @@ public static class NMBreadcrumbExtensions
         props.Separator = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMCheckboxGroup adds of its own.</summary>
@@ -1389,6 +1458,7 @@ public static class NMCheckboxGroupExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMPagination adds of its own.</summary>
@@ -1420,6 +1490,7 @@ public static class NMPaginationExtensions
         props.TotalPages = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMRadioGroup adds of its own.</summary>
@@ -1460,6 +1531,7 @@ public static class NMRadioGroupExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMSegmented adds of its own.</summary>
@@ -1500,6 +1572,7 @@ public static class NMSegmentedExtensions
         props.Value = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMStepIndicator adds of its own.</summary>
@@ -1540,6 +1613,7 @@ public static class NMStepIndicatorExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMToggles adds of its own.</summary>
@@ -1580,6 +1654,7 @@ public static class NMTogglesExtensions
         props.Type = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMAlert adds of its own.</summary>
@@ -1629,6 +1704,7 @@ public static class NMAlertExtensions
         props.Style = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMCard adds of its own.</summary>
@@ -1660,6 +1736,7 @@ public static class NMCardExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMContentFooter adds of its own.</summary>
@@ -1673,6 +1750,7 @@ public static class NMContentFooterExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMContentHeader adds of its own.</summary>
@@ -1695,6 +1773,7 @@ public static class NMContentHeaderExtensions
         props.TitleId = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMEmptyState adds of its own.</summary>
@@ -1708,6 +1787,7 @@ public static class NMEmptyStateExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMList adds of its own.</summary>
@@ -1757,6 +1837,7 @@ public static class NMListExtensions
         props.Type = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMMetrics adds of its own.</summary>
@@ -1815,6 +1896,7 @@ public static class NMMetricsExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMTable adds of its own.</summary>
@@ -1855,6 +1937,7 @@ public static class NMTableExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMColorPicker adds of its own.</summary>
@@ -1913,6 +1996,7 @@ public static class NMColorPickerExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMCombobox adds of its own.</summary>
@@ -1971,6 +2055,7 @@ public static class NMComboboxExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMCommandPalette adds of its own.</summary>
@@ -1984,6 +2069,7 @@ public static class NMCommandPaletteExtensions
         props.SearchText = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMDatePicker adds of its own.</summary>
@@ -2006,6 +2092,7 @@ public static class NMDatePickerExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMDrawer adds of its own.</summary>
@@ -2046,6 +2133,7 @@ public static class NMDrawerExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMDropdown adds of its own.</summary>
@@ -2059,6 +2147,7 @@ public static class NMDropdownExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMModal adds of its own.</summary>
@@ -2081,6 +2170,7 @@ public static class NMModalExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMPopover adds of its own.</summary>
@@ -2130,6 +2220,7 @@ public static class NMPopoverExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMSearchInput adds of its own.</summary>
@@ -2161,6 +2252,7 @@ public static class NMSearchInputExtensions
         props.Value = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMSelect adds of its own.</summary>
@@ -2201,6 +2293,7 @@ public static class NMSelectExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMToast adds of its own.</summary>
@@ -2286,6 +2379,7 @@ public static class NMToastExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMTooltip adds of its own.</summary>
@@ -2299,6 +2393,7 @@ public static class NMTooltipExtensions
         props.Position = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMAccordion adds of its own.</summary>
@@ -2339,6 +2434,7 @@ public static class NMAccordionExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMCarousel adds of its own.</summary>
@@ -2388,6 +2484,7 @@ public static class NMCarouselExtensions
         props.Snap = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMFileUpload adds of its own.</summary>
@@ -2401,6 +2498,7 @@ public static class NMFileUploadExtensions
         props.UploadPct = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMNavigation adds of its own.</summary>
@@ -2423,6 +2521,7 @@ public static class NMNavigationExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMStepper adds of its own.</summary>
@@ -2454,6 +2553,7 @@ public static class NMStepperExtensions
         props.Size = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMTabs adds of its own.</summary>
@@ -2505,6 +2605,7 @@ public static class NMTabsExtensions
         props.Variant = value;
         return props;
     }
+
 }
 
 /// <summary>The setters a NMTreeView adds of its own.</summary>
@@ -2527,4 +2628,5 @@ public static class NMTreeViewExtensions
         props.Size = value;
         return props;
     }
+
 }
