@@ -17,7 +17,19 @@ public sealed class LocalStorageDriver : IStorageDriver
 
     public char DirectorySeparator => Path.DirectorySeparatorChar;
 
-    public string CombinePath(string parent, string child) => Path.Combine(parent, child);
+    // Not Path.Combine: it returns the child alone whenever the child looks rooted,
+    // and every stored Filename starts with a separator ("/Movie.NoMercy.m3u8"), so
+    // joining a folder to a filename silently produced the bare filename. The
+    // IStorageDriver contract is a plain join with the child's leading separators
+    // trimmed — remote drivers already behave that way.
+    public string CombinePath(string parent, string child)
+    {
+        if (string.IsNullOrEmpty(child))
+            return parent;
+        if (string.IsNullOrEmpty(parent))
+            return child;
+        return Path.Combine(parent.TrimEnd('/', '\\'), child.TrimStart('/', '\\'));
+    }
 
     public bool FileExists(string path) => File.Exists(path);
 

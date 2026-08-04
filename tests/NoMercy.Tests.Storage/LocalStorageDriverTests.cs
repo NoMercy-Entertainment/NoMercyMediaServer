@@ -60,9 +60,24 @@ public sealed class LocalStorageDriverTests : IDisposable
     }
 
     [Fact]
-    public void CombinePath_delegates_to_Path_Combine()
+    public void CombinePath_joins_parent_and_child()
     {
         _driver.CombinePath("a", "b").Should().Be(Path.Combine("a", "b"));
+    }
+
+    /// <summary>
+    /// Every stored Filename starts with a separator, so a child that looks rooted is
+    /// the normal case, not the exception. Path.Combine answers the child alone there —
+    /// the folder silently disappears and the caller checks a path at the filesystem
+    /// root. The IStorageDriver contract is a plain join.
+    /// </summary>
+    [Fact]
+    public void CombinePath_keeps_the_parent_when_the_child_starts_with_a_separator()
+    {
+        _driver
+            .CombinePath("Films/Fight Club (1999)", "/Fight Club (1999).NoMercy.m3u8")
+            .Should()
+            .Be(Path.Combine("Films/Fight Club (1999)", "Fight Club (1999).NoMercy.m3u8"));
     }
 
     [Fact]

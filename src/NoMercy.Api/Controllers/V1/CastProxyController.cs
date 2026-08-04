@@ -43,6 +43,20 @@ public class CastProxyController(
 {
     private const int TvControlPort = 7626;
 
+    /// <summary>
+    /// The LAN address to forward to, and the port it answers on.
+    ///
+    /// <see cref="Device.Ip"/> is where the device was last SEEN from, which through
+    /// the tunnel is the household's public address — it routes nowhere from inside
+    /// the LAN and the forward simply times out. Only the address a device advertises
+    /// over mDNS reaches its control server, and that is <see cref="Device.LanIp"/>.
+    /// A device without one is unreachable, never a reason to try the public address.
+    /// </summary>
+    internal static (string? Host, int Port) ResolveLanTarget(Device tv) =>
+        string.IsNullOrWhiteSpace(tv.LanIp)
+            ? (null, TvControlPort)
+            : (tv.LanIp, tv.LanPort ?? TvControlPort);
+
     // PATCH is not optional: every selection endpoint on the TV's /v1 surface —
     // subtitle, audio, quality, playlist, volume — is a PATCH. Omitting it made
     // the proxy answer 405 before the request ever reached the TV, so picking a
@@ -54,7 +68,8 @@ public class CastProxyController(
     {
         Guid userId = User.UserId();
         logger.LogInformation(
-            "[CastProxy] {Method} device={DeviceId} path=/{Path} user={User}", [Request.Method, deviceId, path, userId]
+            "[CastProxy] {Method} device={DeviceId} path=/{Path} user={User}",
+            [Request.Method, deviceId, path, userId]
         );
 
         if (userId == Guid.Empty)
@@ -70,12 +85,15 @@ public class CastProxyController(
         if (tv is null)
         {
             logger.LogWarning(
-                "[CastProxy] no owned TV device '{DeviceId}' for user {User}", [deviceId, userId]
+                "[CastProxy] no owned TV device '{DeviceId}' for user {User}",
+                [deviceId, userId]
             );
             return NotFoundResponse($"No owned TV device '{deviceId}' found");
         }
 
-        if (string.IsNullOrWhiteSpace(tv.Ip))
+        (string? host, int port) = ResolveLanTarget(tv);
+
+        if (host is null)
         {
             logger.LogWarning("[CastProxy] TV '{Name}' has no LAN IP", tv.Name);
             return ServiceUnavailableResponse("Target TV has no known LAN address");
@@ -85,7 +103,7 @@ public class CastProxyController(
         // version in the path (e.g. "v1/launch"), so forward it verbatim rather
         // than re-prefixing "/v1/" — doubling it (…/v1/v1/launch) 404s the TV.
         string query = Request.QueryString.HasValue ? Request.QueryString.Value! : string.Empty;
-        string targetUrl = $"http://{tv.Ip}:{TvControlPort}/{path}{query}";
+        string targetUrl = $"http://{host}:{port}/{path}{query}";
         logger.LogInformation("[CastProxy] forwarding to {TargetUrl}", targetUrl);
 
         using HttpRequestMessage forward = new(new HttpMethod(Request.Method), targetUrl);
@@ -116,7 +134,8 @@ public class CastProxyController(
 
             byte[] body = await upstream.Content.ReadAsByteArrayAsync();
             logger.LogInformation(
-                "[CastProxy] TV {Ip} replied {Status} ({Bytes} bytes)", [tv.Ip, (int)upstream.StatusCode, body.Length]
+                "[CastProxy] TV {Ip} replied {Status} ({Bytes} bytes)",
+                [host, (int)upstream.StatusCode, body.Length]
             );
 
             Response.StatusCode = (int)upstream.StatusCode;
@@ -127,13 +146,14 @@ public class CastProxyController(
         }
         catch (TaskCanceledException)
         {
-            logger.LogWarning("[CastProxy] TV '{Name}' ({Ip}) timed out", [tv.Name, tv.Ip]);
+            logger.LogWarning("[CastProxy] TV '{Name}' ({Ip}) timed out", [tv.Name, host]);
             return GatewayTimeoutResponse($"TV '{tv.Name}' did not respond in time");
         }
         catch (HttpRequestException ex)
         {
             logger.LogWarning(
-                "[CastProxy] could not reach TV '{Name}' ({Ip}): {Message}", [tv.Name, tv.Ip, ex.Message]
+                "[CastProxy] could not reach TV '{Name}' ({Ip}): {Message}",
+                [tv.Name, host, ex.Message]
             );
             return ServiceUnavailableResponse($"Could not reach TV '{tv.Name}': {ex.Message}");
         }

@@ -15,6 +15,7 @@ using NoMercy.Api.Services.Music;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Networking.Cast;
 using NoMercy.Networking.Http;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup.Cast;
@@ -99,9 +100,11 @@ public partial class MusicHub
         // calls are cheap.
         foreach (Device tv in registeredTvs)
         {
-            if (string.IsNullOrEmpty(tv.Ip))
+            string? resolved = CastAddress.Resolve(tv.LanIp, tv.Ip);
+            if (resolved is null)
                 continue;
-            string ip = tv.Ip;
+
+            string ip = resolved;
             _ = Task.Run(async () =>
             {
                 try
@@ -208,7 +211,7 @@ public partial class MusicHub
             // Cast mDNS name (set in Android TV settings) doesn't match our DB's
             // custom name (set in NoMercy onboarding). Best-effort, async — some
             // cast_shell builds don't honor third-party LAUNCHes.
-            string targetIp = targetTv.Ip;
+            string? targetIp = CastAddress.Resolve(targetTv.LanIp, targetTv.Ip);
             Ulid targetUlid = targetTv.Id;
             string serverIdString = Info.DeviceId.ToString();
             string serverUrl = ResolveServerUrl();

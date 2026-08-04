@@ -117,6 +117,20 @@ public sealed class FileManagerMoveToLibraryFolderTests : IDisposable
     {
         Mock<IStorageDriver> driverMock = new();
         Mock<IMediaAnalyzer> mediaAnalyzerMock = new();
+
+        // The real repository answers with an empty list, never a null task; without
+        // these an unrelated test fails inside the empty-scan delete guard.
+        repoMock
+            .Setup(repository =>
+                repository.GetRecordedVideoFileLocationsByMovieIdAsync(It.IsAny<int>())
+            )
+            .ReturnsAsync([]);
+        repoMock
+            .Setup(repository =>
+                repository.GetRecordedVideoFileLocationsByTvIdAsync(It.IsAny<int>())
+            )
+            .ReturnsAsync([]);
+
         return new(
             repoMock.Object,
             factory,

@@ -9,12 +9,52 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace NoMercy.NmSystem.Extensions;
 
 public static partial class Url
 {
+    // RFC 3986 pchar, minus the percent-encoding introducer: what may stand
+    // unescaped inside a URL path segment.
+    private const string PathSafePunctuation = "-._~!$&'()*+,;=:@";
+
+    /// <summary>
+    /// Percent-encodes a served file path so it survives a URL parser.
+    /// </summary>
+    /// <remarks>
+    /// Library filenames are user data and routinely carry characters a URL
+    /// parser reads as structure: <c>#</c> starts a fragment, so everything
+    /// after it is dropped from the request, and a bare <c>%</c> that is not
+    /// followed by two hex digits is an invalid escape that Cloudflare rejects
+    /// with a 400 before the request ever reaches us — which a browser then
+    /// reports as a CORS failure with no status.
+    /// <para>Only characters that are illegal in a path segment are escaped,
+    /// so every path without them stays byte-identical and existing clients,
+    /// cached URLs, and the ingest-key prefix match are unaffected. Non-ASCII
+    /// is left alone: browsers and Kestrel already agree on its encoding.</para>
+    /// </remarks>
+    public static string EncodePath(this string path)
+    {
+        StringBuilder builder = new(path.Length);
+
+        foreach (char character in path)
+        {
+            if (
+                character == '/'
+                || character > 127
+                || char.IsAsciiLetterOrDigit(character)
+                || PathSafePunctuation.Contains(character)
+            )
+                builder.Append(character);
+            else
+                builder.Append('%').Append(((int)character).ToString("X2"));
+        }
+
+        return builder.ToString();
+    }
+
     public static Uri ToHttps(this Uri url)
     {
         UriBuilder uriBuilder = new(url)

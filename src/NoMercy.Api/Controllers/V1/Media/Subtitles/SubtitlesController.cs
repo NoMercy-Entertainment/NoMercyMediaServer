@@ -374,9 +374,9 @@ public class SubtitlesController(
 
         await RegisterSubtitleAsync(file, request.Language, ct);
 
-        string baseFolder = $"/{file.Share}{file.Folder}";
+        string baseFolder = $"/{file.Share}{file.Folder}".EncodePath();
         string trackUrl =
-            $"{baseFolder}/subtitles{filenameNoExt}.{request.Language}.{DownloadedSubtitleType}.{SidecarExtension}";
+            $"{baseFolder}/subtitles{filenameNoExt.EncodePath()}.{request.Language}.{DownloadedSubtitleType}.{SidecarExtension}";
 
         SubtitleDownloadResultDto result = new(
             File: trackUrl,

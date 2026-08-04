@@ -93,6 +93,8 @@ public partial class FileManager
             .Select(f => f.Folder)
             .ToArray();
 
+        LibraryRootFolders = rootFolders;
+
         foreach (Folder rootFolder in rootFolders)
         {
             IStorage folderStorage = StorageFor(rootFolder);
@@ -152,6 +154,47 @@ public partial class FileManager
 
         return folders;
     }
+
+    /// <summary>
+    /// Whether any path this title is already registered under still reads back.
+    /// A rescan resolving nothing is a claim about the SCAN; this is the check that
+    /// turns it into a claim about the MEDIA, and only that justifies a delete.
+    /// </summary>
+    private async Task<bool> RecordedMediaStillReadable(Library library)
+    {
+        List<RecordedVideoFileLocation> recorded = library.Type switch
+        {
+            MediaTypes.MovieMediaType =>
+                await fileRepository.GetRecordedVideoFileLocationsByMovieIdAsync(Id),
+            MediaTypes.TvMediaType or MediaTypes.AnimeMediaType =>
+                await fileRepository.GetRecordedVideoFileLocationsByTvIdAsync(Show?.Id ?? Id),
+            _ => [],
+        };
+
+        foreach (RecordedVideoFileLocation location in recorded)
+        {
+            Folder? folder = ResolveRecordedFolder(location.Share);
+            if (folder is null)
+                continue;
+
+            IStorage storage = StorageFor(folder);
+            string path = storage.CombinePath(location.HostFolder, location.Filename);
+
+            if (TryExists(storage, path))
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The library root a registered file belongs to. <c>Share</c> holds a
+    /// <c>Folders.Id</c>; rows written before that was reliable fall back to the
+    /// library's first root, whose driver and scope root are the ones that matter.
+    /// </summary>
+    private Folder? ResolveRecordedFolder(string share) =>
+        LibraryRootFolders.FirstOrDefault(rootFolder => rootFolder.Id.ToString() == share)
+        ?? LibraryRootFolders.FirstOrDefault();
 
     private static bool TryExists(IStorage storage, string path)
     {

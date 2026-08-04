@@ -105,6 +105,12 @@ public partial class FileManager(
     /// False also covers "never asked", which is the safe direction: nothing is cleared.
     /// </summary>
     private bool AnyLibraryRootReadable { get; set; }
+
+    /// <summary>
+    /// The library's root folder rows as <c>Paths</c> read them, kept so the delete
+    /// guard can re-open the same storages without a second query.
+    /// </summary>
+    private IReadOnlyList<Folder> LibraryRootFolders { get; set; } = [];
     private List<MediaFolderExtend> Files { get; set; } = [];
     public string Type { get; set; } = "";
 
@@ -173,25 +179,37 @@ public partial class FileManager(
         }
         else if (Filter is null && !hasCandidates && AnyLibraryRootReadable)
         {
-            // The library's own root reads back and this title still resolved nothing, so
-            // the media is gone rather than unreachable. Leaving the rows behind puts a
-            // title in the UI that plays nothing and keeps a VideoFile that other tables
-            // still point at.
-            Logger.App(
-                $"[FindFiles] {Type} id={id}: library root readable and nothing resolved — "
-                    + "removing the video file and metadata records",
-                LogEventLevel.Information
-            );
-
-            switch (library.Type)
+            // A readable library root says nothing about THIS title: a root registered one
+            // level above where the media actually lives reads back fine and resolves every
+            // title to nothing, and deleting on that wipes a library that is fully on disk.
+            // The registered rows carry the path each file was last seen at, so ask storage
+            // directly and only delete once the media itself is unreachable.
+            if (await RecordedMediaStillReadable(library))
             {
-                case MediaTypes.MovieMediaType:
-                    await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
-                    break;
-                case MediaTypes.TvMediaType:
-                case MediaTypes.AnimeMediaType:
-                    await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
-                    break;
+                Logger.App(
+                    $"[FindFiles] {Type} id={id}: nothing resolved but the registered media is "
+                        + "still readable — preserving records (resolution failed, the media did not)",
+                    LogEventLevel.Warning
+                );
+            }
+            else
+            {
+                Logger.App(
+                    $"[FindFiles] {Type} id={id}: library root readable, nothing resolved and the "
+                        + "registered media is gone — removing the video file and metadata records",
+                    LogEventLevel.Information
+                );
+
+                switch (library.Type)
+                {
+                    case MediaTypes.MovieMediaType:
+                        await fileRepository.DeleteVideoFilesAndMetadataByMovieIdAsync(id);
+                        break;
+                    case MediaTypes.TvMediaType:
+                    case MediaTypes.AnimeMediaType:
+                        await fileRepository.DeleteVideoFilesAndMetadataByTvIdAsync(Show?.Id ?? id);
+                        break;
+                }
             }
         }
         else if (Filter is null && !hasCandidates)

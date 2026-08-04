@@ -18,6 +18,7 @@ using NoMercy.Api.Services.Video;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Networking.Cast;
 using NoMercy.Networking.Http;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
@@ -545,9 +546,21 @@ public partial class VideoHub
             d.DeviceId.Equals(deviceId, StringComparison.OrdinalIgnoreCase) && d.Type == "tv"
         );
 
-        if (targetTv is not null)
+        // A TV only ever seen from outside this network has no address a Cast LAUNCH could
+        // reach, so the panel wake is skipped — never the handoff itself, which is what the
+        // rest of this method performs.
+        string? targetIp = targetTv is null
+            ? null
+            : CastAddress.Resolve(targetTv.LanIp, targetTv.Ip);
+
+        if (targetTv is not null && targetIp is null)
+            _logger.LogDebug(
+                "No LAN address recorded for TV {DeviceId} — skipping panel wake",
+                deviceId
+            );
+
+        if (targetTv is not null && targetIp is not null)
         {
-            string targetIp = targetTv.Ip;
             Ulid targetUlid = targetTv.Id;
             string serverIdString = Info.DeviceId.ToString();
             string serverUrl = ResolveServerUrl();
