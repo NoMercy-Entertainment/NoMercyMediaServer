@@ -62,6 +62,17 @@ if [ "${2:-}" = "--no-restart" ]; then
   exit 0
 fi
 
+# The server binary, not just the plugin. This script restarted whatever was
+# last built, so a contract change in the server source left the old host
+# running: it loaded the previous build of a plugin and silently dropped the new
+# one, which reads as "my plugin stopped loading" rather than "the host is
+# stale".
+echo "== building the server =="
+if ! dotnet build "$here/src/NoMercy.Service/NoMercy.Service.csproj" --nologo -v q; then
+  echo "   FAILED: server build" >&2
+  exit 1
+fi
+
 echo "== starting the dev server =="
 nohup "$server_exe" --dev --loglevel=verbose > "$here/plugin-dev-install.log" 2>&1 &
 echo "log: $here/plugin-dev-install.log"
