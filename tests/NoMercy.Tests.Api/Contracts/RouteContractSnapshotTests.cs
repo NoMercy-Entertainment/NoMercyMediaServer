@@ -197,6 +197,7 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "GET api/v{version:apiVersion}/home/tv [Home.HomeTv]",
         "GET api/v{version:apiVersion}/libraries [Libraries.Libraries]",
         "GET api/v{version:apiVersion}/libraries/mobile [Libraries.Mobile]",
+        "GET api/v{version:apiVersion}/libraries/navigation [Libraries.Navigation]",
         "GET api/v{version:apiVersion}/libraries/tv [Libraries.Tv]",
         "GET api/v{version:apiVersion}/libraries/{libraryId:ulid} [Libraries.Library]",
         "GET api/v{version:apiVersion}/libraries/{libraryId:ulid}/letter/{letter} [Libraries.LibraryByLetter]",
