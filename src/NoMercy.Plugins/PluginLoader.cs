@@ -214,7 +214,7 @@ internal sealed class PluginLoader(
                         string dataFolder = Path.Combine(
                             _pluginsPath,
                             "data",
-                            instance.Id.ToString("N")
+                            instance.Id.ToString()
                         );
                         if (!_storage.Exists(dataFolder))
                         {
@@ -376,7 +376,7 @@ internal sealed class PluginLoader(
             await _eventBus.PublishAsync(
                 new PluginErrorOccurredEvent
                 {
-                    PluginId = Guid.Empty.ToString(),
+                    PluginId = Ulid.Empty.ToString(),
                     PluginName = pluginName,
                     ErrorMessage = $"Invalid plugin manifest: {ex.Message}",
                     ExceptionType = ex.GetType().Name,
@@ -410,7 +410,7 @@ internal sealed class PluginLoader(
             await _eventBus.PublishAsync(
                 new PluginErrorOccurredEvent
                 {
-                    PluginId = Guid.Empty.ToString(),
+                    PluginId = Ulid.Empty.ToString(),
                     PluginName = Path.GetFileNameWithoutExtension(assemblyPath),
                     ErrorMessage =
                         $"Failed to initialize plugin load context: {loadContextEx.Message}",
@@ -447,11 +447,7 @@ internal sealed class PluginLoader(
                         continue;
                     }
 
-                    string dataFolder = Path.Combine(
-                        _pluginsPath,
-                        "data",
-                        instance.Id.ToString("N")
-                    );
+                    string dataFolder = Path.Combine(_pluginsPath, "data", instance.Id.ToString());
                     if (!await _storage.ExistsAsync(dataFolder, ct))
                     {
                         await _storage.CreateDirectoryAsync(dataFolder, ct);
@@ -531,7 +527,7 @@ internal sealed class PluginLoader(
                     };
 
                     LoadedPlugin loaded = new(info, null, loadContext);
-                    if (identity.Id != Guid.Empty)
+                    if (identity.Id != Ulid.Empty)
                     {
                         _registry[identity.Id] = loaded;
                     }
@@ -570,7 +566,7 @@ internal sealed class PluginLoader(
             await _eventBus.PublishAsync(
                 new PluginErrorOccurredEvent
                 {
-                    PluginId = Guid.Empty.ToString(),
+                    PluginId = Ulid.Empty.ToString(),
                     PluginName = assemblyName,
                     ErrorMessage = errorMessage,
                     ExceptionType = nameof(ReflectionTypeLoadException),
@@ -592,7 +588,7 @@ internal sealed class PluginLoader(
             await _eventBus.PublishAsync(
                 new PluginErrorOccurredEvent
                 {
-                    PluginId = Guid.Empty.ToString(),
+                    PluginId = Ulid.Empty.ToString(),
                     PluginName = assemblyName,
                     ErrorMessage = ex.Message,
                     ExceptionType = ex.GetType().Name,
@@ -628,15 +624,22 @@ internal sealed class PluginLoader(
         CancellationToken ct
     )
     {
-        if (manifest.Translations is null) return;
+        if (manifest.Translations is null)
+            return;
 
         string directory = Path.Combine(pluginDir, manifest.Translations.Path);
         Dictionary<string, string?> files = new();
 
-        foreach (string locale in manifest.Translations.Locales.Append(manifest.Translations.Source).Distinct())
+        foreach (
+            string locale in manifest
+                .Translations.Locales.Append(manifest.Translations.Source)
+                .Distinct()
+        )
         {
             string path = Path.Combine(directory, $"{locale}.json");
-            files[locale] = _storage.Exists(path) ? await _storage.ReadAllTextAsync(path, ct) : null;
+            files[locale] = _storage.Exists(path)
+                ? await _storage.ReadAllTextAsync(path, ct)
+                : null;
         }
 
         List<PluginTranslationProblem> problems = PluginTranslationValidator.Validate(
@@ -668,5 +671,4 @@ internal sealed class PluginLoader(
                 );
         }
     }
-
 }

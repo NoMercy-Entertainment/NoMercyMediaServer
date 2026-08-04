@@ -28,7 +28,7 @@ public class PluginAbstractionsTests
     {
         public string Name => "Test Plugin";
         public string Description => "A test plugin for unit testing";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0, 0);
         public bool Initialized { get; private set; }
         public IPluginContext? ReceivedContext { get; private set; }
@@ -46,7 +46,7 @@ public class PluginAbstractionsTests
     {
         public string Name => "Test Metadata";
         public string Description => "Test metadata provider";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }
@@ -74,7 +74,7 @@ public class PluginAbstractionsTests
     {
         public string Name => "Test Source";
         public string Description => "Test media source";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }
@@ -99,7 +99,7 @@ public class PluginAbstractionsTests
     {
         public string Name => "Test Encoder";
         public string Description => "Test encoder";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }
@@ -121,7 +121,7 @@ public class PluginAbstractionsTests
     {
         public string Name => "Test Scheduled";
         public string Description => "Test scheduled task";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0, 0);
         public string CronExpression => "0 0 * * *";
         public bool Executed { get; private set; }
@@ -141,7 +141,7 @@ public class PluginAbstractionsTests
     {
         public string Name => "Test Auth";
         public string Description => "Test auth";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }
@@ -168,7 +168,7 @@ public class PluginAbstractionsTests
         public string DataFolderPath { get; }
         public IPluginConfiguration Configuration { get; }
         public HttpClient HttpClient { get; }
-        public Guid PluginId { get; }
+        public Ulid PluginId { get; }
         public IPluginSecretStore Secrets { get; }
         public IPluginLibraryQuery Library { get; }
         public IPluginLibraryWriter? LibraryWriter => null;
@@ -183,7 +183,7 @@ public class PluginAbstractionsTests
             DataFolderPath = dataFolder;
             Configuration = new NullPluginConfiguration();
             HttpClient = new(new HttpClientHandler());
-            PluginId = Guid.Empty;
+            PluginId = Ulid.Empty;
             Secrets = new InMemorySecretStore();
             Library = new NullPluginLibraryQuery();
             Grants = new DenyingGrants();
@@ -265,7 +265,7 @@ public class PluginAbstractionsTests
 
         plugin.Name.Should().Be("Test Plugin");
         plugin.Description.Should().NotBeNullOrEmpty();
-        plugin.Id.Should().NotBe(Guid.Empty);
+        plugin.Id.Should().NotBe(Ulid.Empty);
         plugin.Version.Should().Be(new(1, 0, 0));
     }
 
@@ -429,13 +429,13 @@ public class PluginAbstractionsTests
             return Task.CompletedTask;
         }
 
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
@@ -450,7 +450,7 @@ public class PluginAbstractionsTests
     {
         PluginInfo info = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Ulid.NewUlid(),
             Name = "My Plugin",
             Description = "A useful plugin",
             Version = new(2, 1, 0),

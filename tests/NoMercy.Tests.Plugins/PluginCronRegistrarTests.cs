@@ -139,7 +139,7 @@ public class PluginCronRegistrarTests
     {
         public string Name => "fake-scheduled";
         public string Description => "d";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0);
         public string CronExpression => cronExpression;
 
@@ -153,7 +153,7 @@ public class PluginCronRegistrarTests
     private sealed class FakePluginManager : IPluginManager
     {
         private readonly List<IScheduledTaskPlugin> _plugins = [];
-        private readonly Dictionary<Guid, PluginCapabilities?> _capabilities = [];
+        private readonly Dictionary<Ulid, PluginCapabilities?> _capabilities = [];
 
         public static FakePluginManager Empty() => new();
 
@@ -201,13 +201,13 @@ public class PluginCronRegistrarTests
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>

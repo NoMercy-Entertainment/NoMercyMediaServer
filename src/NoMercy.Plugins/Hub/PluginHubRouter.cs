@@ -19,14 +19,14 @@ namespace NoMercy.Plugins.Hub;
 public class PluginHubRouter(IPluginManager pluginManager, ILogger<PluginHubRouter> logger)
     : IPluginHubRouter
 {
-    private readonly ConcurrentDictionary<Guid, IPluginHubHandler> _handlers = new();
+    private readonly ConcurrentDictionary<Ulid, IPluginHubHandler> _handlers = new();
 
     public void Register(IPluginHubHandler handler) => _handlers[handler.PluginId] = handler;
 
-    public void Unregister(Guid pluginId) => _handlers.TryRemove(pluginId, out _);
+    public void Unregister(Ulid pluginId) => _handlers.TryRemove(pluginId, out _);
 
     public async Task<bool> RouteAsync(
-        Guid pluginId,
+        Ulid pluginId,
         PluginHubMessage message,
         IPluginHubClient client,
         CancellationToken ct

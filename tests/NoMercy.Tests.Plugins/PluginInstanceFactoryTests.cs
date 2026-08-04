@@ -61,7 +61,7 @@ public class PluginInstanceFactoryTests
         public Dependency Dependency { get; } = dependency;
         public string Name => "Dependent";
         public string Description => string.Empty;
-        public Guid Id => Guid.Parse("22222222-2222-2222-2222-222222222222");
+        public Ulid Id => Ulid.Parse("1248H248H248H248H248H248H2");
         public Version Version => new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }
@@ -73,7 +73,7 @@ public class PluginInstanceFactoryTests
     {
         public string Name => "Simple";
         public string Description => string.Empty;
-        public Guid Id => Guid.Parse("33333333-3333-3333-3333-333333333333");
+        public Ulid Id => Ulid.Parse("1K6CSK6CSK6CSK6CSK6CSK6CSK");
         public Version Version => new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }

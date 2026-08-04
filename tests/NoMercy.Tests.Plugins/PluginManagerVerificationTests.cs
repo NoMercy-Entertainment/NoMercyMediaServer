@@ -29,7 +29,7 @@ public class PluginManagerVerificationTests : IDisposable
     {
         _tempPluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-plugin-verify-tests-" + Guid.NewGuid().ToString("N")
+            "nomercy-plugin-verify-tests-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempPluginsDir);
 
@@ -63,7 +63,7 @@ public class PluginManagerVerificationTests : IDisposable
 
     private string WriteSourceDll(byte[] bytes)
     {
-        string path = Path.Combine(_tempPluginsDir, $"source-{Guid.NewGuid():N}.dll");
+        string path = Path.Combine(_tempPluginsDir, $"source-{Ulid.NewUlid():N}.dll");
         File.WriteAllBytes(path, bytes);
         return path;
     }
@@ -110,7 +110,7 @@ public class PluginManagerVerificationTests : IDisposable
     [Fact]
     public async Task LoadPluginFromManifestAsync_AbiMismatch_MarksMalfunctionedInsteadOfInstantiating()
     {
-        Guid pluginId = Guid.NewGuid();
+        Ulid pluginId = Ulid.NewUlid();
         string pluginDir = Path.Combine(_tempPluginsDir, "AbiMismatchPlugin");
         Directory.CreateDirectory(pluginDir);
 

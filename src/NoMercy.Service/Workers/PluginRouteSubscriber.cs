@@ -52,7 +52,7 @@ public class PluginRouteSubscriber(
 
     private Task OnLoaded(PluginLoadedEvent loaded, CancellationToken ct)
     {
-        if (!Guid.TryParse(loaded.PluginId, out Guid pluginId))
+        if (!Ulid.TryParse(loaded.PluginId, out Ulid pluginId))
             return Task.CompletedTask;
 
         PluginInfo? info = pluginManager.GetPluginInfo(pluginId);
@@ -74,7 +74,7 @@ public class PluginRouteSubscriber(
 
     private Task OnDisabled(PluginDisabledEvent disabled, CancellationToken ct)
     {
-        if (Guid.TryParse(disabled.PluginId, out Guid pluginId))
+        if (Ulid.TryParse(disabled.PluginId, out Ulid pluginId))
             registrar.Detach(pluginId);
 
         return Task.CompletedTask;

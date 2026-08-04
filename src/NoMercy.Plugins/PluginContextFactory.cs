@@ -35,7 +35,7 @@ public class PluginContextFactory(
 ) : IPluginContextFactory
 {
     public IPluginContext Create(
-        Guid pluginId,
+        Ulid pluginId,
         string dataFolderPath,
         ILogger logger,
         PluginCapabilities? capabilities,
@@ -79,5 +79,5 @@ public class PluginContextFactory(
 /// </summary>
 public interface IPluginLibraryWriterFactory
 {
-    IPluginLibraryWriter? CreateFor(Guid pluginId);
+    IPluginLibraryWriter? CreateFor(Ulid pluginId);
 }

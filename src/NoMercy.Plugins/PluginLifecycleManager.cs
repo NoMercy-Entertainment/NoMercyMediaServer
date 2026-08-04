@@ -32,7 +32,7 @@ internal sealed class PluginLifecycleManager(
     PluginLoader loader,
     IPluginContextFactory contextFactory,
     IPluginAssemblyTracker? assemblyTracker = null,
-    Action<Guid>? releaseScheduledWork = null
+    Action<Ulid>? releaseScheduledWork = null
 )
 {
     private readonly IEventBus _eventBus = eventBus;
@@ -44,9 +44,9 @@ internal sealed class PluginLifecycleManager(
     private readonly PluginLoader _loader = loader;
     private readonly IPluginContextFactory _contextFactory = contextFactory;
     private readonly IPluginAssemblyTracker? _assemblyTracker = assemblyTracker;
-    private readonly Action<Guid>? _releaseScheduledWork = releaseScheduledWork;
+    private readonly Action<Ulid>? _releaseScheduledWork = releaseScheduledWork;
 
-    public async Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
+    public async Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default)
     {
         if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
@@ -68,7 +68,7 @@ internal sealed class PluginLifecycleManager(
         {
             try
             {
-                string dataFolder = Path.Combine(_pluginsPath, "data", pluginId.ToString("N"));
+                string dataFolder = Path.Combine(_pluginsPath, "data", pluginId.ToString());
                 if (!_storage.Exists(dataFolder))
                 {
                     _storage.CreateDirectory(dataFolder);
@@ -126,7 +126,7 @@ internal sealed class PluginLifecycleManager(
         }
     }
 
-    public async Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default)
+    public async Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default)
     {
         if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
@@ -158,7 +158,7 @@ internal sealed class PluginLifecycleManager(
         );
     }
 
-    public async Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default)
+    public async Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default)
     {
         if (!_registry.TryRemove(pluginId, out LoadedPlugin? loaded))
         {

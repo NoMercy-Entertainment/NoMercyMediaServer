@@ -31,7 +31,7 @@ public class ConfigPluginConsentStoreTests : IDisposable
     {
         _tempDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-consent-store-tests-" + Guid.NewGuid().ToString("N")
+            "nomercy-consent-store-tests-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempDir);
     }
@@ -54,14 +54,14 @@ public class ConfigPluginConsentStoreTests : IDisposable
     {
         ConfigPluginConsentStore store = MakeStore();
 
-        store.Contains(Guid.NewGuid()).Should().BeFalse();
+        store.Contains(Ulid.NewUlid()).Should().BeFalse();
     }
 
     [Fact]
     public void Add_ThenContains_ReturnsTrue()
     {
         ConfigPluginConsentStore store = MakeStore();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
 
         store.Add(id);
 
@@ -74,7 +74,7 @@ public class ConfigPluginConsentStoreTests : IDisposable
         // The whole point of a config-backed store over an in-memory HashSet:
         // a second store instance reading the SAME config file must observe
         // the grant a completely different store instance made.
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         MakeStore().Add(id);
 
         ConfigPluginConsentStore secondInstance = MakeStore();
@@ -86,7 +86,7 @@ public class ConfigPluginConsentStoreTests : IDisposable
     public void Add_SameIdTwice_DoesNotDuplicateOrThrow()
     {
         ConfigPluginConsentStore store = MakeStore();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
 
         store.Add(id);
         Action act = () => store.Add(id);
@@ -99,8 +99,8 @@ public class ConfigPluginConsentStoreTests : IDisposable
     public void Add_SecondDifferentId_BothPersist()
     {
         ConfigPluginConsentStore store = MakeStore();
-        Guid first = Guid.NewGuid();
-        Guid second = Guid.NewGuid();
+        Ulid first = Ulid.NewUlid();
+        Ulid second = Ulid.NewUlid();
 
         store.Add(first);
         store.Add(second);
@@ -114,7 +114,7 @@ public class ConfigPluginConsentStoreTests : IDisposable
     {
         ConfigPluginConsentStore store = MakeStore();
 
-        Action act = () => store.Remove(Guid.NewGuid());
+        Action act = () => store.Remove(Ulid.NewUlid());
 
         act.Should().NotThrow();
     }
@@ -123,10 +123,10 @@ public class ConfigPluginConsentStoreTests : IDisposable
     public void Remove_IdNotGranted_DoesNotThrowAndLeavesOthersIntact()
     {
         ConfigPluginConsentStore store = MakeStore();
-        Guid granted = Guid.NewGuid();
+        Ulid granted = Ulid.NewUlid();
         store.Add(granted);
 
-        Action act = () => store.Remove(Guid.NewGuid());
+        Action act = () => store.Remove(Ulid.NewUlid());
 
         act.Should().NotThrow();
         store.Contains(granted).Should().BeTrue();
@@ -136,7 +136,7 @@ public class ConfigPluginConsentStoreTests : IDisposable
     public void Remove_GrantedId_RemovesIt()
     {
         ConfigPluginConsentStore store = MakeStore();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         store.Add(id);
 
         store.Remove(id);
@@ -147,7 +147,7 @@ public class ConfigPluginConsentStoreTests : IDisposable
     [Fact]
     public void Remove_PersistsAcrossNewStoreInstances()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         ConfigPluginConsentStore first = MakeStore();
         first.Add(id);
         first.Remove(id);

@@ -25,11 +25,11 @@ public class UiPluginContractTests
 {
     private sealed class DownloaderPlugin : IUiPlugin
     {
-        public static readonly Guid KnownId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+        public static readonly Ulid KnownId = Ulid.Parse("01ECH000000000000000000000");
 
         public string Name => "Downloader";
         public string Description => "Manages transfers";
-        public Guid Id => KnownId;
+        public Ulid Id => KnownId;
         public Version Version { get; } = new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }

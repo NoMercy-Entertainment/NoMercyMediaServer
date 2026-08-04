@@ -19,5 +19,5 @@ namespace NoMercy.Plugins.Hub;
 /// </summary>
 public class NullPluginHubContextFactory : IPluginHubContextFactory
 {
-    public IPluginHubContext For(Guid pluginId) => new NullPluginHubContext();
+    public IPluginHubContext For(Ulid pluginId) => new NullPluginHubContext();
 }

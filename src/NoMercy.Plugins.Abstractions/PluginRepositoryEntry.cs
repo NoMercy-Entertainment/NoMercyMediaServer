@@ -16,7 +16,7 @@ namespace NoMercy.Plugins.Abstractions;
 public class PluginRepositoryEntry
 {
     [JsonPropertyName("id")]
-    public required Guid Id { get; init; }
+    public required Ulid Id { get; init; }
 
     [JsonPropertyName("name")]
     public required string Name { get; init; }

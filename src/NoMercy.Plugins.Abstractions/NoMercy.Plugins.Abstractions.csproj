@@ -41,6 +41,13 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <!--
+      A plugin's identity is an id this platform issues, so it is a Ulid like
+      every other id we control. It has to be in the shared-assembly set for the
+      same reason Newtonsoft is: a plugin comparing its own Ulid against the
+      host's would otherwise be comparing two types that merely look alike.
+    -->
+    <PackageReference Include="Ulid" />
   </ItemGroup>
 
   <ItemGroup>

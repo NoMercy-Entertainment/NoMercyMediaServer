@@ -69,7 +69,8 @@ public class PluginRoute
         string[] wanted = Segments(Path);
         string[] given = Segments(path);
 
-        if (wanted.Length != given.Length) return null;
+        if (wanted.Length != given.Length)
+            return null;
 
         Dictionary<string, string> parameters = new();
 
@@ -96,17 +97,22 @@ public class PluginRoute
     /// </summary>
     public string Build(IReadOnlyDictionary<string, string>? parameters = null)
     {
-        IEnumerable<string> parts = Segments(Path).Select(part =>
-        {
-            if (!part.StartsWith(':')) return part;
+        IEnumerable<string> parts = Segments(Path)
+            .Select(part =>
+            {
+                if (!part.StartsWith(':'))
+                    return part;
 
-            string key = part[1..];
+                string key = part[1..];
 
-            if (parameters is null || !parameters.TryGetValue(key, out string? value))
-                throw new ArgumentException($"route '{Name}' needs a '{key}'", nameof(parameters));
+                if (parameters is null || !parameters.TryGetValue(key, out string? value))
+                    throw new ArgumentException(
+                        $"route '{Name}' needs a '{key}'",
+                        nameof(parameters)
+                    );
 
-            return Uri.EscapeDataString(value);
-        });
+                return Uri.EscapeDataString(value);
+            });
 
         string built = string.Join('/', parts);
 

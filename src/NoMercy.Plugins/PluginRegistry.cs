@@ -15,7 +15,7 @@ namespace NoMercy.Plugins;
 
 internal sealed class PluginRegistry : IPluginRegistry
 {
-    private readonly ConcurrentDictionary<Guid, LoadedPlugin> _plugins = new();
+    private readonly ConcurrentDictionary<Ulid, LoadedPlugin> _plugins = new();
 
     /// <summary>
     /// Replaces the entry for <paramref name="id"/>. Every call site that
@@ -27,7 +27,7 @@ internal sealed class PluginRegistry : IPluginRegistry
     /// IOException when uninstall tries to delete the plugin directory).
     /// Centralizing the dispose+unload here fixes every caller in one place.
     /// </summary>
-    public LoadedPlugin this[Guid id]
+    public LoadedPlugin this[Ulid id]
     {
         set
         {
@@ -50,12 +50,12 @@ internal sealed class PluginRegistry : IPluginRegistry
         }
     }
 
-    public bool TryGetValue(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin)
+    public bool TryGetValue(Ulid id, [MaybeNullWhen(false)] out LoadedPlugin plugin)
     {
         return _plugins.TryGetValue(id, out plugin);
     }
 
-    public bool TryRemove(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin)
+    public bool TryRemove(Ulid id, [MaybeNullWhen(false)] out LoadedPlugin plugin)
     {
         return _plugins.TryRemove(id, out plugin);
     }

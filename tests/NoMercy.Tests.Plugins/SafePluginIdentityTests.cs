@@ -35,7 +35,7 @@ public class SafePluginIdentityTests
     {
         SafePluginIdentity identity = SafePluginIdentity.Read(null, typeof(WellBehavedPlugin));
 
-        identity.Id.Should().Be(Guid.Empty);
+        identity.Id.Should().Be(Ulid.Empty);
         identity.Name.Should().Be(typeof(WellBehavedPlugin).FullName);
         identity.Description.Should().BeEmpty();
         identity.Version.Should().Be(new(0, 0, 0));
@@ -49,7 +49,7 @@ public class SafePluginIdentityTests
         Func<SafePluginIdentity> act = () => SafePluginIdentity.Read(plugin, plugin.GetType());
 
         SafePluginIdentity identity = act.Should().NotThrow().Subject;
-        identity.Id.Should().Be(Guid.Empty);
+        identity.Id.Should().Be(Ulid.Empty);
         identity.Name.Should().Be(typeof(ThrowingPlugin).FullName);
         identity.Description.Should().BeEmpty();
         identity.Version.Should().Be(new(0, 0, 0));
@@ -91,11 +91,11 @@ public class SafePluginIdentityTests
 
     private sealed class WellBehavedPlugin : IPlugin
     {
-        public static readonly Guid FixedId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        public static readonly Ulid FixedId = Ulid.Parse("0H248H248H248H248H248H248H");
 
         public string Name => "Well Behaved";
         public string Description => "A normal plugin";
-        public Guid Id => FixedId;
+        public Ulid Id => FixedId;
         public Version Version => new(1, 2, 3);
 
         public void Initialize(IPluginContext context) { }
@@ -107,7 +107,7 @@ public class SafePluginIdentityTests
     {
         public string Name => throw new InvalidOperationException("name boom");
         public string Description => throw new InvalidOperationException("description boom");
-        public Guid Id => throw new InvalidOperationException("id boom");
+        public Ulid Id => throw new InvalidOperationException("id boom");
         public Version Version => throw new InvalidOperationException("version boom");
 
         public void Initialize(IPluginContext context) =>
@@ -118,11 +118,11 @@ public class SafePluginIdentityTests
 
     private sealed class NullReturningPlugin : IPlugin
     {
-        public static readonly Guid FixedId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        public static readonly Ulid FixedId = Ulid.Parse("248H248H248H248H248H248H24");
 
         public string Name => "Null Returning";
         public string Description => null!;
-        public Guid Id => FixedId;
+        public Ulid Id => FixedId;
         public Version Version => null!;
 
         public void Initialize(IPluginContext context) { }

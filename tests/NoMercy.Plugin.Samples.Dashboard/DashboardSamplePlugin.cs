@@ -14,7 +14,7 @@ namespace NoMercy.Plugin.Samples.Dashboard;
 /// </summary>
 public class DashboardSamplePlugin : IUiPlugin
 {
-    public Guid Id => Guid.Parse("66666666-7777-8888-9999-000000000000");
+    public Ulid Id => Ulid.Parse("01DASHB0ARD000000000000000");
 
     public string Name => "Dashboard Sample";
 

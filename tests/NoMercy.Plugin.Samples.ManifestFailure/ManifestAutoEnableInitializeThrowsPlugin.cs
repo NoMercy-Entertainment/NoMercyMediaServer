@@ -23,12 +23,12 @@ namespace NoMercy.Plugin.Samples.ManifestFailure;
 // ordering across several types.
 public sealed class ManifestAutoEnableInitializeThrowsPlugin : IPlugin
 {
-    public static readonly Guid FixedId = Guid.Parse("77777777-8888-9999-aaaa-bbbbbbbbbbbb");
+    public static readonly Ulid FixedId = Ulid.Parse("01MAN0FESTFA000RE000000000");
 
     public string Name => "ManifestFailure";
     public string Description =>
         "Constructs fine, Initialize() throws when auto-enabled by manifest";
-    public Guid Id => FixedId;
+    public Ulid Id => FixedId;
     public Version Version { get; } = new(0, 1, 0);
 
     public void Initialize(IPluginContext context) =>

@@ -19,7 +19,7 @@ namespace NoMercy.Tests.Plugins;
 
 public class PluginManifestGuardTests
 {
-    private static readonly Guid KnownId = new("a1b2c3d4-e5f6-7890-abcd-ef1234567890");
+    private static readonly Ulid KnownId = Ulid.Parse("51PB1X9SFPF28AQKFF28T5CY4G");
 
     private static string BuildJson(
         string? id = null,
@@ -53,7 +53,7 @@ public class PluginManifestGuardTests
     [Fact]
     public void Parse_EmptyGuid_Fires_RejectsManifest()
     {
-        string json = BuildJson(id: Guid.Empty.ToString());
+        string json = BuildJson(id: Ulid.Empty.ToString());
 
         Action act = () => PluginManifestParser.Parse(json);
 
@@ -63,11 +63,11 @@ public class PluginManifestGuardTests
     [Fact]
     public void Parse_NonEmptyGuid_Silent_AcceptsManifest()
     {
-        string json = BuildJson(id: Guid.NewGuid().ToString());
+        string json = BuildJson(id: Ulid.NewUlid().ToString());
 
         PluginManifest manifest = PluginManifestParser.Parse(json);
 
-        manifest.Id.Should().NotBe(Guid.Empty);
+        manifest.Id.Should().NotBe(Ulid.Empty);
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public class PluginManifestGuardTests
 
         PluginManifest manifest = PluginManifestParser.Parse(json);
 
-        manifest.Id.Should().NotBe(Guid.Empty);
+        manifest.Id.Should().NotBe(Ulid.Empty);
         manifest.Assembly.Should().NotBeNullOrWhiteSpace();
     }
 

@@ -32,7 +32,7 @@ public class PluginScheduledJobTests
     {
         public string Name => "Multi";
         public string Description => "Several cadences";
-        public Guid Id { get; } = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        public Ulid Id { get; } = Ulid.Parse("248H248H248H248H248H248H24");
         public Version Version { get; } = new(1, 0, 0);
         public string CronExpression => "* * * * *";
 
@@ -62,7 +62,7 @@ public class PluginScheduledJobTests
     {
         public string Name => "Single";
         public string Description => "One cadence";
-        public Guid Id { get; } = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        public Ulid Id { get; } = Ulid.Parse("2NANANANANANANANANANANANAN");
         public Version Version { get; } = new(1, 0, 0);
         public string CronExpression => "*/5 * * * *";
         public int Runs { get; private set; }
@@ -154,7 +154,7 @@ public class PluginScheduledJobTests
     {
         public string Name => "Blocking";
         public string Description => "Holds until released";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0, 0);
         public string CronExpression => "* * * * *";
         public int Started;
@@ -259,7 +259,7 @@ public class PluginMessageEventTests
     public async Task A_host_subscriber_receives_what_a_plugin_published()
     {
         InMemoryEventBus bus = new();
-        Guid pluginId = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        Ulid pluginId = Ulid.Parse("36CSK6CSK6CSK6CSK6CSK6CSK6");
 
         PluginMessageEvent? received = null;
         bus.Subscribe<PluginMessageEvent>(
@@ -292,7 +292,7 @@ public class PluginMessageEventTests
         // subscriber that was expecting something else.
         PluginMessageEvent @event = new()
         {
-            PluginId = Guid.NewGuid(),
+            PluginId = Ulid.NewUlid(),
             Name = "x",
             Payload = JsonNode.Parse("\"just a string\""),
         };
@@ -303,7 +303,7 @@ public class PluginMessageEventTests
     [Fact]
     public void An_absent_payload_reads_null()
     {
-        PluginMessageEvent @event = new() { PluginId = Guid.NewGuid(), Name = "x" };
+        PluginMessageEvent @event = new() { PluginId = Ulid.NewUlid(), Name = "x" };
 
         @event.PayloadAs<DownloadCompleted>().Should().BeNull();
     }
@@ -364,13 +364,13 @@ public class PluginManagerLookupTests
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
@@ -380,7 +380,7 @@ public class PluginManagerLookupTests
             where T : IPlugin => [];
     }
 
-    private static PluginInfo Plugin(Guid id) =>
+    private static PluginInfo Plugin(Ulid id) =>
         new()
         {
             Id = id,
@@ -394,7 +394,7 @@ public class PluginManagerLookupTests
     [Fact]
     public void An_implementer_that_never_heard_of_the_accessor_still_answers()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
 
         IPluginManager manager = new ListOnlyManager(Plugin(id));
 
@@ -404,9 +404,9 @@ public class PluginManagerLookupTests
     [Fact]
     public void An_unknown_id_is_null_rather_than_a_throw()
     {
-        IPluginManager manager = new ListOnlyManager(Plugin(Guid.NewGuid()));
+        IPluginManager manager = new ListOnlyManager(Plugin(Ulid.NewUlid()));
 
-        manager.GetPluginInfo(Guid.NewGuid()).Should().BeNull();
-        manager.GetPluginInstance(Guid.NewGuid()).Should().BeNull();
+        manager.GetPluginInfo(Ulid.NewUlid()).Should().BeNull();
+        manager.GetPluginInstance(Ulid.NewUlid()).Should().BeNull();
     }
 }

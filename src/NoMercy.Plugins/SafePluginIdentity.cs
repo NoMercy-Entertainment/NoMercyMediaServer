@@ -21,7 +21,7 @@ namespace NoMercy.Plugins;
 /// derived from the plugin's CLR type.
 /// </summary>
 internal readonly record struct SafePluginIdentity(
-    Guid Id,
+    Ulid Id,
     string Name,
     string Description,
     Version Version
@@ -35,17 +35,17 @@ internal readonly record struct SafePluginIdentity(
 
         if (instance is null)
         {
-            return new(Guid.Empty, name, string.Empty, UnknownVersion);
+            return new(Ulid.Empty, name, string.Empty, UnknownVersion);
         }
 
-        Guid id = Guid.Empty;
+        Ulid id = Ulid.Empty;
         try
         {
             id = instance.Id;
         }
         catch (Exception)
         {
-            // Faulty Id getter — fall back to Guid.Empty.
+            // Faulty Id getter — fall back to Ulid.Empty.
         }
 
         try

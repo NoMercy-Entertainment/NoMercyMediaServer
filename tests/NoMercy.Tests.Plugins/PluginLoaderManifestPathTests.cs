@@ -29,8 +29,8 @@ namespace NoMercy.Tests.Plugins;
 /// </summary>
 public class PluginLoaderManifestPathTests : IDisposable
 {
-    private static readonly Guid ManifestFailurePluginId = Guid.Parse(
-        "77777777-8888-9999-aaaa-bbbbbbbbbbbb"
+    private static readonly Ulid ManifestFailurePluginId = Ulid.Parse(
+        "01MAN0FESTFA000RE000000000"
     );
 
     private readonly string _tempPluginsDir;
@@ -40,7 +40,7 @@ public class PluginLoaderManifestPathTests : IDisposable
     {
         _tempPluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-manifest-path-" + Guid.NewGuid().ToString("N")
+            "nomercy-manifest-path-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempPluginsDir);
         _eventBus = new();
@@ -117,7 +117,7 @@ public class PluginLoaderManifestPathTests : IDisposable
     {
         string manifestJson = """
             {
-              "id": "77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+              "id": "01MAN0FESTFA000RE000000000",
               "name": "ManifestFailure",
               "version": "0.1.0",
               "description": "manifest auto-enable initialize failure",
@@ -162,7 +162,7 @@ public class PluginLoaderManifestPathTests : IDisposable
         // BEFORE the load runs.
         string manifestJson = """
             {
-              "id": "77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+              "id": "01MAN0FESTFA000RE000000000",
               "name": "ManifestFailure",
               "version": "0.1.0",
               "description": "elevated capability with pre-granted consent",
@@ -197,7 +197,7 @@ public class PluginLoaderManifestPathTests : IDisposable
     {
         string manifestJson = """
             {
-              "id": "77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+              "id": "01MAN0FESTFA000RE000000000",
               "name": "ManifestFailure",
               "version": "0.1.0",
               "description": "elevated capability without consent",
@@ -248,7 +248,7 @@ public class PluginLoaderManifestPathTests : IDisposable
         foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
             File.Copy(file, Path.Combine(pluginDir, Path.GetFileName(file)), overwrite: true);
 
-        Guid manifestId = Guid.NewGuid();
+        Ulid manifestId = Ulid.NewUlid();
         string manifestJson = $$"""
             {
               "id": "{{manifestId}}",
@@ -301,7 +301,7 @@ public class PluginLoaderManifestPathTests : IDisposable
         string abstractionsDest = Path.Combine(pluginDir, "NoMercy.Plugins.Abstractions.dll");
         File.Copy(abstractionsSrc, abstractionsDest, overwrite: true);
 
-        Guid manifestId = Guid.NewGuid();
+        Ulid manifestId = Ulid.NewUlid();
         string manifestJson = $$"""
             {
               "id": "{{manifestId}}",

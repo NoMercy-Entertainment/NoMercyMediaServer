@@ -15,9 +15,9 @@ namespace NoMercy.Plugins.Capabilities;
 
 public interface IPluginConsentStore
 {
-    bool Contains(Guid pluginId);
-    void Add(Guid pluginId);
-    void Remove(Guid pluginId);
+    bool Contains(Ulid pluginId);
+    void Add(Ulid pluginId);
+    void Remove(Ulid pluginId);
 }
 
 public class PluginConsentService(IPluginConsentStore store) : IPluginConsentService
@@ -40,9 +40,9 @@ public class PluginConsentService(IPluginConsentStore store) : IPluginConsentSer
         return capabilities.Hooks.All(hook => BaselineHooks.Contains(hook));
     }
 
-    public bool HasConsent(Guid pluginId) => store.Contains(pluginId);
+    public bool HasConsent(Ulid pluginId) => store.Contains(pluginId);
 
-    public void GrantConsent(Guid pluginId) => store.Add(pluginId);
+    public void GrantConsent(Ulid pluginId) => store.Add(pluginId);
 
-    public void RevokeConsent(Guid pluginId) => store.Remove(pluginId);
+    public void RevokeConsent(Ulid pluginId) => store.Remove(pluginId);
 }

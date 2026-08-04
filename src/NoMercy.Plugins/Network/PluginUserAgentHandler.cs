@@ -33,7 +33,7 @@ namespace NoMercy.Plugins.Network;
 /// </para>
 /// </summary>
 public partial class PluginUserAgentHandler(
-    Guid pluginId,
+    Ulid pluginId,
     string? pluginName,
     Version? pluginVersion
 ) : DelegatingHandler
@@ -52,7 +52,7 @@ public partial class PluginUserAgentHandler(
     /// so an unsanitised name is a malformed header, and a name containing a
     /// newline would be worse than malformed.</para>
     /// </summary>
-    internal static string BuildProduct(Guid pluginId, string? name, Version? version)
+    internal static string BuildProduct(Ulid pluginId, string? name, Version? version)
     {
         string token = NonTokenCharacters().Replace(name ?? string.Empty, "-").Trim('-', '.');
 
@@ -61,7 +61,7 @@ public partial class PluginUserAgentHandler(
         // — and attribute a request to nothing. The id is worse to read and
         // actually identifies the plugin.
         if (!token.Any(char.IsLetterOrDigit))
-            token = pluginId.ToString("N");
+            token = pluginId.ToString();
 
         return $"NoMercyPlugin-{token}/{version?.ToString() ?? "0.0.0"}";
     }

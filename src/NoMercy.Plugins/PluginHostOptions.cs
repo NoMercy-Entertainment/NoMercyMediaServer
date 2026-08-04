@@ -72,5 +72,8 @@ public record PluginHostOptions
             // assembly identity — the response then silently ships camelCase
             // where every client expects snake_case.
             "Newtonsoft.Json",
+            // A plugin's id crosses the boundary in both directions - the host
+            // asks a plugin who it is, and hands it back on every view request.
+            "Ulid",
         };
 }

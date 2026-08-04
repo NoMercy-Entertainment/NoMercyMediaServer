@@ -38,21 +38,21 @@ public class PluginHub(
     IPluginHubRouter router
 ) : ConnectionHub(httpContextAccessor, contextFactory, connectedClients, activityLogger)
 {
-    public static string GroupFor(Guid pluginId) => $"plugin:{pluginId}";
+    public static string GroupFor(Ulid pluginId) => $"plugin:{pluginId}";
 
     public Task Subscribe(string pluginId) =>
-        Guid.TryParse(pluginId, out Guid id)
+        Ulid.TryParse(pluginId, out Ulid id)
             ? Groups.AddToGroupAsync(Context.ConnectionId, GroupFor(id))
             : Task.CompletedTask;
 
     public Task Unsubscribe(string pluginId) =>
-        Guid.TryParse(pluginId, out Guid id)
+        Ulid.TryParse(pluginId, out Ulid id)
             ? Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupFor(id))
             : Task.CompletedTask;
 
     public async Task<bool> Send(string pluginId, string method, JsonNode? payload)
     {
-        if (!Guid.TryParse(pluginId, out Guid id))
+        if (!Ulid.TryParse(pluginId, out Ulid id))
             return false;
 
         PluginHubMessage message = new()

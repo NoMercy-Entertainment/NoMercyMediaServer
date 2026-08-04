@@ -24,7 +24,11 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 feed="C:/Projects/StoneyEagle/.nm-plugin-feed"
 mkdir -p "$feed"
 
-projects=(NoMercy.Plugins.Abstractions NoMercy.Events NoMercy.Design)
+# Everything in the shared-assembly set that a plugin compiles against. Mvc was
+# missing, so a plugin that derives a controller from it could not restore at a
+# version this script had just published, and the failure named the package
+# rather than the omission.
+projects=(NoMercy.Plugins.Abstractions NoMercy.Events NoMercy.Design NoMercy.Plugins.Mvc)
 
 for project in "${projects[@]}"; do
   echo "== $project $version =="

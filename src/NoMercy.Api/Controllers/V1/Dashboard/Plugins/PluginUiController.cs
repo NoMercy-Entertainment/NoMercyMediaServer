@@ -52,7 +52,7 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// the path already resolved. A plugin declaring none reports none, and its
     /// screens stay reachable through the wildcard.
     /// </summary>
-    private List<object> Pages(Guid pluginId, string kind, string surface)
+    private List<object> Pages(Ulid pluginId, string kind, string surface)
     {
         if (pluginManager.GetPluginInstance(pluginId) is not IUiPlugin plugin)
             return [];
@@ -151,8 +151,8 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// plugin's id lets the client merge them into its own catalogue as a
     /// namespace, which is what keeps two plugins using the same key apart.
     /// </summary>
-    [HttpGet("api/v{version:apiVersion}/plugins/{id:guid}/translations/{locale}")]
-    public async Task<IActionResult> Translations(Guid id, string locale, CancellationToken ct)
+    [HttpGet("api/v{version:apiVersion}/plugins/{id:ulid}/translations/{locale}")]
+    public async Task<IActionResult> Translations(Ulid id, string locale, CancellationToken ct)
     {
         PluginInfo? info = pluginManager.GetPluginInfo(id);
 
@@ -167,9 +167,9 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
         return Ok(new DataResponseDto<Dictionary<string, string>> { Data = strings ?? [] });
     }
 
-    [HttpGet("api/v{version:apiVersion}/plugins/{id:guid}/view")]
+    [HttpGet("api/v{version:apiVersion}/plugins/{id:ulid}/view")]
     public async Task<IActionResult> View(
-        Guid id,
+        Ulid id,
         [FromQuery] string? route,
         [FromQuery] string? surface,
         CancellationToken ct)

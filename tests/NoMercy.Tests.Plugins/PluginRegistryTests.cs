@@ -18,7 +18,7 @@ namespace NoMercy.Tests.Plugins;
 
 public class PluginRegistryTests
 {
-    private static LoadedPlugin MakePlugin(Guid id)
+    private static LoadedPlugin MakePlugin(Ulid id)
     {
         PluginInfo info = new()
         {
@@ -35,7 +35,7 @@ public class PluginRegistryTests
     public void Set_TryGetValue_And_Values_RoundTrip()
     {
         PluginRegistry registry = new();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         LoadedPlugin plugin = MakePlugin(id);
 
         registry[id] = plugin;
@@ -49,7 +49,7 @@ public class PluginRegistryTests
     public void TryRemove_RemovesThePlugin()
     {
         PluginRegistry registry = new();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         registry[id] = MakePlugin(id);
 
         registry.TryRemove(id, out LoadedPlugin? removed).Should().BeTrue();
@@ -63,15 +63,15 @@ public class PluginRegistryTests
     {
         PluginRegistry registry = new();
 
-        registry.TryGetValue(Guid.NewGuid(), out _).Should().BeFalse();
+        registry.TryGetValue(Ulid.NewUlid(), out _).Should().BeFalse();
     }
 
     [Fact]
     public void Clear_RemovesEverything()
     {
         PluginRegistry registry = new();
-        registry[Guid.NewGuid()] = MakePlugin(Guid.NewGuid());
-        registry[Guid.NewGuid()] = MakePlugin(Guid.NewGuid());
+        registry[Ulid.NewUlid()] = MakePlugin(Ulid.NewUlid());
+        registry[Ulid.NewUlid()] = MakePlugin(Ulid.NewUlid());
 
         registry.Clear();
 
@@ -89,12 +89,12 @@ public class PluginRegistryTests
     public void Set_ReplacingExistingEntry_DisposesOldInstanceAndUnloadsOldLoadContext()
     {
         PluginRegistry registry = new();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
 
         DisposalTrackingPlugin oldInstance = new();
         string dummyPath = Path.Combine(
             Path.GetTempPath(),
-            $"nm-registry-test-{Guid.NewGuid():N}.dll"
+            $"nm-registry-test-{Ulid.NewUlid():N}.dll"
         );
         File.WriteAllBytes(dummyPath, []);
         PluginLoadContext oldContext = new(dummyPath);
@@ -125,7 +125,7 @@ public class PluginRegistryTests
     public void Set_ReplacingWithSameReference_DoesNotDisposeIt()
     {
         PluginRegistry registry = new();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         DisposalTrackingPlugin instance = new();
         LoadedPlugin loaded = new(MakeInfo(id), instance, null);
 
@@ -143,7 +143,7 @@ public class PluginRegistryTests
         // exists specifically so replacing THAT entry never calls Dispose on a
         // null reference.
         PluginRegistry registry = new();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         registry[id] = new(MakeInfo(id), null, null);
 
         Action act = () => registry[id] = new(MakeInfo(id), new DisposalTrackingPlugin(), null);
@@ -155,7 +155,7 @@ public class PluginRegistryTests
     public void Set_ConcurrentReplacements_DisposesEverySupersededEntryExactlyOnce()
     {
         PluginRegistry registry = new();
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         const int concurrentWriters = 50;
         ConcurrentBag<DisposalTrackingPlugin> instances = new();
 
@@ -183,7 +183,7 @@ public class PluginRegistryTests
         survivor.WasDisposed.Should().BeFalse();
     }
 
-    private static PluginInfo MakeInfo(Guid id) =>
+    private static PluginInfo MakeInfo(Ulid id) =>
         new()
         {
             Id = id,
@@ -199,7 +199,7 @@ public class PluginRegistryTests
 
         public string Name => "DisposalTracker";
         public string Description => string.Empty;
-        public Guid Id => Guid.NewGuid();
+        public Ulid Id => Ulid.NewUlid();
         public Version Version => new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }

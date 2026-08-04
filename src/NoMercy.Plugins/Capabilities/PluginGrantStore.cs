@@ -18,19 +18,19 @@ namespace NoMercy.Plugins.Capabilities;
 /// </summary>
 public interface IPluginGrantStore
 {
-    IReadOnlyList<string> Granted(Guid pluginId, string kind);
-    bool Holds(Guid pluginId, string kind, string value);
-    void Grant(Guid pluginId, string kind, string value);
-    void Revoke(Guid pluginId, string kind, string value);
+    IReadOnlyList<string> Granted(Ulid pluginId, string kind);
+    bool Holds(Ulid pluginId, string kind, string value);
+    void Grant(Ulid pluginId, string kind, string value);
+    void Revoke(Ulid pluginId, string kind, string value);
 
     /// <summary>Records a plugin's request. Asking twice for one thing records once.</summary>
-    void Request(Guid pluginId, string kind, string value, string reason);
+    void Request(Ulid pluginId, string kind, string value, string reason);
 
     /// <summary>Everything waiting on the owner, for the dashboard to present.</summary>
     IReadOnlyList<PluginGrantRequest> PendingRequests();
 
     /// <summary>Clears a request once the owner has answered it either way.</summary>
-    void ClearRequest(Guid pluginId, string kind, string value);
+    void ClearRequest(Ulid pluginId, string kind, string value);
 }
 
 public class PluginGrantRecord
@@ -41,14 +41,14 @@ public class PluginGrantRecord
 
 public class PluginGrantEntry
 {
-    public Guid PluginId { get; init; }
+    public Ulid PluginId { get; init; }
     public string Kind { get; init; } = string.Empty;
     public string Value { get; init; } = string.Empty;
 }
 
 public class PluginGrantRequestEntry
 {
-    public Guid PluginId { get; init; }
+    public Ulid PluginId { get; init; }
     public string Kind { get; init; } = string.Empty;
     public string Value { get; init; } = string.Empty;
     public string Reason { get; init; } = string.Empty;
@@ -67,7 +67,7 @@ public class ConfigPluginGrantStore(IPluginConfiguration configuration) : IPlugi
 {
     private readonly Lock _gate = new();
 
-    public IReadOnlyList<string> Granted(Guid pluginId, string kind)
+    public IReadOnlyList<string> Granted(Ulid pluginId, string kind)
     {
         PluginGrantRecord record = Read();
         return record
@@ -79,7 +79,7 @@ public class ConfigPluginGrantStore(IPluginConfiguration configuration) : IPlugi
             .ToList();
     }
 
-    public bool Holds(Guid pluginId, string kind, string value)
+    public bool Holds(Ulid pluginId, string kind, string value)
     {
         IReadOnlyList<string> granted = Granted(pluginId, kind);
 
@@ -89,7 +89,7 @@ public class ConfigPluginGrantStore(IPluginConfiguration configuration) : IPlugi
         );
     }
 
-    public void Grant(Guid pluginId, string kind, string value)
+    public void Grant(Ulid pluginId, string kind, string value)
     {
         lock (_gate)
         {
@@ -123,7 +123,7 @@ public class ConfigPluginGrantStore(IPluginConfiguration configuration) : IPlugi
         }
     }
 
-    public void Revoke(Guid pluginId, string kind, string value)
+    public void Revoke(Ulid pluginId, string kind, string value)
     {
         lock (_gate)
         {
@@ -140,7 +140,7 @@ public class ConfigPluginGrantStore(IPluginConfiguration configuration) : IPlugi
         }
     }
 
-    public void Request(Guid pluginId, string kind, string value, string reason)
+    public void Request(Ulid pluginId, string kind, string value, string reason)
     {
         lock (_gate)
         {
@@ -187,7 +187,7 @@ public class ConfigPluginGrantStore(IPluginConfiguration configuration) : IPlugi
             ))
             .ToList();
 
-    public void ClearRequest(Guid pluginId, string kind, string value)
+    public void ClearRequest(Ulid pluginId, string kind, string value)
     {
         lock (_gate)
         {

@@ -37,7 +37,7 @@ public interface IPluginContext
     HttpClient HttpClient { get; }
 
     /// <summary>The plugin's own id, so it can name itself when raising an event or asking for a grant.</summary>
-    Guid PluginId { get; }
+    Ulid PluginId { get; }
 
     /// <summary>Protected storage for passwords and tokens, scoped to this plugin.</summary>
     IPluginSecretStore Secrets { get; }

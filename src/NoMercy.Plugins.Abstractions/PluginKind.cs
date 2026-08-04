@@ -46,7 +46,6 @@ public static class PluginKind
     /// kind, because backend is not a place a screen goes: it is the absence of
     /// one, and saying it twice would let a manifest contradict itself.
     /// </summary>
-
     public static bool IsKnown(string? kind)
     {
         return kind is not null && Array.IndexOf(All, kind) >= 0;
@@ -81,14 +80,12 @@ public static class PluginRoutes
     /// app, which cannot add routes while running, still show a plugin nobody
     /// had heard of when the app shipped.
     /// </summary>
-    public static string PrefixFor(string kind, Guid pluginId)
+    public static string PrefixFor(string kind, Ulid pluginId)
     {
         if (!PluginKind.DrawsUi(kind))
             throw new ArgumentException($"plugins of kind '{kind}' have no screens", nameof(kind));
 
-        return kind == PluginKind.Addon
-            ? $"/addons/{pluginId}"
-            : $"/{kind}/plugins/{pluginId}";
+        return kind == PluginKind.Addon ? $"/addons/{pluginId}" : $"/{kind}/plugins/{pluginId}";
     }
 
     /// <summary>

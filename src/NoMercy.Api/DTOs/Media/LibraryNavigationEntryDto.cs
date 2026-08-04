@@ -50,7 +50,7 @@ public record LibraryNavigationEntryDto
     public string Origin { get; set; } = LibraryNavigationOrigin.Library;
 
     [JsonProperty("plugin_id", NullValueHandling = NullValueHandling.Ignore)]
-    public Guid? PluginId { get; set; }
+    public Ulid? PluginId { get; set; }
 }
 
 public static class LibraryNavigationOrigin

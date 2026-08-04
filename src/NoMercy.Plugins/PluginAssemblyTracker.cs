@@ -38,27 +38,27 @@ namespace NoMercy.Plugins;
 public interface IPluginAssemblyTracker
 {
     /// <summary>Records where a plugin's assembly lives, at unload time.</summary>
-    void TrackUnload(Guid pluginId, string? assemblyPath);
+    void TrackUnload(Ulid pluginId, string? assemblyPath);
 
     /// <summary>
     /// Whether anything of <paramref name="pluginId"/> still holds its files.
     /// <para>False for a plugin never tracked, and false once its files are
     /// gone: in both cases there is nothing left to be blocked on.</para>
     /// </summary>
-    bool IsStillLoaded(Guid pluginId);
+    bool IsStillLoaded(Ulid pluginId);
 }
 
 public class PluginAssemblyTracker : IPluginAssemblyTracker
 {
-    private readonly ConcurrentDictionary<Guid, string> _unloading = new();
+    private readonly ConcurrentDictionary<Ulid, string> _unloading = new();
 
-    public void TrackUnload(Guid pluginId, string? assemblyPath)
+    public void TrackUnload(Ulid pluginId, string? assemblyPath)
     {
         if (!string.IsNullOrWhiteSpace(assemblyPath))
             _unloading[pluginId] = assemblyPath;
     }
 
-    public bool IsStillLoaded(Guid pluginId)
+    public bool IsStillLoaded(Ulid pluginId)
     {
         if (!_unloading.TryGetValue(pluginId, out string? assemblyPath))
             return false;

@@ -19,7 +19,7 @@ namespace NoMercy.Api.Hubs;
 /// answer without broadcasting. The plugin id travels in the envelope because
 /// one connection is subscribed to several plugins at once.
 /// </summary>
-public class PluginHubCallerClient(IClientProxy caller, Guid pluginId) : IPluginHubClient
+public class PluginHubCallerClient(IClientProxy caller, Ulid pluginId) : IPluginHubClient
 {
     public Task SendAsync(string type, object? payload) =>
         caller.SendAsync(

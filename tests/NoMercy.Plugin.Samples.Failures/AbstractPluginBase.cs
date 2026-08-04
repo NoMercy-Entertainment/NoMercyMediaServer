@@ -21,7 +21,7 @@ public abstract class AbstractPluginBase : IPlugin
 {
     public abstract string Name { get; }
     public abstract string Description { get; }
-    public abstract Guid Id { get; }
+    public abstract Ulid Id { get; }
     public abstract Version Version { get; }
 
     public abstract void Initialize(IPluginContext context);

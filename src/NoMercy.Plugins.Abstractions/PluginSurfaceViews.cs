@@ -43,15 +43,18 @@ public class PluginSurfaceViews
             PluginSurface.Web => Web ?? Fallback,
             PluginSurface.Mobile => Mobile ?? Fallback,
             PluginSurface.Tv => Tv ?? Fallback,
-            _ => Fallback
+            _ => Fallback,
         };
     }
 
     /// <summary>Which surfaces this plugin actually adapted, for its author.</summary>
     public IEnumerable<string> Adapted()
     {
-        if (Web is not null) yield return PluginSurface.Web;
-        if (Mobile is not null) yield return PluginSurface.Mobile;
-        if (Tv is not null) yield return PluginSurface.Tv;
+        if (Web is not null)
+            yield return PluginSurface.Web;
+        if (Mobile is not null)
+            yield return PluginSurface.Mobile;
+        if (Tv is not null)
+            yield return PluginSurface.Tv;
     }
 }

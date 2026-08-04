@@ -39,7 +39,7 @@ public class PluginArchiveInstallTests : IDisposable
 {
     private readonly string _tempDir = Path.Combine(
         Path.GetTempPath(),
-        $"nm-plugin-archive-{Guid.NewGuid():N}"
+        $"nm-plugin-archive-{Ulid.NewUlid():N}"
     );
     private readonly string _pluginsDir;
     private readonly PluginManager _manager;
@@ -78,7 +78,7 @@ public class PluginArchiveInstallTests : IDisposable
 
     private const string Manifest = """
         {
-          "id": "b3d4f1a2-7c5e-4d8a-9f10-1c2b3a4d5e6f",
+          "id": "5KTKRT4Z2Y9P59Y40W5CX4TQKF",
           "name": "Internet Radio Provider",
           "description": "Adds internet radio stations as a music media source.",
           "version": "1.0.0",

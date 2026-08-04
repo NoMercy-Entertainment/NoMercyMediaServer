@@ -32,7 +32,7 @@ namespace NoMercy.Tests.Plugins;
 /// </summary>
 public class PluginRestartAfterBootTests : IDisposable
 {
-    private static readonly Guid PluginId = Guid.Parse("5b2ec2d0-1f4a-4d33-9c61-9a0a5b0f2d11");
+    private static readonly Ulid PluginId = Ulid.Parse("2V5V1D07TA9MSSRRCT19DGYB8H");
 
     private readonly string _pluginsDir;
 
@@ -40,7 +40,7 @@ public class PluginRestartAfterBootTests : IDisposable
     {
         _pluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-restart-" + Guid.NewGuid().ToString("N")
+            "nomercy-restart-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_pluginsDir);
     }

@@ -68,7 +68,7 @@ public class PluginPlaybackSource
     /// The plugin that owns this source, so a client can attribute what it is
     /// playing and a viewer can tell where it came from.
     /// </summary>
-    public Guid PluginId { get; init; }
+    public Ulid PluginId { get; init; }
 }
 
 /// <summary>
@@ -108,5 +108,5 @@ public class PluginPlaybackState
     /// </summary>
     public string? Device { get; init; }
 
-    public Guid? OwnedByPlugin { get; init; }
+    public Ulid? OwnedByPlugin { get; init; }
 }

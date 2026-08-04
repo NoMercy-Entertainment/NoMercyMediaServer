@@ -19,11 +19,11 @@ namespace NoMercy.Plugins;
 /// </summary>
 internal interface IPluginRegistry
 {
-    LoadedPlugin this[Guid id] { set; }
+    LoadedPlugin this[Ulid id] { set; }
 
-    bool TryGetValue(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin);
+    bool TryGetValue(Ulid id, [MaybeNullWhen(false)] out LoadedPlugin plugin);
 
-    bool TryRemove(Guid id, [MaybeNullWhen(false)] out LoadedPlugin plugin);
+    bool TryRemove(Ulid id, [MaybeNullWhen(false)] out LoadedPlugin plugin);
 
     ICollection<LoadedPlugin> Values { get; }
 

@@ -21,7 +21,7 @@ public class PluginLifecycleTests
     {
         return new()
         {
-            Id = Guid.NewGuid(),
+            Id = Ulid.NewUlid(),
             Name = "TestPlugin",
             Description = "Test",
             Version = new(1, 0, 0),

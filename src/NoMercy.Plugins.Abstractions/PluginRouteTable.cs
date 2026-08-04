@@ -64,14 +64,18 @@ public class PluginRouteTable
     /// <summary>A path to one of this plugin's pages, by name.</summary>
     public string PathTo(string name, IReadOnlyDictionary<string, string>? parameters = null)
     {
-        PluginRoute route = _routes.FirstOrDefault(candidate => candidate.Name == name)
+        PluginRoute route =
+            _routes.FirstOrDefault(candidate => candidate.Name == name)
             ?? throw new ArgumentException($"no route named '{name}'", nameof(name));
 
         return route.Build(parameters);
     }
 
     /// <summary>An action going to one of this plugin's pages, by name.</summary>
-    public PluginActionIntent GoTo(string name, IReadOnlyDictionary<string, string>? parameters = null)
+    public PluginActionIntent GoTo(
+        string name,
+        IReadOnlyDictionary<string, string>? parameters = null
+    )
     {
         return PluginNavigation.To(PathTo(name, parameters));
     }
@@ -86,9 +90,11 @@ public class PluginRouteTable
     {
         // Two routes differing only in what they call a parameter are the same
         // route: `/stations/:id` and `/stations/:slug` both match one path.
-        return string.Join('/', path
-            .Split('/', StringSplitOptions.RemoveEmptyEntries)
-            .Select(part => part.StartsWith(':') ? ":" : part.ToLowerInvariant()));
+        return string.Join(
+            '/',
+            path.Split('/', StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => part.StartsWith(':') ? ":" : part.ToLowerInvariant())
+        );
     }
 }
 

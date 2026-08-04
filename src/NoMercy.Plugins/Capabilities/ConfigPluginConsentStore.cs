@@ -15,7 +15,7 @@ namespace NoMercy.Plugins.Capabilities;
 
 public class PluginConsentRecord
 {
-    public List<Guid> GrantedPluginIds { get; init; } = [];
+    public List<Ulid> GrantedPluginIds { get; init; } = [];
 }
 
 // Backed by IPluginConfiguration under a platform-scoped data folder (not a
@@ -23,13 +23,13 @@ public class PluginConsentRecord
 // across every plugin's consent check.
 public class ConfigPluginConsentStore(IPluginConfiguration configuration) : IPluginConsentStore
 {
-    public bool Contains(Guid pluginId)
+    public bool Contains(Ulid pluginId)
     {
         PluginConsentRecord? record = configuration.GetConfiguration<PluginConsentRecord>();
         return record?.GrantedPluginIds.Contains(pluginId) ?? false;
     }
 
-    public void Add(Guid pluginId)
+    public void Add(Ulid pluginId)
     {
         PluginConsentRecord record = configuration.GetConfiguration<PluginConsentRecord>() ?? new();
 
@@ -40,7 +40,7 @@ public class ConfigPluginConsentStore(IPluginConfiguration configuration) : IPlu
         configuration.SaveConfiguration(record);
     }
 
-    public void Remove(Guid pluginId)
+    public void Remove(Ulid pluginId)
     {
         PluginConsentRecord? record = configuration.GetConfiguration<PluginConsentRecord>();
         if (record is null || !record.GrantedPluginIds.Remove(pluginId))

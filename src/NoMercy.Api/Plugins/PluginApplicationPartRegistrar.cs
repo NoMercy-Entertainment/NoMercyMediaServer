@@ -33,11 +33,11 @@ public class PluginApplicationPartRegistrar(
     ILogger<PluginApplicationPartRegistrar> logger
 ) : IPluginAssemblyCatalog
 {
-    private readonly ConcurrentDictionary<Guid, Assembly> _attached = new();
+    private readonly ConcurrentDictionary<Ulid, Assembly> _attached = new();
 
-    public Guid? OwnerOf(Assembly assembly)
+    public Ulid? OwnerOf(Assembly assembly)
     {
-        foreach (KeyValuePair<Guid, Assembly> entry in _attached)
+        foreach (KeyValuePair<Ulid, Assembly> entry in _attached)
         {
             if (ReferenceEquals(entry.Value, assembly))
                 return entry.Key;
@@ -94,7 +94,7 @@ public class PluginApplicationPartRegistrar(
         return true;
     }
 
-    public void Detach(Guid pluginId)
+    public void Detach(Ulid pluginId)
     {
         if (!_attached.TryRemove(pluginId, out Assembly? assembly))
             return;

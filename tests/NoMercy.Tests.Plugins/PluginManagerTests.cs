@@ -32,7 +32,7 @@ public class PluginManagerTests : IDisposable
     {
         _tempPluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-plugin-tests-" + Guid.NewGuid().ToString("N")
+            "nomercy-plugin-tests-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempPluginsDir);
 
@@ -192,7 +192,7 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public async Task EnablePluginAsync_UnknownPluginId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _manager.EnablePluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _manager.EnablePluginAsync(Ulid.NewUlid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -200,7 +200,7 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public async Task DisablePluginAsync_UnknownPluginId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _manager.DisablePluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _manager.DisablePluginAsync(Ulid.NewUlid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -208,7 +208,7 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_UnknownPluginId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _manager.UninstallPluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _manager.UninstallPluginAsync(Ulid.NewUlid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -226,7 +226,7 @@ public class PluginManagerTests : IDisposable
     {
         string nonExistentPath = Path.Combine(
             Path.GetTempPath(),
-            "nonexistent-" + Guid.NewGuid().ToString("N")
+            "nonexistent-" + Ulid.NewUlid().ToString()
         );
         InMemoryEventBus bus = new();
         PluginManager manager = new(
@@ -353,7 +353,7 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public void GetPluginInstance_UnknownId_ReturnsNull()
     {
-        IPlugin? result = _manager.GetPluginInstance(Guid.NewGuid());
+        IPlugin? result = _manager.GetPluginInstance(Ulid.NewUlid());
 
         result.Should().BeNull();
     }
@@ -425,7 +425,7 @@ public class PluginManagerTests : IDisposable
     {
         Action act = () =>
             new PluginContext(
-                Guid.Empty,
+                Ulid.Empty,
                 null!,
                 new MinimalServiceProvider(),
                 NullLogger.Instance,
@@ -443,7 +443,7 @@ public class PluginManagerTests : IDisposable
     {
         Action act = () =>
             new PluginContext(
-                Guid.Empty,
+                Ulid.Empty,
                 new InMemoryEventBus(),
                 null!,
                 NullLogger.Instance,
@@ -461,7 +461,7 @@ public class PluginManagerTests : IDisposable
     {
         Action act = () =>
             new PluginContext(
-                Guid.Empty,
+                Ulid.Empty,
                 new InMemoryEventBus(),
                 new MinimalServiceProvider(),
                 null!,
@@ -479,7 +479,7 @@ public class PluginManagerTests : IDisposable
     {
         Action act = () =>
             new PluginContext(
-                Guid.Empty,
+                Ulid.Empty,
                 new InMemoryEventBus(),
                 new MinimalServiceProvider(),
                 NullLogger.Instance,
@@ -503,7 +503,7 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public async Task LoadPluginFromManifestAsync_MissingAssembly_PublishesErrorEvent()
     {
-        Guid pluginId = Guid.NewGuid();
+        Ulid pluginId = Ulid.NewUlid();
         string pluginDir = Path.Combine(_tempPluginsDir, "TestPlugin");
         Directory.CreateDirectory(pluginDir);
 
@@ -562,7 +562,7 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public async Task LoadPluginFromManifestAsync_InvalidDll_PublishesErrorEvent()
     {
-        Guid pluginId = Guid.NewGuid();
+        Ulid pluginId = Ulid.NewUlid();
         string pluginDir = Path.Combine(_tempPluginsDir, "BadDll");
         Directory.CreateDirectory(pluginDir);
 
@@ -598,7 +598,7 @@ public class PluginManagerTests : IDisposable
     [Fact]
     public async Task LoadPluginsFromDirectoryAsync_PrefersManifestOverDllScan()
     {
-        Guid pluginId = Guid.NewGuid();
+        Ulid pluginId = Ulid.NewUlid();
         string pluginDir = Path.Combine(_tempPluginsDir, "ManifestPlugin");
         Directory.CreateDirectory(pluginDir);
 

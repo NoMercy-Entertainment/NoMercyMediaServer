@@ -38,13 +38,15 @@ public interface IPluginSystem
         string capability,
         string command,
         IReadOnlyDictionary<string, object?>? arguments = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 
     /// <summary>Ask a capability about its current state.</summary>
     Task<PluginSystemResult> QueryAsync(
         string capability,
         string question,
-        CancellationToken ct = default);
+        CancellationToken ct = default
+    );
 }
 
 /// <summary>
@@ -119,7 +121,7 @@ public class PluginSystemResult
         {
             Ok = false,
             Refused = true,
-            Reason = $"no grant for '{PluginCapability.GrantFor(capability)}'"
+            Reason = $"no grant for '{PluginCapability.GrantFor(capability)}'",
         };
     }
 
@@ -129,7 +131,7 @@ public class PluginSystemResult
         {
             Ok = false,
             Unsupported = true,
-            Reason = $"this host offers no '{capability}'"
+            Reason = $"this host offers no '{capability}'",
         };
     }
 

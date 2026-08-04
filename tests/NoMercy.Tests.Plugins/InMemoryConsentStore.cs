@@ -15,11 +15,11 @@ namespace NoMercy.Tests.Plugins;
 
 internal sealed class InMemoryConsentStore : IPluginConsentStore
 {
-    private readonly HashSet<Guid> _granted = [];
+    private readonly HashSet<Ulid> _granted = [];
 
-    public bool Contains(Guid pluginId) => _granted.Contains(pluginId);
+    public bool Contains(Ulid pluginId) => _granted.Contains(pluginId);
 
-    public void Add(Guid pluginId) => _granted.Add(pluginId);
+    public void Add(Ulid pluginId) => _granted.Add(pluginId);
 
-    public void Remove(Guid pluginId) => _granted.Remove(pluginId);
+    public void Remove(Ulid pluginId) => _granted.Remove(pluginId);
 }

@@ -174,7 +174,7 @@ public class PluginRepository : IPluginRepository
         }
     }
 
-    public PluginRepositoryEntry? FindPlugin(Guid pluginId)
+    public PluginRepositoryEntry? FindPlugin(Ulid pluginId)
     {
         lock (_lock)
         {
@@ -182,7 +182,7 @@ public class PluginRepository : IPluginRepository
         }
     }
 
-    public PluginVersionEntry? FindVersion(Guid pluginId, string version)
+    public PluginVersionEntry? FindVersion(Ulid pluginId, string version)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
 

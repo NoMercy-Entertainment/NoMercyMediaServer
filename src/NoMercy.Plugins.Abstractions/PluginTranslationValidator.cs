@@ -20,31 +20,42 @@ public static class PluginTranslationValidator
     /// </summary>
     public static List<PluginTranslationProblem> Validate(
         PluginTranslations translations,
-        Func<string, string?> readLocaleFile)
+        Func<string, string?> readLocaleFile
+    )
     {
         List<PluginTranslationProblem> problems = [];
 
         string? sourceText = readLocaleFile(translations.Source);
         if (sourceText is null)
         {
-            problems.Add(new()
-            {
-                Locale = translations.Source,
-                Detail = "the source locale is declared but its file is missing, so there is nothing to measure against"
-            });
+            problems.Add(
+                new()
+                {
+                    Locale = translations.Source,
+                    Detail =
+                        "the source locale is declared but its file is missing, so there is nothing to measure against",
+                }
+            );
             return problems;
         }
 
         Dictionary<string, string>? source = Read(sourceText);
         if (source is null)
         {
-            problems.Add(new() { Locale = translations.Source, Detail = "the source locale is not readable as a flat set of strings" });
+            problems.Add(
+                new()
+                {
+                    Locale = translations.Source,
+                    Detail = "the source locale is not readable as a flat set of strings",
+                }
+            );
             return problems;
         }
 
         foreach (string locale in translations.Locales)
         {
-            if (locale == translations.Source) continue;
+            if (locale == translations.Source)
+                continue;
 
             string? text = readLocaleFile(locale);
             if (text is null)
@@ -56,7 +67,9 @@ public static class PluginTranslationValidator
             Dictionary<string, string>? entries = Read(text);
             if (entries is null)
             {
-                problems.Add(new() { Locale = locale, Detail = "not readable as a flat set of strings" });
+                problems.Add(
+                    new() { Locale = locale, Detail = "not readable as a flat set of strings" }
+                );
                 continue;
             }
 
@@ -65,13 +78,27 @@ public static class PluginTranslationValidator
                 if (!entries.ContainsKey(key))
                     problems.Add(new() { Locale = locale, Detail = $"missing key '{key}'" });
                 else if (string.IsNullOrWhiteSpace(entries[key]))
-                    problems.Add(new() { Locale = locale, Detail = $"key '{key}' is empty, which reads as a blank label rather than as untranslated" });
+                    problems.Add(
+                        new()
+                        {
+                            Locale = locale,
+                            Detail =
+                                $"key '{key}' is empty, which reads as a blank label rather than as untranslated",
+                        }
+                    );
             }
 
             foreach (string key in entries.Keys)
             {
                 if (!source.ContainsKey(key))
-                    problems.Add(new() { Locale = locale, Detail = $"key '{key}' is not in the source locale, so nothing will ever read it" });
+                    problems.Add(
+                        new()
+                        {
+                            Locale = locale,
+                            Detail =
+                                $"key '{key}' is not in the source locale, so nothing will ever read it",
+                        }
+                    );
             }
         }
 

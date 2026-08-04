@@ -1,5 +1,5 @@
 {
-  "id": "77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+  "id": "01MAN0FESTFA000RE000000000",
   "name": "ManifestFailure",
   "version": "0.1.0",
   "description": "Sample plugin for testing the manifest-driven auto-enable Initialize() failure path",

@@ -22,7 +22,7 @@ public static class PluginHttpClientFactory
     public static HttpClient Create(
         PluginCapabilities? capabilities,
         Func<IReadOnlyList<string>>? grantedHosts = null,
-        Guid pluginId = default,
+        Ulid pluginId = default,
         string? pluginName = null,
         Version? pluginVersion = null
     )

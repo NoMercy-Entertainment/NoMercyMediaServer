@@ -61,8 +61,8 @@ public class PluginController(
         );
     }
 
-    [HttpGet("{id:guid}")]
-    public IActionResult Show(Guid id)
+    [HttpGet("{id:ulid}")]
+    public IActionResult Show(Ulid id)
     {
         PluginInfo? plugin = pluginManager.GetInstalledPlugins().FirstOrDefault(p => p.Id == id);
         if (plugin is null)
@@ -92,8 +92,8 @@ public class PluginController(
     /// first run.
     /// </para>
     /// </summary>
-    [HttpPost("{id:guid}/consent")]
-    public async Task<IActionResult> Consent(Guid id, [FromBody] PluginConsentRequestDto? request)
+    [HttpPost("{id:ulid}/consent")]
+    public async Task<IActionResult> Consent(Ulid id, [FromBody] PluginConsentRequestDto? request)
     {
         PluginInfo? plugin = pluginManager.GetInstalledPlugins().FirstOrDefault(p => p.Id == id);
         if (plugin is null)
@@ -127,8 +127,8 @@ public class PluginController(
     }
 
     /// <summary>Withdraws consent and disables the plugin.</summary>
-    [HttpDelete("{id:guid}/consent")]
-    public async Task<IActionResult> RevokeConsent(Guid id)
+    [HttpDelete("{id:ulid}/consent")]
+    public async Task<IActionResult> RevokeConsent(Ulid id)
     {
         consentService.RevokeConsent(id);
 
@@ -164,8 +164,8 @@ public class PluginController(
         );
 
     /// <summary>Answers one pending request. Denying clears it rather than recording a denial.</summary>
-    [HttpPost("{id:guid}/grants")]
-    public IActionResult ResolveGrant(Guid id, [FromBody] PluginGrantDecisionDto decision)
+    [HttpPost("{id:ulid}/grants")]
+    public IActionResult ResolveGrant(Ulid id, [FromBody] PluginGrantDecisionDto decision)
     {
         if (string.IsNullOrWhiteSpace(decision.Kind) || string.IsNullOrWhiteSpace(decision.Value))
             return UnprocessableEntityResponse("A grant needs both a kind and a value");
@@ -198,8 +198,8 @@ public class PluginController(
         PluginGrantKind.LibraryWrite,
     ];
 
-    [HttpPost("{id:guid}/enable")]
-    public async Task<IActionResult> Enable(Guid id)
+    [HttpPost("{id:ulid}/enable")]
+    public async Task<IActionResult> Enable(Ulid id)
     {
         try
         {
@@ -219,8 +219,8 @@ public class PluginController(
         }
     }
 
-    [HttpPost("{id:guid}/disable")]
-    public async Task<IActionResult> Disable(Guid id)
+    [HttpPost("{id:ulid}/disable")]
+    public async Task<IActionResult> Disable(Ulid id)
     {
         try
         {
@@ -281,7 +281,7 @@ public class PluginController(
 
         string stagingDirectory = Path.Combine(
             AppFiles.TempPath,
-            $"plugin-install-{Guid.NewGuid():N}"
+            $"plugin-install-{Ulid.NewUlid():N}"
         );
         string stagedPath = Path.Combine(stagingDirectory, fileName);
 
@@ -345,8 +345,8 @@ public class PluginController(
         return lastSeparator < 0 ? candidate : candidate[(lastSeparator + 1)..];
     }
 
-    [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Uninstall(Guid id)
+    [HttpDelete("{id:ulid}")]
+    public async Task<IActionResult> Uninstall(Ulid id)
     {
         try
         {
@@ -411,7 +411,7 @@ public class PluginController(
 public record PluginInfoDto
 {
     [JsonProperty("id")]
-    public Guid Id { get; init; }
+    public Ulid Id { get; init; }
 
     [JsonProperty("name")]
     public string Name { get; init; } = null!;

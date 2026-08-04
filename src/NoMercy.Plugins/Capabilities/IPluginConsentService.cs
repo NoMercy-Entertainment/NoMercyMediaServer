@@ -16,7 +16,7 @@ namespace NoMercy.Plugins.Capabilities;
 public interface IPluginConsentService
 {
     bool IsBaseline(PluginCapabilities? capabilities);
-    bool HasConsent(Guid pluginId);
-    void GrantConsent(Guid pluginId);
-    void RevokeConsent(Guid pluginId);
+    bool HasConsent(Ulid pluginId);
+    void GrantConsent(Ulid pluginId);
+    void RevokeConsent(Ulid pluginId);
 }

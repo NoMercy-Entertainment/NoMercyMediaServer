@@ -24,12 +24,12 @@ namespace NoMercy.Tests.Plugins;
 /// </summary>
 public class PluginRestartAdvisorTests
 {
-    private static readonly Guid PluginId = Guid.Parse("77777777-7777-7777-7777-777777777777");
+    private static readonly Ulid PluginId = Ulid.Parse("3QEXVQEXVQEXVQEXVQEXVQEXVQ");
 
     private static PluginInfo Plugin(
         bool contributesServices = false,
         bool rest = false,
-        Guid? id = null
+        Ulid? id = null
     ) =>
         new()
         {
@@ -108,7 +108,7 @@ public class PluginRestartAdvisorTests
         PluginRestartAdvisor advisor = new();
         advisor.MarkRegisteredAtStartup(PluginId);
 
-        Guid other = Guid.Parse("88888888-8888-8888-8888-888888888888");
+        Ulid other = Ulid.Parse("48H248H248H248H248H248H248");
 
         advisor
             .Evaluate(Plugin(contributesServices: true, id: other), PluginOperation.Enable)

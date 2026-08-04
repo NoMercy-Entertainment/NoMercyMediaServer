@@ -142,7 +142,7 @@ public class PluginNetworkGlobAndGrantTests
 /// </summary>
 public class PluginUserAgentHandlerTests
 {
-    private static readonly Guid PluginId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    private static readonly Ulid PluginId = Ulid.Parse("1K6CSK6CSK6CSK6CSK6CSK6CSK");
 
     private static HttpClient ClientFor(string? name, Version? version = null) =>
         new(

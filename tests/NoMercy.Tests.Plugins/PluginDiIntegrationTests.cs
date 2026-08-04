@@ -27,7 +27,7 @@ public class PluginDiIntegrationTests : IDisposable
     {
         _tempPluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-di-tests-" + Guid.NewGuid().ToString("N")
+            "nomercy-di-tests-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempPluginsDir);
     }

@@ -34,7 +34,7 @@ public class PluginRouteConvention(IPluginAssemblyCatalog catalog) : IApplicatio
             if (!typeof(PluginControllerBase).IsAssignableFrom(controller.ControllerType))
                 continue;
 
-            Guid? owner = catalog.OwnerOf(controller.ControllerType.Assembly);
+            Ulid? owner = catalog.OwnerOf(controller.ControllerType.Assembly);
 
             if (owner is null)
                 continue;

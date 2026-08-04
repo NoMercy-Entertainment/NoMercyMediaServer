@@ -38,12 +38,15 @@ public static class PluginNavigation
     public static PluginActionIntent To(string route)
     {
         if (!route.StartsWith('/'))
-            throw new ArgumentException("a plugin route starts with '/', and is relative to the plugin rather than to the app", nameof(route));
+            throw new ArgumentException(
+                "a plugin route starts with '/', and is relative to the plugin rather than to the app",
+                nameof(route)
+            );
 
         return new()
         {
             Type = PluginActionType.Navigate,
-            Payload = new() { [RouteKey] = route, [RelativeKey] = true }
+            Payload = new() { [RouteKey] = route, [RelativeKey] = true },
         };
     }
 
@@ -60,7 +63,7 @@ public static class PluginNavigation
         return new()
         {
             Type = PluginActionType.Navigate,
-            Payload = new() { [RouteKey] = path, [RelativeKey] = false }
+            Payload = new() { [RouteKey] = path, [RelativeKey] = false },
         };
     }
 
@@ -69,13 +72,15 @@ public static class PluginNavigation
     /// taken into account. The client calls this rather than reading the payload
     /// itself, so one rule decides it everywhere.
     /// </summary>
-    public static string Resolve(PluginActionIntent intent, string kind, Guid pluginId)
+    public static string Resolve(PluginActionIntent intent, string kind, Ulid pluginId)
     {
-        string route = intent.Payload.TryGetValue(RouteKey, out object? value) && value is string text
-            ? text
-            : "/";
+        string route =
+            intent.Payload.TryGetValue(RouteKey, out object? value) && value is string text
+                ? text
+                : "/";
 
-        bool relative = !intent.Payload.TryGetValue(RelativeKey, out object? flag) || flag is not false;
+        bool relative =
+            !intent.Payload.TryGetValue(RelativeKey, out object? flag) || flag is not false;
 
         if (!relative)
             return route;

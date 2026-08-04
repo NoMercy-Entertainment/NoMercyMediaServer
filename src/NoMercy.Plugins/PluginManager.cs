@@ -9,9 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Text.Json;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using NoMercy.Events;
@@ -49,7 +49,7 @@ public class PluginManager : IPluginManager, IDisposable
         IPluginContextFactory? contextFactory = null,
         PluginHostOptions? hostOptions = null,
         IPluginAssemblyTracker? assemblyTracker = null,
-        Action<Guid>? releaseScheduledWork = null
+        Action<Ulid>? releaseScheduledWork = null
     )
     {
         _eventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
@@ -156,7 +156,7 @@ public class PluginManager : IPluginManager, IDisposable
             // caller supplies is enforced, before anything is copied to disk.
             PluginManifest checksumManifest = new()
             {
-                Id = Guid.Empty,
+                Id = Ulid.Empty,
                 Name = Path.GetFileNameWithoutExtension(fullPath),
                 Description = string.Empty,
                 Version = "0.0.0",
@@ -366,17 +366,17 @@ public class PluginManager : IPluginManager, IDisposable
         string FolderName
     );
 
-    public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default)
+    public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default)
     {
         return _lifecycle.EnablePluginAsync(pluginId, ct);
     }
 
-    public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default)
+    public Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default)
     {
         return _lifecycle.DisablePluginAsync(pluginId, ct);
     }
 
-    public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default)
+    public Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default)
     {
         return _lifecycle.UninstallPluginAsync(pluginId, ct);
     }
@@ -481,7 +481,7 @@ public class PluginManager : IPluginManager, IDisposable
         return _loader.LoadPluginAssemblyAsync(assemblyPath, ct);
     }
 
-    public IPlugin? GetPluginInstance(Guid pluginId)
+    public IPlugin? GetPluginInstance(Ulid pluginId)
     {
         if (_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
         {
@@ -491,21 +491,30 @@ public class PluginManager : IPluginManager, IDisposable
         return null;
     }
 
-    public PluginInfo? GetPluginInfo(Guid pluginId) =>
+    public PluginInfo? GetPluginInfo(Ulid pluginId) =>
         _registry.TryGetValue(pluginId, out LoadedPlugin? loaded) ? loaded.Info : null;
 
-    public async Task<Dictionary<string, string>?> ReadTranslationsAsync(Guid pluginId, string locale, CancellationToken ct)
+    public async Task<Dictionary<string, string>?> ReadTranslationsAsync(
+        Ulid pluginId,
+        string locale,
+        CancellationToken ct
+    )
     {
-        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded)) return null;
+        if (!_registry.TryGetValue(pluginId, out LoadedPlugin? loaded))
+            return null;
 
         string? manifestPath = loaded.Info.ManifestPath;
-        if (string.IsNullOrWhiteSpace(manifestPath) || !_storage.Exists(manifestPath)) return null;
+        if (string.IsNullOrWhiteSpace(manifestPath) || !_storage.Exists(manifestPath))
+            return null;
 
         PluginTranslations? declared;
         try
         {
             declared = JsonSerializer
-                .Deserialize<PluginManifest>(await _storage.ReadAllTextAsync(manifestPath, ct), TranslationJson)
+                .Deserialize<PluginManifest>(
+                    await _storage.ReadAllTextAsync(manifestPath, ct),
+                    TranslationJson
+                )
                 ?.Translations;
         }
         catch (JsonException)
@@ -513,10 +522,12 @@ public class PluginManager : IPluginManager, IDisposable
             return null;
         }
 
-        if (declared is null) return null;
+        if (declared is null)
+            return null;
 
         string? root = Path.GetDirectoryName(manifestPath);
-        if (root is null) return null;
+        if (root is null)
+            return null;
 
         // Falls back to the locale the plugin was authored in. A viewer whose
         // language a plugin does not ship should read it in the language it was
@@ -526,17 +537,27 @@ public class PluginManager : IPluginManager, IDisposable
         return await ReadLocaleFileAsync(Path.Combine(root, declared.Path), wanted, ct);
     }
 
-    private static readonly JsonSerializerOptions TranslationJson = new() { PropertyNameCaseInsensitive = true };
+    private static readonly JsonSerializerOptions TranslationJson = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
 
-    private async Task<Dictionary<string, string>?> ReadLocaleFileAsync(string directory, string locale, CancellationToken ct)
+    private async Task<Dictionary<string, string>?> ReadLocaleFileAsync(
+        string directory,
+        string locale,
+        CancellationToken ct
+    )
     {
         string path = Path.Combine(directory, $"{locale}.json");
 
-        if (!_storage.Exists(path)) return null;
+        if (!_storage.Exists(path))
+            return null;
 
         try
         {
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(await _storage.ReadAllTextAsync(path, ct));
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(
+                await _storage.ReadAllTextAsync(path, ct)
+            );
         }
         catch (JsonException)
         {

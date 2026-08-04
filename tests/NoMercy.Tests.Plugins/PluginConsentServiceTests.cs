@@ -49,7 +49,7 @@ public class PluginConsentServiceTests
     public void Consent_RoundTrips()
     {
         PluginConsentService service = new(new InMemoryConsentStore());
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         Assert.False(service.HasConsent(id));
         service.GrantConsent(id);
         Assert.True(service.HasConsent(id));
@@ -59,7 +59,7 @@ public class PluginConsentServiceTests
     public void RevokeConsent_RemovesGrantedConsent()
     {
         PluginConsentService service = new(new InMemoryConsentStore());
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         service.GrantConsent(id);
         Assert.True(service.HasConsent(id));
 

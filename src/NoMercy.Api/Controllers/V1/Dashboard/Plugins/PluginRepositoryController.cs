@@ -145,9 +145,9 @@ public class PluginRepositoryController(
     /// only ever reach somewhere a repository the owner added has published.
     /// </para>
     /// </summary>
-    [HttpPost("{pluginId:guid}/install")]
+    [HttpPost("{pluginId:ulid}/install")]
     public async Task<IActionResult> Install(
-        Guid pluginId,
+        Ulid pluginId,
         [FromQuery] string? version,
         CancellationToken ct
     )
@@ -165,7 +165,7 @@ public class PluginRepositoryController(
 
         string stagingDirectory = Path.Combine(
             AppFiles.TempPath,
-            $"plugin-fetch-{Guid.NewGuid():N}"
+            $"plugin-fetch-{Ulid.NewUlid():N}"
         );
         // The catalogue names the artifact, and a plugin that ships more than a
         // single assembly publishes an archive. Staging it under the wrong

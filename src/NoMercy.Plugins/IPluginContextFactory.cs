@@ -27,7 +27,7 @@ namespace NoMercy.Plugins;
 public interface IPluginContextFactory
 {
     IPluginContext Create(
-        Guid pluginId,
+        Ulid pluginId,
         string dataFolderPath,
         ILogger logger,
         PluginCapabilities? capabilities,

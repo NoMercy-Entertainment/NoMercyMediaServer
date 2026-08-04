@@ -26,7 +26,7 @@ public class PluginServiceRegistrationTests : IDisposable
     {
         _tempPluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-svc-reg-" + Guid.NewGuid().ToString("N")
+            "nomercy-svc-reg-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempPluginsDir);
 
@@ -176,7 +176,7 @@ public class PluginServiceRegistrationTests : IDisposable
         IServiceCollection services = new ServiceCollection();
         string missing = Path.Combine(
             Path.GetTempPath(),
-            "no-such-" + Guid.NewGuid().ToString("N")
+            "no-such-" + Ulid.NewUlid().ToString()
         );
 
         Action act = () => services.RegisterPluginServicesFromManifests(missing);
@@ -254,7 +254,7 @@ public class PluginServiceRegistrationTests : IDisposable
             Path.Combine(pluginDir, "plugin.json"),
             """
             {
-              "id": "44444444-4444-4444-4444-444444444444",
+              "id": "248H248H248H248H248H248H24",
               "name": "MissingAssembly",
               "description": "manifest with no matching dll on disk",
               "version": "1.0.0",
