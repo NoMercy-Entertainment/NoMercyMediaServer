@@ -14,7 +14,7 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Api.DTOs.Media.Nm;
+namespace NoMercy.Design;
 
 /// <summary>
 /// A key on the spacing scale. The scale is the design system's, so a key

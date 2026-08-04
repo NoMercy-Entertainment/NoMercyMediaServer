@@ -13,7 +13,7 @@
 
 using Newtonsoft.Json;
 
-namespace NoMercy.Api.DTOs.Media.Nm;
+namespace NoMercy.Design;
 
 /// <summary>
 /// Every component name the design system publishes. Reach for these rather

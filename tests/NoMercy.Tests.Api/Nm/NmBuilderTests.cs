@@ -1,5 +1,5 @@
 using Newtonsoft.Json;
-using NoMercy.Api.DTOs.Media.Nm;
+using NoMercy.Design;
 using Xunit;
 
 namespace NoMercy.Tests.Api.NmComponents;

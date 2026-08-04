@@ -45,5 +45,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj" />
+    <!--
+      The design system, so a plugin can name any of the fifty-six components
+      rather than the ten this assembly had tags for. It carries Newtonsoft,
+      which the plugin load context already shares: a plugin's [JsonProperty]
+      has to resolve to the host's copy or the host's formatter ignores it.
+    -->
+    <ProjectReference Include="..\NoMercy.Design\NoMercy.Design.csproj" />
   </ItemGroup>
 </Project>

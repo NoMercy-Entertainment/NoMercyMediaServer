@@ -58,6 +58,10 @@ public record PluginHostOptions
             "NoMercy.Plugins.Abstractions",
             "NoMercy.Plugins.Mvc",
             "NoMercy.Events",
+            // The design system's contract. A plugin builds its screens from the
+            // same component records the host renders, so the two must be the
+            // same types and not two copies that merely look alike.
+            "NoMercy.Design",
             "Microsoft.Extensions.Logging.Abstractions",
             "Microsoft.Extensions.Logging",
             "Microsoft.Extensions.DependencyInjection.Abstractions",
