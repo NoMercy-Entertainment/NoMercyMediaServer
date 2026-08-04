@@ -414,7 +414,7 @@ public static class PluginViews
                         "cell",
                         column.Align,
                         CellContent(
-                            $"{row.Id}-{column.Key}",
+                            $"{row.Id}-{column.Key}-value",
                             column,
                             row.Props.GetValueOrDefault(column.Key)
                         )
