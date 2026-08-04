@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using System.Net;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using System.Timers;
@@ -18,6 +19,7 @@ using Newtonsoft.Json;
 using NoMercy.Events;
 using NoMercy.Events.Cast;
 using NoMercy.Networking.Discovery;
+using NoMercy.Networking.Http;
 using NoMercy.NmSystem.Extensions;
 using Sharpcaster;
 using Sharpcaster.Models;
@@ -105,6 +107,22 @@ public class ChromeCastService : IChromeCastService
     {
         if (string.IsNullOrEmpty(ip))
             return null;
+
+        // A Cast device answers on port 8009 of the network this server sits on, so an
+        // address off that network can never be one. Device rows store where the client
+        // connected FROM, and a phone or TV reaching the server through the tunnel
+        // registers its public address — this method then rescanned mDNS for it, failed,
+        // synthesized a receiver named after the WAN IP, and every device listing tried a
+        // TCP connect to the owner's own router. Refusing the address here is the one
+        // choke point all three callers share.
+        if (
+            !IPAddress.TryParse(ip, out IPAddress? parsed)
+            || !ClientIpResolver.IsPrivateNetwork(parsed)
+        )
+        {
+            _logger.LogDebug("Not a castable address, skipping Chromecast lookup: {Ip}", ip);
+            return null;
+        }
 
         string? hit = LookupNameByIp(ip);
         if (hit is not null)

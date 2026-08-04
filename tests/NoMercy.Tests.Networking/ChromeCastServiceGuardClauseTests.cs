@@ -85,6 +85,34 @@ public sealed class ChromeCastServiceGuardClauseTests
         Assert.Null(name);
     }
 
+    // A device row stores the address the client connected FROM. Anyone watching from
+    // outside the LAN registers a public address, and treating that as a Cast candidate
+    // made the server rescan mDNS for it, synthesize a receiver named after the WAN IP,
+    // and open a TCP connection to the owner's own router on every device listing.
+    [Theory]
+    [InlineData("85.144.244.49")]
+    [InlineData("8.8.8.8")]
+    [InlineData("2a02:a45f:6c1e::1")]
+    [InlineData("not-an-ip")]
+    public async Task FindReceiverNameByIpAsync_AddressOffThisNetwork_ReturnsNull(string ip)
+    {
+        ChromeCastService service = BuildService();
+
+        string? name = await service.FindReceiverNameByIpAsync(ip);
+
+        Assert.Null(name);
+    }
+
+    [Fact]
+    public async Task FindReceiverNameByIpAsync_LanAddress_StillSynthesizesAReceiver()
+    {
+        ChromeCastService service = BuildService();
+
+        string? name = await service.FindReceiverNameByIpAsync("192.168.2.31");
+
+        Assert.Equal("192.168.2.31", name);
+    }
+
     [Fact]
     public async Task SelectChromecast_NullReceiver_DoesNotThrow()
     {
