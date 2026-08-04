@@ -85,6 +85,8 @@ public static class PluginViews
                 ["box"] = new Dictionary<string, object?>
                 {
                     ["direction"] = direction,
+
+                    ["width"] = "full",
                     ["wrap"] = wrap ? "wrap" : null,
                     ["gap"] = new Dictionary<string, object?> { ["all"] = "3" },
                 },
@@ -170,6 +172,8 @@ public static class PluginViews
                 ["box"] = new Dictionary<string, object?>
                 {
                     ["direction"] = "column",
+
+                    ["width"] = "full",
                     ["gap"] = new Dictionary<string, object?> { ["all"] = "2" },
                     ["padding"] = new Dictionary<string, object?> { ["all"] = "3" },
                 },
@@ -194,6 +198,8 @@ public static class PluginViews
                 ["box"] = new Dictionary<string, object?>
                 {
                     ["direction"] = "column",
+
+                    ["width"] = "full",
                     ["gap"] = new Dictionary<string, object?> { ["all"] = "3" },
                     ["padding"] = new Dictionary<string, object?> { ["all"] = "4" },
                 },
@@ -220,6 +226,14 @@ public static class PluginViews
                 ["ariaLabel"] = label,
                 ["icon"] = icon,
                 ["variant"] = variant ?? "secondary",
+                ["box"] = new Dictionary<string, object?>
+                {
+                    // NMButton fills its container by default, so in a column it
+                    // drew a banner the width of the page rather than something
+                    // to press.
+                    ["alignSelf"] = "start",
+                    ["width"] = "content",
+                },
             },
             Items = [Leaf($"{id}-label", label)],
             Action = action,
@@ -242,7 +256,19 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Button,
-            Props = new() { ["ariaLabel"] = label, ["variant"] = "destructive" },
+            Props = new()
+            {
+                ["ariaLabel"] = label,
+                ["variant"] = "destructive",
+                ["box"] = new Dictionary<string, object?>
+                {
+                    // NMButton fills its container by default, so in a column it
+                    // drew a banner the width of the page rather than something
+                    // to press.
+                    ["alignSelf"] = "start",
+                    ["width"] = "content",
+                },
+            },
             Items = [Leaf($"{id}-label", label)],
             Action = new()
             {
@@ -268,7 +294,25 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Form,
-            Props = new() { ["submitLabel"] = submitLabel, ["fields"] = fields.ToList() },
+            Props = new()
+            {
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = "column",
+
+                    ["width"] = "full",
+                    ["gap"] = new Dictionary<string, object?> { ["all"] = "3" },
+                    ["padding"] = new Dictionary<string, object?> { ["all"] = "4" },
+                },
+            },
+            // A field is a component, not an entry in a bag. Declaring them as
+            // props left the card with nothing inside it and drew an empty bar
+            // where the form should be.
+            Items =
+            [
+                .. fields.Select(field => Field(id, field)),
+                Button($"{id}-submit", submitLabel, submitAction, variant: "primary"),
+            ],
             Action = submitAction,
         };
 
@@ -277,9 +321,11 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.EmptyState,
-            Items = message is null
-                ? [Leaf($"{id}-title", title)]
-                : [Leaf($"{id}-title", title), Leaf($"{id}-message", message)],
+            // Two text leaves side by side share a line, so the empty state read
+            // "No indexer configuredAdd an indexer so…" as one sentence. The
+            // heading and the line under it are different things and have to be
+            // different components to sit apart.
+            Items = [.. Face(id, title, message, null)],
         };
 
     public static PluginComponent Spinner(string id, string? label = null) =>
@@ -388,5 +434,88 @@ public static class PluginViews
                 Component = "NMHelper",
                 Props = new() { ["helperText"] = secondary },
             };
+    }
+
+    /// <summary>
+    /// One field, as the component that collects it. A label is a sibling
+    /// rather than a prop on the control: only the checkbox declares one, and
+    /// the rest would have dropped it silently.
+    /// </summary>
+    private static PluginComponent Field(string formId, PluginFormField field)
+    {
+        string id = $"{formId}-{field.Name}";
+
+        if (field.Type == PluginFormFieldType.Checkbox || field.Type == PluginFormFieldType.Toggle)
+            return new()
+            {
+                Id = id,
+                Component = field.Type == PluginFormFieldType.Toggle ? "NMToggle" : "NMCheckbox",
+                Props = new()
+                {
+                    ["name"] = field.Name,
+                    ["labelText"] = field.Label,
+                    ["checked"] = field.Value as bool? ?? false,
+                    ["ariaLabel"] = field.Label,
+                },
+            };
+
+        string component = field.Type switch
+        {
+            PluginFormFieldType.Select => "NMSelect",
+            PluginFormFieldType.File => "NMFileUpload",
+            _ => "NMInput",
+        };
+
+        Dictionary<string, object?> props = new()
+        {
+            ["name"] = field.Name,
+            ["placeholder"] = field.Placeholder ?? field.Label,
+            ["required"] = field.Required,
+            ["value"] = field.Value,
+        };
+
+        if (field.Type == PluginFormFieldType.Password || field.Type == PluginFormFieldType.Number)
+            props["type"] = field.Type;
+
+        if (field.Accept is not null)
+            props["accept"] = field.Accept;
+
+        if (field.Multiple)
+            props["multiple"] = true;
+
+        if (field.Options.Count > 0)
+            props["options"] = field.Options;
+
+        return new()
+        {
+            Id = $"{id}-group",
+            Component = PluginComponentType.Container,
+            Props = new()
+            {
+                ["variant"] = "ghost",
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = "column",
+
+                    ["width"] = "full",
+                    ["gap"] = new Dictionary<string, object?> { ["all"] = "1" },
+                },
+            },
+            Items =
+            [
+                new()
+                {
+                    Id = $"{id}-label",
+                    Component = "NMFormLabel",
+                    Items = [Leaf($"{id}-label-text", field.Label)],
+                },
+                new()
+                {
+                    Id = id,
+                    Component = component,
+                    Props = props,
+                },
+            ],
+        };
     }
 }

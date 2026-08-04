@@ -233,9 +233,12 @@ public class PluginViewContractTests
 
         string json = Serialize(form);
 
-        json.Should().Contain("\"type\":\"file\"");
+        // A field is the component that collects it, not a type string in a bag
+        // no component reads.
+        json.Should().Contain("\"component\":\"NMFileUpload\"");
         json.Should().Contain("\"accept\":\".torrent\"");
-        json.Should().Contain("\"type\":\"checkbox\"");
+        json.Should().Contain("\"component\":\"NMCheckbox\"");
+        json.Should().Contain("\"component\":\"NMButton\"");
     }
 
     [Fact]
