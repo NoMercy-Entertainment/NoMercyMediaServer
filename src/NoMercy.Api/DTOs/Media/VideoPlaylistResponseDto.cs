@@ -131,7 +131,7 @@ public class VideoPlaylistResponseDto
             return;
 
         UserData? userData = videoFile.UserData.FirstOrDefault();
-        string baseFolder = $"/{videoFile.Share}{videoFile.Folder}";
+        string baseFolder = $"/{videoFile.Share}{videoFile.Folder}".EncodePath();
 
         string? logo = episode
             .Tv.Images.OrderByDescending(image => image.VoteAverage)
@@ -171,12 +171,12 @@ public class VideoPlaylistResponseDto
             : null;
         Image = episode.Still;
         Logo = logo;
-        File = $"{baseFolder}{videoFile.Filename}";
+        File = $"{baseFolder}{videoFile.Filename.EncodePath()}";
         Sources =
         [
             new()
             {
-                Src = $"{baseFolder}{videoFile.Filename}",
+                Src = $"{baseFolder}{videoFile.Filename.EncodePath()}",
                 Type = videoFile.Filename.Contains(".mp4") ? "video/mp4" : "application/x-mpegURL",
                 Languages =
                     JsonConvert
@@ -193,7 +193,14 @@ public class VideoPlaylistResponseDto
 
         List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
             is { FileSize: > 0 } chaptersFile
-            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
+            ?
+            [
+                new()
+                {
+                    File = $"{baseFolder}{chaptersFile.FileName.EncodePath()}",
+                    Kind = "chapters",
+                },
+            ]
             : [];
 
         Tracks = NormalizePreviewTracks(
@@ -201,7 +208,7 @@ public class VideoPlaylistResponseDto
                 .Tracks.Select(t => new VideoTrack
                 {
                     Label = t.Label,
-                    File = $"{baseFolder}{t.File}",
+                    File = $"{baseFolder}{t.File.EncodePath()}",
                     Language = t.Language,
                     Kind = t.Kind,
                 })
@@ -221,7 +228,7 @@ public class VideoPlaylistResponseDto
             videoFile
                 .Metadata?.Fonts?.Select(font => new IFont
                 {
-                    FileName = $"{baseFolder}{font.FileName}",
+                    FileName = $"{baseFolder}{font.FileName.EncodePath()}",
                     FileHash = font.FileHash,
                     FileSize = font.FileSize,
                 })
@@ -266,7 +273,7 @@ public class VideoPlaylistResponseDto
             .FirstOrDefault(image => image.Type == "logo")
             ?.FilePath;
         UserData? userData = videoFile.UserData.FirstOrDefault();
-        string baseFolder = $"/{videoFile.Share}{videoFile.Folder}";
+        string baseFolder = $"/{videoFile.Share}{videoFile.Folder}".EncodePath();
 
         string title = movie.Translations.FirstOrDefault()?.Title ?? movie.Title;
         string? overview = movie.Translations.FirstOrDefault()?.Overview ?? movie.Overview;
@@ -294,12 +301,12 @@ public class VideoPlaylistResponseDto
             : null;
         Image = movie.Backdrop;
         Logo = logo;
-        File = $"{baseFolder}{videoFile.Filename}";
+        File = $"{baseFolder}{videoFile.Filename.EncodePath()}";
         Sources =
         [
             new()
             {
-                Src = $"{baseFolder}{videoFile.Filename}",
+                Src = $"{baseFolder}{videoFile.Filename.EncodePath()}",
                 Type = videoFile.Filename.Contains(".mp4") ? "video/mp4" : "application/x-mpegURL",
                 Languages =
                     JsonConvert
@@ -316,7 +323,14 @@ public class VideoPlaylistResponseDto
 
         List<VideoTrack> chaptersTrack = videoFile.Metadata?.ChapterFile
             is { FileSize: > 0 } chaptersFile
-            ? [new() { File = $"{baseFolder}{chaptersFile.FileName}", Kind = "chapters" }]
+            ?
+            [
+                new()
+                {
+                    File = $"{baseFolder}{chaptersFile.FileName.EncodePath()}",
+                    Kind = "chapters",
+                },
+            ]
             : [];
 
         Tracks = NormalizePreviewTracks(
@@ -324,7 +338,7 @@ public class VideoPlaylistResponseDto
                 .Tracks.Select(t => new VideoTrack
                 {
                     Label = t.Label,
-                    File = $"{baseFolder}{t.File}",
+                    File = $"{baseFolder}{t.File.EncodePath()}",
                     Language = t.Language,
                     Kind = t.Kind,
                 })
@@ -340,7 +354,7 @@ public class VideoPlaylistResponseDto
             videoFile
                 .Metadata?.Fonts?.Select(font => new IFont
                 {
-                    FileName = $"{baseFolder}{font.FileName}",
+                    FileName = $"{baseFolder}{font.FileName.EncodePath()}",
                     FileHash = font.FileHash,
                     FileSize = font.FileSize,
                 })
@@ -393,7 +407,7 @@ public class VideoPlaylistResponseDto
 
     private static Subs Subtitles(VideoFile videoFile)
     {
-        string baseFolder = $"/{videoFile.Share}{videoFile.Folder}";
+        string baseFolder = $"/{videoFile.Share}{videoFile.Folder}".EncodePath();
 
         string subtitles = videoFile.Subtitles ?? "[]";
         // Subtitles is a string column on VideoFile that can drift to
@@ -425,7 +439,8 @@ public class VideoPlaylistResponseDto
                     File =
                         $"{baseFolder}/subtitles{(videoFile?.Filename).OrEmpty()
                     .Replace(".mp4", "")
-                    .Replace(".m3u8", "")}.{language}.{type}.{ext}",
+                    .Replace(".m3u8", "")
+                    .EncodePath()}.{language}.{type}.{ext}",
                     Language = language,
                     Kind = "subtitles",
                 }

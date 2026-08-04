@@ -20,6 +20,7 @@ using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Encoder.LiveTranscode.Protocol;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Extensions;
 using NoMercy.Storage;
 using NoMercyQueue.Core.Resources;
 using EncoderMediaInfo = NoMercy.Encoder.Analysis.MediaInfo;
@@ -698,17 +699,12 @@ public class LiveTranscodeService(
                 (a, index) =>
                     new LiveAudioRendition(
                         Language: a.Language,
-                        Uri: EncodeServedPath($"{baseFolder}{a.FileName}"),
+                        Uri: $"{baseFolder}{a.FileName}".EncodePath(),
                         IsDefault: index == defaultIndex
                     )
             )
             .ToList();
     }
-
-    // Percent-encode each path segment (spaces, commas, apostrophes) while keeping
-    // the '/' separators DynamicStaticFilesMiddleware splits on and unescapes.
-    private static string EncodeServedPath(string path) =>
-        string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
 
     // Spawn one audio-only transcode per source language for a raw source, and
     // return the master's audio list pointing at each child's media playlist. The
@@ -867,7 +863,7 @@ public class LiveTranscodeService(
         string servedPath = BuildServedUrl(file);
         string ingestKey = ingestKeyStore.Issue(servedPath);
         int httpPort = RuntimeServerSettings.Current.InternalServerPort + 1;
-        string url = $"http://127.0.0.1:{httpPort}{EncodeServedPath(servedPath)}";
+        string url = $"http://127.0.0.1:{httpPort}{servedPath.EncodePath()}";
         string[] headers = ["-headers", $"X-NoMercy-Ingest-Key: {ingestKey}\r\n"];
         return (url, headers, ingestKey);
     }
