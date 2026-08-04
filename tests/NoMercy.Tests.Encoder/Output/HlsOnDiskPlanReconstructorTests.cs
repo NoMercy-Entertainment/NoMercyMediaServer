@@ -148,7 +148,8 @@ public class HlsOnDiskPlanReconstructorTests : IDisposable
         int width,
         int height,
         int bitDepth,
-        string colorTransfer
+        string colorTransfer,
+        string? pixelFormat = null
     )
     {
         MediaInfo info = new(
@@ -166,7 +167,7 @@ public class HlsOnDiskPlanReconstructorTests : IDisposable
                     Height: height,
                     FrameRate: 23.976,
                     BitDepth: bitDepth,
-                    PixelFormat: bitDepth >= 10 ? "yuv420p10le" : "yuv420p",
+                    PixelFormat: pixelFormat ?? (bitDepth >= 10 ? "yuv420p10le" : "yuv420p"),
                     ColorPrimaries: "bt2020",
                     ColorTransfer: colorTransfer,
                     ColorSpace: "bt2020nc",
@@ -188,6 +189,65 @@ public class HlsOnDiskPlanReconstructorTests : IDisposable
                 )
             )
             .ReturnsAsync(info);
+    }
+
+    /// <summary>
+    /// A 4:4:4 rendition reconstructed from disk must reach the master as Range
+    /// Extensions. The reconstruction probes the real stream but used to discard
+    /// its pixel format and assume 4:2:0, so a rung no handset can decode was
+    /// advertised as Main10 — a profile every handset claims. Clients selected it
+    /// and died at the decoder instead of passing over it.
+    /// </summary>
+    [Fact]
+    public async Task Reconstruct_FourFourFourRendition_IsAdvertisedAsRangeExtensions()
+    {
+        IStorage storage = TestStorageFactory.CreateLocal();
+
+        WriteVariant("video_3840x1600", "video_3840x1600", segmentBytes: 900_000);
+        WriteVariant("video_1920x800_SDR", "video_1920x800_SDR", segmentBytes: 300_000);
+        WriteVariant("audio_eng_eac3", "audio_eng_eac3", segmentBytes: 60_000);
+
+        SetupProbe(
+            "video_3840x1600",
+            codec: "hevc",
+            width: 3840,
+            height: 1600,
+            bitDepth: 10,
+            colorTransfer: "smpte2084",
+            pixelFormat: "yuv444p10le"
+        );
+        SetupProbe(
+            "video_1920x800_SDR",
+            codec: "h264",
+            width: 1920,
+            height: 800,
+            bitDepth: 8,
+            colorTransfer: "bt709"
+        );
+
+        HlsOnDiskPlanReconstructor reconstructor = new(_mediaAnalyzer.Object);
+        OutputPlan plan = await reconstructor.ReconstructAsync(
+            storage,
+            _outputDirectory,
+            CancellationToken.None
+        );
+
+        HlsOutputStrategy strategy = new(storage);
+        await strategy.FinalizeAsync(_outputDirectory, plan, "Title", CancellationToken.None);
+
+        string master = await File.ReadAllTextAsync(Path.Combine(_outputDirectory, "Title.m3u8"));
+
+        string? hdrLine = master
+            .Split('\n')
+            .FirstOrDefault(line =>
+                line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal)
+                && line.Contains("RESOLUTION=3840x1600", StringComparison.Ordinal)
+            );
+
+        hdrLine.Should().NotBeNull();
+        hdrLine.Should().Contain("hvc1.4.10.");
+        hdrLine.Should().NotContain("avc1");
+        hdrLine.Should().NotContain("hvc1.2.");
     }
 
     private static int ExtractInt(string streamInfLine, string attribute)

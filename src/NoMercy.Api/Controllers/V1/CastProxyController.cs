@@ -43,6 +43,20 @@ public class CastProxyController(
 {
     private const int TvControlPort = 7626;
 
+    /// <summary>
+    /// The LAN address to forward to, and the port it answers on.
+    ///
+    /// <see cref="Device.Ip"/> is where the device was last SEEN from, which through
+    /// the tunnel is the household's public address — it routes nowhere from inside
+    /// the LAN and the forward simply times out. Only the address a device advertises
+    /// over mDNS reaches its control server, and that is <see cref="Device.LanIp"/>.
+    /// A device without one is unreachable, never a reason to try the public address.
+    /// </summary>
+    internal static (string? Host, int Port) ResolveLanTarget(Device tv) =>
+        string.IsNullOrWhiteSpace(tv.LanIp)
+            ? (null, TvControlPort)
+            : (tv.LanIp, tv.LanPort ?? TvControlPort);
+
     // PATCH is not optional: every selection endpoint on the TV's /v1 surface —
     // subtitle, audio, quality, playlist, volume — is a PATCH. Omitting it made
     // the proxy answer 405 before the request ever reached the TV, so picking a
@@ -77,19 +91,13 @@ public class CastProxyController(
             return NotFoundResponse($"No owned TV device '{deviceId}' found");
         }
 
-        // Device.Ip is the address the TV was last SEEN from — through the tunnel
-        // that is the household's public IP, which routes nowhere from inside the
-        // LAN and simply times out. The TV's own control server is only reachable
-        // at the address it advertises over mDNS, which is what LanIp holds.
-        string? host = !string.IsNullOrWhiteSpace(tv.LanIp) ? tv.LanIp : null;
+        (string? host, int port) = ResolveLanTarget(tv);
 
         if (host is null)
         {
             logger.LogWarning("[CastProxy] TV '{Name}' has no LAN IP", tv.Name);
             return ServiceUnavailableResponse("Target TV has no known LAN address");
         }
-
-        int port = tv.LanPort ?? TvControlPort;
 
         // Transparent passthrough: the caller already includes the TV's API
         // version in the path (e.g. "v1/launch"), so forward it verbatim rather
