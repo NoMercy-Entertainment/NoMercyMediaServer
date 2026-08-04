@@ -156,4 +156,21 @@ public class ConfigPluginConsentStoreTests : IDisposable
 
         second.Contains(id).Should().BeFalse();
     }
+
+    [Fact]
+    public void Contains_ConsentGrantedBeforeIdsBecameUlid_IsStillHeld()
+    {
+        // The file a server that ran the GUID build left behind. A malformed
+        // config reads as no config, so getting this wrong does not throw —
+        // it silently un-consents every plugin the user already approved.
+        Guid legacyId = Guid.Parse("395df423-3e2f-4a1c-bc5b-dbc41a9133ef");
+        File.WriteAllText(
+            Path.Combine(_tempDir, "config.json"),
+            $@"{{""GrantedPluginIds"":[""{legacyId}""]}}"
+        );
+
+        ConfigPluginConsentStore store = MakeStore();
+
+        store.Contains(new(legacyId)).Should().BeTrue();
+    }
 }
