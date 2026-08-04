@@ -24,10 +24,10 @@ namespace NoMercy.Tests.Plugins;
 /// </summary>
 public class PluginSecretStoreTests
 {
-    private static readonly Guid PluginA = Guid.Parse("11111111-1111-1111-1111-111111111111");
-    private static readonly Guid PluginB = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Ulid PluginA = Ulid.Parse("0H248H248H248H248H248H248H");
+    private static readonly Ulid PluginB = Ulid.Parse("1248H248H248H248H248H248H2");
 
-    private static PluginSecretStore Store(Guid pluginId, IPluginConfiguration configuration) =>
+    private static PluginSecretStore Store(Ulid pluginId, IPluginConfiguration configuration) =>
         new(pluginId, new EphemeralDataProtectionProvider(), configuration);
 
     [Fact]

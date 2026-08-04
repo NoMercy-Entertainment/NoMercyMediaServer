@@ -28,7 +28,12 @@ public class FfProbeService : IFfProbeService
 {
     public static FfProbeService Current { get; } = new();
 
-    private const int ExecutionTimeoutMs = 30000;
+    // A probe over a non-seekable stdin pipe scans to end-of-file on containers whose
+    // duration lives there, which this codebase already measures at ~30 s/file on a
+    // network mount — the same number this ceiling used, so a remote FLAC raced its own
+    // timeout and every track was dropped from the import as unreadable. This bounds a
+    // hung process, nothing else, so it is set well clear of the work it has to allow.
+    private const int ExecutionTimeoutMs = 180000;
     private const int MaxRetries = 3;
 
     public async Task<FfProbeData> CreateAsync(string file, CancellationToken ct = default)
@@ -478,7 +483,12 @@ public class FfProbeService : IFfProbeService
                 RedirectStandardInput = true,
             };
 
+            // Every child is tied to the server's job object, so a shutdown takes the
+            // whole tree with it. Killing the process on the way out only covers the
+            // paths that reach their own cleanup; a crash or a stop mid-probe left
+            // ffmpeg and ffprobe running with nothing left to reap them.
             process.Start();
+            Shell.ChildProcessManager.Attach(process);
 
             string stdOut = await process.StandardOutput.ReadToEndAsync(linkedCts.Token);
 
@@ -498,8 +508,29 @@ public class FfProbeService : IFfProbeService
         finally
         {
             FfProbeThrottle.Release();
+            KillIfStillRunning(process);
             process?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Dispose releases the handle; it does not stop the program. Only the timeout path
+    /// killed the child, so a cancelled probe — which is what a shutdown raises — left an
+    /// ffprobe running with no parent. Eight of them accumulated across one debugging
+    /// session, the oldest surviving fifteen hours and several server restarts.
+    /// </summary>
+    private static void KillIfStillRunning(Process? process)
+    {
+        if (process is null)
+            return;
+
+        try
+        {
+            if (!process.HasExited)
+                process.Kill(entireProcessTree: true);
+        }
+        catch (InvalidOperationException) { }
+        catch (NotSupportedException) { }
     }
 
     private async Task<string> RunFfprobeStdinWithRetry(
@@ -598,7 +629,12 @@ public class FfProbeService : IFfProbeService
                 CreateNoWindow = true,
             };
 
+            // Every child is tied to the server's job object, so a shutdown takes the
+            // whole tree with it. Killing the process on the way out only covers the
+            // paths that reach their own cleanup; a crash or a stop mid-probe left
+            // ffmpeg and ffprobe running with nothing left to reap them.
             process.Start();
+            Shell.ChildProcessManager.Attach(process);
 
             Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(linkedCts.Token);
             Task pumpTask = PumpStdinAsync(driver, file, process, linkedCts.Token);
@@ -636,6 +672,7 @@ public class FfProbeService : IFfProbeService
         {
             FfProbeThrottle.Release();
             FfProbeThrottle.ReleaseRemote();
+            KillIfStillRunning(process);
             process?.Dispose();
         }
     }

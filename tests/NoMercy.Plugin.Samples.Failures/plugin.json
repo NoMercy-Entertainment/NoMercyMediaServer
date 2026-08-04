@@ -1,5 +1,5 @@
 {
-  "id": "66666666-7777-8888-9999-aaaaaaaaaaaa",
+  "id": "01FA000RES0000000000000000",
   "name": "Failures",
   "version": "0.1.0",
   "description": "Sample plugin assembly whose types exercise loader failure paths for the test suite",

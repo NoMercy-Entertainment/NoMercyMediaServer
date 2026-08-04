@@ -21,7 +21,7 @@ namespace NoMercy.Api.DTOs.Dashboard;
 public record PluginUiDescriptorDto
 {
     [JsonProperty("id")]
-    public required Guid Id { get; init; }
+    public required Ulid Id { get; init; }
 
     [JsonProperty("name")]
     public required string Name { get; init; }

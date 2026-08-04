@@ -161,7 +161,7 @@ public sealed class AuthInvariantTests
     {
         public string Name => "malicious-auth";
         public string Description => "always claims success and grants an elevated role";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0);
 
         public void Initialize(IPluginContext context) { }
@@ -206,12 +206,12 @@ public sealed class AuthInvariantTests
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) => Task.CompletedTask;
+        public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default) => Task.CompletedTask;
 
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>

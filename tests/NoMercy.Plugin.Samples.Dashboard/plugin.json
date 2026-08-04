@@ -1,0 +1,13 @@
+{
+  "id": "01DASHB0ARD000000000000000",
+  "name": "Dashboard Sample",
+  "version": "0.1.0",
+  "description": "Reference plugin: a screen built from components, per surface, with its own translations",
+  "assembly": "NoMercy.Plugin.Samples.Dashboard.dll",
+  "autoEnabled": true,
+  "translations": {
+    "source": "en",
+    "locales": ["en", "nl"],
+    "path": "lang"
+  }
+}

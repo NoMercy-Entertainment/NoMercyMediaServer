@@ -259,8 +259,6 @@ public static class PluginServiceCollectionExtensions
                             && t is { IsAbstract: false, IsInterface: false }
                         );
 
-                    bool registeredAny = false;
-
                     foreach (Type registratorType in registratorTypes)
                     {
                         if (
@@ -269,18 +267,19 @@ public static class PluginServiceCollectionExtensions
                         )
                         {
                             registrator.RegisterServices(services);
-                            registeredAny = true;
                         }
                     }
 
-                    // This pass is the only moment a plugin's services can reach
-                    // the container. Recording that it happened is what lets the
-                    // advisor tell an owner that toggling THIS plugin later
-                    // needs no restart — without it, every service-contributing
-                    // plugin reports "restart required" forever, including the
-                    // ones that were here all along.
-                    if (registeredAny)
-                        RestartAdvisorIn(services)?.MarkRegisteredAtStartup(manifest.Id);
+                    // Marked because the plugin was PRESENT for this pass, not
+                    // because it registered anything in it.
+                    //
+                    // This is also where a plugin's controllers are picked up,
+                    // and the advisor consults the same flag for routes. Gating
+                    // it on `registeredAny` meant a plugin that declares `rest`
+                    // and contributes no services — which is most of them — was
+                    // never marked, so it reported "needs a restart" after every
+                    // boot including the restart the owner had just performed.
+                    RestartAdvisorIn(services)?.MarkRegisteredAtStartup(manifest.Id);
                 }
                 finally
                 {

@@ -18,7 +18,7 @@ namespace NoMercy.Tests.Plugins;
 public class PluginManifestParserV2Tests
 {
     private const string V1Json = """
-        { "id":"b3d4f1a2-7c5e-4d8a-9f10-1c2b3a4d5e6f","name":"Internet Radio Provider",
+        { "id":"5KTKRT4Z2Y9P59Y40W5CX4TQKF","name":"Internet Radio Provider",
           "description":"radio","version":"1.0.0","targetAbi":"10.0",
           "assembly":"NoMercy.Plugin.InternetRadio.dll","autoEnabled":true }
         """;
@@ -36,7 +36,7 @@ public class PluginManifestParserV2Tests
     public void Parse_V2Manifest_PopulatesCapabilities()
     {
         string json = """
-            { "id":"b3d4f1a2-7c5e-4d8a-9f10-1c2b3a4d5e6f","name":"Radio","description":"d",
+            { "id":"5KTKRT4Z2Y9P59Y40W5CX4TQKF","name":"Radio","description":"d",
               "version":"1.0.0","assembly":"x.dll",
               "capabilities":{ "hooks":["mediaSource","ui"],
                 "network":{"hosts":["*.somafm.com"]},

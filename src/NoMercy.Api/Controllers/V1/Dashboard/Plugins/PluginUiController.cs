@@ -39,6 +39,90 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// <summary>
     /// Every plugin the caller's client should show in its navigation.
     /// </summary>
+    /// <summary>
+    /// Every plugin screen the server can place, grouped by the area it lands in.
+    ///
+    /// This is what the addons page browses. The client does not work out where
+    /// anything goes: the route is resolved here from the mount's kind, so the
+    /// web app, a phone and a television all navigate to the same place without
+    /// agreeing on anything but the word.
+    /// </summary>
+    /// <summary>
+    /// A plugin's declared pages on one surface, with the shell each wants and
+    /// the path already resolved. A plugin declaring none reports none, and its
+    /// screens stay reachable through the wildcard.
+    /// </summary>
+    private List<object> Pages(Ulid pluginId, string kind, string surface)
+    {
+        if (pluginManager.GetPluginInstance(pluginId) is not IUiPlugin plugin)
+            return [];
+
+        string prefix = PluginRoutes.PrefixFor(kind, pluginId).TrimEnd('/');
+
+        return plugin
+            .Routes.On(surface)
+            .Select(object (route) => new
+            {
+                route.Name,
+                route.Label,
+                Layout = route.LayoutFor(surface),
+                Path = prefix + (route.Path == "/" ? string.Empty : route.Path)
+            })
+            .ToList();
+    }
+
+    [HttpGet("api/v{version:apiVersion}/plugins/ui/browse")]
+    public IActionResult Browse([FromQuery] string? surface)
+    {
+        string asking = PluginSurface.IsKnown(surface) ? surface! : PluginSurface.Web;
+
+        var groups = pluginManager
+            .GetInstalledPlugins()
+            .Where(HasUi)
+            .SelectMany(info =>
+                (pluginManager.GetPluginInstance(info.Id) as IUiPlugin)?.NavEntries.Select(entry => new
+                {
+                    PluginId = info.Id,
+                    PluginName = info.Name,
+                    entry.Label,
+                    entry.Icon,
+                    Kind = PluginKind.IsKnown(entry.Section) ? entry.Section : PluginKind.Dashboard,
+                    entry.Route,
+                    // Offered here at all, which is a different question from
+                    // what it looks like once opened.
+                    AppearsHere = entry.AppearsOn(asking)
+                }) ?? []
+            )
+            // A kind the server does not place is dropped rather than listed
+            // with a route nothing answers, which would read as a broken plugin.
+            .Where(entry => PluginKind.DrawsUi(entry.Kind) && entry.AppearsHere)
+            .GroupBy(entry => entry.Kind)
+            .OrderBy(group => Array.IndexOf(PluginKind.All, group.Key))
+            .Select(group => new
+            {
+                Kind = group.Key,
+                Entries = group
+                    .Select(entry => new
+                    {
+                        entry.PluginId,
+                        entry.PluginName,
+                        entry.Label,
+                        entry.Icon,
+                        Path = PluginRoutes.PrefixFor(entry.Kind, entry.PluginId).TrimEnd('/')
+                            + (entry.Route == "/" ? string.Empty : entry.Route),
+                        // Every page the plugin declares, so a client registers a
+                        // named route for each when a server is chosen rather than
+                        // discovering them one navigation at a time.
+                        Pages = Pages(entry.PluginId, entry.Kind, asking)
+                    })
+                    .OrderBy(entry => entry.PluginName)
+                    .ToList()
+            })
+            .ToList();
+
+        return Ok(new DataResponseDto<object> { Data = groups });
+    }
+
     [HttpGet("api/v{version:apiVersion}/plugins/ui")]
     public IActionResult Discover()
     {
@@ -59,8 +143,36 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
     /// <summary>
     /// What a plugin wants rendered for one of its routes.
     /// </summary>
-    [HttpGet("api/v{version:apiVersion}/plugins/{id:guid}/view")]
-    public async Task<IActionResult> View(Guid id, [FromQuery] string? route, CancellationToken ct)
+    /// <summary>
+    /// The plugin's own strings for one locale.
+    ///
+    /// A plugin supplies the text in the components it builds, so the client has
+    /// no way to translate what it has never seen. Serving them under the
+    /// plugin's id lets the client merge them into its own catalogue as a
+    /// namespace, which is what keeps two plugins using the same key apart.
+    /// </summary>
+    [HttpGet("api/v{version:apiVersion}/plugins/{id:ulid}/translations/{locale}")]
+    public async Task<IActionResult> Translations(Ulid id, string locale, CancellationToken ct)
+    {
+        PluginInfo? info = pluginManager.GetPluginInfo(id);
+
+        if (info is null)
+            return NotFoundResponse("Plugin not found");
+
+        // The manager owns the fallback because it is the thing holding the
+        // manifest: a viewer whose language the plugin does not ship reads it in
+        // the language it was written in, never in empty labels.
+        Dictionary<string, string>? strings = await pluginManager.ReadTranslationsAsync(id, locale, ct);
+
+        return Ok(new DataResponseDto<Dictionary<string, string>> { Data = strings ?? [] });
+    }
+
+    [HttpGet("api/v{version:apiVersion}/plugins/{id:ulid}/view")]
+    public async Task<IActionResult> View(
+        Ulid id,
+        [FromQuery] string? route,
+        [FromQuery] string? surface,
+        CancellationToken ct)
     {
         PluginInfo? info = pluginManager.GetPluginInfo(id);
 
@@ -74,14 +186,27 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
         {
             Route = string.IsNullOrWhiteSpace(route) ? "/" : route,
             Query = Request
-                .Query.Where(entry => entry.Key != "route")
+                .Query.Where(entry => entry.Key != "route" && entry.Key != "surface")
                 .ToDictionary(entry => entry.Key, entry => entry.Value.ToString()),
             UserId = User.UserId().ToString(),
+            // An unknown surface falls back rather than being passed through. A
+            // plugin branching on it would hit its own default and serve the
+            // desktop shape to a television, which looks like a plugin bug.
+            Surface = PluginSurface.IsKnown(surface) ? surface! : PluginSurface.Web,
         };
 
         try
         {
             PluginView view = await plugin.GetViewAsync(request, ct);
+
+            // A declared route names the shell its page wants, and the plugin
+            // should not have to repeat it on every view it builds. A view that
+            // named one itself keeps it.
+            PluginRouteMatch? declared = plugin.Routes.Resolve(request.Route);
+
+            if (declared is not null && view.Layout == PluginLayout.Standard)
+                view.Layout = declared.Route.LayoutFor(request.Surface);
+
             return Ok(new DataResponseDto<PluginView> { Data = view });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

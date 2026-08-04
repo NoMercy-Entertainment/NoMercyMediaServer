@@ -25,11 +25,11 @@ namespace NoMercy.Tests.Plugins;
 /// </summary>
 public class PluginAssemblyTrackerTests : IDisposable
 {
-    private static readonly Guid PluginId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+    private static readonly Ulid PluginId = Ulid.Parse("4SK6CSK6CSK6CSK6CSK6CSK6CS");
 
     private readonly string _directory = Path.Combine(
         Path.GetTempPath(),
-        "nomercy-tracker-" + Guid.NewGuid().ToString("N")
+        "nomercy-tracker-" + Ulid.NewUlid().ToString()
     );
 
     private readonly string _assemblyPath;

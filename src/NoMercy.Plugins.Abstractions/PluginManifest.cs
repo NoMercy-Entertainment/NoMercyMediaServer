@@ -16,7 +16,8 @@ namespace NoMercy.Plugins.Abstractions;
 public class PluginManifest
 {
     [JsonPropertyName("id")]
-    public required Guid Id { get; init; }
+    [JsonConverter(typeof(PluginIdJsonConverter))]
+    public required Ulid Id { get; init; }
 
     [JsonPropertyName("name")]
     public required string Name { get; init; }
@@ -41,6 +42,12 @@ public class PluginManifest
 
     [JsonPropertyName("autoEnabled")]
     public bool AutoEnabled { get; init; } = true;
+
+    /// <summary>
+    /// The translations this plugin ships, checked when it loads.
+    /// </summary>
+    [JsonPropertyName("translations")]
+    public PluginTranslations? Translations { get; init; }
 
     [JsonPropertyName("capabilities")]
     public PluginCapabilities? Capabilities { get; init; }

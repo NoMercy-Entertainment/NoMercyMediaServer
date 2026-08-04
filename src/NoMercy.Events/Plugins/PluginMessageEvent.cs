@@ -44,7 +44,7 @@ public sealed class PluginMessageEvent : EventBase
     public override string Source => "Plugin";
 
     /// <summary>Which plugin raised it. Subscribers filter on this first.</summary>
-    public required Guid PluginId { get; init; }
+    public required Ulid PluginId { get; init; }
 
     /// <summary>
     /// The plugin's own name for the event, e.g. <c>download.completed</c>.
@@ -65,7 +65,7 @@ public sealed class PluginMessageEvent : EventBase
     /// hand-assemble a node to raise one.
     /// </summary>
     public static PluginMessageEvent From<T>(
-        Guid pluginId,
+        Ulid pluginId,
         string name,
         T payload,
         JsonSerializerOptions? options = null

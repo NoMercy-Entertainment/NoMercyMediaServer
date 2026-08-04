@@ -18,7 +18,7 @@ namespace NoMercy.Plugins.Abstractions;
 /// </summary>
 public interface IPluginHubHandler
 {
-    Guid PluginId { get; }
+    Ulid PluginId { get; }
 
     Task HandleAsync(PluginHubMessage message, IPluginHubClient client, CancellationToken ct);
 }

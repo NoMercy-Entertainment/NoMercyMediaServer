@@ -41,6 +41,22 @@ public static class PluginGrantKind
     public const string NetworkHost = "network.host";
 
     /// <summary>
+    /// One mediated capability, as `capability.&lt;name&gt;`. Built from the
+    /// capability rather than listed beside it, so a new one cannot be added and
+    /// left ungated by someone who forgot the second list.
+    /// </summary>
+    public static string ForCapability(string capability) => PluginCapability.GrantFor(capability);
+
+    /// <summary>
+    /// Playing something the library does not own, by URL.
+    ///
+    /// Finer than the player capability as a whole, because arranging a viewer's
+    /// own media and choosing what comes out of their speakers are different
+    /// amounts of trust, and only the second one needs asking about.
+    /// </summary>
+    public const string PlayerSource = "player.source";
+
+    /// <summary>
     /// One library the plugin may write to and delete within, by library id.
     /// The value is a library id, or <see cref="PluginGrant.Everything"/> for
     /// every library the server has.

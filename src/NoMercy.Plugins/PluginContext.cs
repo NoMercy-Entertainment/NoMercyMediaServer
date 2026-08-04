@@ -27,7 +27,7 @@ public class PluginContext : IPluginContext
     public string DataFolderPath { get; }
     public IPluginConfiguration Configuration { get; }
     public HttpClient HttpClient { get; }
-    public Guid PluginId { get; }
+    public Ulid PluginId { get; }
     public IPluginSecretStore Secrets { get; }
     public IPluginLibraryQuery Library { get; }
     public IPluginLibraryWriter? LibraryWriter { get; }
@@ -35,7 +35,7 @@ public class PluginContext : IPluginContext
     public IPluginHubContext Hub { get; }
 
     public PluginContext(
-        Guid pluginId,
+        Ulid pluginId,
         IEventBus eventBus,
         IServiceProvider services,
         ILogger logger,

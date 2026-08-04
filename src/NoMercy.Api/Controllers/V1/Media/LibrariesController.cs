@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -23,6 +24,8 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -33,9 +36,128 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/libraries")]
 public class LibrariesController(
     ILibraryRepository libraryRepository,
-    IDbContextFactory<MediaContext> contextFactory
+    IDbContextFactory<MediaContext> contextFactory,
+    IPluginManager pluginManager
 ) : BaseController
 {
+    /// <summary>
+    /// Every way into the library section, in the order they are drawn.
+    ///
+    /// <para>
+    /// Which of these exist is not a client's question to answer. A viewer
+    /// granted only a music library has no people, specials or genres to browse,
+    /// and a plugin's page exists only while that plugin is enabled — both are
+    /// facts the server holds. The clients each carried their own copy of this
+    /// list and drifted, and a plugin that mounted into the library section had
+    /// nowhere to appear at all.
+    /// </para>
+    /// </summary>
+    [HttpGet]
+    [Route("navigation")]
+    public async Task<IActionResult> Navigation(CancellationToken ct = default)
+    {
+        Guid userId = User.UserId();
+
+        List<Library> libraries = await libraryRepository.GetLibraries(userId, ct);
+        List<LibraryNavigationEntryDto> entries = [];
+
+        foreach (
+            Library library in libraries
+                .Where(library => library.Type != "music")
+                .OrderBy(library => library.Order)
+        )
+        {
+            entries.Add(
+                new()
+                {
+                    Id = library.Id.ToString(),
+                    Label = library.Title,
+                    Icon = IconForLibraryType(library.Type),
+                    Link = $"/libraries/{library.Id}",
+                    Origin = LibraryNavigationOrigin.Library,
+                }
+            );
+        }
+
+        bool hasVideo = libraries.Any(library => library.Type != "music");
+        bool hasMovies = libraries.Any(library => library.Type == "movie");
+
+        if (hasMovies)
+        {
+            entries.Add(
+                Page("collections", "library.base.collections", "collection1", "/collection")
+            );
+        }
+
+        if (hasVideo)
+        {
+            entries.Add(Page("specials", "library.base.specials", "sparkles", "/specials"));
+            entries.Add(Page("genres", "library.base.genres", "witchHat", "/genres"));
+            entries.Add(Page("people", "library.base.people", "user", "/person"));
+            entries.Add(Page("favorites", "library.base.favorites", "heart", "/favorites"));
+            entries.Add(Page("lists", "library.base.my_lists", "bulletList", "/lists"));
+        }
+
+        entries.AddRange(PluginEntries(PluginKind.Library, PluginKind.Video));
+
+        return Ok(new DataResponseDto<List<LibraryNavigationEntryDto>> { Data = entries });
+    }
+
+    private static LibraryNavigationEntryDto Page(
+        string id,
+        string label,
+        string icon,
+        string link
+    ) =>
+        new()
+        {
+            Id = id,
+            Label = label,
+            Icon = icon,
+            Link = link,
+            Origin = LibraryNavigationOrigin.Page,
+        };
+
+    /// <summary>
+    /// A library the app has no glyph for is still a library: it gets the folder
+    /// rather than nothing, which is what an unmapped type used to draw.
+    /// </summary>
+    private static string IconForLibraryType(string? type) =>
+        type switch
+        {
+            "anime" or "tv" => "monitor",
+            "movie" => "movieClap",
+            "music" => "noteDouble",
+            _ => "folder",
+        };
+
+    /// <summary>
+    /// The pages plugins mount into this section. A plugin awaiting consent or
+    /// disabled has no instance, so it contributes nothing — the entry appears
+    /// the moment it is enabled and disappears again when it is not.
+    /// </summary>
+    private List<LibraryNavigationEntryDto> PluginEntries(params string[] kinds) =>
+        pluginManager
+            .GetInstalledPlugins()
+            .SelectMany(info =>
+                (pluginManager.GetPluginInstance(info.Id) as IUiPlugin)
+                    ?.NavEntries.Where(entry => kinds.Contains(entry.Section))
+                    .Select(entry => new LibraryNavigationEntryDto
+                    {
+                        Id = $"plugin-{info.Id}-{entry.Route.Trim('/')}".TrimEnd('-'),
+                        Label = entry.Label,
+                        Icon = entry.Icon ?? string.Empty,
+                        Link =
+                            PluginRoutes.PrefixFor(entry.Section, info.Id).TrimEnd('/')
+                            + (entry.Route == "/" ? string.Empty : entry.Route),
+                        Origin = LibraryNavigationOrigin.Plugin,
+                        PluginId = info.Id,
+                    })
+                ?? []
+            )
+            .OrderBy(entry => entry.Label)
+            .ToList();
+
     [HttpGet]
     [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Libraries(CancellationToken ct = default)
@@ -59,84 +181,116 @@ public class LibrariesController(
         string country = Country();
 
         // Start all independent queries in parallel - each task gets its own DbContext for thread safety
-        Task<List<Library>> librariesTask = Task.Run(async () =>
-        {
-            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(contextFactory).GetLibrariesLite(userId, ct);
-        }, ct);
-        Task<Dictionary<Ulid, int>> countsTask = Task.Run(async () =>
-        {
-            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(contextFactory).GetLibraryItemCountsAsync(
-                userId,
-                ct
-            );
-        }, ct);
-        Task<List<CollectionListDto>> collectionsTask = Task.Run(async () =>
-        {
-            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new CollectionRepository(contextFactory).GetCollectionItemCardsAsync(
-                userId,
-                language,
-                country,
-                10,
-                0,
-                ct
-            );
-        }, ct);
-        Task<List<SpecialCardDto>> specialsTask = Task.Run(async () =>
-        {
-            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new SpecialRepository(ctx, contextFactory).GetSpecialItemCardsAsync(
-                userId,
-                language,
-                country,
-                10,
-                0,
-                ct
-            );
-        }, ct);
-        Task<HomeTvCardDto?> randomTvTask = Task.Run(async () =>
-        {
-            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(contextFactory).GetRandomTvCardAsync(
-                userId,
-                language,
-                country,
-                ct
-            );
-        }, ct);
-        Task<HomeMovieCardDto?> randomMovieTask = Task.Run(async () =>
-        {
-            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new LibraryRepository(contextFactory).GetRandomMovieCardAsync(
-                userId,
-                language,
-                country,
-                ct
-            );
-        }, ct);
-        Task<FavoritesData> favoritesTask = Task.Run(async () =>
-        {
-            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new HomeRepository(ctx, contextFactory).GetFavoritesAsync(
-                userId,
-                language,
-                country,
-                ct
-            );
-        }, ct);
-        Task<List<UserPlaylistSummary>> myListsTask = Task.Run(async () =>
-        {
-            await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
-            return await new UserPlaylistRepository(contextFactory).GetUserPlaylistsAsync(
-                userId,
-                ct
-            );
-        }, ct);
-
-        await Task.WhenAll([librariesTask, countsTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask, favoritesTask, myListsTask]
+        Task<List<Library>> librariesTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await new LibraryRepository(contextFactory).GetLibrariesLite(userId, ct);
+            },
+            ct
         );
+        Task<Dictionary<Ulid, int>> countsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await new LibraryRepository(contextFactory).GetLibraryItemCountsAsync(
+                    userId,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<List<CollectionListDto>> collectionsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await new CollectionRepository(contextFactory).GetCollectionItemCardsAsync(
+                    userId,
+                    language,
+                    country,
+                    10,
+                    0,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<List<SpecialCardDto>> specialsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await new SpecialRepository(ctx, contextFactory).GetSpecialItemCardsAsync(
+                    userId,
+                    language,
+                    country,
+                    10,
+                    0,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<HomeTvCardDto?> randomTvTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await new LibraryRepository(contextFactory).GetRandomTvCardAsync(
+                    userId,
+                    language,
+                    country,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<HomeMovieCardDto?> randomMovieTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await new LibraryRepository(contextFactory).GetRandomMovieCardAsync(
+                    userId,
+                    language,
+                    country,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<FavoritesData> favoritesTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await new HomeRepository(ctx, contextFactory).GetFavoritesAsync(
+                    userId,
+                    language,
+                    country,
+                    ct
+                );
+            },
+            ct
+        );
+        Task<List<UserPlaylistSummary>> myListsTask = Task.Run(
+            async () =>
+            {
+                await using MediaContext ctx = await contextFactory.CreateDbContextAsync(ct);
+                return await new UserPlaylistRepository(contextFactory).GetUserPlaylistsAsync(
+                    userId,
+                    ct
+                );
+            },
+            ct
+        );
+
+        await Task.WhenAll([
+            librariesTask,
+            countsTask,
+            collectionsTask,
+            specialsTask,
+            randomTvTask,
+            randomMovieTask,
+            favoritesTask,
+            myListsTask,
+        ]);
 
         List<Library> libraries = librariesTask.Result;
         Dictionary<Ulid, int> itemCounts = countsTask.Result;
@@ -408,8 +562,15 @@ public class LibrariesController(
             );
         });
 
-        await Task.WhenAll([librariesTask, collectionsTask, specialsTask, randomTvTask, randomMovieTask, favoritesTask, myListsTask]
-        );
+        await Task.WhenAll([
+            librariesTask,
+            collectionsTask,
+            specialsTask,
+            randomTvTask,
+            randomMovieTask,
+            favoritesTask,
+            myListsTask,
+        ]);
 
         List<Library> libraries = librariesTask.Result;
         List<CollectionListDto> collections = collectionsTask.Result;

@@ -37,7 +37,7 @@ namespace NoMercy.Data.Plugins;
 /// </para>
 /// </summary>
 public class PluginLibraryWriter(
-    Guid pluginId,
+    Ulid pluginId,
     IDbContextFactory<MediaContext> contextFactory,
     IStorageFactory storageFactory,
     IPluginGrantStore grants,
@@ -236,7 +236,7 @@ public class PluginLibraryWriterFactory(
     ILoggerFactory loggerFactory
 ) : IPluginLibraryWriterFactory
 {
-    public IPluginLibraryWriter? CreateFor(Guid pluginId)
+    public IPluginLibraryWriter? CreateFor(Ulid pluginId)
     {
         // The capability says the plugin wants this; the grant says the owner
         // allowed it. No grant, no writer — and the context exposes null, so a

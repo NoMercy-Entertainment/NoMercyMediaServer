@@ -40,7 +40,7 @@ public class PluginGrantDecisionDto : PluginGrantDto
 public class PluginGrantRequestDto(PluginGrantRequest request)
 {
     [JsonProperty("plugin_id")]
-    public Guid PluginId { get; } = request.PluginId;
+    public Ulid PluginId { get; } = request.PluginId;
 
     [JsonProperty("kind")]
     public string Kind { get; } = request.Kind;

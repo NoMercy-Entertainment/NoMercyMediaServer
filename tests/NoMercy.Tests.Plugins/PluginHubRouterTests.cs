@@ -27,11 +27,11 @@ namespace NoMercy.Tests.Plugins;
 [Trait("Category", "Unit")]
 public class PluginHubRouterTests
 {
-    private static readonly Guid PluginId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    private static readonly Ulid PluginId = Ulid.Parse("5ANANANEXVSK6DVQFEXVQEXVQE");
 
-    private sealed class RecordingHandler(Guid pluginId) : IPluginHubHandler
+    private sealed class RecordingHandler(Ulid pluginId) : IPluginHubHandler
     {
-        public Guid PluginId { get; } = pluginId;
+        public Ulid PluginId { get; } = pluginId;
         public List<string> Received { get; } = [];
         public bool Throws { get; init; }
 
@@ -58,19 +58,19 @@ public class PluginHubRouterTests
     {
         public IReadOnlyList<PluginInfo> GetInstalledPlugins() => info is null ? [] : [info];
 
-        public PluginInfo? GetPluginInfo(Guid pluginId) =>
+        public PluginInfo? GetPluginInfo(Ulid pluginId) =>
             info is not null && info.Id == pluginId ? info : null;
 
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>

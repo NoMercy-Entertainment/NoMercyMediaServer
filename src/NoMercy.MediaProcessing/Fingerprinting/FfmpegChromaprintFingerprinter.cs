@@ -32,6 +32,8 @@ public sealed partial class FfmpegChromaprintFingerprinter(
     ILogger<FfmpegChromaprintFingerprinter> logger
 ) : IAudioFingerprinter
 {
+    private static readonly TimeSpan FingerprintTimeout = TimeSpan.FromMinutes(3);
+
     /// <summary>
     /// A chromaprint fingerprint in AcoustID's wire form: URL-safe base64. The
     /// muxer writes nothing else on stdout, so the whole payload is the value —
@@ -71,12 +73,32 @@ public sealed partial class FfmpegChromaprintFingerprinter(
             "-",
         ];
 
-        ProcessResult result = await processRunner.RunAsync(
-            options.FfmpegPath,
-            arguments,
-            workingDirectory: null,
-            cancellationToken: ct
-        );
+        // ffmpeg reading a stalled network mount never returns, and RunAsync waits on
+        // the caller's token alone — so one unreadable file held the single import
+        // worker for good and every later music import queued behind it forever.
+        using CancellationTokenSource fingerprintCts =
+            CancellationTokenSource.CreateLinkedTokenSource(ct);
+        fingerprintCts.CancelAfter(FingerprintTimeout);
+
+        ProcessResult result;
+        try
+        {
+            result = await processRunner.RunAsync(
+                options.FfmpegPath,
+                arguments,
+                workingDirectory: null,
+                cancellationToken: fingerprintCts.Token
+            );
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning(
+                "chromaprint fingerprinting timed out after {Seconds}s for {Path}",
+                FingerprintTimeout.TotalSeconds,
+                filePath
+            );
+            return null;
+        }
 
         if (!result.IsSuccess)
         {
@@ -129,12 +151,26 @@ public sealed partial class FfmpegChromaprintFingerprinter(
             localPath,
         ];
 
-        ProcessResult result = await processRunner.RunAsync(
-            options.FfprobePath,
-            arguments,
-            workingDirectory: null,
-            cancellationToken: ct
+        using CancellationTokenSource probeCts = CancellationTokenSource.CreateLinkedTokenSource(
+            ct
         );
+        probeCts.CancelAfter(FingerprintTimeout);
+
+        ProcessResult result;
+        try
+        {
+            result = await processRunner.RunAsync(
+                options.FfprobePath,
+                arguments,
+                workingDirectory: null,
+                cancellationToken: probeCts.Token
+            );
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning("duration probe timed out for {Path}", localPath);
+            return 0;
+        }
 
         if (!result.IsSuccess)
             return 0;

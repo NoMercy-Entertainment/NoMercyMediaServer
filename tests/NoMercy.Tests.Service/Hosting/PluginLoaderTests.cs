@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Service.Hosting;
 public class PluginLoaderTests
 {
     private static PluginLoadResult FakeResult(string name, string version) =>
-        new(Guid.NewGuid(), name, version, Mock.Of<IPlugin>());
+        new(Ulid.NewUlid(), name, version, Mock.Of<IPlugin>());
 
     private static PluginApplicationPartRegistrar PartRegistrar() =>
         new(new(), NullLogger<PluginApplicationPartRegistrar>.Instance);

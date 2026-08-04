@@ -37,13 +37,28 @@ public interface IPluginContext
     HttpClient HttpClient { get; }
 
     /// <summary>The plugin's own id, so it can name itself when raising an event or asking for a grant.</summary>
-    Guid PluginId { get; }
+    Ulid PluginId { get; }
 
     /// <summary>Protected storage for passwords and tokens, scoped to this plugin.</summary>
     IPluginSecretStore Secrets { get; }
 
     /// <summary>Reading the library. Read-only, so it needs no capability.</summary>
     IPluginLibraryQuery Library { get; }
+
+    /// <summary>
+    /// Everything the plugin can reach that it does not own, by name.
+    ///
+    /// The general way in. A host grows a capability without this contract
+    /// moving, and a plugin asks whether one exists before depending on it.
+    /// Null when the host mediates nothing, so existing hosts keep compiling.
+    /// </summary>
+    IPluginSystem? System => null;
+
+    /// <summary>
+    /// Playback, as a typed surface over <see cref="PluginCapability.Player" />.
+    /// One capability made convenient, never the only way to reach it.
+    /// </summary>
+    IPluginPlayer? Player => null;
 
     /// <summary>
     /// Writing to the library. Present only when the plugin declared

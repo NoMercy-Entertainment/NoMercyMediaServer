@@ -26,5 +26,5 @@ namespace NoMercy.Api.Plugins;
 public interface IPluginAssemblyCatalog
 {
     /// <summary>The plugin an assembly belongs to, or null when it is not one.</summary>
-    Guid? OwnerOf(Assembly assembly);
+    Ulid? OwnerOf(Assembly assembly);
 }

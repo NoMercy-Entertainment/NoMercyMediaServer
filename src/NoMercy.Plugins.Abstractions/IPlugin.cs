@@ -15,7 +15,7 @@ public interface IPlugin : IDisposable
 {
     string Name { get; }
     string Description { get; }
-    Guid Id { get; }
+    Ulid Id { get; }
     Version Version { get; }
     void Initialize(IPluginContext context);
 }

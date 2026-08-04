@@ -27,28 +27,37 @@ namespace NoMercy.Plugins.Abstractions;
 /// </summary>
 public static class PluginComponentType
 {
-    public const string Container = "PluginContainer";
-    public const string Text = "PluginText";
-    public const string Image = "PluginImage";
-    public const string List = "PluginList";
-    public const string Row = "PluginRow";
-    public const string Grid = "PluginGrid";
-    public const string Card = "PluginCard";
-    public const string Detail = "PluginDetail";
-    public const string Button = "PluginButton";
-    public const string Form = "PluginForm";
+    public const string Container = "NMCard";
+    public const string Text = "NMText";
+    public const string Image = "NMImage";
+    public const string List = "NMCard";
+    public const string Row = "NMCard";
+    public const string Grid = "NMCard";
+    public const string Card = "NMCard";
+    public const string Detail = "NMCard";
+    public const string Button = "NMButton";
+    public const string Form = "NMCard";
     public const string WebView = "PluginWebView";
-    public const string EmptyState = "PluginEmptyState";
-    public const string Spinner = "PluginSpinner";
+    public const string EmptyState = "NMEmptyState";
+    public const string Spinner = "NMSpinner";
 
-    /// <summary>Columns plus rows, each row optionally carrying an action.</summary>
-    public const string Table = "PluginTable";
+    /// <summary>
+    /// Columns plus rows, each row optionally carrying an action.
+    /// <para>
+    /// The one tag still drawn by the pre-design-system map. NMTable is a bare
+    /// table element with a single slot, and the design system generates no row
+    /// or cell component to put in it, so a payload cannot build one. Every
+    /// other tag here now names an NM component; this one changes the day those
+    /// two exist.
+    /// </para>
+    /// </summary>
+    public const string Table = "NMCard";
 
     /// <summary>Determinate when a value is set, indeterminate when it is not.</summary>
-    public const string Progress = "PluginProgress";
+    public const string Progress = "NMProgress";
 
     /// <summary>A status chip carrying a semantic variant, never a colour.</summary>
-    public const string Badge = "PluginBadge";
+    public const string Badge = "NMBadge";
 
     /// <summary>The tags every client is expected to render.</summary>
     public static IReadOnlySet<string> All { get; } =

@@ -56,4 +56,48 @@ public class PluginUiMount
 
     [JsonPropertyName("route")]
     public required string Route { get; init; }
+
+    /// <summary>
+    /// Which area of the app this mount lands in, from <see cref="PluginKind" />.
+    ///
+    /// On the mount rather than on the plugin, because a plugin is rarely one
+    /// thing: a subtitle plugin belongs with video and with the library, and a
+    /// scrobbler wants a page in music and its settings in the dashboard. One
+    /// kind for the whole plugin would force a choice that has no right answer.
+    /// </summary>
+    [JsonPropertyName("kind")]
+    public string Kind { get; init; } = PluginKind.Dashboard;
+
+    /// <summary>
+    /// Asks for a place in the main navigation beside the app's own sections.
+    ///
+    /// A request rather than a setting. If every plugin could take a top-level
+    /// slot the navigation becomes a junk drawer and the plugin installed last
+    /// wins the most prominent place, so the viewer decides which ones are
+    /// promoted and none are by default.
+    /// </summary>
+    [JsonPropertyName("requestsTopLevel")]
+    public bool RequestsTopLevel { get; init; }
+
+    /// <summary>
+    /// The surfaces this mount appears on, from <see cref="PluginSurface" />.
+    ///
+    /// Empty means every one, which is the right default: a plugin author who
+    /// says nothing wants their screen everywhere, not nowhere. Naming a subset
+    /// is for a screen that genuinely cannot exist elsewhere, such as one built
+    /// around a file picker on a television.
+    ///
+    /// This is coarser than branching inside the view and answers a different
+    /// question: not what the page looks like on a television, but whether the
+    /// viewer is offered it at all. Listing a screen that cannot work there
+    /// reads as a broken plugin rather than one that was never meant to.
+    /// </summary>
+    [JsonPropertyName("surfaces")]
+    public List<string> Surfaces { get; init; } = [];
+
+    /// <summary>Whether this mount is offered on the given surface.</summary>
+    public bool AppearsOn(string surface)
+    {
+        return Surfaces.Count == 0 || Surfaces.Contains(surface);
+    }
 }

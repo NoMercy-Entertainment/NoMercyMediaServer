@@ -63,7 +63,7 @@ public class PluginVersionDto(PluginVersionEntry entry)
 public class PluginCatalogueEntryDto
 {
     [JsonProperty("id")]
-    public Guid Id { get; init; }
+    public Ulid Id { get; init; }
 
     [JsonProperty("name")]
     public string Name { get; init; } = null!;

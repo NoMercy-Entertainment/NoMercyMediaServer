@@ -31,7 +31,7 @@ public class PluginBootScanTests : IDisposable
     {
         _tempPluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-boot-scan-" + Guid.NewGuid().ToString("N")
+            "nomercy-boot-scan-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempPluginsDir);
 
@@ -129,7 +129,7 @@ public class PluginBootScanTests : IDisposable
     {
         string missing = Path.Combine(
             Path.GetTempPath(),
-            "no-such-dir-" + Guid.NewGuid().ToString("N")
+            "no-such-dir-" + Ulid.NewUlid().ToString()
         );
         PluginManager manager = new(
             new InMemoryEventBus(),
@@ -252,7 +252,7 @@ public class PluginBootScanTests : IDisposable
             Path.Combine(disabledDir, "plugin.json"),
             """
             {
-              "id": "66666666-1111-2222-3333-444444444444",
+              "id": "36CSK6C48H48H36CT48H248H24",
               "name": "EchoDisabled",
               "version": "0.1.0",
               "description": "same assembly, never auto-enabled",

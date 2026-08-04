@@ -39,20 +39,20 @@ namespace NoMercy.Tests.Plugins;
 /// </summary>
 public class PluginLoaderFailureFixtureTests : IDisposable
 {
-    private static readonly Guid ConstructorThrowsPluginId = Guid.Parse(
-        "11111111-0000-0000-0000-000000000001"
+    private static readonly Ulid ConstructorThrowsPluginId = Ulid.Parse(
+        "01SAMPLE000000000000000001"
     );
-    private static readonly Guid InitializeThrowsPluginId = Guid.Parse(
-        "22222222-0000-0000-0000-000000000002"
+    private static readonly Ulid InitializeThrowsPluginId = Ulid.Parse(
+        "01SAMPLE000000000000000002"
     );
-    private static readonly Guid ServiceRegistratorPluginId = Guid.Parse(
-        "33333333-0000-0000-0000-000000000003"
+    private static readonly Ulid ServiceRegistratorPluginId = Ulid.Parse(
+        "01SAMPLE000000000000000003"
     );
-    private static readonly Guid InitializeThrowsDisposeSucceedsPluginId = Guid.Parse(
-        "44444444-0000-0000-0000-000000000004"
+    private static readonly Ulid InitializeThrowsDisposeSucceedsPluginId = Ulid.Parse(
+        "01SAMPLE000000000000000004"
     );
-    private static readonly Guid TypeSignatureDependsOnMissingAssemblyPluginId = Guid.Parse(
-        "55555555-0000-0000-0000-000000000005"
+    private static readonly Ulid TypeSignatureDependsOnMissingAssemblyPluginId = Ulid.Parse(
+        "01SAMPLE000000000000000005"
     );
 
     private readonly string _tempPluginsDir;
@@ -63,7 +63,7 @@ public class PluginLoaderFailureFixtureTests : IDisposable
     {
         _tempPluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-loader-failures-" + Guid.NewGuid().ToString("N")
+            "nomercy-loader-failures-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempPluginsDir);
 
@@ -156,8 +156,8 @@ public class PluginLoaderFailureFixtureTests : IDisposable
         IReadOnlyList<PluginInfo> installed = _manager.GetInstalledPlugins();
 
         // ConstructorThrowsPlugin never produced an instance, so SafePluginIdentity
-        // read a null instance back — Id stayed Guid.Empty, and the loader's
-        // `if (identity.Id != Guid.Empty)` guard means it was never recorded at all.
+        // read a null instance back — Id stayed Ulid.Empty, and the loader's
+        // `if (identity.Id != Ulid.Empty)` guard means it was never recorded at all.
         installed.Should().NotContain(p => p.Id == ConstructorThrowsPluginId);
 
         // InitializeThrowsPlugin constructed fine (a real, non-empty Id was read),
@@ -304,7 +304,7 @@ public class PluginLoaderFailureFixtureTests : IDisposable
             .Should()
             .Contain(e => e.PluginId == InitializeThrowsPluginId.ToString())
             .And.Contain(e => e.PluginId == InitializeThrowsDisposeSucceedsPluginId.ToString())
-            .And.Contain(e => e.PluginId == Guid.Empty.ToString());
+            .And.Contain(e => e.PluginId == Ulid.Empty.ToString());
     }
 
     [Fact]

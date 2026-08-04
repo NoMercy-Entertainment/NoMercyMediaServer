@@ -43,7 +43,7 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         _tempDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-lifecycle-mgr-" + Guid.NewGuid().ToString("N")
+            "nomercy-lifecycle-mgr-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempDir);
 
@@ -83,7 +83,7 @@ public class PluginLifecycleManagerTests : IDisposable
         catch (IOException) { }
     }
 
-    private static PluginInfo Info(Guid id, PluginStatus status, string? assemblyPath = null) =>
+    private static PluginInfo Info(Ulid id, PluginStatus status, string? assemblyPath = null) =>
         new()
         {
             Id = id,
@@ -99,7 +99,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task EnablePluginAsync_UnknownId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _lifecycle.EnablePluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _lifecycle.EnablePluginAsync(Ulid.NewUlid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -107,7 +107,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task EnablePluginAsync_AlreadyActive_IsANoOp()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Active), plugin, null);
 
@@ -121,7 +121,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task EnablePluginAsync_DisabledWithInstance_InitializesAndTransitionsToActive()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Disabled), plugin, null);
         List<PluginLoadedEvent> loaded = [];
@@ -144,10 +144,10 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task EnablePluginAsync_DisabledWithInstance_CreatesDataFolderWhenMissing()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Disabled), plugin, null);
-        string dataFolder = Path.Combine(_tempDir, "data", id.ToString("N"));
+        string dataFolder = Path.Combine(_tempDir, "data", id.ToString());
 
         Directory.Exists(dataFolder).Should().BeFalse();
 
@@ -165,7 +165,7 @@ public class PluginLifecycleManagerTests : IDisposable
         // throwing, so EnablePluginAsync completes either way. What this proves
         // is that the null-instance branch defers to the loader instead of
         // trying to call Initialize() on a null reference.
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string assemblyPath = Path.Combine(_tempDir, "missing-plugin.dll");
         _registry[id] = new(Info(id, PluginStatus.Disabled, assemblyPath), null, null);
 
@@ -182,7 +182,7 @@ public class PluginLifecycleManagerTests : IDisposable
         // `catch (InvalidOperationException) { throw; }` must let that specific
         // exception through unmodified rather than recording it as a generic
         // malfunction.
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Deleted), plugin, null);
 
@@ -201,7 +201,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task EnablePluginAsync_InitializeThrows_MarksMalfunctionedAndPublishesErrorEvent()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         ThrowingInitializePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Disabled), plugin, null);
         List<PluginErrorOccurredEvent> errors = [];
@@ -225,7 +225,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task DisablePluginAsync_UnknownId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _lifecycle.DisablePluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _lifecycle.DisablePluginAsync(Ulid.NewUlid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -233,7 +233,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task DisablePluginAsync_AlreadyDisabled_IsANoOp()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Disabled), plugin, null);
 
@@ -247,7 +247,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task DisablePluginAsync_Active_DisposesInstanceAndTransitionsToDisabled()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Active), plugin, null);
 
@@ -261,7 +261,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task DisablePluginAsync_ActiveWithNullInstance_DoesNotThrow()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         _registry[id] = new(Info(id, PluginStatus.Active), null, null);
 
         Func<Task> act = () => _lifecycle.DisablePluginAsync(id);
@@ -274,7 +274,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_UnknownId_ThrowsInvalidOperation()
     {
-        Func<Task> act = () => _lifecycle.UninstallPluginAsync(Guid.NewGuid());
+        Func<Task> act = () => _lifecycle.UninstallPluginAsync(Ulid.NewUlid());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -282,7 +282,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_RemovesFromRegistry_DisposesInstance_TransitionsToDeleted()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Active), plugin, null);
 
@@ -295,7 +295,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_NoAssemblyPath_DoesNotThrow()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath: null), plugin, null);
 
@@ -307,7 +307,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_AssemblyDirectoryExists_DeletesIt()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string pluginDir = Path.Combine(_tempDir, "SomePlugin");
         Directory.CreateDirectory(pluginDir);
         string assemblyPath = Path.Combine(pluginDir, "SomePlugin.dll");
@@ -323,7 +323,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_AssemblyDirectoryAlreadyGone_DoesNotThrow()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string assemblyPath = Path.Combine(_tempDir, "GoneAlready", "GoneAlready.dll");
         FakePlugin plugin = new();
         _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath), plugin, null);
@@ -336,7 +336,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_NullInstance_DoesNotThrow()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         _registry[id] = new(Info(id, PluginStatus.Active), null, null);
 
         Func<Task> act = () => _lifecycle.UninstallPluginAsync(id);
@@ -348,8 +348,8 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_RealLoadContext_UnloadsIt()
     {
-        Guid id = Guid.NewGuid();
-        string dummyPath = Path.Combine(_tempDir, $"unload-target-{Guid.NewGuid():N}.dll");
+        Ulid id = Ulid.NewUlid();
+        string dummyPath = Path.Combine(_tempDir, $"unload-target-{Ulid.NewUlid():N}.dll");
         File.WriteAllBytes(dummyPath, []);
         PluginLoadContext loadContext = new(dummyPath);
         bool unloaded = false;
@@ -369,7 +369,7 @@ public class PluginLifecycleManagerTests : IDisposable
         // filename like "bare.dll", which resolves to "" (empty, non-null).
         // The `pluginDir is not null` half of this guard exists specifically
         // for this root-path shape.
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string rootPath = Path.DirectorySeparatorChar.ToString();
         Path.GetDirectoryName(rootPath).Should().BeNull("this is exactly the edge case under test");
         FakePlugin plugin = new();
@@ -390,7 +390,7 @@ public class PluginLifecycleManagerTests : IDisposable
         // just Unload()ed but not yet garbage-collected (a real, non-contrived
         // race during a genuine uninstall), which a bare `catch (IOException)`
         // does not cover.
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string pluginDir = Path.Combine(_tempDir, "ReadOnlyPlugin");
         Directory.CreateDirectory(pluginDir);
         string assemblyPath = Path.Combine(pluginDir, "ReadOnlyPlugin.dll");
@@ -425,7 +425,7 @@ public class PluginLifecycleManagerTests : IDisposable
     [Fact]
     public async Task UninstallPluginAsync_DeleteDirectoryFails_LogsWarningInsteadOfThrowing()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string pluginDir = Path.Combine(_tempDir, "LockedPlugin");
         Directory.CreateDirectory(pluginDir);
         string assemblyPath = Path.Combine(pluginDir, "LockedPlugin.dll");
@@ -484,7 +484,7 @@ public class PluginLifecycleManagerTests : IDisposable
 
         public string Name => "fake";
         public string Description => "d";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0);
 
         public void Initialize(IPluginContext context) => InitializeCallCount++;
@@ -496,7 +496,7 @@ public class PluginLifecycleManagerTests : IDisposable
     {
         public string Name => "throwing";
         public string Description => "d";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0);
 
         public void Initialize(IPluginContext context) =>

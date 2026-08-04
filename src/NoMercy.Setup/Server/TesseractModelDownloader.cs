@@ -45,6 +45,50 @@ public class TesseractModelDownloader(
     // release manifest.
     private readonly Binaries _binaries = new(driver, storage, httpClient);
 
+    /// <summary>
+    /// ISO 639-2 gave several languages two codes: a bibliographic one ("fre") and a
+    /// terminological one ("fra"). Media files carry the bibliographic code, and asking
+    /// the release for a spelling it does not publish fails as an unsigned asset rather
+    /// than as a missing language — which is what turned a French subtitle into "No
+    /// signed manifest entry for 'fre.traineddata'" on every OCR attempt.
+    /// <para>
+    /// The release is not consistent about which spelling it uses: it publishes
+    /// <c>fra</c> for French but <c>ger</c> and <c>dut</c> for German and Dutch. So this
+    /// is an alternate to fall back to, never a substitution — translating every code
+    /// would break the languages that are already published under the bibliographic one.
+    /// </para>
+    /// </summary>
+    private static readonly Dictionary<string, string> AlternateLanguageCodes = new(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        ["alb"] = "sqi",
+        ["arm"] = "hye",
+        ["baq"] = "eus",
+        ["bur"] = "mya",
+        ["chi"] = "chi_sim",
+        ["cze"] = "ces",
+        ["dut"] = "nld",
+        ["fre"] = "fra",
+        ["fra"] = "fre",
+        ["deu"] = "ger",
+        ["ger"] = "deu",
+        ["nld"] = "dut",
+        ["dut"] = "nld",
+        ["geo"] = "kat",
+        ["ger"] = "deu",
+        ["gre"] = "ell",
+        ["ice"] = "isl",
+        ["mac"] = "mkd",
+        ["mao"] = "mri",
+        ["may"] = "msa",
+        ["per"] = "fas",
+        ["rum"] = "ron",
+        ["slo"] = "slk",
+        ["tib"] = "bod",
+        ["wel"] = "cym",
+    };
+
     public async Task<Stream> DownloadVerifiedAsync(string language, CancellationToken ct)
     {
         string assetName = $"{language}.traineddata";
@@ -81,6 +125,21 @@ public class TesseractModelDownloader(
         ManifestAsset? manifestAsset = manifest.Assets.FirstOrDefault(a =>
             a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase)
         );
+
+        if (
+            manifestAsset is null
+            && AlternateLanguageCodes.TryGetValue(language, out string? alternate)
+        )
+        {
+            string alternateAsset = $"{alternate}.traineddata";
+            manifestAsset = manifest.Assets.FirstOrDefault(a =>
+                a.Name.Equals(alternateAsset, StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (manifestAsset is not null)
+                assetName = alternateAsset;
+        }
+
         if (manifestAsset is null)
         {
             throw new InvalidOperationException(

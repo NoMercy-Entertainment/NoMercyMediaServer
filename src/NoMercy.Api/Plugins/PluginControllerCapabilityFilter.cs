@@ -36,7 +36,7 @@ public class PluginControllerCapabilityFilter(IPluginManager pluginManager) : IA
         if (context.Controller is not PluginControllerBase)
             return next();
 
-        if (!Guid.TryParse(context.RouteData.Values["pluginId"]?.ToString(), out Guid pluginId))
+        if (!Ulid.TryParse(context.RouteData.Values["pluginId"]?.ToString(), out Ulid pluginId))
         {
             context.Result = new NotFoundResult();
             return Task.CompletedTask;

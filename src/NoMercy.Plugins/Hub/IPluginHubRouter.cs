@@ -25,7 +25,7 @@ public interface IPluginHubRouter
 {
     void Register(IPluginHubHandler handler);
 
-    void Unregister(Guid pluginId);
+    void Unregister(Ulid pluginId);
 
     /// <summary>
     /// Hands the message to the plugin's handler, or drops it. Dropped when no
@@ -34,7 +34,7 @@ public interface IPluginHubRouter
     /// it did not ask the owner for.
     /// </summary>
     Task<bool> RouteAsync(
-        Guid pluginId,
+        Ulid pluginId,
         PluginHubMessage message,
         IPluginHubClient client,
         CancellationToken ct

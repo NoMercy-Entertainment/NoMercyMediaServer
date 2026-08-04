@@ -20,7 +20,7 @@ public class PluginVerifierTests
 {
     private static string WriteTempDll(byte[] bytes)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"plugin-{Guid.NewGuid():N}.dll");
+        string path = Path.Combine(Path.GetTempPath(), $"plugin-{Ulid.NewUlid():N}.dll");
         File.WriteAllBytes(path, bytes);
         return path;
     }
@@ -28,7 +28,7 @@ public class PluginVerifierTests
     private static PluginManifest Manifest(string? abi) =>
         new()
         {
-            Id = Guid.NewGuid(),
+            Id = Ulid.NewUlid(),
             Name = "n",
             Description = "d",
             Version = "1.0.0",

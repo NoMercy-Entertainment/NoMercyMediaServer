@@ -18,7 +18,7 @@ public record PluginNavEntryDto
 {
     /// <summary>
     /// Always one a client knows: an unrecognised section is resolved to
-    /// <see cref="PluginUiSection.Tools"/> here rather than shipped through and
+    /// <see cref="PluginUiSection.Addon"/> here rather than shipped through and
     /// dropped by whichever client happens not to know it.
     /// </summary>
     [JsonProperty("section")]

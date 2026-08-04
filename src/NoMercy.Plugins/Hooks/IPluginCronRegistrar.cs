@@ -24,5 +24,5 @@ public interface IPluginCronRegistrar
     /// A plugin declaring several jobs leaves several.
     /// </para>
     /// </summary>
-    void UnregisterPlugin(Guid pluginId);
+    void UnregisterPlugin(Ulid pluginId);
 }

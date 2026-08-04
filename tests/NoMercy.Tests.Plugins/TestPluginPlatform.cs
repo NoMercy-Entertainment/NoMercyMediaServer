@@ -32,7 +32,7 @@ public static class TestPluginPlatform
         new ConfigPluginGrantStore(new InMemoryPluginConfiguration());
 
     /// <summary>A secret store with an ephemeral key ring, for tests that need one to exist.</summary>
-    public static IPluginSecretStore Secrets(Guid pluginId = default) =>
+    public static IPluginSecretStore Secrets(Ulid pluginId = default) =>
         new PluginSecretStore(
             pluginId,
             new EphemeralDataProtectionProvider(),
@@ -40,14 +40,14 @@ public static class TestPluginPlatform
         );
 
     /// <summary>Grants for one plugin over a fresh store.</summary>
-    public static IPluginGrants Grants(Guid pluginId = default, IPluginGrantStore? store = null) =>
+    public static IPluginGrants Grants(Ulid pluginId = default, IPluginGrantStore? store = null) =>
         new PluginGrants(pluginId, store ?? GrantStore());
 
     public static PluginContext Context(
         IEventBus eventBus,
         string dataFolder,
         IStorage storage,
-        Guid? pluginId = null,
+        Ulid? pluginId = null,
         IServiceProvider? services = null,
         IPluginGrantStore? grants = null,
         IPluginLibraryQuery? library = null,
@@ -55,7 +55,7 @@ public static class TestPluginPlatform
         PluginCapabilities? capabilities = null
     )
     {
-        Guid id = pluginId ?? Guid.Empty;
+        Ulid id = pluginId ?? Ulid.Empty;
         IPluginGrantStore grantStore = grants ?? GrantStore();
 
         return new(

@@ -34,11 +34,11 @@ public abstract class PluginControllerBase : ControllerBase
 {
     /// <summary>
     /// Which plugin this request was routed to, taken from the route the
-    /// convention prefixed. <see cref="Guid.Empty"/> when a controller is
+    /// convention prefixed. <see cref="Ulid.Empty"/> when a controller is
     /// constructed outside a request, as in a unit test.
     /// </summary>
-    protected Guid PluginId =>
-        Guid.TryParse(RouteData.Values["pluginId"]?.ToString(), out Guid id) ? id : Guid.Empty;
+    protected Ulid PluginId =>
+        Ulid.TryParse(RouteData.Values["pluginId"]?.ToString(), out Ulid id) ? id : Ulid.Empty;
 
     /// <summary>A payload, in the <c>{ data }</c> envelope.</summary>
     protected OkObjectResult Data<T>(T data) => Ok(new PluginDataResponse<T> { Data = data });

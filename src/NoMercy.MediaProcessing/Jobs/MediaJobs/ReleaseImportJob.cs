@@ -43,12 +43,29 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
 
     public override string QueueName => "import";
-    public override int Priority => 4;
+
+    // The queue reserves by OrderByDescending(Priority), so the old 4 sat below
+    // PersonRefreshJob's 5 and below the show/movie extras at 6, and a manual import
+    // never got the single import worker while any of that was outstanding. Matching 6
+    // was not enough either: equal priorities fall back to insertion order, so a fresh
+    // import still queued behind every enrichment job already waiting.
+    //
+    // This is what "Add selection" dispatches, with someone watching the dashboard for
+    // it, so it outranks background enrichment outright rather than tying with it.
+    public override int Priority => 9;
 
     // private bool _fromFingerprint;
 
     public override async Task Handle()
     {
+        Log.LogInformation(
+            "ReleaseImportJob: {InputFolder} -> library {LibraryId} folder {FolderId} release {ReleaseId}",
+            InputFolder,
+            LibraryId,
+            FolderId,
+            ReleaseId
+        );
+
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
 
@@ -66,7 +83,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         if (rootFolders.Count == 0)
         {
             Log.LogTrace("Processing folder: {InputFolder}", InputFolder);
-            Folder? baseFolder = MatchLibraryFolder(albumLibrary, InputFolder);
+            Folder? baseFolder = ResolveDestinationFolder(albumLibrary, InputFolder);
             if (baseFolder is null)
             {
                 Log.LogWarning(
@@ -86,7 +103,7 @@ public class ReleaseImportJob : AbstractMusicFolderJob
             folder =>
             {
                 Log.LogInformation("Processing folder: {Path}", folder.Path);
-                Folder? baseFolder = MatchLibraryFolder(albumLibrary, folder.Path);
+                Folder? baseFolder = ResolveDestinationFolder(albumLibrary, folder.Path);
                 if (baseFolder is null)
                 {
                     Log.LogWarning(
@@ -111,6 +128,45 @@ public class ReleaseImportJob : AbstractMusicFolderJob
     /// nothing, and the old <c>.First(...)</c> threw "Sequence contains no matching
     /// element" for every music release on a local/UNC library.
     /// </summary>
+    /// <summary>
+    /// Where this release is being imported TO.
+    /// <para>
+    /// "Add new content" picks a destination folder and hands its id over in
+    /// <see cref="AbstractMusicFolderJob.FolderId"/>, while the path it hands over is the
+    /// SOURCE — a download or staging folder that is deliberately outside the library.
+    /// Deriving the destination by asking which library folder contains the source
+    /// therefore never matched, and every manual music import was skipped with
+    /// "no library folder contains …". The operator already answered this question;
+    /// the answer is honoured here.
+    /// </para>
+    /// <para>
+    /// The library scan dispatches this job with only a path (the folder is already in
+    /// the library and no destination was chosen), so that route still resolves by
+    /// containment.
+    /// </para>
+    /// </summary>
+    private Folder? ResolveDestinationFolder(Library library, string absolutePath)
+    {
+        if (FolderId != default)
+        {
+            Folder? chosen = library
+                .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)
+                .FirstOrDefault(folder => folder.Id == FolderId);
+
+            if (chosen is not null)
+                return chosen;
+
+            Log.LogWarning(
+                "ReleaseImportJob: destination folder {FolderId} is not in library {LibraryId}; falling back to the folder containing {Path}",
+                FolderId,
+                LibraryId,
+                absolutePath
+            );
+        }
+
+        return MatchLibraryFolder(library, absolutePath);
+    }
+
     private Folder? MatchLibraryFolder(Library library, string absolutePath) =>
         library
             .FolderLibraries.Select(folderLibrary => folderLibrary.Folder)

@@ -56,7 +56,7 @@ public class PluginCronRegistrar(IPluginManager pluginManager, CronWorker cronWo
         }
     }
 
-    public void UnregisterPlugin(Guid pluginId)
+    public void UnregisterPlugin(Ulid pluginId)
     {
         // Both shapes, because a plugin's job list is read from the instance
         // and the instance may already be gone by the time it is disabled. The

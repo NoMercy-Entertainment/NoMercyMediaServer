@@ -20,6 +20,7 @@ using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs.Dto;
+using NoMercy.MediaProcessing.Music;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.MediaProcessing.Recordings;
 using NoMercy.MediaProcessing.ReleaseGroups;
@@ -35,6 +36,7 @@ using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 public class AudioImportJob : AbstractMusicFolderJob
@@ -128,7 +130,10 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
         catch (Exception ex)
         {
-            Log.LogInformation("Fingerprint lookup failed for {Path}: {Message}", [mediaFile.Path, ex.Message]);
+            Log.LogInformation(
+                "Fingerprint lookup failed for {Path}: {Message}",
+                [mediaFile.Path, ex.Message]
+            );
             return null;
         }
     }
@@ -286,30 +291,47 @@ public class AudioImportJob : AbstractMusicFolderJob
         using (musicBrainzRecordingClient)
         await using (_mediaContext)
         {
+            Log.LogInformation("AudioImportJob: importing {InputFolder}", InputFolder);
+
             bool wasEmpty = !await _mediaContext!.AlbumLibrary.AnyAsync(al =>
                 al.LibraryId == LibraryId
             );
 
-            // First pass: count releases without storing all tags in memory
+            // Each call to the factory re-scans the folder and rebuilds every AudioTagModel
+            // from the file's own tags, so anything ResolveReleaseIdAsync worked out by
+            // fingerprint is gone by the next enumeration. Counting in one pass and matching
+            // in a second therefore dropped every file on a rip with no MusicBrainz tags —
+            // which is the exact case fingerprinting exists for. Resolve once, keep it.
+            List<(MediaFile MediaFile, AudioTagModel AudioTag, Guid? ReleaseId)> scannedFiles = [];
+
             await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
             {
-                if (await ResolveReleaseIdAsync(mediaFile, audioTag) is null)
-                    continue;
+                Guid? resolvedReleaseId = null;
 
-                MusicBrainzReleaseAppends? releaseAppends =
-                    await musicBrainzReleaseClient.WithAllAppends(audioTag.MusicBrainz!.ReleaseId);
-                if (releaseAppends is null)
-                    continue;
+                if (await ResolveReleaseIdAsync(mediaFile, audioTag) is not null)
+                {
+                    MusicBrainzReleaseAppends? releaseAppends =
+                        await musicBrainzReleaseClient.WithAllAppends(
+                            audioTag.MusicBrainz!.ReleaseId
+                        );
 
-                if (
-                    releases.TryGetValue(
-                        releaseAppends.Id,
-                        out (MusicBrainzReleaseAppends ReleaseAppends, int Count) value
-                    )
-                )
-                    releases[releaseAppends.Id] = (releaseAppends, value.Count + 1);
-                else
-                    releases.Add(releaseAppends.Id, (releaseAppends, 1));
+                    if (releaseAppends is not null)
+                    {
+                        resolvedReleaseId = releaseAppends.Id;
+
+                        if (
+                            releases.TryGetValue(
+                                releaseAppends.Id,
+                                out (MusicBrainzReleaseAppends ReleaseAppends, int Count) value
+                            )
+                        )
+                            releases[releaseAppends.Id] = (releaseAppends, value.Count + 1);
+                        else
+                            releases.Add(releaseAppends.Id, (releaseAppends, 1));
+                    }
+                }
+
+                scannedFiles.Add((mediaFile, audioTag, resolvedReleaseId));
             }
 
             // pick the most common release
@@ -330,28 +352,24 @@ public class AudioImportJob : AbstractMusicFolderJob
                 return;
             }
 
-            // Second pass: collect only files that match the chosen release
-            List<(MediaFile MediaFile, AudioTagModel AudioTag)> matchingFiles = [];
-            await foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFilesFactory())
-            {
-                if (
-                    audioTag.MusicBrainz?.ReleaseId == release.Id
+            List<(MediaFile MediaFile, AudioTagModel AudioTag)> matchingFiles = scannedFiles
+                .Where(scanned =>
+                    scanned.ReleaseId == release.Id
+                    || scanned.AudioTag.MusicBrainz?.ReleaseId == release.Id
                     || (
-                        audioTag.MusicBrainz?.ReleaseTrackId != null
+                        scanned.AudioTag.MusicBrainz?.ReleaseTrackId != null
                         && release.Media.Any(m =>
                             m.Tracks.Any(t =>
-                                t.Id == audioTag.MusicBrainz.ReleaseTrackId
-                                || t.Id == audioTag.MusicBrainz.RecordingId
-                                || t.Recording.Id == audioTag.MusicBrainz.RecordingId
-                                || t.Recording.Id == audioTag.MusicBrainz.ReleaseTrackId
+                                t.Id == scanned.AudioTag.MusicBrainz.ReleaseTrackId
+                                || t.Id == scanned.AudioTag.MusicBrainz.RecordingId
+                                || t.Recording.Id == scanned.AudioTag.MusicBrainz.RecordingId
+                                || t.Recording.Id == scanned.AudioTag.MusicBrainz.ReleaseTrackId
                             )
                         )
                     )
                 )
-                {
-                    matchingFiles.Add((mediaFile, audioTag));
-                }
-            }
+                .Select(scanned => (scanned.MediaFile, scanned.AudioTag))
+                .ToList();
 
             await AddSingleOrRelease(
                 release,
@@ -432,6 +450,10 @@ public class AudioImportJob : AbstractMusicFolderJob
         MusicBrainzRecordingClient musicBrainzRecordingClient,
         RecordingManager recordingManager
     )
+    // Storing a release needs one of its files to anchor the album to, and the old
+    // .First() threw "Sequence contains no elements" when the folder scan came back
+    // empty — a message that names neither the folder nor the release, which is what
+    // made a failed music import unreadable in the queue.
     {
         CoverArtImageManagerManager.CoverPalette? coverPalette =
             await CoverArtImageManagerManager.Add(release.MusicBrainzReleaseGroup.Id, true);
@@ -445,6 +467,24 @@ public class AudioImportJob : AbstractMusicFolderJob
         await AddGenres(release.Genres, musicGenreManager);
 
         await releaseGroupManager.Store(release.MusicBrainzReleaseGroup, LibraryId, coverPalette);
+
+        if (audioFiles.Count == 0)
+        {
+            Log.LogWarning(
+                "AudioImportJob: no audio files resolved under {InputFolder} for release {Title} ({ReleaseId}); nothing to store",
+                InputFolder,
+                release.Title,
+                release.Id
+            );
+            return;
+        }
+
+        Log.LogInformation(
+            "AudioImportJob: {Count} file(s) matched {Title}",
+            audioFiles.Count,
+            release.Title
+        );
+
         await releaseManager.Store(
             release,
             albumLibrary,
@@ -486,15 +526,24 @@ public class AudioImportJob : AbstractMusicFolderJob
                         && tag.MusicBrainz?.RecordingId != musicBrainzTrack.Id
                         && tag.MusicBrainz?.RecordingId != musicBrainzTrack.Recording.Id
                     )
-                    || (
+                    // A rip with no MusicBrainz tags fails every id comparison above, and
+                    // with || that alone skipped the track — so the title/duration/position
+                    // fallback underneath could never rescue a file and no untagged album
+                    // ever paired a track to encode.
+                    && (
                         !musicBrainzTrack.Title.ContainsSanitized(
                             tag.Tags?.Title ?? file.Parsed?.Title
                         )
                         && !(Math.Abs(tag.Duration - musicBrainzTrack.Duration) < 5)
                         && musicBrainzTrack.Position != tag.Tags?.Track
                         && musicBrainzTrack.Position != file.Parsed?.TrackNumber
-                        && musicBrainzTrack.Position != index + 1
-                        && musicBrainzTrack.Position * idx != index + 1
+                    // The two comparisons that used to close this list — position
+                    // against index + 1, and against index + 1 over the medium —
+                    // read the track's own place in the loop and never looked at
+                    // the file, so every track matched whichever file came first
+                    // and one file was handed to all eleven encodes. A file pairs
+                    // on something about that file: its title, its length, or the
+                    // track number it carries.
                     )
                 )
                     continue;
@@ -519,6 +568,23 @@ public class AudioImportJob : AbstractMusicFolderJob
                 mediaFile,
                 folderLibrary,
                 coverPalette
+            );
+
+            Log.LogInformation(
+                "AudioImportJob: encoding {Track} from {File}",
+                musicBrainzTrack.Title,
+                mediaFile.Path
+            );
+
+            MusicEncodeDispatcher.Dispatch(
+                StorageFactory,
+                albumLibrary,
+                folderLibrary,
+                release,
+                musicBrainzTrack,
+                mediaFile,
+                InputFolder,
+                audioFiles.Select(audioFile => audioFile.MediaFile).ToList()
             );
 
             foreach (MusicBrainzArtistCredit artistCredit in musicBrainzRecording.ArtistCredit)
@@ -563,7 +629,11 @@ public class AudioImportJob : AbstractMusicFolderJob
         Dictionary<Guid, (MusicBrainzReleaseAppends ReleaseAppends, int Count)> releases = new();
 
         ReleaseGroupRepository releaseGroupRepository = new(_mediaContext);
-        ReleaseGroupManager releaseGroupManager = new(releaseGroupRepository, jobDispatcher, LoggerFactory.CreateLogger<ReleaseGroupManager>());
+        ReleaseGroupManager releaseGroupManager = new(
+            releaseGroupRepository,
+            jobDispatcher,
+            LoggerFactory.CreateLogger<ReleaseGroupManager>()
+        );
 
         MusicGenreRepository musicGenreRepository = new(_mediaContext);
         MusicGenreManager musicGenreManager = new(musicGenreRepository);
@@ -573,7 +643,8 @@ public class AudioImportJob : AbstractMusicFolderJob
             releaseRepository,
             musicGenreRepository,
             StorageFactory,
-            jobDispatcher, LoggerFactory.CreateLogger<ReleaseManager>()
+            jobDispatcher,
+            LoggerFactory.CreateLogger<ReleaseManager>()
         );
 
         ArtistRepository artistRepository = new(_mediaContext);
@@ -581,7 +652,8 @@ public class AudioImportJob : AbstractMusicFolderJob
             artistRepository,
             musicGenreRepository,
             jobDispatcher,
-            StorageFactory, LoggerFactory.CreateLogger<ArtistManager>()
+            StorageFactory,
+            LoggerFactory.CreateLogger<ArtistManager>()
         );
 
         RecordingRepository recordingRepository = new(_mediaContext);
@@ -590,7 +662,8 @@ public class AudioImportJob : AbstractMusicFolderJob
             musicGenreRepository,
             artistRepository,
             StorageDriver,
-            StorageFactory, LoggerFactory.CreateLogger<RecordingManager>()
+            StorageFactory,
+            LoggerFactory.CreateLogger<RecordingManager>()
         );
 
         Library albumLibrary = _mediaContext
@@ -621,11 +694,15 @@ public class AudioImportJob : AbstractMusicFolderJob
 
     private async IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)> GetAudioFiles()
     {
+        // Depth 2, matching the file list that produced the release the operator chose.
+        // An album folder holds its tracks directly, and at depth 1 the scan returned no
+        // files for the very folder the file list had just read eleven out of — so the
+        // import had nothing to anchor the release to and stored nothing.
         await using MediaScan mediaScan = new(StorageDriver);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan
             .DisableRegexFilter()
             .EnableFileListing()
-            .Process(InputFolder, 1);
+            .Process(InputFolder, 2);
 
         _rootFolder ??= rootFolders.FirstOrDefault();
 

@@ -46,9 +46,9 @@ public interface IPluginManager
         CancellationToken ct = default
     ) => throw new NotSupportedException("This plugin manager cannot install from an archive.");
 
-    Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default);
-    Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default);
-    Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default);
+    Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default);
+    Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default);
+    Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default);
 
     // Boot-time scan: load all plugins in the plugins directory, isolating failures
     // per plugin so one bad plugin never blocks the others.
@@ -62,10 +62,21 @@ public interface IPluginManager
     // all need one plugin by id on a request path; scanning the whole installed
     // list for it is the shape those call sites had to use before. The default
     // does exactly that scan so existing implementers keep compiling.
-    PluginInfo? GetPluginInfo(Guid pluginId) =>
+    PluginInfo? GetPluginInfo(Ulid pluginId) =>
         GetInstalledPlugins().FirstOrDefault(info => info.Id == pluginId);
+
+    // The plugin's strings for one locale, read from the files it ships beside
+    // its assembly, falling back to the locale the plugin was authored in when
+    // it ships nothing for the one asked for. A default returning null keeps
+    // existing implementers compiling; a manager that knows where a plugin lives
+    // on disk overrides it.
+    Task<Dictionary<string, string>?> ReadTranslationsAsync(
+        Ulid pluginId,
+        string locale,
+        CancellationToken ct
+    ) => Task.FromResult<Dictionary<string, string>?>(null);
 
     // The live instance, for the platform endpoints that have to call into a
     // plugin (IUiPlugin.GetViewAsync). Null when nothing is loaded under that id.
-    IPlugin? GetPluginInstance(Guid pluginId) => null;
+    IPlugin? GetPluginInstance(Ulid pluginId) => null;
 }

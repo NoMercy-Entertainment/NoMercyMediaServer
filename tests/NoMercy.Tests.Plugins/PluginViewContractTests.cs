@@ -9,8 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Text.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using NoMercy.Plugins.Abstractions;
 using Xunit;
 
@@ -26,7 +27,19 @@ namespace NoMercy.Tests.Plugins;
 [Trait("Category", "Unit")]
 public class PluginViewContractTests
 {
-    private static string Serialize(object value) => JsonSerializer.Serialize(value);
+    /// <summary>
+    /// The settings MVC builds for the pipeline this server registers, so a
+    /// claim about the wire is a claim about the wire. This used
+    /// <c>System.Text.Json</c>, which writes no response here: it honoured
+    /// attributes Newtonsoft cannot see, so these assertions passed while every
+    /// payload went out carrying a second copy of each component's children
+    /// beside its props, and every card in the app drew an empty body.
+    /// </summary>
+    private static readonly JsonSerializerSettings ApiSettings =
+        new MvcNewtonsoftJsonOptions().SerializerSettings;
+
+    private static string Serialize(object value) =>
+        JsonConvert.SerializeObject(value, ApiSettings);
 
     [Fact]
     public void PlayMedia_CarriesAStableTypeAndPayload()
@@ -57,8 +70,8 @@ public class PluginViewContractTests
 
         string json = Serialize(view);
 
-        json.Should().Contain("\"component\":\"PluginGrid\"");
-        json.Should().Contain("\"component\":\"PluginCard\"");
+        json.Should().Contain("\"component\":\"NMCard\"");
+        json.Should().Contain("\"component\":\"NMText\"");
         json.Should().Contain("\"playMedia\"");
         view.WebView.Should().BeNull();
     }
@@ -158,11 +171,23 @@ public class PluginViewContractTests
             ]
         );
 
+        // A header row and one body row, built from boxes because the design
+        // system has no table row or cell — and announced as a table, which is
+        // the part a reader needs.
         table.Component.Should().Be(PluginComponentType.Table);
-        table.Props["columns"].Should().BeOfType<List<PluginTableColumn>>();
-        table.Items.Should().ContainSingle();
-        table.Items[0].Props["progress"].Should().Be(0.42);
-        table.Items[0].Action!.Type.Should().Be(PluginActionType.CallPlugin);
+        Dictionary<string, object?> access =
+            (Dictionary<string, object?>)table.Props["accessibility"]!;
+        access["role"].Should().Be("table");
+
+        table.Items.Should().HaveCount(2);
+        table.Items[0].Items.Should().HaveCount(3, "one cell per column");
+
+        PluginComponent body = table.Items[1];
+        body.Action!.Type.Should().Be(PluginActionType.CallPlugin);
+
+        // The progress column carries a bar, not the raw fraction as words.
+        body.Items[1].Items[0].Component.Should().Be(PluginComponentType.Progress);
+        body.Items[1].Items[0].Props["value"].Should().Be(42.0);
     }
 
     [Fact]
@@ -220,9 +245,12 @@ public class PluginViewContractTests
 
         string json = Serialize(form);
 
-        json.Should().Contain("\"type\":\"file\"");
+        // A field is the component that collects it, not a type string in a bag
+        // no component reads.
+        json.Should().Contain("\"component\":\"NMFileUpload\"");
         json.Should().Contain("\"accept\":\".torrent\"");
-        json.Should().Contain("\"type\":\"checkbox\"");
+        json.Should().Contain("\"component\":\"NMCheckbox\"");
+        json.Should().Contain("\"component\":\"NMButton\"");
     }
 
     [Fact]
@@ -230,15 +258,20 @@ public class PluginViewContractTests
     {
         PluginComponent badge = PluginViews.Badge("state", "Seeding", PluginBadgeVariant.Success);
 
-        badge.Props["variant"].Should().Be("success");
-        PluginBadgeVariant.All.Should().Contain(badge.Props["variant"]!.ToString());
+        // The design system keeps semantic colour on the surface. NMBadge's own
+        // variant is its shape, so a payload still never names a colour.
+        badge.Props["variant"].Should().Be("solid");
+        Dictionary<string, object?> surface = (Dictionary<string, object?>)badge.Props["surface"]!;
+        surface["status"].Should().Be("success");
+        PluginBadgeVariant.All.Should().Contain(surface["status"]!.ToString());
     }
 
     [Fact]
     public void AnIndeterminateProgressHasNoValue()
     {
+        // The contract takes a fraction; NMProgress reads 0-100.
         PluginViews.Progress("p", null).Props["value"].Should().BeNull();
-        PluginViews.Progress("p", 0.25).Props["value"].Should().Be(0.25);
+        PluginViews.Progress("p", 0.25).Props["value"].Should().Be(25.0);
     }
 
     [Fact]
@@ -249,7 +282,7 @@ public class PluginViewContractTests
         PluginUiSection
             .OrFallback("a-section-no-client-knows")
             .Should()
-            .Be(PluginUiSection.Tools);
+            .Be(PluginUiSection.Addon);
         PluginUiSection.OrFallback(PluginUiSection.Music).Should().Be(PluginUiSection.Music);
     }
 }

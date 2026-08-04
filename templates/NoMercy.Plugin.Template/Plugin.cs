@@ -7,7 +7,7 @@ public class Plugin : IPlugin
 {
     public string Name => "NoMercy.Plugin.Template";
     public string Description => "PLUGIN-DESCRIPTION-PLACEHOLDER";
-    public Guid Id { get; } = Guid.Parse("PLUGIN-GUID-PLACEHOLDER");
+    public Ulid Id { get; } = Ulid.Parse("PLUGIN-ULID-PLACEHOLDER");
     public Version Version { get; } = new(1, 0, 0);
 
     private IPluginContext? _context;

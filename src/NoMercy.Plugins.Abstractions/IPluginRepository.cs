@@ -25,8 +25,8 @@ public interface IPluginRepository
     Task RemoveRepositoryAsync(string name, CancellationToken ct = default);
     Task RefreshAsync(CancellationToken ct = default);
     IReadOnlyList<PluginRepositoryEntry> GetAvailablePlugins();
-    PluginRepositoryEntry? FindPlugin(Guid pluginId);
-    PluginVersionEntry? FindVersion(Guid pluginId, string version);
+    PluginRepositoryEntry? FindPlugin(Ulid pluginId);
+    PluginVersionEntry? FindVersion(Ulid pluginId, string version);
 }
 
 public class PluginRepositoryInfo

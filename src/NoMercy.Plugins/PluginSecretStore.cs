@@ -34,7 +34,7 @@ namespace NoMercy.Plugins;
 /// </para>
 /// </summary>
 public class PluginSecretStore(
-    Guid pluginId,
+    Ulid pluginId,
     IDataProtectionProvider protectionProvider,
     IPluginConfiguration configuration
 ) : IPluginSecretStore

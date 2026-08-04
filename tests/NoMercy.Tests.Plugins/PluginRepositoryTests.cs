@@ -30,7 +30,7 @@ public class PluginRepositoryTests : IDisposable
     {
         _tempDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-repo-tests-" + Guid.NewGuid().ToString("N")
+            "nomercy-repo-tests-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempDir);
     }
@@ -58,7 +58,7 @@ public class PluginRepositoryTests : IDisposable
             plugins.Add(
                 new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Ulid.NewUlid(),
                     Name = $"Plugin{i}",
                     Description = $"Test plugin {i}",
                     Author = "Test Author",
@@ -487,7 +487,7 @@ public class PluginRepositoryTests : IDisposable
     public async Task FindPlugin_ExistingId_ReturnsEntry()
     {
         PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 1);
-        Guid pluginId = manifest.Plugins[0].Id;
+        Ulid pluginId = manifest.Plugins[0].Id;
         HttpClient client = CreateMockHttpClient(manifest);
         PluginRepository repo = MakeRepo(client);
 
@@ -504,7 +504,7 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepository repo = MakeRepo();
 
-        PluginRepositoryEntry? found = repo.FindPlugin(Guid.NewGuid());
+        PluginRepositoryEntry? found = repo.FindPlugin(Ulid.NewUlid());
 
         found.Should().BeNull();
     }
@@ -513,7 +513,7 @@ public class PluginRepositoryTests : IDisposable
     public async Task FindVersion_ExistingVersion_ReturnsEntry()
     {
         PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 1);
-        Guid pluginId = manifest.Plugins[0].Id;
+        Ulid pluginId = manifest.Plugins[0].Id;
         HttpClient client = CreateMockHttpClient(manifest);
         PluginRepository repo = MakeRepo(client);
 
@@ -531,7 +531,7 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepository repo = MakeRepo();
 
-        PluginVersionEntry? found = repo.FindVersion(Guid.NewGuid(), "1.0.0");
+        PluginVersionEntry? found = repo.FindVersion(Ulid.NewUlid(), "1.0.0");
 
         found.Should().BeNull();
     }
@@ -540,7 +540,7 @@ public class PluginRepositoryTests : IDisposable
     public async Task FindVersion_UnknownVersion_ReturnsNull()
     {
         PluginRepositoryManifest manifest = CreateTestManifest(pluginCount: 1);
-        Guid pluginId = manifest.Plugins[0].Id;
+        Ulid pluginId = manifest.Plugins[0].Id;
         HttpClient client = CreateMockHttpClient(manifest);
         PluginRepository repo = MakeRepo(client);
 
@@ -556,7 +556,7 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepository repo = MakeRepo();
 
-        Action act = () => repo.FindVersion(Guid.NewGuid(), null!);
+        Action act = () => repo.FindVersion(Ulid.NewUlid(), null!);
 
         act.Should().Throw<ArgumentException>();
     }
@@ -570,7 +570,7 @@ public class PluginRepositoryTests : IDisposable
                 "url": "https://plugins.nomercy.tv/manifest.json",
                 "plugins": [
                     {
-                        "id": "12345678-1234-1234-1234-123456789012",
+                        "id": "0J6HB7G4HM28T14D0J6HB7H40J",
                         "name": "Scrobbler",
                         "description": "Last.fm scrobbling",
                         "author": "NoMercy",
@@ -608,7 +608,7 @@ public class PluginRepositoryTests : IDisposable
     {
         PluginRepositoryEntry entry = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Ulid.NewUlid(),
             Name = "TestPlugin",
             Description = "Test",
             Versions =

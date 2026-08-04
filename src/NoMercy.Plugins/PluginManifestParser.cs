@@ -90,7 +90,7 @@ public static class PluginManifestParser
 
     private static void Validate(PluginManifest manifest)
     {
-        if (manifest.Id == Guid.Empty)
+        if (manifest.Id == Ulid.Empty)
         {
             throw new InvalidOperationException("Plugin manifest 'id' must not be empty.");
         }

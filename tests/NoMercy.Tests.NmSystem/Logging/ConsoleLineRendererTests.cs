@@ -39,7 +39,7 @@ public class ConsoleLineRendererTests
             color: false
         );
 
-        line.Should().Be("14:23:07       TheMovieDB │ Fetching \"Inception\"");
+        line.Should().Be("14:23:07       TheMovieDB   Fetching \"Inception\"");
     }
 
     [Fact]
@@ -85,7 +85,30 @@ public class ConsoleLineRendererTests
 
         string[] lines = block.Split('\n');
         lines.Should().HaveCount(2);
-        lines[1].Should().Be(new string(' ', 26) + "│ second");
+        lines[1].Should().Be(new string(' ', 28) + "second");
+    }
+
+    [Fact]
+    public void Render_DrawsNoBoxGlyph_SoACopiedLineCarriesNoRule()
+    {
+        // The rule is a background colour on a space rather than a box-drawing
+        // character, so pasting a log line does not paste the separator. Pastel
+        // writes no escapes when the stream is redirected, which every CI run
+        // is, so what holds in both environments is the glyph's absence.
+        foreach (bool color in new[] { false, true })
+        {
+            string line = ConsoleLineRenderer.Render(
+                At,
+                LogLevel.Information,
+                LogCategories.Resolve("moviedb"),
+                "x",
+                null,
+                NoMercyConsoleTheme.Dark,
+                color
+            );
+
+            line.Should().NotContain("│");
+        }
     }
 
     [Fact]

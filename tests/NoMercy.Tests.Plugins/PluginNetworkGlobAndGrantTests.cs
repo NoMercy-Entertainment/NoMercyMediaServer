@@ -14,6 +14,7 @@ using System.Net.Http.Headers;
 using FluentAssertions;
 using NoMercy.Plugins.Network;
 using Xunit;
+using NoMercy.NmSystem.Configuration;
 
 namespace NoMercy.Tests.Plugins;
 
@@ -141,7 +142,7 @@ public class PluginNetworkGlobAndGrantTests
 /// </summary>
 public class PluginUserAgentHandlerTests
 {
-    private static readonly Guid PluginId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+    private static readonly Ulid PluginId = Ulid.Parse("1K6CSK6CSK6CSK6CSK6CSK6CSK");
 
     private static HttpClient ClientFor(string? name, Version? version = null) =>
         new(
@@ -152,21 +153,22 @@ public class PluginUserAgentHandlerTests
         );
 
     [Fact]
-    public async Task A_request_with_no_user_agent_gets_the_plugins()
+    public async Task Egress_carries_the_owners_identity_and_the_plugins_attribution()
     {
         HttpResponseMessage response = await ClientFor("Torrent Downloader")
             .GetAsync("https://example.com/x");
 
         string sent = await response.Content.ReadAsStringAsync();
+        sent.Should().Contain(ExternalServicesConfig.Current.UserAgent);
         sent.Should().Contain("NoMercyPlugin-Torrent-Downloader/1.2.3");
     }
 
     [Fact]
-    public async Task A_user_agent_the_plugin_set_is_left_exactly_as_it_was()
+    public async Task A_plugin_cannot_choose_the_identity_this_server_presents()
     {
-        // A private tracker can ban on a user agent it does not expect, and an
-        // indexer behind a browser check wants a browser string. Appending is
-        // still changing it, so nothing is added at all.
+        // It could, until this. A host we do not control is reached from the
+        // owner's address, and letting a plugin send "Mozilla/5.0" made it the
+        // plugin's choice who that traffic came from.
         HttpClient client = ClientFor("Torrent Downloader");
         HttpRequestMessage request = new(HttpMethod.Get, "https://example.com/x");
         request.Headers.UserAgent.ParseAdd("Mozilla/5.0");
@@ -174,8 +176,9 @@ public class PluginUserAgentHandlerTests
         HttpResponseMessage response = await client.SendAsync(request);
 
         string sent = await response.Content.ReadAsStringAsync();
-        sent.Should().Be("Mozilla/5.0");
-        sent.Should().NotContain("NoMercyPlugin");
+        sent.Should().NotContain("Mozilla");
+        sent.Should().Contain(ExternalServicesConfig.Current.UserAgent);
+        sent.Should().Contain("NoMercyPlugin-Torrent-Downloader/1.2.3");
     }
 
     [Theory]
@@ -215,7 +218,7 @@ public class PluginUserAgentHandlerTests
 
         string sent = await response.Content.ReadAsStringAsync();
         sent.Should().NotContain("\r").And.NotContain("\n").And.NotContain(":");
-        sent.Should().StartWith("NoMercyPlugin-evil-X-Injected-yes/");
+        sent.Should().Contain("NoMercyPlugin-evil-X-Injected-yes/");
     }
 
     private sealed class EchoingUserAgentHandler : HttpMessageHandler

@@ -18,7 +18,7 @@ public class EchoEncoderPlugin : IEncoderPlugin
 {
     public string Name => "Echo";
     public string Description => "Sample plugin — returns a fixed encoding profile for any input.";
-    public Guid Id { get; } = Guid.Parse("11111111-2222-3333-4444-555555555555");
+    public Ulid Id { get; } = Ulid.Parse("01ECH000000000000000000000");
     public Version Version { get; } = new(0, 1, 0);
 
     public void Initialize(IPluginContext context)

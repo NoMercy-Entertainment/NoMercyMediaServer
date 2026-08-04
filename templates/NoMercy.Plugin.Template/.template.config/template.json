@@ -13,12 +13,11 @@
   "preferNameDirectory": true,
   "symbols": {
     "pluginId": {
-      "type": "generated",
-      "generator": "guid",
-      "replaces": "PLUGIN-GUID-PLACEHOLDER",
-      "parameters": {
-        "format": "D"
-      }
+      "type": "parameter",
+      "datatype": "string",
+      "isRequired": true,
+      "replaces": "PLUGIN-ULID-PLACEHOLDER",
+      "description": "The plugin's id, as a ULID. Every id NoMercy issues is a ULID; dotnet new has no ULID generator, so this is passed in rather than generated."
     },
     "authorName": {
       "type": "parameter",

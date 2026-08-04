@@ -228,7 +228,12 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             });
         }
 
+        // Every child is tied to the server's job object, so a shutdown takes the
+        // whole tree with it. Killing the process on the way out only covers the
+        // paths that reach their own cleanup; a crash or a stop mid-probe left
+        // ffmpeg and ffprobe running with nothing left to reap them.
         process.Start();
+        Shell.ChildProcessManager.Attach(process);
 
         // Bind the child to the server's kill-on-close job object so a hard
         // crash/kill of the server (where the graceful cancellation path never

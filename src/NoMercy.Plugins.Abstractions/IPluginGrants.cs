@@ -48,7 +48,7 @@ public interface IPluginGrants
 /// <param name="Kind">One of <see cref="PluginGrantKind"/>.</param>
 /// <param name="Reason">The plugin's own words, shown to the owner. Treated as untrusted text.</param>
 public record PluginGrantRequest(
-    Guid PluginId,
+    Ulid PluginId,
     string Kind,
     string Value,
     string Reason,

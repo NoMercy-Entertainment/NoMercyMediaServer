@@ -139,7 +139,7 @@ public class PluginTemplateTests
 
         json.Should()
             .Contain(
-                "PLUGIN-GUID-PLACEHOLDER",
+                "PLUGIN-ULID-PLACEHOLDER",
                 "manifest id must use the GUID placeholder for template substitution"
             );
         json.Should()
@@ -161,7 +161,7 @@ public class PluginTemplateTests
         source.Should().Contain("IPlugin", "Plugin class must implement IPlugin");
         source
             .Should()
-            .Contain("PLUGIN-GUID-PLACEHOLDER", "Plugin class must use GUID placeholder");
+            .Contain("PLUGIN-ULID-PLACEHOLDER", "Plugin class must use the ULID placeholder");
         source.Should().Contain("Initialize", "Plugin class must implement Initialize method");
         source.Should().Contain("Dispose", "Plugin class must implement Dispose method");
     }
@@ -174,7 +174,7 @@ public class PluginTemplateTests
 
         source.Should().Contain("string Name =>", "Plugin must have Name property");
         source.Should().Contain("string Description =>", "Plugin must have Description property");
-        source.Should().Contain("Guid Id", "Plugin must have Id property");
+        source.Should().Contain("Ulid Id", "Plugin must have Id property");
         source.Should().Contain("Version Version", "Plugin must have Version property");
         source
             .Should()

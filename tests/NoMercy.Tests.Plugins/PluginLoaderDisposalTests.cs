@@ -39,7 +39,7 @@ public class PluginLoaderDisposalTests : IDisposable
     {
         _tempPluginsDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-loader-disposal-" + Guid.NewGuid().ToString("N")
+            "nomercy-loader-disposal-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempPluginsDir);
 
@@ -118,7 +118,7 @@ public class PluginLoaderDisposalTests : IDisposable
         // test in this project.
         string manifestJson = $$"""
             {
-              "id": "11111111-2222-3333-4444-555555555555",
+              "id": "01ECH000000000000000000000",
               "name": "Echo",
               "version": "0.1.0",
               "description": "Sample plugin for the test suite",

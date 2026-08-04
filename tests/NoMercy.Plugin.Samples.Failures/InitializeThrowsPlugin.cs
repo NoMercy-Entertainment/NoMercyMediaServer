@@ -19,11 +19,11 @@ namespace NoMercy.Plugin.Samples.Failures;
 // identity-known malfunction recording AND the nested dispose-failure log path.
 public sealed class InitializeThrowsPlugin : IPlugin
 {
-    public static readonly Guid FixedId = Guid.Parse("22222222-0000-0000-0000-000000000002");
+    public static readonly Ulid FixedId = Ulid.Parse("01SAMPLE000000000000000002");
 
     public string Name => "InitializeThrows";
     public string Description => "Constructs fine, Initialize/Dispose both throw";
-    public Guid Id => FixedId;
+    public Ulid Id => FixedId;
     public Version Version { get; } = new(0, 1, 0);
 
     public void Initialize(IPluginContext context) =>

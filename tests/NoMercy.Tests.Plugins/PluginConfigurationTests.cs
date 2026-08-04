@@ -25,7 +25,7 @@ public class PluginConfigurationTests : IDisposable
     {
         _tempDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-config-tests-" + Guid.NewGuid().ToString("N")
+            "nomercy-config-tests-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempDir);
         _config = new(_tempDir, TestStorageHelper.CreateStorage(_tempDir));

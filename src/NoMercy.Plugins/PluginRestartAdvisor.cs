@@ -30,15 +30,15 @@ public interface IPluginRestartAdvisor
     /// Records that a plugin's services were registered during the pre-build
     /// pass, which is the only time they can be.
     /// </summary>
-    void MarkRegisteredAtStartup(Guid pluginId);
+    void MarkRegisteredAtStartup(Ulid pluginId);
 }
 
 public class PluginRestartAdvisor(IPluginAssemblyTracker? tracker = null) : IPluginRestartAdvisor
 {
-    private readonly HashSet<Guid> _registeredAtStartup = [];
+    private readonly HashSet<Ulid> _registeredAtStartup = [];
     private readonly Lock _gate = new();
 
-    public void MarkRegisteredAtStartup(Guid pluginId)
+    public void MarkRegisteredAtStartup(Ulid pluginId)
     {
         lock (_gate)
             _registeredAtStartup.Add(pluginId);
@@ -88,7 +88,7 @@ public class PluginRestartAdvisor(IPluginAssemblyTracker? tracker = null) : IPlu
         return new(reasons);
     }
 
-    private bool WasRegisteredAtStartup(Guid pluginId)
+    private bool WasRegisteredAtStartup(Ulid pluginId)
     {
         lock (_gate)
             return _registeredAtStartup.Contains(pluginId);

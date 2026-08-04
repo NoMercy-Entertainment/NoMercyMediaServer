@@ -26,7 +26,7 @@ public class PluginManifestParserTests : IDisposable
     {
         _tempDir = Path.Combine(
             Path.GetTempPath(),
-            "nomercy-manifest-tests-" + Guid.NewGuid().ToString("N")
+            "nomercy-manifest-tests-" + Ulid.NewUlid().ToString()
         );
         Directory.CreateDirectory(_tempDir);
     }
@@ -44,7 +44,7 @@ public class PluginManifestParserTests : IDisposable
     }
 
     private static string CreateValidManifestJson(
-        Guid? id = null,
+        Ulid? id = null,
         string name = "TestPlugin",
         string description = "A test plugin",
         string version = "1.0.0",
@@ -57,7 +57,7 @@ public class PluginManifestParserTests : IDisposable
     {
         Dictionary<string, object?> manifest = new()
         {
-            ["id"] = (id ?? Guid.NewGuid()).ToString(),
+            ["id"] = (id ?? Ulid.NewUlid()).ToString(),
             ["name"] = name,
             ["description"] = description,
             ["version"] = version,
@@ -78,7 +78,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void Parse_ValidJson_ReturnsManifest()
     {
-        Guid pluginId = Guid.NewGuid();
+        Ulid pluginId = Ulid.NewUlid();
         string json = CreateValidManifestJson(
             id: pluginId,
             name: "MyPlugin",
@@ -93,6 +93,34 @@ public class PluginManifestParserTests : IDisposable
         manifest.Version.Should().Be("2.1.0");
         manifest.Assembly.Should().Be("MyPlugin.dll");
         manifest.AutoEnabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Parse_IdWrittenAsAGuid_LoadsAsTheEquivalentUlid()
+    {
+        // What every plugin published before this platform settled on Ulid
+        // carries. A server update does not get to stop loading it, and the id
+        // it resolves to has to be the same one on every start, or the plugin
+        // loses its stored consent and grants.
+        Guid legacyId = Guid.Parse("395df423-3e2f-4a1c-bc5b-dbc41a9133ef");
+        string json =
+            $@"{{""id"":""{legacyId}"",""name"":""Test"",""description"":""d"",""version"":""1.0.0"",""assembly"":""t.dll""}}";
+
+        PluginManifest manifest = PluginManifestParser.Parse(json);
+
+        manifest.Id.Should().Be(new Ulid(legacyId));
+        manifest.Id.ToGuid().Should().Be(legacyId);
+    }
+
+    [Fact]
+    public void Parse_IdThatIsNeitherUlidNorGuid_IsRejected()
+    {
+        string json =
+            @"{""id"":""not-an-id"",""name"":""Test"",""description"":""d"",""version"":""1.0.0"",""assembly"":""t.dll""}";
+
+        Action parse = () => PluginManifestParser.Parse(json);
+
+        parse.Should().Throw<JsonException>();
     }
 
     [Fact]
@@ -160,7 +188,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void Parse_EmptyGuid_ThrowsInvalidOperation()
     {
-        string json = CreateValidManifestJson(id: Guid.Empty);
+        string json = CreateValidManifestJson(id: Ulid.Empty);
 
         Action act = () => PluginManifestParser.Parse(json);
 
@@ -171,7 +199,7 @@ public class PluginManifestParserTests : IDisposable
     public void Parse_MissingVersion_ThrowsJsonException()
     {
         string json =
-            """{"id":"12345678-1234-1234-1234-123456789012","name":"Test","description":"d","assembly":"t.dll"}""";
+            """{"id":"0J6HB7G4HM28T14D0J6HB7H40J","name":"Test","description":"d","assembly":"t.dll"}""";
 
         Action act = () => PluginManifestParser.Parse(json);
 
@@ -191,7 +219,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void Parse_EmptyAssembly_ThrowsInvalidOperation()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string json =
             $@"{{""id"":""{id}"",""name"":""Test"",""description"":""d"",""version"":""1.0.0"",""assembly"":""""}}";
 
@@ -203,7 +231,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void Parse_WithJsonComments_Succeeds()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string json =
             $@"{{
             // This is a comment
@@ -222,7 +250,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void Parse_WithTrailingCommas_Succeeds()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string json =
             $@"{{
             ""id"": ""{id}"",
@@ -240,7 +268,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public async Task ParseFileAsync_ValidFile_ReturnsManifest()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         string json = CreateValidManifestJson(id: id, name: "FilePlugin");
         string filePath = Path.Combine(_tempDir, "plugin.json");
         await File.WriteAllTextAsync(filePath, json);
@@ -278,7 +306,7 @@ public class PluginManifestParserTests : IDisposable
     [Fact]
     public void ToPluginInfo_CreatesCorrectInfo()
     {
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
         PluginManifest manifest = new()
         {
             Id = id,
@@ -323,7 +351,7 @@ public class PluginManifestParserTests : IDisposable
     {
         PluginManifest manifest = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Ulid.NewUlid(),
             Name = "Test",
             Description = "d",
             Version = "1.0.0",

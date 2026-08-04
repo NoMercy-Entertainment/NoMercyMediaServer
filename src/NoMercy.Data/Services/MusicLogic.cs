@@ -17,9 +17,11 @@ using NoMercy.Data.Jobs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
+using NoMercy.Database.Music;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Music;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -140,7 +142,12 @@ public partial class MusicLogic : IAsyncDisposable
 
                             try
                             {
-                                await ProcessRelease(mediaContext, release, file);
+                                await ProcessRelease(
+                                    mediaContext,
+                                    release,
+                                    file,
+                                    fingerPrintRecording
+                                );
                             }
                             catch (Exception e)
                             {
@@ -175,7 +182,8 @@ public partial class MusicLogic : IAsyncDisposable
     private async Task ProcessRelease(
         MediaContext mediaContext,
         AcoustIdFingerprintReleaseGroups release,
-        MediaFile mediaFile
+        MediaFile mediaFile,
+        AcoustIdFingerprintRecording? matchedRecording = null
     )
     {
         _logger.LogTrace("Processing release: {Title} with id: {Id}", [release.Title, release.Id]);
@@ -211,6 +219,19 @@ public partial class MusicLogic : IAsyncDisposable
         await LinkReleaseToReleaseGroup(mediaContext, releaseAppends);
         await LinkReleaseToLibrary(mediaContext, releaseAppends);
 
+        MusicBrainzTrack? encodableTrack = ResolveTrackForFile(
+            releaseAppends,
+            mediaFile,
+            matchedRecording
+        );
+
+        if (encodableTrack is null)
+            _logger.LogWarning(
+                "No track on {Release} matched {File}, so it was stored but never encoded",
+                releaseAppends.Title,
+                mediaFile.Path
+            );
+
         foreach (MusicBrainzMedia media in releaseAppends.Media)
         foreach (MusicBrainzTrack track in media.Tracks)
         {
@@ -218,6 +239,9 @@ public partial class MusicLogic : IAsyncDisposable
                 continue;
 
             await LinkTrackToRelease(mediaContext, track, releaseAppends);
+
+            if (encodableTrack is not null && track.Id == encodableTrack.Id)
+                DispatchEncode(releaseAppends, track, mediaFile);
 
             foreach (ReleaseArtistCredit artist in track.ArtistCredit)
             {
@@ -280,6 +304,58 @@ public partial class MusicLogic : IAsyncDisposable
         }
 
         return fingerPrintRecording;
+    }
+
+    /// <summary>
+    /// Which single track of the release this one file IS.
+    /// <para>
+    /// The fingerprint answers it outright when it identified a recording, because a
+    /// MusicBrainz track carries the recording id it was pressed from. Only when the
+    /// fingerprint found nothing does this fall back to the less certain reading of the
+    /// file's own tags — the track number the file claims, then its title.
+    /// </para>
+    /// <para>
+    /// Returning null is a real answer: the file was not identified, so it is stored but
+    /// never encoded. Guessing here would write a file to disk under another track's name.
+    /// </para>
+    /// </summary>
+    private static MusicBrainzTrack? ResolveTrackForFile(
+        MusicBrainzReleaseAppends release,
+        MediaFile file,
+        AcoustIdFingerprintRecording? matchedRecording
+    ) => MusicEncodeDispatcher.ResolveTrackForFile(release, file, matchedRecording);
+
+    /// <summary>
+    /// Hands the identified track to the encoder, which resolves the destination folder's
+    /// presets and asks the model for its own sanitized filename fragment
+    /// (<see cref="Track.CreateTitle"/>) rather than assembling a path here.
+    /// </summary>
+    private void DispatchEncode(
+        MusicBrainzReleaseAppends release,
+        MusicBrainzTrack track,
+        MediaFile file
+    )
+    {
+        if (Folder is null)
+        {
+            _logger.LogWarning(
+                "No destination folder on this import, so {Track} from {File} was stored but never encoded",
+                track.Title,
+                file.Path
+            );
+            return;
+        }
+
+        MusicEncodeDispatcher.Dispatch(
+            _storageFactory,
+            Library,
+            Folder,
+            release,
+            track,
+            file,
+            ListPath.Path,
+            (Files ?? []).ToList()
+        );
     }
 
     private AcoustIdFingerprintReleaseGroups? FallbackParser(

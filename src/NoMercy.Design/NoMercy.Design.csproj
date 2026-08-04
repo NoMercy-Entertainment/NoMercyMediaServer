@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Product>NoMercy NM Components</Product>
+    <PublishWithAspNetCoreTargetManifest>false</PublishWithAspNetCoreTargetManifest>
+    <Platforms>AnyCPU;x64;x86;ARM32</Platforms>
+  </PropertyGroup>
+  <PropertyGroup>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <!--
+    The design system's component contract, generated from the same manifest as
+    the web and Compose renderers.
+
+    It is its own assembly because both sides of the plugin boundary name these
+    components: the server builds its own screens from them, and a plugin builds
+    its screens from them. Living in NoMercy.Api meant a plugin could name ten
+    of the fifty-six, since a plugin cannot reference the web project — the rest
+    of the design system was unreachable from the place most of it gets used.
+  -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>NoMercy.Design</PackageId>
+    <Authors>NoMercy Entertainment</Authors>
+    <Description>The NoMercy design system's component contract, for servers and plugins.</Description>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageProjectUrl>https://github.com/NoMercy-Entertainment/nomercy-media-server</PackageProjectUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="" Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
+</Project>

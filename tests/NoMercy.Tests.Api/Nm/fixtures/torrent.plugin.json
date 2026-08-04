@@ -1,0 +1,26 @@
+{
+  "id": "395df423-3e2f-4a1c-bc5b-dbc41a9133ef",
+  "name": "Torrent Downloader",
+  "description": "Keeps a TV library complete by downloading missing episodes over BitTorrent.",
+  "version": "0.1.0",
+  "targetAbi": "10.0",
+  "author": "Phillippe Pelzer",
+  "projectUrl": "https://forgejo.phillippepelzer.me/FiLL/nomercy-torrent-plugin",
+  "assembly": "NoMercy.Plugin.TorrentDownloader.dll",
+  "autoEnabled": true,
+  "capabilities": {
+    "hooks": ["scheduledTask", "ui"],
+    "rest": true,
+    "ws": false,
+    "ui": {
+      "mounts": [
+        {
+          "section": "settings",
+          "label": "Torrent Downloader",
+          "icon": "download",
+          "route": "/settings"
+        }
+      ]
+    }
+  }
+}

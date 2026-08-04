@@ -23,7 +23,7 @@ public class PluginCronExecutorTests
 
         public string Name => "t";
         public string Description => "d";
-        public Guid Id { get; } = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        public Ulid Id { get; } = Ulid.Parse("0H248H248H248H248H248H248H");
         public Version Version { get; } = new(1, 0);
         public string CronExpression => "*/5 * * * *";
 
@@ -44,7 +44,7 @@ public class PluginCronExecutorTests
         FakeTask task = new();
         PluginCronExecutor executor = new(task);
 
-        Assert.Equal("plugin:11111111-1111-1111-1111-111111111111", executor.JobName);
+        Assert.Equal("plugin:0H248H248H248H248H248H248H", executor.JobName);
         Assert.Equal("*/5 * * * *", executor.CronExpression);
 
         await executor.ExecuteAsync(string.Empty, CancellationToken.None);
@@ -70,7 +70,7 @@ public class PluginCronExecutorTests
 
         public string Name => "observer";
         public string Description => "d";
-        public Guid Id { get; } = Guid.NewGuid();
+        public Ulid Id { get; } = Ulid.NewUlid();
         public Version Version { get; } = new(1, 0);
         public string CronExpression => "0 * * * *";
 

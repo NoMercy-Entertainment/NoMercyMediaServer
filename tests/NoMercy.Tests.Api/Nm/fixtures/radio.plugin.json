@@ -1,0 +1,11 @@
+{
+  "id": "b3d4f1a2-7c5e-4d8a-9f10-1c2b3a4d5e6f",
+  "name": "Internet Radio Provider",
+  "description": "Adds a curated list of internet radio stations as a music media source.",
+  "version": "1.0.0",
+  "targetAbi": "10.0",
+  "author": "NoMercy Community",
+  "projectUrl": "https://github.com/NoMercy-Entertainment/nomercy-media-server",
+  "assembly": "NoMercy.Plugin.InternetRadio.dll",
+  "autoEnabled": true
+}

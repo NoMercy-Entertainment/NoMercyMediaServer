@@ -18,7 +18,7 @@ namespace NoMercy.Api.Hubs;
 /// A plugin's push channel. Bound to one plugin id at construction, so a
 /// plugin cannot reach another plugin's subscribers even by trying.
 /// </summary>
-public class PluginHubBroadcaster(IHubContext<PluginHub> hubContext, Guid pluginId)
+public class PluginHubBroadcaster(IHubContext<PluginHub> hubContext, Ulid pluginId)
     : IPluginHubContext
 {
     public Task PushAsync(string type, object? payload) =>

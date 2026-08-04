@@ -25,11 +25,11 @@ public class UiPluginContractTests
 {
     private sealed class DownloaderPlugin : IUiPlugin
     {
-        public static readonly Guid KnownId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+        public static readonly Ulid KnownId = Ulid.Parse("01ECH000000000000000000000");
 
         public string Name => "Downloader";
         public string Description => "Manages transfers";
-        public Guid Id => KnownId;
+        public Ulid Id => KnownId;
         public Version Version { get; } = new(1, 0, 0);
 
         public void Initialize(IPluginContext context) { }
@@ -40,7 +40,7 @@ public class UiPluginContractTests
             [
                 new()
                 {
-                    Section = PluginUiSection.Tools,
+                    Section = PluginUiSection.Addon,
                     Label = "Downloads",
                     Route = "/",
                 },
@@ -70,7 +70,7 @@ public class UiPluginContractTests
         IUiPlugin plugin = new DownloaderPlugin();
 
         plugin.NavEntries[0].Label.Should().Be("Downloads");
-        plugin.NavEntries[0].Section.Should().Be(PluginUiSection.Tools);
+        plugin.NavEntries[0].Section.Should().Be(PluginUiSection.Addon);
 
         PluginView view = await plugin.GetViewAsync(
             new() { Route = "/active" },
@@ -78,7 +78,10 @@ public class UiPluginContractTests
         );
 
         view.Components.Should().ContainSingle();
-        view.Components![0].Items[0].Props["name"].Should().Be("/active");
+        // Items[0] is the header row now. The value is a text leaf in the body
+        // row's first cell, because a cell holds a component rather than a
+        // string keyed by column.
+        view.Components![0].Items[1].Items[0].Items[0].Props["text"].Should().Be("/active");
     }
 
     [Fact]

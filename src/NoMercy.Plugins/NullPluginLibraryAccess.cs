@@ -55,5 +55,5 @@ public sealed class NullPluginLibraryQuery : IPluginLibraryQuery
 /// </summary>
 public sealed class NullPluginLibraryWriterFactory : IPluginLibraryWriterFactory
 {
-    public IPluginLibraryWriter? CreateFor(Guid pluginId) => null;
+    public IPluginLibraryWriter? CreateFor(Ulid pluginId) => null;
 }

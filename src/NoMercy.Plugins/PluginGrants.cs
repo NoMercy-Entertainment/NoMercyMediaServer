@@ -21,7 +21,7 @@ namespace NoMercy.Plugins;
 /// cannot read or request against another plugin's id by supplying one.
 /// </para>
 /// </summary>
-public class PluginGrants(Guid pluginId, IPluginGrantStore store) : IPluginGrants
+public class PluginGrants(Ulid pluginId, IPluginGrantStore store) : IPluginGrants
 {
     private const int MaxReasonLength = 500;
 
