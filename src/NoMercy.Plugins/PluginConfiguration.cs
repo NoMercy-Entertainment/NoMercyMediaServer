@@ -28,12 +28,18 @@ public class PluginConfiguration : IPluginConfiguration
     // could interleave a read with a concurrent write.
     private readonly SemaphoreSlim _lock = new(1, 1);
 
+    // The Ulid converter is on the file, not on a property: the ids in here are
+    // consent and grant records written by earlier versions, where a plugin id
+    // was a GUID. Without it TryDeserialize below would catch the parse failure
+    // and hand back "no config", which reads as a user who granted nothing —
+    // every consented plugin silently back to disabled after an update.
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
+        Converters = { new PluginIdJsonConverter() },
     };
 
     public PluginConfiguration(string dataFolderPath, IStorage storage)
