@@ -123,7 +123,7 @@ public class PluginRouteTableTests
     public void LinksBetweenPagesWithoutWritingThePrefix()
     {
         PluginActionIntent intent = Table().GoTo("station", new Dictionary<string, string> { ["id"] = "42" });
-        Guid id = Guid.NewGuid();
+        Ulid id = Ulid.NewUlid();
 
         Assert.Equal($"/music/plugins/{id}/stations/42", PluginNavigation.Resolve(intent, PluginKind.Music, id));
     }

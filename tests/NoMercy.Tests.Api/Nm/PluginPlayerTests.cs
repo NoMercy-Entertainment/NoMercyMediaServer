@@ -37,11 +37,11 @@ public class PluginPlayerTests
             Url = "https://example.invalid/stream.mp3",
             Title = "Radio",
             IsLive = true,
-            PluginId = Guid.NewGuid()
+            PluginId = Ulid.NewUlid()
         };
 
         Assert.True(stream.IsLive);
-        Assert.NotEqual(Guid.Empty, stream.PluginId);
+        Assert.NotEqual(Ulid.Empty, stream.PluginId);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class PluginPlayerTests
         public string DataFolderPath => string.Empty;
         public IPluginConfiguration Configuration => null!;
         public HttpClient HttpClient => null!;
-        public Guid PluginId => Guid.Empty;
+        public Ulid PluginId => Ulid.Empty;
         public IPluginSecretStore Secrets => null!;
         public IPluginLibraryQuery Library => null!;
         public IPluginLibraryWriter LibraryWriter => null!;

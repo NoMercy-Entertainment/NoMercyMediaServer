@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Api;
 [Trait("Category", "Routes")]
 public class PluginRestEndpointRoutingTests : IClassFixture<PluginRestEndpointRoutingTests.Factory>
 {
-    public static readonly Guid PluginId = new("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+    public static readonly Ulid PluginId = Ulid.NewUlid();
 
     private readonly Factory _factory;
 
@@ -95,19 +95,19 @@ public class PluginRestEndpointRoutingTests : IClassFixture<PluginRestEndpointRo
 
         public IReadOnlyList<PluginInfo> GetInstalledPlugins() => [_info];
 
-        public IPlugin? GetPluginInstance(Guid pluginId) =>
+        public IPlugin? GetPluginInstance(Ulid pluginId) =>
             pluginId == PluginId ? new SamplePlugin() : null;
 
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
@@ -121,7 +121,7 @@ public class PluginRestEndpointRoutingTests : IClassFixture<PluginRestEndpointRo
     {
         public string Name => "Routing Sample";
         public string Description => "Carries one REST controller.";
-        public Guid Id => PluginId;
+        public Ulid Id => PluginId;
         public Version Version => new(1, 0);
 
         public void Initialize(IPluginContext context) { }

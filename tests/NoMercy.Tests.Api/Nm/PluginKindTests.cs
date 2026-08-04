@@ -5,7 +5,7 @@ namespace NoMercy.Tests.Api.NmComponents;
 
 public class PluginKindTests
 {
-    private static readonly Guid Id = Guid.Parse("66666666-7777-8888-9999-000000000000");
+    private static readonly Ulid Id = Ulid.NewUlid();
 
     [Fact]
     public void PutsAPluginWhereItBelongs()

@@ -784,13 +784,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task EnablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task DisablePluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task DisablePluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
-        public Task UninstallPluginAsync(Guid pluginId, CancellationToken ct = default) =>
+        public Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default) =>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>

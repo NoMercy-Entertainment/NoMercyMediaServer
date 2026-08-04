@@ -27,16 +27,16 @@ namespace NoMercy.Tests.Api;
 [Trait("Category", "Routes")]
 public class PluginRouteConvention_Routes_Test
 {
-    private static readonly Guid Owner = new("11111111-2222-3333-4444-555555555555");
+    private static readonly Ulid Owner = Ulid.NewUlid();
 
     private class OwningCatalog : IPluginAssemblyCatalog
     {
-        public Guid? OwnerOf(Assembly assembly) => Owner;
+        public Ulid? OwnerOf(Assembly assembly) => Owner;
     }
 
     private class ForeignCatalog : IPluginAssemblyCatalog
     {
-        public Guid? OwnerOf(Assembly assembly) => null;
+        public Ulid? OwnerOf(Assembly assembly) => null;
     }
 
     private class SampleController : PluginControllerBase
