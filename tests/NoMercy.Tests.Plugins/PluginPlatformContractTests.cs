@@ -230,7 +230,7 @@ public class PluginUiSectionTests
 {
     [Theory]
     [InlineData(PluginUiSection.Music)]
-    [InlineData(PluginUiSection.Tools)]
+    [InlineData(PluginUiSection.Library)]
     [InlineData(PluginUiSection.Dashboard)]
     public void A_known_section_is_kept(string section) =>
         PluginUiSection.OrFallback(section).Should().Be(section);
@@ -240,7 +240,7 @@ public class PluginUiSectionTests
     [InlineData("")]
     [InlineData(null)]
     public void An_unknown_section_renders_somewhere_real(string? section) =>
-        PluginUiSection.OrFallback(section).Should().Be(PluginUiSection.Tools);
+        PluginUiSection.OrFallback(section).Should().Be(PluginUiSection.Addon);
 
     [Fact]
     public void Section_matching_ignores_case() =>

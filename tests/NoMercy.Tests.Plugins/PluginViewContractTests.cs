@@ -282,7 +282,7 @@ public class PluginViewContractTests
         PluginUiSection
             .OrFallback("a-section-no-client-knows")
             .Should()
-            .Be(PluginUiSection.Tools);
+            .Be(PluginUiSection.Addon);
         PluginUiSection.OrFallback(PluginUiSection.Music).Should().Be(PluginUiSection.Music);
     }
 }

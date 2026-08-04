@@ -22,7 +22,7 @@ public class PluginNavEntry
     /// <summary>
     /// One of <see cref="PluginUiSection"/>. An unknown value is not an error;
     /// a client that does not recognise it falls back to
-    /// <see cref="PluginUiSection.Tools"/>.
+    /// <see cref="PluginUiSection.Addon"/>.
     /// </summary>
     [JsonPropertyName("section")]
     public required string Section { get; init; }

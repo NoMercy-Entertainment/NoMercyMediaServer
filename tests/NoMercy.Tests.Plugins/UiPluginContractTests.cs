@@ -40,7 +40,7 @@ public class UiPluginContractTests
             [
                 new()
                 {
-                    Section = PluginUiSection.Tools,
+                    Section = PluginUiSection.Addon,
                     Label = "Downloads",
                     Route = "/",
                 },
@@ -70,7 +70,7 @@ public class UiPluginContractTests
         IUiPlugin plugin = new DownloaderPlugin();
 
         plugin.NavEntries[0].Label.Should().Be("Downloads");
-        plugin.NavEntries[0].Section.Should().Be(PluginUiSection.Tools);
+        plugin.NavEntries[0].Section.Should().Be(PluginUiSection.Addon);
 
         PluginView view = await plugin.GetViewAsync(
             new() { Route = "/active" },
