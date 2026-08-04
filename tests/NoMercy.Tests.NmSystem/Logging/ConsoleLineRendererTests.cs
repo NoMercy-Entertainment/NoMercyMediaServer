@@ -89,20 +89,26 @@ public class ConsoleLineRendererTests
     }
 
     [Fact]
-    public void Render_Coloured_DrawsTheRuleAsABackgroundNotAGlyph()
+    public void Render_DrawsNoBoxGlyph_SoACopiedLineCarriesNoRule()
     {
-        string line = ConsoleLineRenderer.Render(
-            At,
-            LogLevel.Information,
-            LogCategories.Resolve("moviedb"),
-            "x",
-            null,
-            NoMercyConsoleTheme.Dark,
-            color: true
-        );
+        // The rule is a background colour on a space rather than a box-drawing
+        // character, so pasting a log line does not paste the separator. Pastel
+        // writes no escapes when the stream is redirected, which every CI run
+        // is, so what holds in both environments is the glyph's absence.
+        foreach (bool color in new[] { false, true })
+        {
+            string line = ConsoleLineRenderer.Render(
+                At,
+                LogLevel.Information,
+                LogCategories.Resolve("moviedb"),
+                "x",
+                null,
+                NoMercyConsoleTheme.Dark,
+                color
+            );
 
-        line.Should().Contain("[48;2;");
-        line.Should().NotContain("│");
+            line.Should().NotContain("│");
+        }
     }
 
     [Fact]
