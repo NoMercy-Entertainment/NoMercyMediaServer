@@ -43,7 +43,7 @@ public class NoMercyLoggerTests
 
         logger.LogInformation("Fetching {Id}", 27205);
 
-        sink.ToString().Should().Contain("TheMovieDB │ Fetching 27205");
+        sink.ToString().Should().Contain("TheMovieDB   Fetching 27205");
     }
 
     [Fact]

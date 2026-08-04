@@ -39,7 +39,7 @@ public class ConsoleLineRendererTests
             color: false
         );
 
-        line.Should().Be("14:23:07       TheMovieDB │ Fetching \"Inception\"");
+        line.Should().Be("14:23:07       TheMovieDB   Fetching \"Inception\"");
     }
 
     [Fact]
@@ -85,7 +85,24 @@ public class ConsoleLineRendererTests
 
         string[] lines = block.Split('\n');
         lines.Should().HaveCount(2);
-        lines[1].Should().Be(new string(' ', 26) + "│ second");
+        lines[1].Should().Be(new string(' ', 28) + "second");
+    }
+
+    [Fact]
+    public void Render_Coloured_DrawsTheRuleAsABackgroundNotAGlyph()
+    {
+        string line = ConsoleLineRenderer.Render(
+            At,
+            LogLevel.Information,
+            LogCategories.Resolve("moviedb"),
+            "x",
+            null,
+            NoMercyConsoleTheme.Dark,
+            color: true
+        );
+
+        line.Should().Contain("[48;2;");
+        line.Should().NotContain("│");
     }
 
     [Fact]

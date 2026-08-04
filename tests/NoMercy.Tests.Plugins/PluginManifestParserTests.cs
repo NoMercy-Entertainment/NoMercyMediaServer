@@ -96,6 +96,34 @@ public class PluginManifestParserTests : IDisposable
     }
 
     [Fact]
+    public void Parse_IdWrittenAsAGuid_LoadsAsTheEquivalentUlid()
+    {
+        // What every plugin published before this platform settled on Ulid
+        // carries. A server update does not get to stop loading it, and the id
+        // it resolves to has to be the same one on every start, or the plugin
+        // loses its stored consent and grants.
+        Guid legacyId = Guid.Parse("395df423-3e2f-4a1c-bc5b-dbc41a9133ef");
+        string json =
+            $@"{{""id"":""{legacyId}"",""name"":""Test"",""description"":""d"",""version"":""1.0.0"",""assembly"":""t.dll""}}";
+
+        PluginManifest manifest = PluginManifestParser.Parse(json);
+
+        manifest.Id.Should().Be(new Ulid(legacyId));
+        manifest.Id.ToGuid().Should().Be(legacyId);
+    }
+
+    [Fact]
+    public void Parse_IdThatIsNeitherUlidNorGuid_IsRejected()
+    {
+        string json =
+            @"{""id"":""not-an-id"",""name"":""Test"",""description"":""d"",""version"":""1.0.0"",""assembly"":""t.dll""}";
+
+        Action parse = () => PluginManifestParser.Parse(json);
+
+        parse.Should().Throw<JsonException>();
+    }
+
+    [Fact]
     public void Parse_WithOptionalFields_PopulatesAll()
     {
         string json = CreateValidManifestJson(
