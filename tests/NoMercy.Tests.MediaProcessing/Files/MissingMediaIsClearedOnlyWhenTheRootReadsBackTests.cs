@@ -101,14 +101,26 @@ public sealed class MissingMediaIsClearedOnlyWhenTheRootReadsBackTests : IDispos
     /// The title's own folder never exists — that is the empty scan under test. Only the
     /// library root's answer differs between the two cases.
     /// </summary>
-    private static FileManager BuildManager(Mock<IFileRepository> repoMock, bool rootReadsBack)
+    private static FileManager BuildManager(Mock<IFileRepository> repoMock, bool rootReadsBack) =>
+        BuildManager(repoMock, rootReadsBack, readableRecordedPath: null);
+
+    private static FileManager BuildManager(
+        Mock<IFileRepository> repoMock,
+        bool rootReadsBack,
+        string? readableRecordedPath
+    )
     {
         Mock<IStorage> storageMock = new();
         storageMock.Setup(storage => storage.Exists(It.IsAny<string>())).Returns(false);
         storageMock.Setup(storage => storage.Exists(RootPath)).Returns(rootReadsBack);
+
+        if (readableRecordedPath is not null)
+            storageMock.Setup(storage => storage.Exists(readableRecordedPath)).Returns(true);
         storageMock
             .Setup(storage => storage.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((string first, string second) => $"{first}/{second}");
+            .Returns(
+                (string first, string second) => $"{first.TrimEnd('/')}/{second.TrimStart('/')}"
+            );
         storageMock.Setup(storage => storage.Driver).Returns(Mock.Of<IStorageDriver>());
 
         Mock<IStorageFactory> factoryMock = new();
@@ -131,6 +143,11 @@ public sealed class MissingMediaIsClearedOnlyWhenTheRootReadsBackTests : IDispos
         repoMock
             .Setup(repository => repository.MediaType(It.IsAny<int>(), It.IsAny<Library>()))
             .ReturnsAsync((movie, (Tv?)null, MediaTypes.MovieMediaType));
+        repoMock
+            .Setup(repository =>
+                repository.GetRecordedVideoFileLocationsByMovieIdAsync(It.IsAny<int>())
+            )
+            .ReturnsAsync([]);
         return repoMock;
     }
 
@@ -167,6 +184,43 @@ public sealed class MissingMediaIsClearedOnlyWhenTheRootReadsBackTests : IDispos
             repository => repository.DeleteVideoFilesAndMetadataByMovieIdAsync(MovieId),
             Times.Once,
             "the root reads fine and the media resolved nothing, so it is gone"
+        );
+    }
+
+    /// <summary>
+    /// A library root registered one level above where the media actually lives reads
+    /// back fine and resolves every title to nothing — the exact shape that wiped a
+    /// movie whose folder was sitting on disk the whole time. The registered path is
+    /// the only witness that the media is still there, so it decides the delete.
+    /// </summary>
+    [Fact]
+    public async Task RootReadsBack_ButTheRegisteredMediaIsStillReadable_KeepsTheRecords()
+    {
+        Library library = SeedLibraryWithRoot();
+        Movie movie = new() { Id = MovieId, Folder = "/Fight Club (1999)" };
+        Mock<IFileRepository> repoMock = RepositoryResolving(movie);
+
+        const string hostFolder = $"{RootPath}/{RootPath}/Fight Club (1999)";
+        const string filename = "/Fight Club (1999).NoMercy.m3u8";
+
+        repoMock
+            .Setup(repository =>
+                repository.GetRecordedVideoFileLocationsByMovieIdAsync(It.IsAny<int>())
+            )
+            .ReturnsAsync([new(_folderIds[^1].ToString(), hostFolder, filename)]);
+
+        FileManager manager = BuildManager(
+            repoMock,
+            rootReadsBack: true,
+            readableRecordedPath: $"{hostFolder}{filename}"
+        );
+
+        await manager.FindFiles(MovieId, library);
+
+        repoMock.Verify(
+            repository => repository.DeleteVideoFilesAndMetadataByMovieIdAsync(It.IsAny<int>()),
+            Times.Never,
+            "the media the rows point at is still on disk — the scan failed, not the media"
         );
     }
 }

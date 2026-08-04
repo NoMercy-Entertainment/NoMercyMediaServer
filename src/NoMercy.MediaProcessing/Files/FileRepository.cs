@@ -891,6 +891,34 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         return repointed;
     }
 
+    public async Task<List<RecordedVideoFileLocation>> GetRecordedVideoFileLocationsByMovieIdAsync(
+        int movieId
+    )
+    {
+        return await context
+            .VideoFiles.AsNoTracking()
+            .Where(vf => vf.MovieId == movieId)
+            .Select(vf => new RecordedVideoFileLocation(vf.Share, vf.HostFolder, vf.Filename))
+            .ToListAsync();
+    }
+
+    public async Task<List<RecordedVideoFileLocation>> GetRecordedVideoFileLocationsByTvIdAsync(
+        int tvId
+    )
+    {
+        List<int> episodeIds = await context
+            .Episodes.AsNoTracking()
+            .Where(e => e.TvId == tvId)
+            .Select(e => e.Id)
+            .ToListAsync();
+
+        return await context
+            .VideoFiles.AsNoTracking()
+            .Where(vf => vf.EpisodeId != null && episodeIds.Contains(vf.EpisodeId.Value))
+            .Select(vf => new RecordedVideoFileLocation(vf.Share, vf.HostFolder, vf.Filename))
+            .ToListAsync();
+    }
+
     public async Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId)
     {
         List<Ulid> metadataIds = await context

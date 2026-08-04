@@ -68,6 +68,16 @@ public interface IFileRepository
     Task DeleteVideoFilesAndMetadataByMovieIdAsync(int movieId);
     Task DeleteVideoFilesAndMetadataByTvIdAsync(int tvId);
 
+    /// <summary>
+    /// The paths already registered for a title. A rescan that resolves nothing has
+    /// to prove the media is gone before it deletes anything, and these rows are the
+    /// only record of where it was.
+    /// </summary>
+    Task<List<RecordedVideoFileLocation>> GetRecordedVideoFileLocationsByMovieIdAsync(int movieId);
+
+    /// <inheritdoc cref="GetRecordedVideoFileLocationsByMovieIdAsync"/>
+    Task<List<RecordedVideoFileLocation>> GetRecordedVideoFileLocationsByTvIdAsync(int tvId);
+
     Task<List<VideoFile>> SearchVideoFilesAsync(
         string? query,
         int limit,
