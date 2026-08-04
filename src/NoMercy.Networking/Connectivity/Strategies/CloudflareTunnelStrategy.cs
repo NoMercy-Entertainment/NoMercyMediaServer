@@ -48,6 +48,26 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
     private static partial Regex FailurePattern();
 
     /// <summary>
+    /// cloudflared logs a client that walks away at ERR: a browser navigating off a page
+    /// cancels its in-flight API calls, and a player switching quality or seeking abandons
+    /// the HLS segments it no longer needs. Both are the client's own choice and the tunnel
+    /// stays healthy, but every one matched FailurePattern and surfaced as a warning, so a
+    /// normal evening of watching filled the log with red that nobody can act on. Only the
+    /// graceful shapes are matched — an HTTP/2 cancel carries error code 0, and a non-zero
+    /// code is still a real stream failure.
+    /// </summary>
+    [GeneratedRegex(
+        @"ended abruptly: context canceled|canceled by remote with error code 0\b|\bcontext canceled\b",
+        RegexOptions.IgnoreCase
+    )]
+    private static partial Regex ClientCancellationPattern();
+
+    internal static bool IsClientCancellation(string line)
+    {
+        return ClientCancellationPattern().IsMatch(line);
+    }
+
+    /// <summary>
     /// cloudflared exits on a revoked token, a clock skew, or a network drop. Nothing noticed
     /// before: the exit was logged and the manager kept reporting Tunneled for the rest of
     /// the server's uptime while nothing was listening.
@@ -183,7 +203,7 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
                 // cloudflared reports why it failed — bad token, clock skew, no egress — on
                 // these streams. At LogTrace none of it was ever written, so every tunnel
                 // failure looked identical and unexplained from the logs.
-                if (FailurePattern().IsMatch(line))
+                if (FailurePattern().IsMatch(line) && !IsClientCancellation(line))
                     _logger.LogWarning("cloudflared: {Line}", line);
                 else
                     _logger.LogDebug("cloudflared: {Line}", line);

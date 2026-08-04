@@ -249,6 +249,34 @@ public sealed class CloudflareTunnelStrategyTests
         Assert.Null(ex);
     }
 
+    [Theory]
+    [InlineData(
+        "2026-08-04T19:00:19Z ERR  error=\"Incoming request ended abruptly: context canceled\" connIndex=2 event=1 ingressRule=0 originService=https://127.0.0.1:7626"
+    )]
+    [InlineData(
+        "2026-08-04T19:00:19Z ERR Request failed error=\"Incoming request ended abruptly: context canceled\" connIndex=2 dest=https://server.nomercy.tv/api/v1/home/continue event=0 type=http"
+    )]
+    [InlineData(
+        "2026-08-04T19:01:14Z ERR Request failed error=\"stream 43797 canceled by remote with error code 0\" connIndex=2 dest=https://server.nomercy.tv/video_00015.ts event=0 type=http"
+    )]
+    public void IsClientCancellation_ClientAbortedRequest_IsNotAFailure(string line)
+    {
+        Assert.True(CloudflareTunnelStrategy.IsClientCancellation(line));
+    }
+
+    [Theory]
+    [InlineData(
+        "2026-08-04T19:00:19Z ERR Register tunnel error error=\"Unauthorized: Not a valid tunnel token\""
+    )]
+    [InlineData(
+        "2026-08-04T19:00:19Z ERR Request failed error=\"stream 43797 canceled by remote with error code 2\" connIndex=2"
+    )]
+    [InlineData("2026-08-04T19:00:19Z FTL error=\"failed to dial to edge: dial tcp: i/o timeout\"")]
+    public void IsClientCancellation_RealTunnelFailure_StaysAFailure(string line)
+    {
+        Assert.False(CloudflareTunnelStrategy.IsClientCancellation(line));
+    }
+
     [Fact]
     public async Task TryEstablishAsync_CheckAvailabilityThrows_PropagatesBeforeTokenCheck()
     {
