@@ -158,12 +158,25 @@ public partial class FileLogic(
         );
         string fileName = "/" + StoragePathHelpers.GetName(itemPath);
         string hostFolder = itemPath.Replace(fileName, "");
-        string showName = (Movie?.Folder ?? Show?.Folder).OrEmpty().Trim('/', '\\');
-        int showIdx = string.IsNullOrEmpty(showName)
-            ? -1
-            : itemPath.IndexOf(showName, StringComparison.OrdinalIgnoreCase);
-        string baseFolder =
-            showIdx >= 0 ? ("/" + itemPath[showIdx..]).Replace(fileName, "") : hostFolder;
+
+        // Folder is served as /{Share}{Folder}{Filename}, so it has to be
+        // root-exclusive. Storing the raw scan path instead produces a row whose
+        // URL no client can resolve.
+        if (
+            !StoragePathHelpers.TryGetLibraryRelativeFolder(
+                hostFolder,
+                folder.Path,
+                out string baseFolder
+            )
+        )
+        {
+            logger.LogWarning(
+                "Skipping video file '{Path}': it does not resolve under library folder '{Root}'",
+                item.Path,
+                folder.Path
+            );
+            return;
+        }
 
         string subtitleFolder = hostFolder.TrimEnd('/') + "/subtitles";
 

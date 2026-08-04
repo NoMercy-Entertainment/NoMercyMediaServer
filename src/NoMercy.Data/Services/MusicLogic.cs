@@ -533,11 +533,14 @@ public partial class MusicLogic : IAsyncDisposable
         if (hasAlbum)
             return musicBrainzRelease;
 
+        StoragePathHelpers.TryGetLibraryRelativeParts(
+            mediaFile.Path,
+            ResolveLibraryRoot(),
+            out string relativeFolder,
+            out _
+        );
         string folder =
-            mediaFile
-                .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                .Replace("\\" + mediaFile.Name, "")
-            ?? string.Empty;
+            StoragePathHelpers.GetParent(mediaFile.Path.Replace('\\', '/')) ?? string.Empty;
 
         Album insert = new()
         {
@@ -556,7 +559,7 @@ public partial class MusicLogic : IAsyncDisposable
 
             LibraryId = Library.Id,
             FolderId = Folder!.Id,
-            Folder = folder.Replace(ResolveLibraryRoot(), "").Replace("\\", "/"),
+            Folder = relativeFolder,
             HostFolder = folder.PathName(),
         };
 
@@ -733,20 +736,44 @@ public partial class MusicLogic : IAsyncDisposable
         if (file is not null)
         {
             _logger.LogTrace("File Match: {File}", file);
-            FfProbeData ffProbeData = await FfProbe.CreateAsync(file);
-            string folder =
-                mediaFile
-                    .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                    .Replace("\\" + mediaFile.Name, "")
-                ?? string.Empty;
 
-            insert.Filename = "/" + StoragePathHelpers.GetName(file.Replace('\\', '/'));
+            if (
+                !StoragePathHelpers.TryGetLibraryRelativeParts(
+                    file,
+                    ResolveLibraryRoot(),
+                    out string relativeFolder,
+                    out string filename
+                )
+            )
+            {
+                _logger.LogWarning(
+                    "Skipping track {Title}: '{File}' does not resolve under the library folder",
+                    musicBrainzTrack.Title,
+                    file
+                );
+                return null;
+            }
+
+            FfProbeData ffProbeData = await FfProbe.CreateAsync(file);
+
+            insert.Filename = filename;
             insert.Quality = (int)Math.Floor(ffProbeData.Format.BitRate / 1000.0);
             insert.Duration = HmsRegex().Replace(ffProbeData.Duration.ToString(@"hh\:mm\:ss"), "");
 
             insert.FolderId = Folder!.Id;
-            insert.Folder = folder.Replace(ResolveLibraryRoot(), "").Replace("\\", "/");
-            insert.HostFolder = folder.PathName();
+            insert.Folder = relativeFolder;
+            insert.HostFolder = (
+                StoragePathHelpers.GetParent(file.Replace('\\', '/')) ?? string.Empty
+            ).PathName();
+        }
+
+        // A track with no file on disk has no folder and no filename, so its
+        // composed URL (/{FolderId}{Folder}{Filename}) can never resolve. Only
+        // refresh the metadata of a row that already exists; never create one.
+        if (file is null && !mediaContext.Tracks.AsNoTracking().Any(t => t.Id == insert.Id))
+        {
+            _logger.LogTrace("No file matched for track {Title}", musicBrainzTrack.Title);
+            return null;
         }
 
         try
