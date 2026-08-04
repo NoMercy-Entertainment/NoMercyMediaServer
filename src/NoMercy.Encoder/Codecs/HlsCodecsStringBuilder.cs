@@ -93,15 +93,30 @@ public static class HlsCodecsStringBuilder
         bool tenBit,
         int width = 0,
         int height = 0,
-        double frameRate = 0
+        double frameRate = 0,
+        string? pixelFormat = null
     )
     {
-        // Profile
-        int profileIdc = tenBit ? 2 : 1; // 1=Main, 2=Main10
+        // A rendition whose chroma is not 4:2:0 is Range Extensions (profile 4),
+        // not Main/Main10 — 4:4:4 and 4:2:2 live only there. Advertising such a
+        // stream as Main10 is what let a phone select a rendition its decoder
+        // cannot open: the codec string said a profile every handset supports,
+        // the bytes were RExt, and the failure surfaced as a dead player rather
+        // than as the variant being filtered out of the master.
+        bool rangeExtensions = IsNonFourTwoZeroChroma(pixelFormat);
 
-        // Compatibility flags: Main=0x60000000, Main10=0x40000000
-        // Encoded as the leading non-zero hex word only.
-        string compatFlags = tenBit ? "4" : "6";
+        // Profile
+        int profileIdc =
+            rangeExtensions ? 4
+            : tenBit ? 2
+            : 1; // 1=Main, 2=Main10, 4=RExt
+
+        // Compatibility flags: Main=0x60000000, Main10=0x40000000,
+        // RExt=0x08000000. Encoded as the leading non-zero hex word only.
+        string compatFlags =
+            rangeExtensions ? "10"
+            : tenBit ? "4"
+            : "6";
 
         // Level: spec uses level_idc = level × 30 (e.g. L4.0 → 120, L3.1 → 93).
         // ParseHevcLevel defaults to L4.0 (120), which cannot legally carry 4K —
@@ -113,7 +128,29 @@ public static class HlsCodecsStringBuilder
             levelIdc = Math.Max(levelIdc, MinHevcLevelIdc(width, height, frameRate));
         string levelStr = $"L{levelIdc}";
 
-        return $"hvc1.{profileIdc}.{compatFlags}.{levelStr}.B0";
+        // RExt carries its general_constraint_indicator_flags rather than the
+        // bare B0 a Main/Main10 stream gets: 9C.08 is what a 4:4:4 10-bit
+        // rendition reports, and players match on those bytes when deciding
+        // whether they have a decoder at all.
+        string constraintBytes = rangeExtensions ? "9C.08" : "B0";
+
+        return $"hvc1.{profileIdc}.{compatFlags}.{levelStr}.{constraintBytes}";
+    }
+
+    /// <summary>
+    /// Whether a pixel format names a chroma subsampling other than 4:2:0.
+    /// An unknown or absent format is treated as 4:2:0 — the overwhelmingly
+    /// common case, and claiming RExt for a Main10 stream would filter a
+    /// rendition every device can actually play.
+    /// </summary>
+    private static bool IsNonFourTwoZeroChroma(string? pixelFormat)
+    {
+        if (string.IsNullOrWhiteSpace(pixelFormat))
+            return false;
+
+        string lower = pixelFormat.ToLowerInvariant();
+
+        return lower.Contains("444") || lower.Contains("422");
     }
 
     /// <summary>
@@ -188,7 +225,8 @@ public static class HlsCodecsStringBuilder
         bool tenBit,
         int width = 0,
         int height = 0,
-        double frameRate = 0
+        double frameRate = 0,
+        string? pixelFormat = null
     )
     {
         VideoCodecType? family = CodecFamilyClassifier.ClassifyVideo(encoderName);
@@ -196,7 +234,15 @@ public static class HlsCodecsStringBuilder
         return family switch
         {
             VideoCodecType.H264 => ForH264(profile, level, width, height, frameRate),
-            VideoCodecType.H265 => ForHevc(profile, level, tenBit, width, height, frameRate),
+            VideoCodecType.H265 => ForHevc(
+                profile,
+                level,
+                tenBit,
+                width,
+                height,
+                frameRate,
+                pixelFormat
+            ),
             VideoCodecType.Av1 => ForAv1(level, tenBit, width, height, frameRate),
             // VP9 — no RFC 6381 standardised short-form; use vp09 signaling
             VideoCodecType.Vp9 => $"vp09.00.41.{(tenBit ? "10" : "08")}",

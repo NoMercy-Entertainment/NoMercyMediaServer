@@ -74,6 +74,25 @@ public class HlsCodecsStringBuilderTests
         HlsCodecsStringBuilder.ForHevc("main", null, tenBit: true).Should().Be("hvc1.2.4.L120.B0");
     }
 
+    /// <summary>
+    /// A 4:4:4 or 4:2:2 rendition is Range Extensions, and no phone has a
+    /// decoder for it. Advertised as Main10 it looks playable to every client,
+    /// so the variant is selected and playback dies at the decoder instead of
+    /// the rendition being filtered out of the master where it belongs.
+    /// </summary>
+    [Theory]
+    [InlineData("yuv444p10le", "hvc1.4.10.L153.9C.08")]
+    [InlineData("yuv422p10le", "hvc1.4.10.L153.9C.08")]
+    [InlineData("yuv420p10le", "hvc1.2.4.L153.B0")]
+    [InlineData(null, "hvc1.2.4.L153.B0")]
+    public void ForHevc_NonFourTwoZeroChroma_IsRangeExtensions(string? pixelFormat, string expected)
+    {
+        HlsCodecsStringBuilder
+            .ForHevc("main", "5.1", tenBit: true, pixelFormat: pixelFormat)
+            .Should()
+            .Be(expected);
+    }
+
     // ── AV1 (av01.0.LLT.DD) ────────────────────────────────────────────────
 
     [Theory]

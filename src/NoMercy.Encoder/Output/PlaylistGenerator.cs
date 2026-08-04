@@ -315,7 +315,8 @@ public class PlaylistGenerator : IPlaylistGenerator
             video.TenBit,
             video.Width,
             video.Height,
-            video.FrameRate
+            video.FrameRate,
+            video.PixelFormat
         );
 
     private static string? GetAudioCodecTag(AudioOutputPlan audio) =>

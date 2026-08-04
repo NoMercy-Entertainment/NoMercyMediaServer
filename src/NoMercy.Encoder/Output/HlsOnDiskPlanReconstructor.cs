@@ -146,7 +146,8 @@ public partial class HlsOnDiskPlanReconstructor(
                 bool tenBit,
                 string? colorTransfer,
                 double frameRate,
-                bool isFmp4
+                bool isFmp4,
+                string? pixelFormat
             ) = await ProbeVideoAsync(storage, dir, ct);
 
             if (isFmp4)
@@ -177,7 +178,10 @@ public partial class HlsOnDiskPlanReconstructor(
                     Profile: null,
                     Level: null,
                     TenBit: tenBit,
-                    PixelFormat: tenBit ? "yuv420p10le" : "yuv420p",
+                    // The probed format, not an assumed one: a 4:4:4 or 4:2:2
+                    // rendition is Range Extensions, and the master's codec
+                    // string is derived from this field.
+                    PixelFormat: pixelFormat ?? (tenBit ? "yuv420p10le" : "yuv420p"),
                     MapLabel: "[v0]",
                     ExtraFlags: [],
                     FrameRate: frameRate > 0 ? frameRate : 23.976,
@@ -394,7 +398,8 @@ public partial class HlsOnDiskPlanReconstructor(
         bool TenBit,
         string? ColorTransfer,
         double FrameRate,
-        bool IsFmp4
+        bool IsFmp4,
+        string? PixelFormat
     )> ProbeVideoAsync(IStorage storage, string dir, CancellationToken ct)
     {
         string initPath = storage.CombinePath(dir, "init.mp4");
@@ -402,14 +407,14 @@ public partial class HlsOnDiskPlanReconstructor(
         string? probePath = isFmp4 ? initPath : FindFirstSegment(storage, dir);
 
         if (probePath is null)
-            return (null, 0, 0, false, null, 0, isFmp4);
+            return (null, 0, 0, false, null, 0, isFmp4, null);
 
         try
         {
             MediaInfo info = await mediaAnalyzer.AnalyzeAsync(probePath, storage, ct);
             VideoStreamInfo? stream = info.VideoStreams.FirstOrDefault();
             return stream is null
-                ? (null, 0, 0, false, null, 0, isFmp4)
+                ? (null, 0, 0, false, null, 0, isFmp4, null)
                 : (
                     stream.Codec,
                     stream.Width,
@@ -417,7 +422,8 @@ public partial class HlsOnDiskPlanReconstructor(
                     stream.BitDepth >= 10,
                     stream.ColorTransfer,
                     stream.FrameRate,
-                    isFmp4
+                    isFmp4,
+                    stream.PixelFormat
                 );
         }
         catch (Exception)
@@ -425,7 +431,7 @@ public partial class HlsOnDiskPlanReconstructor(
             // A corrupt/missing init segment must not sink the whole
             // reconstruction — the caller falls back to the directory-name
             // width/height/HDR signal for this one rendition.
-            return (null, 0, 0, false, null, 0, isFmp4);
+            return (null, 0, 0, false, null, 0, isFmp4, null);
         }
     }
 
