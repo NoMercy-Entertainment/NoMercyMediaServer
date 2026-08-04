@@ -120,6 +120,7 @@ public static partial class ServiceConfiguration
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
         services.AddSingleton<CastSessionTokenService>();
+        services.AddSingleton<Api.Services.Cast.IServerCastWaker, Api.Services.Cast.ServerCastWaker>();
         // Route every container to the same tracker. The Service rebuilds its host
         // on the HTTPS restart and on port-conflict retry; a per-container singleton
         // would mean queue workers in the live host wait on a tracker that the static
