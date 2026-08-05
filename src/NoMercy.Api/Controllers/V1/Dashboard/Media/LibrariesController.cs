@@ -455,12 +455,15 @@ public class LibrariesController(
     /// collections dispatched nothing at all for it and the rescan reported success
     /// having done no work. Music is not addressed per title either — its file matching
     /// runs over the library's own folders — so it dispatches once for the library.
+    /// It dispatches <see cref="LibraryScanJob"/> rather than <see cref="FileRescanJob"/>:
+    /// the latter is the video path, which found no parseable candidates in a music
+    /// folder and went on to delete video-file and metadata records.
     /// </summary>
     private void RescanLibraryFiles(Library library)
     {
         if (library.Type == MediaTypes.MusicMediaType)
         {
-            jobDispatcher.DispatchJob<FileRescanJob>(library.Id);
+            jobDispatcher.DispatchJob<LibraryScanJob>(library.Id);
             return;
         }
 
