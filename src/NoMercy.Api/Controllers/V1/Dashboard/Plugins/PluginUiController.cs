@@ -110,6 +110,12 @@ public class PluginUiController(IPluginManager pluginManager) : BaseController
                         entry.Icon,
                         Path = PluginRoutes.PrefixFor(entry.Kind, entry.PluginId).TrimEnd('/')
                             + (entry.Route == "/" ? string.Empty : entry.Route),
+                        // The mount on its own, without this entry's route on
+                        // the end. A client that has only the resolved path and
+                        // wants to build a sibling route has to guess at where
+                        // the mount stops, and guessing wrong asks the plugin
+                        // for a page nobody declared.
+                        Prefix = PluginRoutes.PrefixFor(entry.Kind, entry.PluginId).TrimEnd('/'),
                         // Every page the plugin declares, so a client registers a
                         // named route for each when a server is chosen rather than
                         // discovering them one navigation at a time.
