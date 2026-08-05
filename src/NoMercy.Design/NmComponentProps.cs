@@ -99,6 +99,16 @@ public abstract record NmProps
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
 
+    /// <summary>
+    /// Children for a slot the component names, keyed by that name. A card
+    /// declares a header, a body and a footer; without this a payload could
+    /// reach none of them, because every renderer filled the default slot and
+    /// nothing else. Anything sent under a name the component does not declare
+    /// is ignored rather than drawn somewhere it does not belong.
+    /// </summary>
+    [JsonProperty("slots", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, List<NmComponent>>? Slots { get; set; }
+
     [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }
 
