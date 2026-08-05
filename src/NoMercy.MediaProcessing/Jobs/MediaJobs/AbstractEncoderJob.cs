@@ -14,12 +14,13 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NoMercy.Plugins.Hooks;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -41,6 +42,12 @@ public abstract class AbstractEncoderJob : IShouldQueue, IJobStorageInjector
 
     [JsonIgnore]
     public ILoggerFactory LoggerFactory { get; set; } = null!;
+
+    [JsonIgnore]
+    public IPluginMediaSourceProvider PluginMediaSources { get; private set; } = null!;
+
+    [JsonIgnore]
+    public IPluginMetadataResolver PluginMetadata { get; private set; } = null!;
 
     [JsonIgnore]
     protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());
@@ -65,6 +72,8 @@ public abstract class AbstractEncoderJob : IShouldQueue, IJobStorageInjector
         StorageFactory = serviceProvider.GetRequiredService<IStorageFactory>();
         StorageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
         LoggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        PluginMediaSources = serviceProvider.GetRequiredService<IPluginMediaSourceProvider>();
+        PluginMetadata = serviceProvider.GetRequiredService<IPluginMetadataResolver>();
     }
 
     public void Dispose() { }

@@ -75,7 +75,9 @@ public class FileRescanJob : AbstractMediaJob
             StorageFactory,
             _mediaAnalyzer,
             _filenameParser,
-            LoggerFactory.CreateLogger<LibraryManager>()
+            LoggerFactory.CreateLogger<LibraryManager>(),
+            null,
+            PluginMediaSources
         );
 
         Library? library = await libraryManager.RescanFiles(LibraryId, Id);

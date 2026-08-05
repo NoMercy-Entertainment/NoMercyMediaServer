@@ -27,6 +27,7 @@ using NoMercy.NmSystem;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Plugins.Hooks;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Shared;
@@ -44,7 +45,8 @@ public class LibraryManager(
     IMediaAnalyzer mediaAnalyzer,
     IFilenameParserPipeline filenameParser,
     ILogger<LibraryManager> logger,
-    IEventBus? eventBus = null
+    IEventBus? eventBus = null,
+    IPluginMediaSourceProvider? pluginMediaSources = null
 ) : BaseManager, ILibraryManager
 {
     private Library? _library;
@@ -535,7 +537,8 @@ public class LibraryManager(
             storageFactory,
             storageDriver,
             mediaAnalyzer,
-            filenameParser
+            filenameParser,
+            pluginMediaSources ?? NullPluginMediaSourceProvider.Instance
         );
 
         _ = await fileManager.FindFiles(id, library);

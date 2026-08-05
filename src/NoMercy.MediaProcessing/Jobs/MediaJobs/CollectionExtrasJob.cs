@@ -52,7 +52,8 @@ public class CollectionExtrasJob : AbstractMediaExraDataJob<TmdbCollectionAppend
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            LoggerFactory.CreateLogger<MovieManager>()
+            LoggerFactory.CreateLogger<MovieManager>(),
+            PluginMetadata
         );
 
         CollectionRepository collectionRepository = new(context);

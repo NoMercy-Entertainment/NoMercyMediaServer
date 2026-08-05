@@ -172,7 +172,8 @@ public class VideoEncodeJob
             StorageFactory,
             StorageDriver,
             _mediaAnalyzer!,
-            _filenameParser!
+            _filenameParser!,
+            PluginMediaSources
         );
 
         Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
@@ -1026,7 +1027,8 @@ public class VideoEncodeJob
             StorageFactory,
             StorageDriver,
             _mediaAnalyzer!,
-            _filenameParser!
+            _filenameParser!,
+            PluginMediaSources
         );
 
         await using LibraryRepository libraryRepository = new(context, StorageDriver);

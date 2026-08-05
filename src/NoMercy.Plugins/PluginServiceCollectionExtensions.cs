@@ -162,6 +162,14 @@ public static class PluginServiceCollectionExtensions
 
         services.AddSingleton<IPluginCronRegistrar, PluginCronRegistrar>();
 
+        // What plugins contribute to a library scan, merged in before the names
+        // are resolved so their files go through the scanner's own parser.
+        services.AddSingleton<IPluginMediaSourceProvider, PluginMediaSourceProvider>();
+
+        // What plugins can fill in that the native provider left empty. Native
+        // runs first; a plugin never overwrites what TMDB already answered.
+        services.AddSingleton<IPluginMetadataResolver, PluginMetadataResolver>();
+
         // Additive auth claims: OnTokenValidated (ServiceConfiguration.Auth.cs) resolves
         // this per authenticated request to enrich the principal. It never decides auth.
         services.AddSingleton<IPluginClaimsAugmentor, PluginClaimsAugmentor>();
