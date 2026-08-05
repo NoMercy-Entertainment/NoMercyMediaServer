@@ -99,6 +99,7 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
             busRegistry,
             Mock.Of<Database.Activity.IActivityLogger>(),
             Mock.Of<IDeviceCapabilityRegistry>(),
+            Mock.Of<NoMercy.Api.Services.Cast.IServerCastWaker>(),
             NullLogger<DeviceHub>.Instance
         );
 

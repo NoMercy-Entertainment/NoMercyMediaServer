@@ -49,7 +49,13 @@ public partial class RecordingManager(
     )
     {
         logger.LogTrace(
-            "Storing Recording: {Title} - {Position}-{Position2} {Title2}", [releaseAppends.Title, musicBrainzMedia.Position, musicBrainzTrack.Position, musicBrainzTrack.Title]
+            "Storing Recording: {Title} - {Position}-{Position2} {Title2}",
+            [
+                releaseAppends.Title,
+                musicBrainzMedia.Position,
+                musicBrainzTrack.Position,
+                musicBrainzTrack.Title,
+            ]
         );
 
         MediaScan mediaScan = new(storageDriver);
@@ -82,11 +88,24 @@ public partial class RecordingManager(
 
                 logger.LogTrace("Recording {Title} found", musicBrainzTrack.Title);
 
+                if (
+                    !StoragePathHelpers.TryGetLibraryRelativeParts(
+                        mediaFile.Path,
+                        ResolveLibraryRoot(libraryFolder),
+                        out string relativeFolder,
+                        out string filename
+                    )
+                )
+                {
+                    logger.LogWarning(
+                        "Skipping recording {Title}: '{Path}' does not resolve under library folder '{Root}'",
+                        [musicBrainzTrack.Title, mediaFile.Path, libraryFolder.Path]
+                    );
+                    continue;
+                }
+
                 string path =
-                    mediaFile
-                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        .Replace("\\" + mediaFile.Name, "")
-                    ?? string.Empty;
+                    StoragePathHelpers.GetParent(mediaFile.Path.Replace('\\', '/')) ?? string.Empty;
 
                 Track insert = new()
                 {
@@ -98,7 +117,7 @@ public partial class RecordingManager(
                     DiscNumber = musicBrainzMedia.Position,
                     TrackNumber = musicBrainzTrack.Position,
 
-                    Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path.Replace('\\', '/')),
+                    Filename = filename,
                     Quality = (int)
                         Math.Floor(
                             (
@@ -118,7 +137,7 @@ public partial class RecordingManager(
                         ),
 
                     FolderId = libraryFolder.Id,
-                    Folder = path.Replace(ResolveLibraryRoot(libraryFolder), "").Replace("\\", "/"),
+                    Folder = relativeFolder,
                     HostFolder = path.PathName(),
 
                     Cover = releaseCoverPalette?.Url is not null
@@ -163,7 +182,8 @@ public partial class RecordingManager(
     )
     {
         logger.LogTrace(
-            "Linking Recording to Artist: {Title} - {Title2}", [musicBrainzTrack.Title, releaseAppends.MusicBrainzReleaseGroup.Title]
+            "Linking Recording to Artist: {Title} - {Title2}",
+            [musicBrainzTrack.Title, releaseAppends.MusicBrainzReleaseGroup.Title]
         );
 
         foreach (ReleaseArtistCredit credit in releaseAppends.ArtistCredit)
@@ -359,6 +379,13 @@ public partial class RecordingManager(
         JobDispatcher jobDispatcher = new();
         logger.LogTrace("Recording {Title} found", releaseAppends.Title);
 
+        StoragePathHelpers.TryGetLibraryRelativeParts(
+            mediaFile.Path,
+            ResolveLibraryRoot(libraryFolder),
+            out string artistRelativeFolder,
+            out _
+        );
+
         foreach (MusicBrainzArtistAppends artist in artistAppends)
         {
             try
@@ -386,15 +413,11 @@ public partial class RecordingManager(
                     Year = artist.LifeSpan?.BeginDate?.Year,
 
                     FolderId = libraryFolder.Id,
-                    Folder = mediaFile
-                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        .Replace("\\" + mediaFile.Name, "")
-                        .Replace(ResolveLibraryRoot(libraryFolder), "")
-                        .Replace("\\", "/"),
-                    HostFolder = mediaFile
-                        .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                        .Replace("\\" + mediaFile.Name, "")
-                        .PathName()!,
+                    Folder = artistRelativeFolder,
+                    HostFolder = (
+                        StoragePathHelpers.GetParent(mediaFile.Path.Replace('\\', '/'))
+                        ?? string.Empty
+                    ).PathName(),
 
                     LibraryId = libraryFolder.FolderLibraries.FirstOrDefault()!.LibraryId,
                 };
@@ -408,11 +431,24 @@ public partial class RecordingManager(
             }
         }
 
+        if (
+            !StoragePathHelpers.TryGetLibraryRelativeParts(
+                mediaFile.Path,
+                ResolveLibraryRoot(libraryFolder),
+                out string relativeFolder,
+                out string filename
+            )
+        )
+        {
+            logger.LogWarning(
+                "Skipping recording {Title}: '{Path}' does not resolve under library folder '{Root}'",
+                [trackAppends.Title, mediaFile.Path, libraryFolder.Path]
+            );
+            return;
+        }
+
         string path =
-            mediaFile
-                .Parsed?.FilePath.Replace("/" + mediaFile.Name, "")
-                .Replace("\\" + mediaFile.Name, "")
-            ?? string.Empty;
+            StoragePathHelpers.GetParent(mediaFile.Path.Replace('\\', '/')) ?? string.Empty;
 
         Track insert = new()
         {
@@ -422,7 +458,7 @@ public partial class RecordingManager(
             DiscNumber = mediaFile.Parsed?.DiscNumber ?? 0,
             TrackNumber = mediaFile.Parsed?.TrackNumber ?? 0,
 
-            Filename = "/" + StoragePathHelpers.GetName(mediaFile.Path.Replace('\\', '/')),
+            Filename = filename,
             Quality = (int)
                 Math.Floor(
                     (
@@ -440,7 +476,7 @@ public partial class RecordingManager(
                 ),
 
             FolderId = libraryFolder.Id,
-            Folder = path.Replace(ResolveLibraryRoot(libraryFolder), "").Replace("\\", "/"),
+            Folder = relativeFolder,
             HostFolder = path.PathName(),
 
             Cover = releaseCoverPalette?.Url is not null

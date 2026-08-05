@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NoMercy.Api.Services.Cast;
 using NoMercy.Api.WebSockets;
 using NoMercy.Authorization;
 using NoMercy.Database;
@@ -25,6 +26,7 @@ using NoMercy.Networking;
 using NoMercy.Networking.Devices;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
+using NoMercy.Setup.Cast;
 
 namespace NoMercy.Api.Hubs;
 
@@ -35,6 +37,7 @@ public sealed class DeviceHub : ConnectionHub
     private readonly DeviceBusRegistry _busRegistry;
     private readonly IDeviceCapabilityRegistry _capabilityRegistry;
     private readonly ILogger<DeviceHub> _logger;
+    private readonly IServerCastWaker _castWaker;
 
     public DeviceHub(
         IHttpContextAccessor httpContextAccessor,
@@ -43,6 +46,7 @@ public sealed class DeviceHub : ConnectionHub
         DeviceBusRegistry busRegistry,
         IActivityLogger activityLogger,
         IDeviceCapabilityRegistry capabilityRegistry,
+        IServerCastWaker castWaker,
         ILogger<DeviceHub> logger
     )
         : base(httpContextAccessor, contextFactory, connectedClients, activityLogger)
@@ -50,6 +54,7 @@ public sealed class DeviceHub : ConnectionHub
         _contextFactory = contextFactory;
         _busRegistry = busRegistry;
         _capabilityRegistry = capabilityRegistry;
+        _castWaker = castWaker;
         _logger = logger;
     }
 
@@ -77,7 +82,13 @@ public sealed class DeviceHub : ConnectionHub
         _capabilityRegistry.Set(deviceId, payload);
 
         _logger.LogInformation(
-            "Device {DeviceId} declared capabilities: channels={Channels} codecs=[{Codecs}] ramTier={Tier}", [deviceId, payload.MaxAudioChannels, string.Join(",", payload.AudioCodecs), payload.RamTier]
+            "Device {DeviceId} declared capabilities: channels={Channels} codecs=[{Codecs}] ramTier={Tier}",
+            [
+                deviceId,
+                payload.MaxAudioChannels,
+                string.Join(",", payload.AudioCodecs),
+                payload.RamTier,
+            ]
         );
     }
 
@@ -134,7 +145,12 @@ public sealed class DeviceHub : ConnectionHub
             return new(sent ? "wake_sent" : "no_route");
         }
 
-        return new("cast_fallback");
+        // Off the bus: the server does the Cast wake itself rather than handing the
+        // job back to whichever client happened to ask. `cast_fallback` made the
+        // feature only as reliable as the weakest sender on the network — and left
+        // any client without a Cast SDK unable to wake a TV at all.
+        bool dispatched = await _castWaker.WakeAsync(device, user.Id, CastIntent.Idle());
+        return new(dispatched ? "wake_sent" : "no_route");
     }
 
     public async Task<WakeResult> WakeForVideo(string deviceId)
@@ -160,7 +176,12 @@ public sealed class DeviceHub : ConnectionHub
             return new(sent ? "wake_sent" : "no_route");
         }
 
-        return new("cast_fallback");
+        // Off the bus: the server does the Cast wake itself rather than handing the
+        // job back to whichever client happened to ask. `cast_fallback` made the
+        // feature only as reliable as the weakest sender on the network — and left
+        // any client without a Cast SDK unable to wake a TV at all.
+        bool dispatched = await _castWaker.WakeAsync(device, user.Id, CastIntent.Idle());
+        return new(dispatched ? "wake_sent" : "no_route");
     }
 
     public async Task<List<DeviceDropNoticeDto>> PendingNotices()

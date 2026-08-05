@@ -69,8 +69,12 @@ public class LibraryRescanDispatchTests
         };
 
     [Fact]
-    public async Task Rescanning_a_music_library_dispatches_a_file_rescan_for_it()
+    public async Task Rescanning_a_music_library_runs_the_music_scanner_not_the_video_one()
     {
+        // FileRescanJob is the video path: pointed at a music library it reports
+        // "no parseable candidates" and moves on to deleting video-file and
+        // metadata records. The music scanner is LibraryScanJob, which walks the
+        // library's folders and matches audio files.
         Library library = MusicLibrary();
         Mock<IJobDispatcher> jobDispatcher = new();
 
@@ -78,8 +82,12 @@ public class LibraryRescanDispatchTests
 
         result.Should().BeOfType<OkObjectResult>();
         jobDispatcher.Verify(
-            dispatcher => dispatcher.DispatchJob<FileRescanJob>(library.Id),
+            dispatcher => dispatcher.DispatchJob<LibraryScanJob>(library.Id),
             Times.Once
+        );
+        jobDispatcher.Verify(
+            dispatcher => dispatcher.DispatchJob<FileRescanJob>(library.Id),
+            Times.Never
         );
     }
 
@@ -93,7 +101,7 @@ public class LibraryRescanDispatchTests
 
         result.Should().BeOfType<OkObjectResult>();
         jobDispatcher.Verify(
-            dispatcher => dispatcher.DispatchJob<FileRescanJob>(library.Id),
+            dispatcher => dispatcher.DispatchJob<LibraryScanJob>(library.Id),
             Times.Once
         );
     }

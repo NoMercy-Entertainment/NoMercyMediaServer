@@ -106,4 +106,83 @@ public static class StoragePathHelpers
             ? normalizedItem.TrimStart('/')
             : normalizedItem[rootIndex..].TrimStart('/');
     }
+
+    /// <summary>
+    /// Splits a scanned file path into the <c>Folder</c> / <c>Filename</c> pair
+    /// that a media row persists, relative to <paramref name="folderRoot"/>:
+    /// <c>("/U2/The Joshua Tree", "/01. Where.flac")</c>. Both parts carry a
+    /// leading <c>'/'</c> because the API composes the playback URL as
+    /// <c>/{FolderId}{Folder}{Filename}</c>.
+    /// Returns false — leaving both parts empty — when the pair could not
+    /// address a file: an empty path or root, a path naming a directory, or a
+    /// file that does not live under the root. Callers must not persist a row
+    /// on false; the composed URL would be unresolvable for every client.
+    /// Unlike <see cref="RebaseToFolderRoot"/>, which keeps the root segment for
+    /// facade access, the returned folder is root-exclusive.
+    /// </summary>
+    public static bool TryGetLibraryRelativeParts(
+        string absoluteFilePath,
+        string folderRoot,
+        out string folder,
+        out string filename
+    )
+    {
+        folder = string.Empty;
+        filename = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(absoluteFilePath) || string.IsNullOrWhiteSpace(folderRoot))
+            return false;
+
+        string normalizedPath = absoluteFilePath.Replace('\\', '/');
+        if (normalizedPath.EndsWith('/'))
+            return false;
+
+        string name = GetName(normalizedPath);
+        if (string.IsNullOrEmpty(name))
+            return false;
+
+        string directory = normalizedPath[..^name.Length];
+        if (!TryGetLibraryRelativeFolder(directory, folderRoot, out folder))
+            return false;
+
+        filename = "/" + name;
+        return true;
+    }
+
+    /// <summary>
+    /// The directory-shaped counterpart of
+    /// <see cref="TryGetLibraryRelativeParts"/>: turns a scanned directory into
+    /// the root-exclusive <c>Folder</c> value a media row persists
+    /// (<c>"/U2/The Joshua Tree"</c>, or empty for the root itself). Returns
+    /// false — leaving <paramref name="folder"/> empty — when the directory does
+    /// not live under <paramref name="folderRoot"/>, so a caller never persists
+    /// an unstripped host path such as <c>"M:/Download/complete/…"</c>.
+    /// </summary>
+    public static bool TryGetLibraryRelativeFolder(
+        string directory,
+        string folderRoot,
+        out string folder
+    )
+    {
+        folder = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(folderRoot))
+            return false;
+
+        string normalizedDirectory = directory.Replace('\\', '/');
+        string normalizedRoot = folderRoot.Replace('\\', '/').Trim('/');
+        if (normalizedRoot.Length == 0)
+            return false;
+
+        int rootIndex = normalizedDirectory.IndexOf(
+            normalizedRoot,
+            StringComparison.OrdinalIgnoreCase
+        );
+        if (rootIndex < 0)
+            return false;
+
+        string withinRoot = normalizedDirectory[(rootIndex + normalizedRoot.Length)..].Trim('/');
+        folder = withinRoot.Length == 0 ? string.Empty : "/" + withinRoot;
+        return true;
+    }
 }

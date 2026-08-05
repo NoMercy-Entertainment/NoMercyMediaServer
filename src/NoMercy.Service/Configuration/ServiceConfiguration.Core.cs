@@ -23,6 +23,7 @@ using NoMercy.Data.Plugins;
 using NoMercy.Data.Repositories;
 using NoMercy.Data.Resolvers;
 using NoMercy.Data.Security;
+using NoMercy.Data.Services;
 using NoMercy.Database;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Startup;
@@ -120,6 +121,10 @@ public static partial class ServiceConfiguration
         services.AddSingleton<SetupEndpoints>();
         services.AddSingleton<BootOrchestrator>();
         services.AddSingleton<CastSessionTokenService>();
+        services.AddSingleton<
+            Api.Services.Cast.IServerCastWaker,
+            Api.Services.Cast.ServerCastWaker
+        >();
         // Route every container to the same tracker. The Service rebuilds its host
         // on the HTTPS restart and on port-conflict retry; a per-container singleton
         // would mean queue workers in the live host wait on a tracker that the static
@@ -619,6 +624,10 @@ public static partial class ServiceConfiguration
         services.AddHostedService<IntroDetectionSubscriber>();
         services.AddHostedService<PaletteBackfillStartupService>();
         services.AddHostedService<MusicQueryWarmupService>();
+        // Singleton, not scoped: the startup service that consumes it is one,
+        // and the repair itself holds only a context factory and a logger.
+        services.AddSingleton<IUnresolvablePathRepair, UnresolvablePathRepair>();
+        services.AddHostedService<UnresolvablePathRepairStartupService>();
 
         // Before AddPluginSystem, so its null-object fallback stays a no-op.
         // This host maps /pluginHub, so a plugin's Hub.PushAsync reaches real
