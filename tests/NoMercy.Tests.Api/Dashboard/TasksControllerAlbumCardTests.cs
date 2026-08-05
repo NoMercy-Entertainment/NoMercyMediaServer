@@ -36,8 +36,9 @@ namespace NoMercy.Tests.Api.Dashboard;
 [Trait("Category", "Tasks")]
 public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, IAsyncLifetime
 {
-    private const int AlbumTracks = 8;
+    private const int EncodedTracks = 3;
     private const int QueuedTracks = 5;
+    private const int AlbumTracks = EncodedTracks + QueuedTracks;
     private static readonly Guid ReleaseId = new("bb2d2f61-4d43-4f2a-9d51-19f3d3e2c0aa");
 
     private readonly HttpClient _authed;
@@ -49,6 +50,9 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
     {
         _authed = factory.CreateClient().AsAuthenticated();
     }
+
+    private static Guid EncodedTrackId(int track) =>
+        new($"0000000{track}-3333-3333-3333-333333333333");
 
     private static string MusicPayload(int track)
     {
@@ -93,6 +97,10 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
         // Both navigations are default-initialized on the model, so an album that
         // only sets the ids drags two empty rows into the insert and the foreign
         // keys fail on them rather than on anything this test is about.
+        //
+        // Tracks is deliberately a number that matches nothing: it is what the
+        // metadata provider says the release holds, and a card that counts
+        // towards it reports work as done that was never encoded.
         media.Albums.Add(
             new()
             {
@@ -102,9 +110,30 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
                 Library = library,
                 FolderId = _folderId,
                 LibraryFolder = folder,
-                Tracks = AlbumTracks,
+                Tracks = 42,
             }
         );
+        await media.SaveChangesAsync();
+
+        // Tracks already encoded. The link to the release is written when the
+        // encode succeeds and the recording is stored, so these rows are the
+        // finished work — and the only honest numerator the card has.
+        for (int track = 1; track <= EncodedTracks; track++)
+        {
+            Guid trackId = EncodedTrackId(track);
+            media.Tracks.Add(
+                new()
+                {
+                    Id = trackId,
+                    Name = $"Encoded {track}",
+                    FolderId = _folderId,
+                    Folder = "/Music/Eagles",
+                    Filename = $"/e{track}.flac",
+                }
+            );
+            media.AlbumTrack.Add(new(ReleaseId, trackId));
+        }
+
         await media.SaveChangesAsync();
 
         await using QueueContext queue = new();
@@ -132,6 +161,9 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
         await queue.QueueJobs.Where(job => _rowIds.Contains(job.Id)).ExecuteDeleteAsync();
 
         await using MediaContext media = new();
+        List<Guid> trackIds = Enumerable.Range(1, EncodedTracks).Select(EncodedTrackId).ToList();
+        await media.AlbumTrack.Where(link => link.AlbumId == ReleaseId).ExecuteDeleteAsync();
+        await media.Tracks.Where(track => trackIds.Contains(track.Id)).ExecuteDeleteAsync();
         await media.Albums.Where(album => album.Id == ReleaseId).ExecuteDeleteAsync();
         await media.FolderLibrary.Where(link => link.FolderId == _folderId).ExecuteDeleteAsync();
         await media.Folders.Where(folder => folder.Id == _folderId).ExecuteDeleteAsync();
@@ -179,18 +211,22 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
     {
         JsonElement card = await AlbumCardAsync();
 
-        card.GetProperty("total_items").GetInt32().Should().Be(AlbumTracks);
-        card.GetProperty("completed_items")
+        card.GetProperty("total_items")
             .GetInt32()
             .Should()
             .Be(
-                AlbumTracks - QueuedTracks,
-                "a track that has left the queue is a track that finished"
+                AlbumTracks,
+                "the album is what is stored plus what is still queued, so the card "
+                    + "reaches 100% exactly when the queue for it runs dry"
             );
+        card.GetProperty("completed_items")
+            .GetInt32()
+            .Should()
+            .Be(EncodedTracks, "a stored track is an encoded track — nothing else is done");
         card.GetProperty("progress")
             .GetDouble()
             .Should()
-            .BeApproximately((AlbumTracks - QueuedTracks) * 100d / AlbumTracks, 0.05);
+            .BeApproximately(EncodedTracks * 100d / AlbumTracks, 0.05);
     }
 
     [Fact]

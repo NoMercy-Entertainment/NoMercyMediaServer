@@ -621,15 +621,27 @@ public class TasksController(
 
         List<Guid> releaseIds = musicRows.Select(row => row.Job.ReleaseId).Distinct().ToList();
 
-        // How many tracks the album has at all. Without it there is no denominator
-        // and the card can only report what is left, so a release that is not
-        // stored yet reports its queued tracks and no progress rather than a
-        // percentage invented from a number it does not have.
-        Dictionary<Guid, AlbumTotal> albums = await mediaContext
+        // Tracks of the release that are stored, which is to say encoded: the link
+        // between a track and its release is written when the encode succeeds and
+        // the recording is stored, so this count is exactly the work that is done.
+        //
+        // Not Album.Tracks. That is the release's track count as the metadata
+        // provider states it, and it agrees with neither the library nor the
+        // queue — a compilation stored with two tracks and two queued carries
+        // Tracks = 20, so a card counting towards it opened at "18 of 20 done"
+        // for an album where nothing had been encoded at all.
+        Dictionary<Guid, int> encodedByRelease = await mediaContext
+            .AlbumTrack.AsNoTracking()
+            .Where(link => releaseIds.Contains(link.AlbumId))
+            .GroupBy(link => link.AlbumId)
+            .Select(group => new ReleaseEncodedCount(group.Key, group.Count()))
+            .ToDictionaryAsync(row => row.AlbumId, row => row.Encoded);
+
+        Dictionary<Guid, string?> covers = await mediaContext
             .Albums.AsNoTracking()
             .Where(album => releaseIds.Contains(album.Id))
-            .Select(album => new AlbumTotal(album.Id, album.Tracks, album.Cover))
-            .ToDictionaryAsync(album => album.Id);
+            .Select(album => new AlbumCover(album.Id, album.Cover))
+            .ToDictionaryAsync(album => album.Id, album => album.Cover);
 
         return musicRows
             .GroupBy(row => row.Job.ReleaseId)
@@ -639,10 +651,13 @@ public class TasksController(
                 MusicQueueRow current =
                     group.FirstOrDefault(row => row.Row.ReservedAt is not null) ?? first;
 
-                albums.TryGetValue(group.Key, out AlbumTotal? album);
+                // What is left, and what is done, each counted from the thing that
+                // records it. Their sum is the album as this server knows it, so
+                // the card reaches 100% exactly when the queue runs dry — which a
+                // denominator from anywhere else could not promise.
                 int remaining = remainingByRelease.GetValueOrDefault(group.Key, group.Count());
-                int total = album?.Tracks > 0 ? album.Tracks : remaining;
-                int completed = Math.Clamp(total - remaining, 0, total);
+                int completed = encodedByRelease.GetValueOrDefault(group.Key);
+                int total = completed + remaining;
 
                 string title = string.Join(
                     " - ",
@@ -662,7 +677,7 @@ public class TasksController(
                     // track count is what moves — which is the point.
                     PayloadId = group.Key.ToString(),
                     Title = title.Length > 0 ? title : Path.GetFileName(first.Job.InputFile),
-                    Backdrop = album?.Cover,
+                    Backdrop = covers.GetValueOrDefault(group.Key),
                     Type = nameof(MusicEncodeJob),
                     Status = group.Any(row => row.Row.ReservedAt is not null)
                         ? "running"
@@ -1035,11 +1050,55 @@ public class TasksController(
     /// "running" no matter what the server thought.</summary>
     [HttpGet]
     [Route("queue/status")]
-    public IActionResult EncoderQueueStatus()
+    public async Task<IActionResult> EncoderQueueStatus()
     {
         QueueRunner? runner = QueueRunner.Current;
         bool paused = runner is not null && EncoderQueueFamily.All(queue => runner.IsPaused(queue));
-        return Ok(new { paused });
+
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
+
+        // What is actually in the queue, which the listing cannot say. That
+        // endpoint returns a bounded sample — a share of each priority band —
+        // so a panel counting the cards it was handed announced 38 queued
+        // encodes with 1,200 waiting. The depth is a count, it costs one query,
+        // and it is the number the operator is reading the panel for.
+        List<QueueTypeCount> counts = await queueContext
+            .Database.SqlQueryRaw<QueueTypeCount>(
+                """
+                SELECT CASE
+                         WHEN Payload LIKE '%VideoEncodeJob%' THEN 'video'
+                         WHEN Payload LIKE '%MusicEncodeJob%' THEN 'music'
+                         ELSE 'maintenance'
+                       END AS Kind,
+                       SUM(CASE WHEN ReservedAt IS NULL THEN 1 ELSE 0 END) AS Pending,
+                       SUM(CASE WHEN ReservedAt IS NULL THEN 0 ELSE 1 END) AS Running
+                FROM QueueJobs
+                WHERE Queue = 'encoder'
+                GROUP BY Kind
+                """
+            )
+            .ToListAsync();
+
+        // An album is one card, so it is one unit of queued work here too —
+        // counting its tracks would put the panel's heading and its cards in
+        // open disagreement.
+        int albums = (await CountQueuedTracksByRelease(queueContext)).Count;
+
+        int videoPending = counts.FirstOrDefault(row => row.Kind == "video")?.Pending ?? 0;
+        int maintenancePending =
+            counts.FirstOrDefault(row => row.Kind == "maintenance")?.Pending ?? 0;
+
+        return Ok(
+            new
+            {
+                paused,
+                pending = videoPending + maintenancePending + albums,
+                running = counts.Sum(row => row.Running),
+                video = videoPending,
+                music = albums,
+                maintenance = maintenancePending,
+            }
+        );
     }
 
     /// <summary>
@@ -1333,10 +1392,21 @@ internal sealed record QueueJobEntry(QueueJob Row, VideoEncodeJob? Job);
 internal sealed record MusicQueueRow(QueueJob Row, MusicEncodeJob Job);
 
 /// <summary>
-/// How many tracks a stored album has, and what it looks like. The count is the
-/// denominator an album card counts towards.
+/// How much encoder work of one kind is waiting and how much is in flight,
+/// counted over the whole queue rather than over the listing's sample.
 /// </summary>
-internal sealed record AlbumTotal(Guid Id, int Tracks, string? Cover);
+internal sealed class QueueTypeCount
+{
+    public string? Kind { get; set; }
+    public int Pending { get; set; }
+    public int Running { get; set; }
+}
+
+/// <summary>Tracks of a release that are stored, and so encoded.</summary>
+internal sealed record ReleaseEncodedCount(Guid AlbumId, int Encoded);
+
+/// <summary>A release's artwork, for the card that stands for it.</summary>
+internal sealed record AlbumCover(Guid Id, string? Cover);
 
 /// <summary>
 /// Tracks of one release still on the encoder queue, counted in SQL.
