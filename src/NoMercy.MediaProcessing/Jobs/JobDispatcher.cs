@@ -162,14 +162,14 @@ public class JobDispatcher : IJobDispatcher
     public virtual void DispatchJob<TJob>(MusicBrainzReleaseGroup musicBrainzReleaseGroup)
         where TJob : MusicMetadataJob, new()
     {
-        TJob job = new() { MusicBrainzReleaseGroup = musicBrainzReleaseGroup };
+        TJob job = new() { ReleaseGroupId = musicBrainzReleaseGroup.Id };
         Dispatcher.Dispatch(job);
     }
 
     public virtual void DispatchJob<TJob>(MusicBrainzArtist musicBrainzArtist)
         where TJob : MusicMetadataJob, new()
     {
-        TJob job = new() { MusicBrainzArtist = musicBrainzArtist };
+        TJob job = new() { ArtistId = musicBrainzArtist.Id };
         Dispatcher.Dispatch(job);
     }
 

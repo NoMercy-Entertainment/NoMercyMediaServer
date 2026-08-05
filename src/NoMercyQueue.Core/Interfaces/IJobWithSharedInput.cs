@@ -9,17 +9,18 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.MusicBrainz.Models;
+namespace NoMercyQueue.Core.Interfaces;
 
-namespace NoMercy.MediaProcessing.Jobs.Dto;
-
-public record FolderMetadata
+/// <summary>
+/// A job whose real input is too big to live in its payload, and is instead
+/// stored once under a key that many jobs share.
+/// <para>
+/// The key is recorded on the queue row rather than left to be dug back out of
+/// the payload, so the sweep that reclaims unreferenced input is an indexed
+/// anti-join instead of a scan over every payload in the queue.
+/// </para>
+/// </summary>
+public interface IJobWithSharedInput
 {
-    public MusicBrainzReleaseAppends MusicBrainzRelease { get; set; } = null!;
-    public string BasePath { get; set; } = string.Empty;
-    public string ArtistName { get; set; } = string.Empty;
-    public string ReleaseName { get; set; } = string.Empty;
-    public int Year { get; set; }
-    public string FolderReleaseName { get; set; } = string.Empty;
-    public string FolderStartLetter { get; set; } = string.Empty;
+    string? SharedInputKey { get; }
 }

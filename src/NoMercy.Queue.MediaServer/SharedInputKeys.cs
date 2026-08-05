@@ -9,17 +9,14 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.MusicBrainz.Models;
+namespace NoMercy.Queue.MediaServer;
 
-namespace NoMercy.MediaProcessing.Jobs.Dto;
-
-public record FolderMetadata
+/// <summary>
+/// How shared job input is named. Written here alone: the dispatcher, the job and
+/// the pass that compacts old rows all have to agree on the key, and a second
+/// spelling of it would silently orphan every blob one of them wrote.
+/// </summary>
+public static class SharedInputKeys
 {
-    public MusicBrainzReleaseAppends MusicBrainzRelease { get; set; } = null!;
-    public string BasePath { get; set; } = string.Empty;
-    public string ArtistName { get; set; } = string.Empty;
-    public string ReleaseName { get; set; } = string.Empty;
-    public int Year { get; set; }
-    public string FolderReleaseName { get; set; } = string.Empty;
-    public string FolderStartLetter { get; set; } = string.Empty;
+    public static string Release(Guid releaseId) => $"release:{releaseId}";
 }

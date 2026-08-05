@@ -11,6 +11,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using NoMercy.NmSystem.Information;
+using NoMercyQueue.Core;
 
 namespace NoMercy.Database;
 
@@ -53,12 +54,23 @@ public class QueueContext : DbContext
             .ToList()
             .ForEach(p => p.DeleteBehavior = DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<QueueJob>().Property(j => j.Payload).HasMaxLength(4096);
+        // Unbounded on purpose. This said 4096 while real music encode payloads ran
+        // past a megabyte — SQLite does not enforce a declared length, so the number
+        // constrained nothing and only misled anyone sizing the table off the model.
+        modelBuilder.Entity<QueueJob>().Property(j => j.Payload).HasMaxLength(int.MaxValue);
+
+        modelBuilder
+            .Entity<QueueJob>()
+            .Property(j => j.PayloadHash)
+            .HasMaxLength(QueuePayloadHash.Length);
+
+        modelBuilder.Entity<QueueJobBlob>().Property(b => b.Data).HasMaxLength(int.MaxValue);
 
         base.OnModelCreating(modelBuilder);
     }
 
     public virtual DbSet<QueueJob> QueueJobs { get; set; }
+    public virtual DbSet<QueueJobBlob> QueueJobBlobs { get; set; }
     public virtual DbSet<FailedJob> FailedJobs { get; set; }
     public virtual DbSet<CronJob> CronJobs { get; set; }
 }

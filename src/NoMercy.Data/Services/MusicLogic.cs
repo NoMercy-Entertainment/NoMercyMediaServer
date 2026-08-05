@@ -31,6 +31,7 @@ using NoMercy.Providers.AcoustId.Client;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Queue.MediaServer;
 using NoMercy.Storage;
 using NoMercyQueue;
 
@@ -41,6 +42,7 @@ public partial class MusicLogic : IAsyncDisposable
     private readonly IDbContextFactory<MediaContext> _mediaContextFactory;
     private readonly IStorageFactory _storageFactory;
     private readonly IAudioFingerprinter _audioFingerprinter;
+    private readonly IQueueJobBlobStore _blobStore;
     private ConcurrentBag<MediaFile>? Files { get; set; }
     private MediaFolderExtend ListPath { get; set; }
 
@@ -58,13 +60,15 @@ public partial class MusicLogic : IAsyncDisposable
         MediaFolderExtend listPath,
         IDbContextFactory<MediaContext> mediaContextFactory,
         IStorageFactory storageFactory,
-        IAudioFingerprinter audioFingerprinter
+        IAudioFingerprinter audioFingerprinter,
+        IQueueJobBlobStore blobStore
     )
     {
         _logger = logger;
         _mediaContextFactory = mediaContextFactory;
         _storageFactory = storageFactory;
         _audioFingerprinter = audioFingerprinter;
+        _blobStore = blobStore;
         Library = library;
         ListPath = listPath;
 
@@ -241,7 +245,7 @@ public partial class MusicLogic : IAsyncDisposable
             await LinkTrackToRelease(mediaContext, track, releaseAppends);
 
             if (encodableTrack is not null && track.Id == encodableTrack.Id)
-                DispatchEncode(releaseAppends, track, mediaFile);
+                await DispatchEncode(releaseAppends, track, mediaFile);
 
             foreach (ReleaseArtistCredit artist in track.ArtistCredit)
             {
@@ -330,7 +334,7 @@ public partial class MusicLogic : IAsyncDisposable
     /// presets and asks the model for its own sanitized filename fragment
     /// (<see cref="Track.CreateTitle"/>) rather than assembling a path here.
     /// </summary>
-    private void DispatchEncode(
+    private async Task DispatchEncode(
         MusicBrainzReleaseAppends release,
         MusicBrainzTrack track,
         MediaFile file
@@ -346,15 +350,15 @@ public partial class MusicLogic : IAsyncDisposable
             return;
         }
 
-        MusicEncodeDispatcher.Dispatch(
+        await MusicEncodeDispatcher.Dispatch(
             _storageFactory,
+            _blobStore,
             Library,
             Folder,
             release,
             track,
             file,
-            ListPath.Path,
-            (Files ?? []).ToList()
+            ListPath.Path
         );
     }
 
@@ -688,7 +692,7 @@ public partial class MusicLogic : IAsyncDisposable
             _logger.LogError(e.Message);
         }
 
-        MusicMetadataJob musicDescriptionJob = new() { MusicBrainzArtist = musicBrainzArtist };
+        MusicMetadataJob musicDescriptionJob = new() { ArtistId = musicBrainzArtist.Id };
         QueueRunner.Current!.Dispatcher.Dispatch(musicDescriptionJob);
 
         FanArtImagesJob fanartImagesJob = new(musicBrainzArtist);

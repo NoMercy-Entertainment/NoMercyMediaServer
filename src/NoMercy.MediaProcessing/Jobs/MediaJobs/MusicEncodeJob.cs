@@ -61,6 +61,19 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
     public override async Task Handle()
     {
+        // The release this encode belongs to is stored once and shared by every
+        // track of the album, so it is read back here rather than carried in the
+        // payload. A release that is gone belonged to work already finished.
+        if (!await Hydrate())
+        {
+            Log.LogWarning(
+                "Skipping encode for track {TrackId}: release {ReleaseId} is no longer stored",
+                TrackId,
+                ReleaseId
+            );
+            return;
+        }
+
         await using MediaContext context = new();
 
         await using LibraryRepository libraryRepository = new(context, StorageDriver);

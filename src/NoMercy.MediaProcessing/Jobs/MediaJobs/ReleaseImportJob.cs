@@ -22,6 +22,7 @@ using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.AcoustId;
+using NoMercy.Queue.MediaServer;
 using NoMercy.Storage;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -38,9 +39,10 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         IStorageFactory storageFactory,
         IStorageDriver storageDriver,
         IAudioFingerprinter audioFingerprinter,
-        ILoggerFactory loggerFactory
+        ILoggerFactory loggerFactory,
+        IQueueJobBlobStore blobStore
     )
-        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
+        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory, blobStore) { }
 
     public override string QueueName => "import";
 

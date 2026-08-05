@@ -12,6 +12,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using NoMercyQueue.Core;
 
 namespace NoMercy.Database.Models.Queue;
 
@@ -19,10 +20,18 @@ namespace NoMercy.Database.Models.Queue;
 // Matches the task-list sort (Priority desc, CreatedAt asc) so SQLite serves it
 // from the index instead of sorting the whole growing queue table.
 [Index(nameof(Priority), nameof(CreatedAt), IsDescending = new[] { true, false })]
-// Every Dispatch dedups via QueueJobs.Any(j => j.Payload == x). Without this index
+// Every Dispatch dedups via QueueJobs.Any(j => j.Payload == x). Without an index
 // that is a full scan of the (large, history-retaining) queue table — seconds per
 // enqueue, which surfaced as multi-second endpoints that dispatch a job inline.
-[Index(nameof(Payload))]
+//
+// Indexed by hash rather than by the payload: indexing Payload meant a B-tree over
+// the payloads themselves, and music encode payloads run to a megabyte each, so the
+// index grew to the size of the table and took queue.db to 23.6GB — half of it this
+// one index. The lookup still confirms against the real payload, so dedup decides
+// on the same equality it always did.
+[Index(nameof(PayloadHash))]
+// Serves the sweep that reclaims shared input no queued job still reads.
+[Index(nameof(SharedInputKey))]
 // Every worker poll reserves via (Queue, ReservedAt IS NULL, Attempts, AvailableAt)
 // ordered by (Priority desc, CreatedAt, Id). The sort index above cannot serve that
 // — the predicate leads with Queue — so SQLite fell back to SCAN + a temp B-tree
@@ -43,8 +52,16 @@ public class QueueJob
     public int Priority { get; set; }
     public string Queue { get; set; } = "default";
 
-    [MaxLength(4096)]
     public required string Payload { get; set; }
+
+    /// <summary>
+    /// SHA-256 of <see cref="Payload"/>, written by the queue on every insert and
+    /// payload rewrite. Exists only to give the enqueue dedup an indexable key —
+    /// see the index note above.
+    /// </summary>
+    [MaxLength(QueuePayloadHash.Length)]
+    public string PayloadHash { get; set; } = string.Empty;
+
     public byte Attempts { get; set; } = 0;
 
     /// <summary>
@@ -72,4 +89,12 @@ public class QueueJob
     /// </summary>
     [MaxLength(64)]
     public string? GroupTag { get; set; }
+
+    /// <summary>
+    /// Key into <see cref="QueueJobBlob"/> for jobs whose input is shared rather
+    /// than copied per payload. Recorded here so reclaiming unreferenced input is
+    /// an anti-join against this column instead of a scan over every payload.
+    /// </summary>
+    [MaxLength(128)]
+    public string? SharedInputKey { get; set; }
 }

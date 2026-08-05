@@ -30,6 +30,8 @@ public static class ServiceRegistration
     {
         services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter());
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
+        services.AddSingleton<IQueueJobBlobStore, QueueJobBlobStore>();
+        services.AddScoped<QueuePayloadCompaction>();
 
         // TryAdd so this shares the same instance as the encoder's own
         // default registration (see AddNoMercyEncoder) regardless of call order.
@@ -114,6 +116,10 @@ public static class ServiceRegistration
         // excluded by design; see the class doc for why a wall-clock cutoff is
         // unsafe for them.
         services.AddHostedService<StuckReservationReaperHostedService>();
+
+        // One-time rewrite of payloads that carried their input inline. Reclaims
+        // the space; the rows it has not reached yet still run correctly.
+        services.AddHostedService<QueuePayloadCompactionHostedService>();
 
         return services;
     }

@@ -27,47 +27,34 @@ namespace NoMercy.Tests.Database;
 [Trait("Category", "Characterization")]
 public class QueueJobPayloadMaxLengthTests
 {
+    // The payload used to declare MaxLength(4096) and these pinned it there.
+    //
+    // That number was never true and never enforced: SQLite ignores a declared
+    // length, and real music encode payloads ran past a megabyte — the queue
+    // database reached 23.6GB carrying them. All the declaration did was tell
+    // anyone sizing the table off the model a figure three orders of magnitude
+    // out. It is now unbounded, which is what the column has always been, and
+    // these pin that instead so a length creeping back in gets noticed.
+
     [Fact]
-    public void QueueJob_Payload_HasMaxLengthAttribute()
+    public void QueueJob_Payload_DeclaresNoMaxLength()
     {
         PropertyInfo? prop = typeof(QueueJob).GetProperty("Payload");
         Assert.NotNull(prop);
+
         MaxLengthAttribute? attr = prop.GetCustomAttribute<MaxLengthAttribute>();
-        Assert.NotNull(attr);
+        Assert.Null(attr);
     }
 
     [Fact]
-    public void QueueJob_Payload_MaxLengthIs4096()
+    public void QueueJob_PayloadHash_IsTheFixedWidthColumn_ThatCarriesTheIndex()
     {
-        PropertyInfo? prop = typeof(QueueJob).GetProperty("Payload");
+        PropertyInfo? prop = typeof(QueueJob).GetProperty("PayloadHash");
         Assert.NotNull(prop);
+
         MaxLengthAttribute? attr = prop.GetCustomAttribute<MaxLengthAttribute>();
         Assert.NotNull(attr);
-        Assert.Equal(4096, attr.Length);
-    }
-
-    [Fact]
-    public void QueueJob_Payload_MaxLengthIsNotDefault256()
-    {
-        PropertyInfo? prop = typeof(QueueJob).GetProperty("Payload");
-        Assert.NotNull(prop);
-        MaxLengthAttribute? attr = prop.GetCustomAttribute<MaxLengthAttribute>();
-        Assert.NotNull(attr);
-        Assert.NotEqual(256, attr.Length);
-    }
-
-    [Fact]
-    public void QueueJob_Payload_ExceedsDefaultConvention()
-    {
-        MaxLengthAttribute? queueAttr = typeof(QueueJob)
-            .GetProperty("Payload")!
-            .GetCustomAttribute<MaxLengthAttribute>();
-
-        Assert.NotNull(queueAttr);
-        Assert.True(
-            queueAttr.Length > 256,
-            $"QueueJob.Payload MaxLength ({queueAttr.Length}) must exceed the 256-char convention"
-        );
+        Assert.Equal(64, attr.Length);
     }
 
     [Theory]
@@ -99,7 +86,7 @@ public class QueueJobPayloadMaxLengthTests
     }
 
     [Fact]
-    public void QueueContext_ConfiguresMaxLength256_AsConvention()
+    public void QueueContext_LeavesThePayloadUnbounded_NotOnThe256Convention()
     {
         DbContextOptionsBuilder<QueueContext> optionsBuilder = new();
         optionsBuilder.UseSqlite("Data Source=:memory:");
@@ -111,7 +98,7 @@ public class QueueJobPayloadMaxLengthTests
 
         IProperty? payloadProp = entityType.FindProperty("Payload");
         Assert.NotNull(payloadProp);
-        Assert.Equal(4096, payloadProp.GetMaxLength());
+        Assert.Equal(int.MaxValue, payloadProp.GetMaxLength());
     }
 
     [Fact]

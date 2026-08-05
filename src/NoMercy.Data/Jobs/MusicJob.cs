@@ -18,6 +18,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.AcoustId;
+using NoMercy.Queue.MediaServer;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -52,6 +53,8 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
 
     private IDbContextFactory<MediaContext> _mediaContextFactory = null!;
 
+    private IQueueJobBlobStore _blobStore = null!;
+
     // Constructor injection: the queue worker builds the job via
     // ActivatorUtilities; [ActivatorUtilitiesConstructor] selects this ctor
     // over the serialized-data ctor. The parameterless ctor is kept for
@@ -63,7 +66,9 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         IStorageDriver storageDriver,
         IAudioFingerprinter audioFingerprinter,
         ILogger<MusicLogic> musicLogicLogger,
-        IDbContextFactory<MediaContext> mediaContextFactory)
+        IDbContextFactory<MediaContext> mediaContextFactory,
+        IQueueJobBlobStore blobStore
+    )
     {
         LoggerFactory = loggerFactory;
         StorageFactory = storageFactory;
@@ -71,6 +76,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         AudioFingerprinter = audioFingerprinter;
         _musicLogicLogger = musicLogicLogger;
         _mediaContextFactory = mediaContextFactory;
+        _blobStore = blobStore;
     }
 
     public MusicJob()
@@ -91,7 +97,10 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         storageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
         AudioFingerprinter = serviceProvider.GetRequiredService<IAudioFingerprinter>();
         _musicLogicLogger = serviceProvider.GetRequiredService<ILogger<MusicLogic>>();
-        _mediaContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+        _mediaContextFactory = serviceProvider.GetRequiredService<
+            IDbContextFactory<MediaContext>
+        >();
+        _blobStore = serviceProvider.GetRequiredService<IQueueJobBlobStore>();
     }
 
     public async Task Handle()
@@ -117,7 +126,8 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
                 list,
                 _mediaContextFactory,
                 StorageFactory,
-                AudioFingerprinter
+                AudioFingerprinter,
+                _blobStore
             );
             await music.Process();
         }

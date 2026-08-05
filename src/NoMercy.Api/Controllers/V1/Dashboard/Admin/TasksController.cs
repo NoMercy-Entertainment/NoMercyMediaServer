@@ -246,12 +246,19 @@ public class TasksController(
         // This panel polls, and the encoder queue is thousands of rows deep on a
         // library mid-encode. Tracking every one of them per poll is pure cost:
         // nothing here is written back.
+        //
+        // Capped for the same reason Index() is, and then some: an uncapped sort
+        // has to buffer every matching row to order it, payload included. Music
+        // payloads run to a megabyte each, so a full encoder queue asked SQLite to
+        // spill gigabytes of temp and the poll died on "database or disk is full"
+        // — the panel went blank exactly when there was most to show.
         ImmutableList<QueueJob> jobs = queueContext
             .QueueJobs.AsNoTracking()
             .Where(j => j.Queue == "encoder")
             .OrderByDescending(j => j.Priority)
             .ThenBy(j => j.CreatedAt)
             .ThenBy(j => j.Id)
+            .Take(UiLimits.MaximumTasksInList)
             .ToImmutableList();
 
         // Each parsed payload stays paired with the row it came from: a payload

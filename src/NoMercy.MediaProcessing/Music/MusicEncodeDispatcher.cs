@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Newtonsoft.Json;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Music;
 using NoMercy.MediaProcessing.Jobs.Dto;
@@ -17,6 +18,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Queue.MediaServer;
 using NoMercy.Storage;
 using NoMercyQueue;
 
@@ -98,15 +100,15 @@ public static class MusicEncodeDispatcher
     /// presets and asks the model for its own sanitized filename fragment
     /// (<see cref="Track.CreateTitle"/>) rather than assembling a path here.
     /// </summary>
-    public static void Dispatch(
+    public static async Task Dispatch(
         IStorageFactory storageFactory,
+        IQueueJobBlobStore blobStore,
         Library library,
         Folder folder,
         MusicBrainzReleaseAppends release,
         MusicBrainzTrack track,
         MediaFile file,
-        string inputFolder,
-        List<MediaFile> folderFiles
+        string inputFolder
     )
     {
         // Everything the encoder writes lands under BasePath. Pointing that at the source
@@ -116,27 +118,29 @@ public static class MusicEncodeDispatcher
         string libraryRoot = destination.Driver.GetFullPath(folder.Path);
         string albumFolder = Sanitize(release, track);
 
+        // Stored once for the whole album. Every track of a release needs the same
+        // graph, and serializing it into each job wrote the same megabyte once per
+        // track — 11.7GB of queue holding 0.5GB of distinct releases.
+        await blobStore.WriteAsync(
+            AbstractMusicEncoderJob.KeyFor(release.Id),
+            JsonConvert.SerializeObject(release)
+        );
+
         QueueRunner.Current!.Dispatcher.Dispatch(
             new MusicEncodeJob
             {
                 LibraryId = library.Id,
                 FolderId = folder.Id,
                 Id = release.Id,
-                FoundTrack = track,
-                MediaFile = file,
+                ReleaseId = release.Id,
+                TrackId = track.Id,
                 InputFolder = inputFolder,
                 InputFile = file.Path,
-                FolderMetaData = new()
-                {
-                    MusicBrainzRelease = release,
-                    BasePath = Path.Combine(libraryRoot, albumFolder).Replace('\\', '/'),
-                    Files = folderFiles,
-                    ArtistName =
-                        release.ArtistCredit.FirstOrDefault()?.MusicBrainzArtist.Name
-                        ?? string.Empty,
-                    ReleaseName = release.Title,
-                    Year = release.DateTime?.Year ?? 0,
-                },
+                BasePath = Path.Combine(libraryRoot, albumFolder).Replace('\\', '/'),
+                ArtistName =
+                    release.ArtistCredit.FirstOrDefault()?.MusicBrainzArtist.Name ?? string.Empty,
+                ReleaseName = release.Title,
+                Year = release.DateTime?.Year ?? 0,
             }
         );
     }

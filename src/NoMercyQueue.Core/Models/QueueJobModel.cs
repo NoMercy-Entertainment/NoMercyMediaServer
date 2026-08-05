@@ -41,4 +41,10 @@ public class QueueJobModel
     /// Null for non-decomposed jobs.
     /// </summary>
     public string? GroupTag { get; set; }
+
+    /// <summary>
+    /// Key of the shared input this job reads, for jobs whose input is too big to
+    /// copy into every payload. Null for jobs that carry their own input.
+    /// </summary>
+    public string? SharedInputKey { get; set; }
 }

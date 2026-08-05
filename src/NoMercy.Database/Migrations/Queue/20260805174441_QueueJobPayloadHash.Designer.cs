@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NoMercy.Database;
 
@@ -10,9 +11,11 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations.Queue
 {
     [DbContext(typeof(QueueContext))]
-    partial class QueueContextModelSnapshot : ModelSnapshot
+    [Migration("20260805174441_QueueJobPayloadHash")]
+    partial class QueueJobPayloadHash
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
@@ -159,15 +162,9 @@ namespace NoMercy.Database.Migrations.Queue
                     b.Property<DateTime?>("ReservedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("SharedInputKey")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
 
                     b.HasIndex("PayloadHash");
-
-                    b.HasIndex("SharedInputKey");
 
                     b.HasIndex("Priority", "CreatedAt")
                         .IsDescending(true, false);
@@ -176,27 +173,6 @@ namespace NoMercy.Database.Migrations.Queue
                         .IsDescending(false, false, true, false, false);
 
                     b.ToTable("QueueJobs");
-                });
-
-            modelBuilder.Entity("NoMercy.Database.Models.Queue.QueueJobBlob", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Data")
-                        .IsRequired()
-                        .HasMaxLength(2147483647)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Key");
-
-                    b.ToTable("QueueJobBlobs");
                 });
 #pragma warning restore 612, 618
         }
