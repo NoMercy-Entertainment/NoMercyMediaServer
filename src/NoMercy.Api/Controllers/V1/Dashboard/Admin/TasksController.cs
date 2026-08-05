@@ -277,12 +277,26 @@ public class TasksController(
 
         List<QueueJobEntry> encoderJobs = parsedJobs.Where(entry => entry.Job is not null).ToList();
 
+        // A music encode is an encode, but it is not a VideoEncodeJob, so it read
+        // as neither one thing nor the other and was dropped from both lists.
+        // Video rows further down the queue hid that until an album import put
+        // thousands of music encodes above every one of them and the panel went
+        // blank while the server encoded an album.
+        List<QueueJobDto> musicJobs = parsedJobs
+            .Where(entry => entry.Job is null)
+            .Select(entry => ReadMusicEncodeJob(entry.Row))
+            .Where(entry => entry is not null)
+            .Select(entry => entry!)
+            .ToList();
+
+        HashSet<int> musicRowIds = musicJobs.Select(dto => dto.Id).ToHashSet();
+
         // Maintenance work sharing the encoder queue — preview rebuilds and
         // subtitle OCR — reported as itself rather than dressed up as an encode.
         // Hours of this can be queued at once, and a panel that shows none of it
         // is telling the operator the server is idle while it works.
         List<MaintenanceJob> maintenanceJobs = parsedJobs
-            .Where(entry => entry.Job is null)
+            .Where(entry => entry.Job is null && !musicRowIds.Contains(entry.Row.Id))
             .Select(entry => ReadMaintenanceJob(entry.Row))
             .Where(entry => entry is not null)
             .Select(entry => entry!)
@@ -431,6 +445,7 @@ public class TasksController(
                     Plan = ResolvePlan(presetIds, presetLookup, planByPresetSet),
                 };
             })
+            .Concat(musicJobs)
             .Concat(maintenanceJobs.Select(entry => entry.Dto))
             // Ordered here, not in SQL: both row columns SQL could sort on are
             // rewritten on every coordinator poll. Priority still leads, because
@@ -516,6 +531,54 @@ public class TasksController(
             // job type. Not this endpoint's problem to report.
             return null;
         }
+    }
+
+    /// <summary>
+    /// A queued music encode as a card, or null when the row is something else.
+    ///
+    /// <para>Deliberately carries no <see cref="QueueJobDto.Kind"/>: kind is what
+    /// marks a row as maintenance, and the dashboard renders any kind it does not
+    /// recognise as generic maintenance — no artwork, no progress. This is an
+    /// encode and reports as one.</para>
+    ///
+    /// <para>The title is the album, because that is what the payload knows. The
+    /// track's own name lived on the release graph, which no longer travels with
+    /// the job; the file being encoded carries the rest.</para>
+    /// </summary>
+    internal static QueueJobDto? ReadMusicEncodeJob(QueueJob row)
+    {
+        MusicEncodeJob? job;
+        try
+        {
+            job = SerializationHelper.Deserialize<object>(row.Payload) as MusicEncodeJob;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+
+        if (job is null)
+            return null;
+
+        string title = string.Join(
+            " - ",
+            new[] { job.ArtistName, job.ReleaseName }.Where(part =>
+                !string.IsNullOrWhiteSpace(part)
+            )
+        );
+
+        return new()
+        {
+            Id = row.Id,
+            Priority = row.Priority,
+            // The track, not the release: a release is one card per track, and a
+            // list keyed by the release collapses an album into a single row.
+            PayloadId = job.TrackId.ToString(),
+            Title = title.Length > 0 ? title : Path.GetFileName(job.InputFile),
+            Type = job.GetType().Name,
+            Status = row.ReservedAt is not null ? "running" : "pending",
+            InputFile = job.InputFile,
+        };
     }
 
     /// <summary>
