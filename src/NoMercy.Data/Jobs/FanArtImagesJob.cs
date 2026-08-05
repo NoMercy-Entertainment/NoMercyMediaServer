@@ -10,19 +10,19 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.FanArt.Client;
 using NoMercy.Providers.FanArt.Models;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
 using Image = NoMercy.Database.Models.Media.Image;
 
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using NoMercyQueue;
 namespace NoMercy.Data.Jobs;
 
 [Serializable]
@@ -42,8 +42,31 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
     public string QueueName => "image";
     public int Priority => 2;
 
+    /// <summary>
+    /// The artist this job fetches art for, or <see cref="Guid.Empty"/> when it
+    /// fetches art for a release group instead.
+    /// <para>
+    /// Ids rather than the graphs: a MusicBrainz artist and release were being
+    /// serialized into the payload whole, and the only things ever read back out
+    /// were these two ids.
+    /// </para>
+    /// </summary>
+    public Guid ArtistId { get; set; }
+
+    /// <summary>
+    /// The release GROUP, which is what FanArt keys albums by — not the release.
+    /// </summary>
+    public Guid ReleaseGroupId { get; set; }
+
+    // Read from a payload but never written back to one, so a job queued before
+    // the ids replaced the graphs still knows what it describes.
     public MusicBrainzArtist? MusicBrainzArtist { get; set; }
+
+    public bool ShouldSerializeMusicBrainzArtist() => false;
+
     public MusicBrainzReleaseAppends? MusicBrainzRelease { get; set; }
+
+    public bool ShouldSerializeMusicBrainzRelease() => false;
 
     // Constructor injection: the queue worker builds the job via
     // ActivatorUtilities, so the logger factory arrives without the
@@ -62,29 +85,35 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
 
     public FanArtImagesJob(MusicBrainzArtist musicBrainzArtist)
     {
-        MusicBrainzArtist = musicBrainzArtist;
+        ArtistId = musicBrainzArtist.Id;
     }
 
     public FanArtImagesJob(MusicBrainzReleaseAppends musicBrainzRelease)
     {
-        MusicBrainzRelease = musicBrainzRelease;
+        ReleaseGroupId = musicBrainzRelease.MusicBrainzReleaseGroup.Id;
     }
 
     public async Task Handle()
     {
-        if (MusicBrainzArtist is not null)
-            await StoreArtist(MusicBrainzArtist);
+        if (ArtistId == Guid.Empty && MusicBrainzArtist is not null)
+            ArtistId = MusicBrainzArtist.Id;
 
-        if (MusicBrainzRelease is not null)
-            await StoreRelease(MusicBrainzRelease);
+        if (ReleaseGroupId == Guid.Empty && MusicBrainzRelease is not null)
+            ReleaseGroupId = MusicBrainzRelease.MusicBrainzReleaseGroup.Id;
+
+        if (ArtistId != Guid.Empty)
+            await StoreArtist(ArtistId);
+
+        if (ReleaseGroupId != Guid.Empty)
+            await StoreRelease(ReleaseGroupId);
     }
 
-    public async Task StoreArtist(MusicBrainzArtist musicBrainzArtist)
+    public async Task StoreArtist(Guid artistId)
     {
         try
         {
             using FanArtMusicClient fanArtMusicClient = new();
-            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(musicBrainzArtist.Id);
+            FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(artistId);
             if (fanArt is null)
                 return;
 
@@ -97,7 +126,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                         Type = "thumb",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzArtist.Id,
+                        ArtistId = artistId,
                         Site = image.Url.BasePath(),
                     }
                 );
@@ -111,7 +140,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                         Type = "logo",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzArtist.Id,
+                        ArtistId = artistId,
                         Site = image.Url.BasePath(),
                     }
                 );
@@ -124,7 +153,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                         Type = "banner",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzArtist.Id,
+                        ArtistId = artistId,
                         Site = image.Url.BasePath(),
                     }
                 );
@@ -137,7 +166,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                         Type = "hdLogo",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzArtist.Id,
+                        ArtistId = artistId,
                         Site = image.Url.BasePath(),
                     }
                 );
@@ -150,7 +179,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                         Type = "background",
                         VoteCount = image.Likes,
                         FilePath = "/" + image.Url.FileName(),
-                        ArtistId = musicBrainzArtist.Id,
+                        ArtistId = artistId,
                         Site = image.Url.BasePath(),
                     }
                 );
@@ -163,9 +192,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
                 .ToList();
 
             await using MediaContext mediaContext = new();
-            Artist dbArtist = await mediaContext.Artists.FirstAsync(a =>
-                a.Id == musicBrainzArtist.Id
-            );
+            Artist dbArtist = await mediaContext.Artists.FirstAsync(a => a.Id == artistId);
 
             Image? artistCover = thumbs.FirstOrDefault();
             dbArtist.Cover = artistCover?.FilePath ?? dbArtist.Cover;
@@ -199,14 +226,12 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
         }
     }
 
-    public async Task StoreRelease(MusicBrainzReleaseAppends musicBrainzRelease)
+    public async Task StoreRelease(Guid releaseGroupId)
     {
         try
         {
             using FanArtMusicClient fanArtMusicClient = new();
-            FanArtAlbum? fanArt = await fanArtMusicClient.Album(
-                musicBrainzRelease.MusicBrainzReleaseGroup.Id
-            );
+            FanArtAlbum? fanArt = await fanArtMusicClient.Album(releaseGroupId);
             if (fanArt is null)
                 return;
 
@@ -245,7 +270,7 @@ public class FanArtImagesJob : IShouldQueue, IJobStorageInjector
             ReleaseGroup dbRelease = await mediaContext
                 .ReleaseGroups.Include(a => a.AlbumReleaseGroup)
                     .ThenInclude(a => a.Album)
-                .FirstAsync(a => a.Id == musicBrainzRelease.MusicBrainzReleaseGroup.Id);
+                .FirstAsync(a => a.Id == releaseGroupId);
 
             IEnumerable<Image> images = covers
                 .Concat(cdArts)

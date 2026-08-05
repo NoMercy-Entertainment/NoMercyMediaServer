@@ -45,6 +45,8 @@ public class QueuePayloadCompaction(
 
     private const string MusicEncodeJobType = "MusicEncodeJob";
     private const string MusicMetadataJobType = "MusicMetadataJob";
+    private const string CoverArtImageJobType = "CoverArtImageJob";
+    private const string FanArtImagesJobType = "FanArtImagesJob";
 
     public async Task<int> RunAsync(CancellationToken cancellationToken = default)
     {
@@ -109,7 +111,47 @@ public class QueuePayloadCompaction(
         if (type.Contains(MusicMetadataJobType, StringComparison.Ordinal))
             return CompactMusicMetadata(parsed) ?? payload;
 
+        if (type.Contains(CoverArtImageJobType, StringComparison.Ordinal))
+            return CompactCoverArtImage(parsed) ?? payload;
+
+        if (type.Contains(FanArtImagesJobType, StringComparison.Ordinal))
+            return CompactFanArtImages(parsed) ?? payload;
+
         return payload;
+    }
+
+    private static string? CompactCoverArtImage(JObject parsed)
+    {
+        if (parsed["musicBrainzRelease"] is not JObject release)
+            return null;
+
+        parsed["releaseId"] = GuidOf(release["id"]);
+        parsed["hasFrontCover"] = release["coverArtArchive"]?.Value<bool?>("front") ?? false;
+        parsed.Remove("musicBrainzRelease");
+
+        return parsed.ToString(Formatting.None);
+    }
+
+    private static string? CompactFanArtImages(JObject parsed)
+    {
+        JObject? artist = parsed["musicBrainzArtist"] as JObject;
+        JObject? release = parsed["musicBrainzRelease"] as JObject;
+
+        if (artist is null && release is null)
+            return null;
+
+        if (artist is not null)
+            parsed["artistId"] = GuidOf(artist["id"]);
+
+        // FanArt keys albums by release GROUP, so that is the id this job needs —
+        // not the release's own.
+        if (release is not null)
+            parsed["releaseGroupId"] = GuidOf(release["musicBrainzReleaseGroup"]?["id"]);
+
+        parsed.Remove("musicBrainzArtist");
+        parsed.Remove("musicBrainzRelease");
+
+        return parsed.ToString(Formatting.None);
     }
 
     private async Task<string?> CompactMusicEncodeAsync(JObject parsed)
