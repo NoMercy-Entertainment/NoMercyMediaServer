@@ -1049,6 +1049,12 @@ public record NMBreadcrumbProps : NmProps
     public override string Component => NmComponents.Breadcrumb;
 
     /// <summary>
+    /// Array of breadcrumb labels
+    /// </summary>
+    [JsonProperty("labels", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<string>? Labels { get; set; }
+
+    /// <summary>
     /// Separator style
     /// </summary>
     [JsonProperty("separator", NullValueHandling = NullValueHandling.Ignore)]
@@ -1340,6 +1346,12 @@ public record NMChatProps : NmProps
     /// <inheritdoc />
     public override string Component => NmComponents.Chat;
 
+    /// <summary>
+    /// Array of message objects
+    /// </summary>
+    [JsonProperty("messages", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<NmChatMessage>? Messages { get; set; }
+
 }
 
 /// <summary>
@@ -1491,10 +1503,22 @@ public record NMTableProps : NmProps
     public override string Component => NmComponents.Table;
 
     /// <summary>
+    /// Array of column definitions
+    /// </summary>
+    [JsonProperty("columns", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<NmTableColumn>? Columns { get; set; }
+
+    /// <summary>
     /// Row hover effect
     /// </summary>
     [JsonProperty("hover", NullValueHandling = NullValueHandling.Ignore)]
     public bool? Hover { get; set; }
+
+    /// <summary>
+    /// Array of row data
+    /// </summary>
+    [JsonProperty("rows", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<NmTableRow>? Rows { get; set; }
 
     /// <summary>
     /// Table size
@@ -1599,6 +1623,12 @@ public record NMComboboxProps : NmProps
     /// </summary>
     [JsonProperty("selected", NullValueHandling = NullValueHandling.Ignore)]
     public string? Selected { get; set; }
+
+    /// <summary>
+    /// Currently selected options (multi-select mode)
+    /// </summary>
+    [JsonProperty("selectedItems", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<string>? SelectedItems { get; set; }
 
     /// <summary>
     /// Field and option item size
@@ -1807,6 +1837,12 @@ public record NMSelectProps : NmProps
     public bool? Error { get; set; }
 
     /// <summary>
+    /// Array of selectable options
+    /// </summary>
+    [JsonProperty("options", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<NmSelectOption>? Options { get; set; }
+
+    /// <summary>
     /// Placeholder text shown when no option is selected
     /// </summary>
     [JsonProperty("placeholder", NullValueHandling = NullValueHandling.Ignore)]
@@ -1915,6 +1951,24 @@ public record NMAccordionProps : NmProps
     public bool? AllowMultiple { get; set; }
 
     /// <summary>
+    /// Array of content for each item
+    /// </summary>
+    [JsonProperty("content", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<string>? Content { get; set; }
+
+    /// <summary>
+    /// Object mapping item indices to disabled state
+    /// </summary>
+    [JsonProperty("disabledItems", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyDictionary<string, bool>? DisabledItems { get; set; }
+
+    /// <summary>
+    /// Object mapping item indices to open state
+    /// </summary>
+    [JsonProperty("openItems", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyDictionary<string, bool>? OpenItems { get; set; }
+
+    /// <summary>
     /// Show chevron indicator
     /// </summary>
     [JsonProperty("showChevron", NullValueHandling = NullValueHandling.Ignore)]
@@ -1983,6 +2037,18 @@ public record NMFileUploadProps : NmProps
     public override string Component => NmComponents.FileUpload;
 
     /// <summary>
+    /// File metadata
+    /// </summary>
+    [JsonProperty("fileMeta", NullValueHandling = NullValueHandling.Ignore)]
+    public string? FileMeta { get; set; }
+
+    /// <summary>
+    /// File name
+    /// </summary>
+    [JsonProperty("fileName", NullValueHandling = NullValueHandling.Ignore)]
+    public string? FileName { get; set; }
+
+    /// <summary>
     /// Upload progress percentage
     /// </summary>
     [JsonProperty("uploadPct", NullValueHandling = NullValueHandling.Ignore)]
@@ -2038,6 +2104,12 @@ public record NMStepperProps : NmProps
     [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
 
+    /// <summary>
+    /// Array of step objects with label and optional description
+    /// </summary>
+    [JsonProperty("steps", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<NmStep>? Steps { get; set; }
+
 }
 
 /// <summary>
@@ -2065,6 +2137,12 @@ public record NMTabsProps : NmProps
     /// </summary>
     [JsonProperty("size", NullValueHandling = NullValueHandling.Ignore)]
     public string? Size { get; set; }
+
+    /// <summary>
+    /// Array of tab labels
+    /// </summary>
+    [JsonProperty("tabLabels", NullValueHandling = NullValueHandling.Ignore)]
+    public IReadOnlyList<string>? TabLabels { get; set; }
 
     /// <summary>
     /// Base id for the tabs. Pass one and each tab gets

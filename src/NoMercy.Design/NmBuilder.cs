@@ -1410,6 +1410,15 @@ public static class NMBadgeGroupExtensions
 public static class NMBreadcrumbExtensions
 {
     /// <summary>
+    /// Array of breadcrumb labels
+    /// </summary>
+    public static NMBreadcrumbProps Labels(this NMBreadcrumbProps props, IReadOnlyList<string> value)
+    {
+        props.Labels = value;
+        return props;
+    }
+
+    /// <summary>
     /// Separator style
     /// </summary>
     public static NMBreadcrumbProps Separator(this NMBreadcrumbProps props, string value)
@@ -1739,6 +1748,20 @@ public static class NMCardExtensions
 
 }
 
+/// <summary>The setters a NMChat adds of its own.</summary>
+public static class NMChatExtensions
+{
+    /// <summary>
+    /// Array of message objects
+    /// </summary>
+    public static NMChatProps Messages(this NMChatProps props, IReadOnlyList<NmChatMessage> value)
+    {
+        props.Messages = value;
+        return props;
+    }
+
+}
+
 /// <summary>The setters a NMContentFooter adds of its own.</summary>
 public static class NMContentFooterExtensions
 {
@@ -1903,11 +1926,29 @@ public static class NMMetricsExtensions
 public static class NMTableExtensions
 {
     /// <summary>
+    /// Array of column definitions
+    /// </summary>
+    public static NMTableProps Columns(this NMTableProps props, IReadOnlyList<NmTableColumn> value)
+    {
+        props.Columns = value;
+        return props;
+    }
+
+    /// <summary>
     /// Row hover effect
     /// </summary>
     public static NMTableProps Hover(this NMTableProps props, bool value)
     {
         props.Hover = value;
+        return props;
+    }
+
+    /// <summary>
+    /// Array of row data
+    /// </summary>
+    public static NMTableProps Rows(this NMTableProps props, IReadOnlyList<NmTableRow> value)
+    {
+        props.Rows = value;
         return props;
     }
 
@@ -2044,6 +2085,15 @@ public static class NMComboboxExtensions
     public static NMComboboxProps Selected(this NMComboboxProps props, string value)
     {
         props.Selected = value;
+        return props;
+    }
+
+    /// <summary>
+    /// Currently selected options (multi-select mode)
+    /// </summary>
+    public static NMComboboxProps SelectedItems(this NMComboboxProps props, IReadOnlyList<string> value)
+    {
+        props.SelectedItems = value;
         return props;
     }
 
@@ -2277,6 +2327,15 @@ public static class NMSelectExtensions
     }
 
     /// <summary>
+    /// Array of selectable options
+    /// </summary>
+    public static NMSelectProps Options(this NMSelectProps props, IReadOnlyList<NmSelectOption> value)
+    {
+        props.Options = value;
+        return props;
+    }
+
+    /// <summary>
     /// Placeholder text shown when no option is selected
     /// </summary>
     public static NMSelectProps Placeholder(this NMSelectProps props, string value)
@@ -2409,6 +2468,33 @@ public static class NMAccordionExtensions
     }
 
     /// <summary>
+    /// Array of content for each item
+    /// </summary>
+    public static NMAccordionProps Content(this NMAccordionProps props, IReadOnlyList<string> value)
+    {
+        props.Content = value;
+        return props;
+    }
+
+    /// <summary>
+    /// Object mapping item indices to disabled state
+    /// </summary>
+    public static NMAccordionProps DisabledItems(this NMAccordionProps props, IReadOnlyDictionary<string, bool> value)
+    {
+        props.DisabledItems = value;
+        return props;
+    }
+
+    /// <summary>
+    /// Object mapping item indices to open state
+    /// </summary>
+    public static NMAccordionProps OpenItems(this NMAccordionProps props, IReadOnlyDictionary<string, bool> value)
+    {
+        props.OpenItems = value;
+        return props;
+    }
+
+    /// <summary>
     /// Show chevron indicator
     /// </summary>
     public static NMAccordionProps ShowChevron(this NMAccordionProps props, bool value)
@@ -2491,6 +2577,24 @@ public static class NMCarouselExtensions
 public static class NMFileUploadExtensions
 {
     /// <summary>
+    /// File metadata
+    /// </summary>
+    public static NMFileUploadProps FileMeta(this NMFileUploadProps props, string value)
+    {
+        props.FileMeta = value;
+        return props;
+    }
+
+    /// <summary>
+    /// File name
+    /// </summary>
+    public static NMFileUploadProps FileName(this NMFileUploadProps props, string value)
+    {
+        props.FileName = value;
+        return props;
+    }
+
+    /// <summary>
     /// Upload progress percentage
     /// </summary>
     public static NMFileUploadProps UploadPct(this NMFileUploadProps props, int value)
@@ -2554,6 +2658,15 @@ public static class NMStepperExtensions
         return props;
     }
 
+    /// <summary>
+    /// Array of step objects with label and optional description
+    /// </summary>
+    public static NMStepperProps Steps(this NMStepperProps props, IReadOnlyList<NmStep> value)
+    {
+        props.Steps = value;
+        return props;
+    }
+
 }
 
 /// <summary>The setters a NMTabs adds of its own.</summary>
@@ -2583,6 +2696,15 @@ public static class NMTabsExtensions
     public static NMTabsProps Size(this NMTabsProps props, string value)
     {
         props.Size = value;
+        return props;
+    }
+
+    /// <summary>
+    /// Array of tab labels
+    /// </summary>
+    public static NMTabsProps TabLabels(this NMTabsProps props, IReadOnlyList<string> value)
+    {
+        props.TabLabels = value;
         return props;
     }
 
