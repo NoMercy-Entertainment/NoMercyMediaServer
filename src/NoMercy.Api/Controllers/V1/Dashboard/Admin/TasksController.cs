@@ -247,18 +247,55 @@ public class TasksController(
         // library mid-encode. Tracking every one of them per poll is pure cost:
         // nothing here is written back.
         //
-        // Capped for the same reason Index() is, and then some: an uncapped sort
-        // has to buffer every matching row to order it, payload included. Music
-        // payloads run to a megabyte each, so a full encoder queue asked SQLite to
-        // spill gigabytes of temp and the poll died on "database or disk is full"
-        // — the panel went blank exactly when there was most to show.
-        ImmutableList<QueueJob> jobs = queueContext
+        // Bounded, for two failures rather than one.
+        //
+        // Unbounded, the sort had to buffer every matching row to order it,
+        // payload included, so a full encoder queue asked SQLite to spill
+        // gigabytes of temp and the poll died on "database or disk is full".
+        //
+        // Bounded by a single top-N, the whole panel came out of the busiest
+        // priority band: an album import queues music at 5 while video encodes
+        // sit at 4 and 0, so 13,779 music rows took every slot and the operator's
+        // video encodes were missing from a panel that claimed to list the queue.
+        // A share per band costs one small indexed query each and cannot starve.
+        List<int> priorities = await queueContext
             .QueueJobs.AsNoTracking()
             .Where(j => j.Queue == "encoder")
-            .OrderByDescending(j => j.Priority)
-            .ThenBy(j => j.CreatedAt)
-            .ThenBy(j => j.Id)
+            .Select(j => j.Priority)
+            .Distinct()
+            .OrderByDescending(priority => priority)
+            .ToListAsync();
+
+        int perBand = Math.Max(1, UiLimits.MaximumTasksInList / Math.Max(1, priorities.Count));
+
+        List<QueueJob> banded = [];
+        foreach (int priority in priorities)
+        {
+            banded.AddRange(
+                await queueContext
+                    .QueueJobs.AsNoTracking()
+                    .Where(j => j.Queue == "encoder" && j.Priority == priority)
+                    .OrderBy(j => j.CreatedAt)
+                    .ThenBy(j => j.Id)
+                    .Take(perBand)
+                    .ToListAsync()
+            );
+        }
+
+        // Work in flight is never a candidate for omission. It is a handful of
+        // rows, and a running encode missing from the panel is the one thing the
+        // operator is most certainly looking for.
+        List<QueueJob> running = await queueContext
+            .QueueJobs.AsNoTracking()
+            .Where(j => j.Queue == "encoder" && j.ReservedAt != null)
+            .OrderBy(j => j.Id)
             .Take(UiLimits.MaximumTasksInList)
+            .ToListAsync();
+
+        ImmutableList<QueueJob> jobs = banded
+            .Concat(running)
+            .GroupBy(row => row.Id)
+            .Select(group => group.First())
             .ToImmutableList();
 
         // Each parsed payload stays paired with the row it came from: a payload
