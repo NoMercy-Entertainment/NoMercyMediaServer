@@ -36,19 +36,43 @@ public class UnresolvablePathRepairTests : IDisposable
         _connection = new("Data Source=:memory:");
         _connection.Open();
 
-        // Tracks carry a Folder FK the scenarios below have no reason to seed:
-        // the sweep decides on the stored path strings alone.
-        using (SqliteCommand foreignKeysOff = _connection.CreateCommand())
+        // Foreign keys stay ON. Every child of Tracks — AlbumTrack, ArtistTrack,
+        // LibraryTrack, PlaylistTrack, MusicGenreTrack, MusicPlays, TrackUser,
+        // Images — is ON DELETE RESTRICT, so a sweep that deletes the track
+        // alone throws against a real database. Switching the constraint off
+        // here would hide exactly the failure these tests exist to catch.
+        using (SqliteCommand foreignKeysOn = _connection.CreateCommand())
         {
-            foreignKeysOff.CommandText = "PRAGMA foreign_keys = OFF;";
-            foreignKeysOff.ExecuteNonQuery();
+            foreignKeysOn.CommandText = "PRAGMA foreign_keys = ON;";
+            foreignKeysOn.ExecuteNonQuery();
         }
 
         _options = new DbContextOptionsBuilder<MediaContext>().UseSqlite(_connection).Options;
 
         using MediaContext ctx = new(_options);
         ctx.Database.EnsureCreated();
+
+        ctx.Drivers.Add(
+            new()
+            {
+                Id = DriverId,
+                Name = "Media",
+                Type = "local",
+            }
+        );
+        ctx.Folders.Add(
+            new()
+            {
+                Id = FolderId,
+                DriverId = DriverId,
+                Path = "Libraries/Music",
+            }
+        );
+        ctx.SaveChanges();
     }
+
+    private static readonly Ulid DriverId = Ulid.NewUlid();
+    private static readonly Ulid FolderId = Ulid.NewUlid();
 
     public void Dispose()
     {
@@ -66,7 +90,7 @@ public class UnresolvablePathRepairTests : IDisposable
             Name = name,
             Folder = folder,
             Filename = filename,
-            FolderId = Ulid.NewUlid(),
+            FolderId = FolderId,
             Duration = "03:12",
         };
 
@@ -139,6 +163,47 @@ public class UnresolvablePathRepairTests : IDisposable
 
         await using MediaContext assertCtx = new(_options);
         assertCtx.Tracks.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task Removes_a_track_that_is_still_linked_to_its_album_artist_and_library()
+    {
+        // Every child of Tracks is ON DELETE RESTRICT, and a scanned track is
+        // never childless — it was linked to its album, artist and library the
+        // moment it was stored. Deleting the track row alone fails on the live
+        // database, which is what a real boot showed.
+        Ulid libraryId = Ulid.NewUlid();
+        Guid genreId = Guid.NewGuid();
+        Track track = Track("Linked", "M:/Download/complete/U2", "/01. Where.flac");
+
+        await using (MediaContext ctx = new(_options))
+        {
+            ctx.Tracks.Add(track);
+            ctx.Libraries.Add(
+                new()
+                {
+                    Id = libraryId,
+                    Title = "Music",
+                    Type = "music",
+                }
+            );
+            ctx.MusicGenres.Add(new() { Id = genreId, Name = "rock" });
+            await ctx.SaveChangesAsync();
+
+            ctx.LibraryTrack.Add(new(libraryId, track.Id));
+            ctx.MusicGenreTrack.Add(new() { GenreId = genreId, TrackId = track.Id });
+            await ctx.SaveChangesAsync();
+        }
+
+        (await BuildRepair().RunAsync(CancellationToken.None)).Should().Be(1);
+
+        await using MediaContext assertCtx = new(_options);
+        assertCtx.Tracks.Should().BeEmpty();
+        assertCtx.LibraryTrack.Should().BeEmpty();
+        assertCtx.MusicGenreTrack.Should().BeEmpty();
+        // The library and the genre survive: only the unplayable file leaves.
+        assertCtx.Libraries.Should().HaveCount(1);
+        assertCtx.MusicGenres.Should().HaveCount(1);
     }
 
     [Fact]
