@@ -203,6 +203,11 @@ internal sealed class PluginLoader(
                         && (
                             _consentService.IsBaseline(manifest.Capabilities)
                             || _consentService.HasConsent(manifest.Id)
+                            // Or it came from a repository the owner trusts.
+                            // Approving each plugin from an index they added
+                            // themselves is a prompt that teaches them to click
+                            // through the one that matters.
+                            || verification.Trusted
                         );
 
                     PluginStatus initialStatus = mayAutoEnable

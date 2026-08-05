@@ -27,6 +27,17 @@ public interface IPluginRepository
     IReadOnlyList<PluginRepositoryEntry> GetAvailablePlugins();
     PluginRepositoryEntry? FindPlugin(Ulid pluginId);
     PluginVersionEntry? FindVersion(Ulid pluginId, string version);
+
+    /// <summary>
+    /// Whether this plugin is listed by a repository the owner marked trusted.
+    /// <para>
+    /// False by default, and false when no index could be read: a server that
+    /// cannot reach the internet must not decide a plugin is trusted because it
+    /// failed to check. The plugin then goes through the ordinary consent, which
+    /// is the answer that was always safe.
+    /// </para>
+    /// </summary>
+    bool IsFromTrustedRepository(Ulid pluginId) => false;
 }
 
 public class PluginRepositoryInfo
@@ -34,4 +45,22 @@ public class PluginRepositoryInfo
     public required string Name { get; init; }
     public required string Url { get; init; }
     public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Whether a plugin listed here is one the owner already trusts, so it
+    /// enables on install instead of waiting to be approved one at a time.
+    /// <para>
+    /// Trust belongs to where a plugin came from, not to what its manifest says
+    /// about itself: an author line is free text any file can copy, and a list
+    /// of blessed plugin ids in the source would be a security decision that
+    /// needs a rebuild to change. A repository is already a thing the owner adds,
+    /// removes and can see.
+    /// </para>
+    /// <para>
+    /// Set on the index we publish because the owner installing our server has
+    /// already decided to trust us; every other repository starts untrusted and
+    /// the owner turns it on if they mean to.
+    /// </para>
+    /// </summary>
+    public bool Trusted { get; set; }
 }

@@ -46,7 +46,15 @@ public static class PluginServiceCollectionExtensions
         // gets a working platform instead of a resolve failure at plugin load.
         services.AddDataProtection();
 
-        services.AddSingleton<IPluginVerifier, PluginVerifier>();
+        // Built from the container rather than by the parameterless constructor,
+        // because one stage asks the repository where a plugin came from and
+        // that answer is the only thing trust may rest on.
+        services.AddSingleton<IPluginVerifier>(sp => new PluginVerifier([
+            new AbiVerificationStage(),
+            new ChecksumVerificationStage(),
+            new TrustedRepositoryVerificationStage(() => sp.GetService<IPluginRepository>()),
+            new SignatureVerificationStage(),
+        ]));
         PluginAssemblyTracker assemblyTracker = new();
         services.AddSingleton<IPluginAssemblyTracker>(assemblyTracker);
 
