@@ -14968,6 +14968,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-default",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15001,6 +15006,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-closable-true",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15034,6 +15044,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-closable-false",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15067,6 +15082,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-position-top-left",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15100,6 +15120,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-position-top-center",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15133,6 +15158,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-position-top-right",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15166,6 +15196,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-position-bottom-left",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15199,6 +15234,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-position-bottom-center",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15232,6 +15272,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-position-bottom-right",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15265,6 +15310,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-showaction-true",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15298,6 +15348,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-showaction-false",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15331,6 +15386,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-showicon-true",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15364,6 +15424,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-showicon-false",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15397,6 +15462,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-showprogress-true",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15430,6 +15500,11 @@ public static class NmKitchenSink
                 ShowProgress = false,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-showprogress-false",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15463,6 +15538,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "default",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-variant-default",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15496,6 +15576,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "info",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-variant-info",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15529,6 +15614,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "success",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-variant-success",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15562,6 +15652,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "warning",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-variant-warning",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
@@ -15595,6 +15690,11 @@ public static class NmKitchenSink
                 ShowProgress = true,
                 Title = "Success",
                 Variant = "error",
+                Box = new NmBox
+                {
+                    Position = "relative",
+                    Width = "full",
+                },
                 TestId = "toast-variant-error",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
