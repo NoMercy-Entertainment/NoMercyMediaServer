@@ -79,10 +79,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-default-child",
+                        Id = "avatar-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -104,10 +118,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-size-xs-child",
+                        Id = "avatar-size-xs-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-xs-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-xs-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -129,10 +157,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-size-sm-child",
+                        Id = "avatar-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -154,10 +196,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-size-md-child",
+                        Id = "avatar-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -179,10 +235,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-size-lg-child",
+                        Id = "avatar-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -204,10 +274,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-size-xl-child",
+                        Id = "avatar-size-xl-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-xl-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-size-xl-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -229,10 +313,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-square-true-child",
+                        Id = "avatar-square-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-square-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-square-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -254,10 +352,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-square-false-child",
+                        Id = "avatar-square-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-square-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-square-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -279,10 +391,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-status-none-child",
+                        Id = "avatar-status-none-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-none-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-none-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -304,10 +430,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-status-online-child",
+                        Id = "avatar-status-online-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-online-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-online-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -329,10 +469,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-status-offline-child",
+                        Id = "avatar-status-offline-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-offline-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-offline-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -354,10 +508,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-status-away-child",
+                        Id = "avatar-status-away-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-away-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-away-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -379,10 +547,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-status-busy-child",
+                        Id = "avatar-status-busy-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-busy-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-status-busy-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -404,10 +586,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-type-icon-child",
+                        Id = "avatar-type-icon-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-type-icon-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-type-icon-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -429,10 +625,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-type-initial-child",
+                        Id = "avatar-type-initial-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-type-initial-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-type-initial-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -454,10 +664,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-type-initials-child",
+                        Id = "avatar-type-initials-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-type-initials-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-type-initials-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -479,10 +703,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "avatar-type-image-child",
+                        Id = "avatar-type-image-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Avatar" },
+                            { ["text"] = "Avatar One" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-type-image-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Two" },
+                    },
+                    new()
+                    {
+                        Id = "avatar-type-image-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Avatar Three" },
                     },
                 ],
             },
@@ -512,10 +750,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-default-child",
+                        Id = "badge-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -535,10 +787,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-dot-true-child",
+                        Id = "badge-dot-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-dot-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-dot-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -558,10 +824,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-dot-false-child",
+                        Id = "badge-dot-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-dot-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-dot-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -581,10 +861,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-mode-text-child",
+                        Id = "badge-mode-text-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-mode-text-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-mode-text-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -604,10 +898,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-mode-icon-only-child",
+                        Id = "badge-mode-icon-only-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-mode-icon-only-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-mode-icon-only-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -627,10 +935,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-size-sm-child",
+                        Id = "badge-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -650,10 +972,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-size-md-child",
+                        Id = "badge-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -673,10 +1009,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-size-lg-child",
+                        Id = "badge-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -696,10 +1046,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-variant-ghost-child",
+                        Id = "badge-variant-ghost-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-variant-ghost-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-variant-ghost-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -719,10 +1083,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-variant-solid-child",
+                        Id = "badge-variant-solid-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-variant-solid-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-variant-solid-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -742,10 +1120,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-variant-outline-child",
+                        Id = "badge-variant-outline-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge" },
+                            { ["text"] = "Badge One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-variant-outline-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-variant-outline-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Three" },
                     },
                 ],
             },
@@ -773,10 +1165,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "divider-default-child",
+                        Id = "divider-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Divider" },
+                            { ["text"] = "Divider One" },
+                    },
+                    new()
+                    {
+                        Id = "divider-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Two" },
+                    },
+                    new()
+                    {
+                        Id = "divider-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Three" },
                     },
                 ],
             },
@@ -794,10 +1200,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "divider-line-solid-child",
+                        Id = "divider-line-solid-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Divider" },
+                            { ["text"] = "Divider One" },
+                    },
+                    new()
+                    {
+                        Id = "divider-line-solid-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Two" },
+                    },
+                    new()
+                    {
+                        Id = "divider-line-solid-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Three" },
                     },
                 ],
             },
@@ -815,10 +1235,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "divider-line-dashed-child",
+                        Id = "divider-line-dashed-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Divider" },
+                            { ["text"] = "Divider One" },
+                    },
+                    new()
+                    {
+                        Id = "divider-line-dashed-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Two" },
+                    },
+                    new()
+                    {
+                        Id = "divider-line-dashed-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Three" },
                     },
                 ],
             },
@@ -836,10 +1270,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "divider-line-dotted-child",
+                        Id = "divider-line-dotted-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Divider" },
+                            { ["text"] = "Divider One" },
+                    },
+                    new()
+                    {
+                        Id = "divider-line-dotted-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Two" },
+                    },
+                    new()
+                    {
+                        Id = "divider-line-dotted-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Three" },
                     },
                 ],
             },
@@ -857,10 +1305,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "divider-placement-left-child",
+                        Id = "divider-placement-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Divider" },
+                            { ["text"] = "Divider One" },
+                    },
+                    new()
+                    {
+                        Id = "divider-placement-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Two" },
+                    },
+                    new()
+                    {
+                        Id = "divider-placement-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Three" },
                     },
                 ],
             },
@@ -878,10 +1340,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "divider-placement-center-child",
+                        Id = "divider-placement-center-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Divider" },
+                            { ["text"] = "Divider One" },
+                    },
+                    new()
+                    {
+                        Id = "divider-placement-center-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Two" },
+                    },
+                    new()
+                    {
+                        Id = "divider-placement-center-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Three" },
                     },
                 ],
             },
@@ -899,10 +1375,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "divider-placement-right-child",
+                        Id = "divider-placement-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Divider" },
+                            { ["text"] = "Divider One" },
+                    },
+                    new()
+                    {
+                        Id = "divider-placement-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Two" },
+                    },
+                    new()
+                    {
+                        Id = "divider-placement-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Divider Three" },
                     },
                 ],
             },
@@ -933,10 +1423,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "form-label-default-child",
+                        Id = "form-label-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Label" },
+                            { ["text"] = "Label One" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Two" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Three" },
                     },
                 ],
             },
@@ -957,10 +1461,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "form-label-disabled-true-child",
+                        Id = "form-label-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Label" },
+                            { ["text"] = "Label One" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Two" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Three" },
                     },
                 ],
             },
@@ -981,10 +1499,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "form-label-disabled-false-child",
+                        Id = "form-label-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Label" },
+                            { ["text"] = "Label One" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Two" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Three" },
                     },
                 ],
             },
@@ -1005,10 +1537,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "form-label-infoicon-true-child",
+                        Id = "form-label-infoicon-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Label" },
+                            { ["text"] = "Label One" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-infoicon-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Two" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-infoicon-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Three" },
                     },
                 ],
             },
@@ -1029,10 +1575,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "form-label-infoicon-false-child",
+                        Id = "form-label-infoicon-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Label" },
+                            { ["text"] = "Label One" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-infoicon-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Two" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-infoicon-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Three" },
                     },
                 ],
             },
@@ -1053,10 +1613,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "form-label-marker-none-child",
+                        Id = "form-label-marker-none-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Label" },
+                            { ["text"] = "Label One" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-marker-none-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Two" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-marker-none-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Three" },
                     },
                 ],
             },
@@ -1077,10 +1651,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "form-label-marker-required-child",
+                        Id = "form-label-marker-required-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Label" },
+                            { ["text"] = "Label One" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-marker-required-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Two" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-marker-required-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Three" },
                     },
                 ],
             },
@@ -1101,10 +1689,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "form-label-marker-custom-child",
+                        Id = "form-label-marker-custom-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Label" },
+                            { ["text"] = "Label One" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-marker-custom-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Two" },
+                    },
+                    new()
+                    {
+                        Id = "form-label-marker-custom-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Label Three" },
                     },
                 ],
             },
@@ -1133,10 +1735,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "helper-default-child",
+                        Id = "helper-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Helper" },
+                            { ["text"] = "Helper One" },
+                    },
+                    new()
+                    {
+                        Id = "helper-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Two" },
+                    },
+                    new()
+                    {
+                        Id = "helper-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Three" },
                     },
                 ],
             },
@@ -1155,10 +1771,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "helper-icon-true-child",
+                        Id = "helper-icon-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Helper" },
+                            { ["text"] = "Helper One" },
+                    },
+                    new()
+                    {
+                        Id = "helper-icon-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Two" },
+                    },
+                    new()
+                    {
+                        Id = "helper-icon-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Three" },
                     },
                 ],
             },
@@ -1177,10 +1807,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "helper-icon-false-child",
+                        Id = "helper-icon-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Helper" },
+                            { ["text"] = "Helper One" },
+                    },
+                    new()
+                    {
+                        Id = "helper-icon-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Two" },
+                    },
+                    new()
+                    {
+                        Id = "helper-icon-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Three" },
                     },
                 ],
             },
@@ -1199,10 +1843,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "helper-status-default-child",
+                        Id = "helper-status-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Helper" },
+                            { ["text"] = "Helper One" },
+                    },
+                    new()
+                    {
+                        Id = "helper-status-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Two" },
+                    },
+                    new()
+                    {
+                        Id = "helper-status-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Three" },
                     },
                 ],
             },
@@ -1221,10 +1879,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "helper-status-error-child",
+                        Id = "helper-status-error-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Helper" },
+                            { ["text"] = "Helper One" },
+                    },
+                    new()
+                    {
+                        Id = "helper-status-error-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Two" },
+                    },
+                    new()
+                    {
+                        Id = "helper-status-error-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Three" },
                     },
                 ],
             },
@@ -1243,10 +1915,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "helper-status-disabled-child",
+                        Id = "helper-status-disabled-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Helper" },
+                            { ["text"] = "Helper One" },
+                    },
+                    new()
+                    {
+                        Id = "helper-status-disabled-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Two" },
+                    },
+                    new()
+                    {
+                        Id = "helper-status-disabled-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Helper Three" },
                     },
                 ],
             },
@@ -1279,10 +1965,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-default-child",
+                        Id = "image-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1305,10 +2005,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-aspectratio-auto-child",
+                        Id = "image-aspectratio-auto-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-auto-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-auto-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1331,10 +2045,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-aspectratio-square-child",
+                        Id = "image-aspectratio-square-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-square-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-square-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1357,10 +2085,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-aspectratio-video-child",
+                        Id = "image-aspectratio-video-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-video-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-video-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1383,10 +2125,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-aspectratio-portrait-child",
+                        Id = "image-aspectratio-portrait-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-portrait-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-portrait-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1409,10 +2165,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-aspectratio-landscape-child",
+                        Id = "image-aspectratio-landscape-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-landscape-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-aspectratio-landscape-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1435,10 +2205,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-border-true-child",
+                        Id = "image-border-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-border-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-border-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1461,10 +2245,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-border-false-child",
+                        Id = "image-border-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-border-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-border-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1487,10 +2285,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-clickable-true-child",
+                        Id = "image-clickable-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-clickable-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-clickable-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1513,10 +2325,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-clickable-false-child",
+                        Id = "image-clickable-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-clickable-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-clickable-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1539,10 +2365,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-fit-cover-child",
+                        Id = "image-fit-cover-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-fit-cover-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-fit-cover-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1565,10 +2405,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-fit-contain-child",
+                        Id = "image-fit-contain-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-fit-contain-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-fit-contain-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1591,10 +2445,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-fit-fill-child",
+                        Id = "image-fit-fill-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-fit-fill-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-fit-fill-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1617,10 +2485,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-fit-none-child",
+                        Id = "image-fit-none-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-fit-none-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-fit-none-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1643,10 +2525,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-rounded-none-child",
+                        Id = "image-rounded-none-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-none-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-none-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1669,10 +2565,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-rounded-sm-child",
+                        Id = "image-rounded-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1695,10 +2605,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-rounded-md-child",
+                        Id = "image-rounded-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1721,10 +2645,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-rounded-lg-child",
+                        Id = "image-rounded-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1747,10 +2685,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-rounded-xl-child",
+                        Id = "image-rounded-xl-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-xl-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-xl-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1773,10 +2725,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-rounded-full-child",
+                        Id = "image-rounded-full-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-full-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-rounded-full-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1799,10 +2765,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-shadow-none-child",
+                        Id = "image-shadow-none-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-none-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-none-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1825,10 +2805,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-shadow-sm-child",
+                        Id = "image-shadow-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1851,10 +2845,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-shadow-md-child",
+                        Id = "image-shadow-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1877,10 +2885,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-shadow-lg-child",
+                        Id = "image-shadow-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1903,10 +2925,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "image-shadow-xl-child",
+                        Id = "image-shadow-xl-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Image" },
+                            { ["text"] = "Image One" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-xl-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Two" },
+                    },
+                    new()
+                    {
+                        Id = "image-shadow-xl-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Image Three" },
                     },
                 ],
             },
@@ -1938,10 +2974,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-default-child",
+                        Id = "link-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -1963,10 +3013,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-disabled-true-child",
+                        Id = "link-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -1988,10 +3052,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-disabled-false-child",
+                        Id = "link-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2013,10 +3091,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-external-true-child",
+                        Id = "link-external-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-external-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-external-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2038,10 +3130,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-external-false-child",
+                        Id = "link-external-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-external-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-external-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2063,10 +3169,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-icon-true-child",
+                        Id = "link-icon-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-icon-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-icon-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2088,10 +3208,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-icon-false-child",
+                        Id = "link-icon-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-icon-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-icon-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2113,10 +3247,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-iconposition-left-child",
+                        Id = "link-iconposition-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-iconposition-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-iconposition-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2138,10 +3286,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-iconposition-right-child",
+                        Id = "link-iconposition-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-iconposition-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-iconposition-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2163,10 +3325,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-size-sm-child",
+                        Id = "link-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2188,10 +3364,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-size-md-child",
+                        Id = "link-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2213,10 +3403,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-size-lg-child",
+                        Id = "link-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2238,10 +3442,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-size-inherit-child",
+                        Id = "link-size-inherit-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-size-inherit-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-size-inherit-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2263,10 +3481,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-variant-default-child",
+                        Id = "link-variant-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-variant-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-variant-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2288,10 +3520,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-variant-subtle-child",
+                        Id = "link-variant-subtle-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-variant-subtle-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-variant-subtle-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2313,10 +3559,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-variant-muted-child",
+                        Id = "link-variant-muted-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-variant-muted-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-variant-muted-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2338,10 +3598,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "link-variant-animated-child",
+                        Id = "link-variant-animated-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Link" },
+                            { ["text"] = "Link One" },
+                    },
+                    new()
+                    {
+                        Id = "link-variant-animated-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Two" },
+                    },
+                    new()
+                    {
+                        Id = "link-variant-animated-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Link Three" },
                     },
                 ],
             },
@@ -2370,10 +3644,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-default-child",
+                        Id = "progress-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2392,10 +3680,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-labelpos-none-child",
+                        Id = "progress-labelpos-none-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-none-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-none-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2414,10 +3716,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-labelpos-label-left-child",
+                        Id = "progress-labelpos-label-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-label-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-label-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2436,10 +3752,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-labelpos-label-right-child",
+                        Id = "progress-labelpos-label-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-label-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-label-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2458,10 +3788,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-labelpos-label-above-left-child",
+                        Id = "progress-labelpos-label-above-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-label-above-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-label-above-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2480,10 +3824,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-labelpos-label-above-right-child",
+                        Id = "progress-labelpos-label-above-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-label-above-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-label-above-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2502,10 +3860,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-labelpos-tooltip-above-child",
+                        Id = "progress-labelpos-tooltip-above-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-tooltip-above-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-tooltip-above-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2524,10 +3896,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-labelpos-tooltip-below-child",
+                        Id = "progress-labelpos-tooltip-below-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-tooltip-below-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-labelpos-tooltip-below-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2546,10 +3932,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-size-sm-child",
+                        Id = "progress-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2568,10 +3968,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-size-md-child",
+                        Id = "progress-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2590,10 +4004,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "progress-size-lg-child",
+                        Id = "progress-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Progress" },
+                            { ["text"] = "Progress One" },
+                    },
+                    new()
+                    {
+                        Id = "progress-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Two" },
+                    },
+                    new()
+                    {
+                        Id = "progress-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Progress Three" },
                     },
                 ],
             },
@@ -2619,10 +4047,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "skeleton-default-child",
+                        Id = "skeleton-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Skeleton" },
+                            { ["text"] = "Skeleton One" },
+                    },
+                    new()
+                    {
+                        Id = "skeleton-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Skeleton Two" },
+                    },
+                    new()
+                    {
+                        Id = "skeleton-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Skeleton Three" },
                     },
                 ],
             },
@@ -2638,10 +4080,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "skeleton-variant-text-child",
+                        Id = "skeleton-variant-text-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Skeleton" },
+                            { ["text"] = "Skeleton One" },
+                    },
+                    new()
+                    {
+                        Id = "skeleton-variant-text-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Skeleton Two" },
+                    },
+                    new()
+                    {
+                        Id = "skeleton-variant-text-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Skeleton Three" },
                     },
                 ],
             },
@@ -2657,10 +4113,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "skeleton-variant-circle-child",
+                        Id = "skeleton-variant-circle-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Skeleton" },
+                            { ["text"] = "Skeleton One" },
+                    },
+                    new()
+                    {
+                        Id = "skeleton-variant-circle-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Skeleton Two" },
+                    },
+                    new()
+                    {
+                        Id = "skeleton-variant-circle-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Skeleton Three" },
                     },
                 ],
             },
@@ -2676,10 +4146,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "skeleton-variant-rectangle-child",
+                        Id = "skeleton-variant-rectangle-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Skeleton" },
+                            { ["text"] = "Skeleton One" },
+                    },
+                    new()
+                    {
+                        Id = "skeleton-variant-rectangle-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Skeleton Two" },
+                    },
+                    new()
+                    {
+                        Id = "skeleton-variant-rectangle-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Skeleton Three" },
                     },
                 ],
             },
@@ -2706,10 +4190,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "spinner-default-child",
+                        Id = "spinner-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Spinner" },
+                            { ["text"] = "Spinner One" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Two" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Three" },
                     },
                 ],
             },
@@ -2726,10 +4224,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "spinner-size-sm-child",
+                        Id = "spinner-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Spinner" },
+                            { ["text"] = "Spinner One" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Two" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Three" },
                     },
                 ],
             },
@@ -2746,10 +4258,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "spinner-size-md-child",
+                        Id = "spinner-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Spinner" },
+                            { ["text"] = "Spinner One" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Two" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Three" },
                     },
                 ],
             },
@@ -2766,10 +4292,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "spinner-size-lg-child",
+                        Id = "spinner-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Spinner" },
+                            { ["text"] = "Spinner One" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Two" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Three" },
                     },
                 ],
             },
@@ -2786,10 +4326,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "spinner-size-xl-child",
+                        Id = "spinner-size-xl-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Spinner" },
+                            { ["text"] = "Spinner One" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-size-xl-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Two" },
+                    },
+                    new()
+                    {
+                        Id = "spinner-size-xl-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Spinner Three" },
                     },
                 ],
             },
@@ -2822,10 +4376,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-default-child",
+                        Id = "tag-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -2848,10 +4416,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-avatar-true-child",
+                        Id = "tag-avatar-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-avatar-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-avatar-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -2874,10 +4456,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-avatar-false-child",
+                        Id = "tag-avatar-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-avatar-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-avatar-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -2900,10 +4496,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-checkbox-true-child",
+                        Id = "tag-checkbox-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-checkbox-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-checkbox-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -2926,10 +4536,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-checkbox-false-child",
+                        Id = "tag-checkbox-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-checkbox-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-checkbox-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -2952,10 +4576,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-count-true-child",
+                        Id = "tag-count-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-count-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-count-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -2978,10 +4616,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-count-false-child",
+                        Id = "tag-count-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-count-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-count-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -3004,10 +4656,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-icon-true-child",
+                        Id = "tag-icon-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-icon-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-icon-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -3030,10 +4696,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-icon-false-child",
+                        Id = "tag-icon-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-icon-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-icon-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -3056,10 +4736,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-size-sm-child",
+                        Id = "tag-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -3082,10 +4776,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-size-md-child",
+                        Id = "tag-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -3108,10 +4816,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-size-lg-child",
+                        Id = "tag-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -3134,10 +4856,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-xclose-true-child",
+                        Id = "tag-xclose-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-xclose-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-xclose-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -3160,10 +4896,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tag-xclose-false-child",
+                        Id = "tag-xclose-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tag" },
+                            { ["text"] = "Tag One" },
+                    },
+                    new()
+                    {
+                        Id = "tag-xclose-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Two" },
+                    },
+                    new()
+                    {
+                        Id = "tag-xclose-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tag Three" },
                     },
                 ],
             },
@@ -3194,10 +4944,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-default-child",
+                        Id = "button-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3218,10 +4982,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-disabled-true-child",
+                        Id = "button-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3242,10 +5020,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-disabled-false-child",
+                        Id = "button-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3266,10 +5058,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-icononly-true-child",
+                        Id = "button-icononly-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-icononly-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-icononly-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3290,10 +5096,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-icononly-false-child",
+                        Id = "button-icononly-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-icononly-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-icononly-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3314,10 +5134,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-loading-true-child",
+                        Id = "button-loading-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-loading-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-loading-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3338,10 +5172,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-loading-false-child",
+                        Id = "button-loading-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-loading-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-loading-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3362,10 +5210,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-size-sm-child",
+                        Id = "button-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3386,10 +5248,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-size-md-child",
+                        Id = "button-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3410,10 +5286,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-size-lg-child",
+                        Id = "button-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3434,10 +5324,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-size-xl-child",
+                        Id = "button-size-xl-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-xl-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-xl-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3458,10 +5362,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-size-2xl-child",
+                        Id = "button-size-2xl-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-2xl-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-size-2xl-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3482,10 +5400,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-primary-child",
+                        Id = "button-variant-primary-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-primary-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-primary-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3506,10 +5438,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-secondary-child",
+                        Id = "button-variant-secondary-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-secondary-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-secondary-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3530,10 +5476,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-secondary-color-child",
+                        Id = "button-variant-secondary-color-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-secondary-color-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-secondary-color-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3554,10 +5514,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-tertiary-child",
+                        Id = "button-variant-tertiary-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-tertiary-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-tertiary-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3578,10 +5552,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-tertiary-color-child",
+                        Id = "button-variant-tertiary-color-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-tertiary-color-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-tertiary-color-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3602,10 +5590,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-link-child",
+                        Id = "button-variant-link-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-link-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-link-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3626,10 +5628,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-link-color-child",
+                        Id = "button-variant-link-color-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-link-color-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-link-color-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3650,10 +5666,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-destructive-child",
+                        Id = "button-variant-destructive-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-destructive-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-destructive-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3674,10 +5704,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-variant-ghost-destructive-child",
+                        Id = "button-variant-ghost-destructive-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button" },
+                            { ["text"] = "Button One" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-ghost-destructive-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-variant-ghost-destructive-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Three" },
                     },
                 ],
             },
@@ -3708,10 +5752,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-default-child",
+                        Id = "checkbox-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox" },
+                            { ["text"] = "Checkbox One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Three" },
                     },
                 ],
             },
@@ -3732,10 +5790,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-checked-indeterminate-child",
+                        Id = "checkbox-checked-indeterminate-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox" },
+                            { ["text"] = "Checkbox One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-checked-indeterminate-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-checked-indeterminate-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Three" },
                     },
                 ],
             },
@@ -3756,10 +5828,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-disabled-true-child",
+                        Id = "checkbox-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox" },
+                            { ["text"] = "Checkbox One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Three" },
                     },
                 ],
             },
@@ -3780,10 +5866,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-disabled-false-child",
+                        Id = "checkbox-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox" },
+                            { ["text"] = "Checkbox One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Three" },
                     },
                 ],
             },
@@ -3804,10 +5904,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-size-sm-child",
+                        Id = "checkbox-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox" },
+                            { ["text"] = "Checkbox One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Three" },
                     },
                 ],
             },
@@ -3828,10 +5942,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-size-md-child",
+                        Id = "checkbox-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox" },
+                            { ["text"] = "Checkbox One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Three" },
                     },
                 ],
             },
@@ -3852,10 +5980,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-size-lg-child",
+                        Id = "checkbox-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox" },
+                            { ["text"] = "Checkbox One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Three" },
                     },
                 ],
             },
@@ -3885,10 +6027,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "input-default-child",
+                        Id = "input-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Input" },
+                            { ["text"] = "Input One" },
+                    },
+                    new()
+                    {
+                        Id = "input-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "input-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Three" },
                     },
                 ],
             },
@@ -3908,10 +6064,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "input-disabled-true-child",
+                        Id = "input-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Input" },
+                            { ["text"] = "Input One" },
+                    },
+                    new()
+                    {
+                        Id = "input-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "input-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Three" },
                     },
                 ],
             },
@@ -3931,10 +6101,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "input-disabled-false-child",
+                        Id = "input-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Input" },
+                            { ["text"] = "Input One" },
+                    },
+                    new()
+                    {
+                        Id = "input-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "input-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Three" },
                     },
                 ],
             },
@@ -3954,10 +6138,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "input-error-true-child",
+                        Id = "input-error-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Input" },
+                            { ["text"] = "Input One" },
+                    },
+                    new()
+                    {
+                        Id = "input-error-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "input-error-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Three" },
                     },
                 ],
             },
@@ -3977,10 +6175,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "input-error-false-child",
+                        Id = "input-error-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Input" },
+                            { ["text"] = "Input One" },
+                    },
+                    new()
+                    {
+                        Id = "input-error-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "input-error-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Three" },
                     },
                 ],
             },
@@ -4000,10 +6212,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "input-size-sm-child",
+                        Id = "input-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Input" },
+                            { ["text"] = "Input One" },
+                    },
+                    new()
+                    {
+                        Id = "input-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "input-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Three" },
                     },
                 ],
             },
@@ -4023,10 +6249,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "input-size-md-child",
+                        Id = "input-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Input" },
+                            { ["text"] = "Input One" },
+                    },
+                    new()
+                    {
+                        Id = "input-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "input-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Three" },
                     },
                 ],
             },
@@ -4046,10 +6286,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "input-size-lg-child",
+                        Id = "input-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Input" },
+                            { ["text"] = "Input One" },
+                    },
+                    new()
+                    {
+                        Id = "input-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "input-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Input Three" },
                     },
                 ],
             },
@@ -4082,10 +6336,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-default-child",
+                        Id = "radio-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio" },
+                            { ["text"] = "Radio One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Three" },
                     },
                 ],
             },
@@ -4108,10 +6376,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-checked-true-child",
+                        Id = "radio-checked-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio" },
+                            { ["text"] = "Radio One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-checked-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-checked-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Three" },
                     },
                 ],
             },
@@ -4134,10 +6416,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-checked-false-child",
+                        Id = "radio-checked-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio" },
+                            { ["text"] = "Radio One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-checked-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-checked-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Three" },
                     },
                 ],
             },
@@ -4160,10 +6456,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-disabled-true-child",
+                        Id = "radio-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio" },
+                            { ["text"] = "Radio One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Three" },
                     },
                 ],
             },
@@ -4186,10 +6496,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-disabled-false-child",
+                        Id = "radio-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio" },
+                            { ["text"] = "Radio One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Three" },
                     },
                 ],
             },
@@ -4212,10 +6536,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-size-sm-child",
+                        Id = "radio-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio" },
+                            { ["text"] = "Radio One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Three" },
                     },
                 ],
             },
@@ -4238,10 +6576,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-size-md-child",
+                        Id = "radio-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio" },
+                            { ["text"] = "Radio One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Three" },
                     },
                 ],
             },
@@ -4273,10 +6625,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-default-child",
+                        Id = "rating-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4298,10 +6664,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-disabled-true-child",
+                        Id = "rating-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4323,10 +6703,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-disabled-false-child",
+                        Id = "rating-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4348,10 +6742,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-max-3-child",
+                        Id = "rating-max-3-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-3-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-3-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4373,10 +6781,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-max-4-child",
+                        Id = "rating-max-4-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-4-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-4-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4398,10 +6820,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-max-5-child",
+                        Id = "rating-max-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4423,10 +6859,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-max-6-child",
+                        Id = "rating-max-6-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-6-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-6-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4448,10 +6898,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-max-7-child",
+                        Id = "rating-max-7-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-7-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-7-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4473,10 +6937,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-max-10-child",
+                        Id = "rating-max-10-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-10-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-max-10-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4498,10 +6976,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-mode-readonly-child",
+                        Id = "rating-mode-readonly-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-mode-readonly-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-mode-readonly-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4523,10 +7015,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-mode-interactive-child",
+                        Id = "rating-mode-interactive-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-mode-interactive-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-mode-interactive-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4548,10 +7054,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-showlabel-true-child",
+                        Id = "rating-showlabel-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-showlabel-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-showlabel-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4573,10 +7093,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-showlabel-false-child",
+                        Id = "rating-showlabel-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-showlabel-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-showlabel-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4598,10 +7132,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-size-sm-child",
+                        Id = "rating-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4623,10 +7171,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-size-md-child",
+                        Id = "rating-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4648,10 +7210,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-size-lg-child",
+                        Id = "rating-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4673,10 +7249,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-0-child",
+                        Id = "rating-value-0-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-0-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-0-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4698,10 +7288,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-0-5-child",
+                        Id = "rating-value-0-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-0-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-0-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4723,10 +7327,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-1-child",
+                        Id = "rating-value-1-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-1-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-1-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4748,10 +7366,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-1-5-child",
+                        Id = "rating-value-1-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-1-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-1-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4773,10 +7405,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-2-child",
+                        Id = "rating-value-2-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-2-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-2-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4798,10 +7444,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-2-5-child",
+                        Id = "rating-value-2-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-2-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-2-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4823,10 +7483,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-3-child",
+                        Id = "rating-value-3-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-3-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-3-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4848,10 +7522,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-3-5-child",
+                        Id = "rating-value-3-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-3-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-3-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4873,10 +7561,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-4-child",
+                        Id = "rating-value-4-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-4-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-4-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4898,10 +7600,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-4-5-child",
+                        Id = "rating-value-4-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-4-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-4-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4923,10 +7639,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "rating-value-5-child",
+                        Id = "rating-value-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Rating" },
+                            { ["text"] = "Rating One" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Two" },
+                    },
+                    new()
+                    {
+                        Id = "rating-value-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Rating Three" },
                     },
                 ],
             },
@@ -4957,10 +7687,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-default-child",
+                        Id = "slider-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -4981,10 +7725,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-disabled-true-child",
+                        Id = "slider-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5005,10 +7763,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-disabled-false-child",
+                        Id = "slider-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5029,10 +7801,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-isbivalue-true-child",
+                        Id = "slider-isbivalue-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-isbivalue-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-isbivalue-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5053,10 +7839,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-isbivalue-false-child",
+                        Id = "slider-isbivalue-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-isbivalue-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-isbivalue-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5077,10 +7877,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-labelmode-none-child",
+                        Id = "slider-labelmode-none-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-labelmode-none-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-labelmode-none-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5101,10 +7915,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-labelmode-bottom-child",
+                        Id = "slider-labelmode-bottom-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-labelmode-bottom-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-labelmode-bottom-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5125,10 +7953,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-labelmode-tooltip-child",
+                        Id = "slider-labelmode-tooltip-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-labelmode-tooltip-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-labelmode-tooltip-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5149,10 +7991,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-size-sm-child",
+                        Id = "slider-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5173,10 +8029,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-size-md-child",
+                        Id = "slider-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5197,10 +8067,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "slider-size-lg-child",
+                        Id = "slider-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Sliders & Ranges" },
+                            { ["text"] = "Sliders & Ranges One" },
+                    },
+                    new()
+                    {
+                        Id = "slider-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Two" },
+                    },
+                    new()
+                    {
+                        Id = "slider-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Sliders & Ranges Three" },
                     },
                 ],
             },
@@ -5232,10 +8116,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-default-child",
+                        Id = "textarea-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5257,10 +8155,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-disabled-true-child",
+                        Id = "textarea-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5282,10 +8194,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-disabled-false-child",
+                        Id = "textarea-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5307,10 +8233,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-error-true-child",
+                        Id = "textarea-error-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-error-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-error-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5332,10 +8272,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-error-false-child",
+                        Id = "textarea-error-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-error-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-error-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5357,10 +8311,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-resize-vertical-child",
+                        Id = "textarea-resize-vertical-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-resize-vertical-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-resize-vertical-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5382,10 +8350,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-resize-none-child",
+                        Id = "textarea-resize-none-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-resize-none-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-resize-none-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5407,10 +8389,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-resize-both-child",
+                        Id = "textarea-resize-both-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-resize-both-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-resize-both-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5432,10 +8428,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-showcounter-true-child",
+                        Id = "textarea-showcounter-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-showcounter-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-showcounter-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5457,10 +8467,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-showcounter-false-child",
+                        Id = "textarea-showcounter-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-showcounter-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-showcounter-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5482,10 +8506,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-size-sm-child",
+                        Id = "textarea-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5507,10 +8545,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-size-md-child",
+                        Id = "textarea-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5532,10 +8584,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "textarea-size-lg-child",
+                        Id = "textarea-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Textarea" },
+                            { ["text"] = "Textarea One" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Two" },
+                    },
+                    new()
+                    {
+                        Id = "textarea-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Textarea Three" },
                     },
                 ],
             },
@@ -5566,10 +8632,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggle-default-child",
+                        Id = "toggle-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Switch" },
+                            { ["text"] = "Switch One" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Three" },
                     },
                 ],
             },
@@ -5590,10 +8670,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggle-checked-true-child",
+                        Id = "toggle-checked-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Switch" },
+                            { ["text"] = "Switch One" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-checked-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-checked-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Three" },
                     },
                 ],
             },
@@ -5614,10 +8708,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggle-checked-false-child",
+                        Id = "toggle-checked-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Switch" },
+                            { ["text"] = "Switch One" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-checked-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-checked-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Three" },
                     },
                 ],
             },
@@ -5638,10 +8746,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggle-disabled-true-child",
+                        Id = "toggle-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Switch" },
+                            { ["text"] = "Switch One" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Three" },
                     },
                 ],
             },
@@ -5662,10 +8784,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggle-disabled-false-child",
+                        Id = "toggle-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Switch" },
+                            { ["text"] = "Switch One" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Three" },
                     },
                 ],
             },
@@ -5686,10 +8822,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggle-size-sm-child",
+                        Id = "toggle-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Switch" },
+                            { ["text"] = "Switch One" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Three" },
                     },
                 ],
             },
@@ -5710,10 +8860,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggle-size-md-child",
+                        Id = "toggle-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Switch" },
+                            { ["text"] = "Switch One" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggle-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Switch Three" },
                     },
                 ],
             },
@@ -5741,10 +8905,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-group-default-child",
+                        Id = "badge-group-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge Group" },
+                            { ["text"] = "Badge Group One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Three" },
                     },
                 ],
             },
@@ -5762,10 +8940,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-group-badgepos-left-child",
+                        Id = "badge-group-badgepos-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge Group" },
+                            { ["text"] = "Badge Group One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-badgepos-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-badgepos-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Three" },
                     },
                 ],
             },
@@ -5783,10 +8975,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-group-badgepos-right-child",
+                        Id = "badge-group-badgepos-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge Group" },
+                            { ["text"] = "Badge Group One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-badgepos-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-badgepos-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Three" },
                     },
                 ],
             },
@@ -5804,10 +9010,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-group-size-md-child",
+                        Id = "badge-group-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge Group" },
+                            { ["text"] = "Badge Group One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Three" },
                     },
                 ],
             },
@@ -5825,10 +9045,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-group-size-lg-child",
+                        Id = "badge-group-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge Group" },
+                            { ["text"] = "Badge Group One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Three" },
                     },
                 ],
             },
@@ -5846,10 +9080,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-group-variant-ghost-child",
+                        Id = "badge-group-variant-ghost-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge Group" },
+                            { ["text"] = "Badge Group One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-ghost-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-ghost-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Three" },
                     },
                 ],
             },
@@ -5867,10 +9115,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-group-variant-solid-child",
+                        Id = "badge-group-variant-solid-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge Group" },
+                            { ["text"] = "Badge Group One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-solid-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-solid-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Three" },
                     },
                 ],
             },
@@ -5888,10 +9150,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "badge-group-variant-outline-child",
+                        Id = "badge-group-variant-outline-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Badge Group" },
+                            { ["text"] = "Badge Group One" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-outline-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-outline-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Badge Group Three" },
                     },
                 ],
             },
@@ -5917,10 +9193,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "breadcrumb-default-child",
+                        Id = "breadcrumb-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Breadcrumb" },
+                            { ["text"] = "Breadcrumb One" },
+                    },
+                    new()
+                    {
+                        Id = "breadcrumb-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Breadcrumb Two" },
+                    },
+                    new()
+                    {
+                        Id = "breadcrumb-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Breadcrumb Three" },
                     },
                 ],
             },
@@ -5936,10 +9226,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "breadcrumb-separator-slash-child",
+                        Id = "breadcrumb-separator-slash-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Breadcrumb" },
+                            { ["text"] = "Breadcrumb One" },
+                    },
+                    new()
+                    {
+                        Id = "breadcrumb-separator-slash-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Breadcrumb Two" },
+                    },
+                    new()
+                    {
+                        Id = "breadcrumb-separator-slash-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Breadcrumb Three" },
                     },
                 ],
             },
@@ -5955,10 +9259,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "breadcrumb-separator-chevron-child",
+                        Id = "breadcrumb-separator-chevron-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Breadcrumb" },
+                            { ["text"] = "Breadcrumb One" },
+                    },
+                    new()
+                    {
+                        Id = "breadcrumb-separator-chevron-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Breadcrumb Two" },
+                    },
+                    new()
+                    {
+                        Id = "breadcrumb-separator-chevron-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Breadcrumb Three" },
                     },
                 ],
             },
@@ -5974,10 +9292,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "breadcrumb-separator-dot-child",
+                        Id = "breadcrumb-separator-dot-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Breadcrumb" },
+                            { ["text"] = "Breadcrumb One" },
+                    },
+                    new()
+                    {
+                        Id = "breadcrumb-separator-dot-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Breadcrumb Two" },
+                    },
+                    new()
+                    {
+                        Id = "breadcrumb-separator-dot-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Breadcrumb Three" },
                     },
                 ],
             },
@@ -6003,10 +9335,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "button-group-default-child",
+                        Id = "button-group-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Button Group" },
+                            { ["text"] = "Button Group One" },
+                    },
+                    new()
+                    {
+                        Id = "button-group-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "button-group-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Button Group Three" },
                     },
                 ],
             },
@@ -6035,10 +9381,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-default-child",
+                        Id = "checkbox-group-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6057,10 +9417,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-groupdisabled-true-child",
+                        Id = "checkbox-group-groupdisabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-groupdisabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-groupdisabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6079,10 +9453,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-groupdisabled-false-child",
+                        Id = "checkbox-group-groupdisabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-groupdisabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-groupdisabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6101,10 +9489,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-grouperror-true-child",
+                        Id = "checkbox-group-grouperror-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-grouperror-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-grouperror-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6123,10 +9525,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-grouperror-false-child",
+                        Id = "checkbox-group-grouperror-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-grouperror-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-grouperror-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6145,10 +9561,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-layout-vertical-child",
+                        Id = "checkbox-group-layout-vertical-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-layout-vertical-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-layout-vertical-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6167,10 +9597,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-layout-horizontal-child",
+                        Id = "checkbox-group-layout-horizontal-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-layout-horizontal-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-layout-horizontal-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6189,10 +9633,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-layout-inline-child",
+                        Id = "checkbox-group-layout-inline-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-layout-inline-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-layout-inline-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6211,10 +9669,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-size-sm-child",
+                        Id = "checkbox-group-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6233,10 +9705,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-size-md-child",
+                        Id = "checkbox-group-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6255,10 +9741,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "checkbox-group-size-lg-child",
+                        Id = "checkbox-group-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Checkbox Group" },
+                            { ["text"] = "Checkbox Group One" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "checkbox-group-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Checkbox Group Three" },
                     },
                 ],
             },
@@ -6286,10 +9786,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "pagination-default-child",
+                        Id = "pagination-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Pagination" },
+                            { ["text"] = "Pagination One" },
+                    },
+                    new()
+                    {
+                        Id = "pagination-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Pagination Two" },
+                    },
+                    new()
+                    {
+                        Id = "pagination-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Pagination Three" },
                     },
                 ],
             },
@@ -6307,10 +9821,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "pagination-size-sm-child",
+                        Id = "pagination-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Pagination" },
+                            { ["text"] = "Pagination One" },
+                    },
+                    new()
+                    {
+                        Id = "pagination-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Pagination Two" },
+                    },
+                    new()
+                    {
+                        Id = "pagination-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Pagination Three" },
                     },
                 ],
             },
@@ -6328,10 +9856,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "pagination-size-md-child",
+                        Id = "pagination-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Pagination" },
+                            { ["text"] = "Pagination One" },
+                    },
+                    new()
+                    {
+                        Id = "pagination-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Pagination Two" },
+                    },
+                    new()
+                    {
+                        Id = "pagination-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Pagination Three" },
                     },
                 ],
             },
@@ -6349,10 +9891,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "pagination-size-lg-child",
+                        Id = "pagination-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Pagination" },
+                            { ["text"] = "Pagination One" },
+                    },
+                    new()
+                    {
+                        Id = "pagination-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Pagination Two" },
+                    },
+                    new()
+                    {
+                        Id = "pagination-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Pagination Three" },
                     },
                 ],
             },
@@ -6381,10 +9937,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-default-child",
+                        Id = "radio-group-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6403,10 +9973,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-groupdisabled-true-child",
+                        Id = "radio-group-groupdisabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-groupdisabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-groupdisabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6425,10 +10009,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-groupdisabled-false-child",
+                        Id = "radio-group-groupdisabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-groupdisabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-groupdisabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6447,10 +10045,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-grouperror-true-child",
+                        Id = "radio-group-grouperror-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-grouperror-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-grouperror-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6469,10 +10081,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-grouperror-false-child",
+                        Id = "radio-group-grouperror-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-grouperror-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-grouperror-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6491,10 +10117,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-layout-vertical-child",
+                        Id = "radio-group-layout-vertical-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-layout-vertical-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-layout-vertical-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6513,10 +10153,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-layout-horizontal-child",
+                        Id = "radio-group-layout-horizontal-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-layout-horizontal-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-layout-horizontal-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6535,10 +10189,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-layout-inline-child",
+                        Id = "radio-group-layout-inline-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-layout-inline-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-layout-inline-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6557,10 +10225,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-size-sm-child",
+                        Id = "radio-group-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6579,10 +10261,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-size-md-child",
+                        Id = "radio-group-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6601,10 +10297,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "radio-group-size-lg-child",
+                        Id = "radio-group-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Radio Group" },
+                            { ["text"] = "Radio Group One" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Two" },
+                    },
+                    new()
+                    {
+                        Id = "radio-group-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Radio Group Three" },
                     },
                 ],
             },
@@ -6633,10 +10343,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "segmented-default-child",
+                        Id = "segmented-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Segmented" },
+                            { ["text"] = "Segmented One" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Two" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Three" },
                     },
                 ],
             },
@@ -6655,10 +10379,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "segmented-disabled-true-child",
+                        Id = "segmented-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Segmented" },
+                            { ["text"] = "Segmented One" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Two" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Three" },
                     },
                 ],
             },
@@ -6677,10 +10415,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "segmented-disabled-false-child",
+                        Id = "segmented-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Segmented" },
+                            { ["text"] = "Segmented One" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Two" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Three" },
                     },
                 ],
             },
@@ -6699,10 +10451,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "segmented-fullwidth-true-child",
+                        Id = "segmented-fullwidth-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Segmented" },
+                            { ["text"] = "Segmented One" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-fullwidth-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Two" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-fullwidth-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Three" },
                     },
                 ],
             },
@@ -6721,10 +10487,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "segmented-fullwidth-false-child",
+                        Id = "segmented-fullwidth-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Segmented" },
+                            { ["text"] = "Segmented One" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-fullwidth-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Two" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-fullwidth-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Three" },
                     },
                 ],
             },
@@ -6743,10 +10523,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "segmented-size-sm-child",
+                        Id = "segmented-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Segmented" },
+                            { ["text"] = "Segmented One" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Two" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Three" },
                     },
                 ],
             },
@@ -6765,10 +10559,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "segmented-size-md-child",
+                        Id = "segmented-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Segmented" },
+                            { ["text"] = "Segmented One" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Two" },
+                    },
+                    new()
+                    {
+                        Id = "segmented-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Segmented Three" },
                     },
                 ],
             },
@@ -6797,10 +10605,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-default-child",
+                        Id = "step-indicator-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6819,10 +10641,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-activeindex-0-child",
+                        Id = "step-indicator-activeindex-0-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-0-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-0-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6841,10 +10677,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-activeindex-1-child",
+                        Id = "step-indicator-activeindex-1-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-1-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-1-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6863,10 +10713,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-activeindex-2-child",
+                        Id = "step-indicator-activeindex-2-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-2-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-2-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6885,10 +10749,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-activeindex-3-child",
+                        Id = "step-indicator-activeindex-3-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-3-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-3-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6907,10 +10785,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-activeindex-4-child",
+                        Id = "step-indicator-activeindex-4-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-4-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-4-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6929,10 +10821,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-activeindex-5-child",
+                        Id = "step-indicator-activeindex-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6951,10 +10857,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-activeindex-6-child",
+                        Id = "step-indicator-activeindex-6-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-6-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-activeindex-6-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6973,10 +10893,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-size-sm-child",
+                        Id = "step-indicator-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -6995,10 +10929,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-size-md-child",
+                        Id = "step-indicator-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7017,10 +10965,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-size-lg-child",
+                        Id = "step-indicator-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7039,10 +11001,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-steps-3-child",
+                        Id = "step-indicator-steps-3-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-3-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-3-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7061,10 +11037,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-steps-4-child",
+                        Id = "step-indicator-steps-4-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-4-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-4-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7083,10 +11073,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-steps-5-child",
+                        Id = "step-indicator-steps-5-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-5-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-5-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7105,10 +11109,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-steps-6-child",
+                        Id = "step-indicator-steps-6-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-6-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-6-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7127,10 +11145,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-steps-7-child",
+                        Id = "step-indicator-steps-7-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-7-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-steps-7-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7149,10 +11181,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-variant-dots-child",
+                        Id = "step-indicator-variant-dots-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-variant-dots-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-variant-dots-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7171,10 +11217,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-variant-bars-child",
+                        Id = "step-indicator-variant-bars-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-variant-bars-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-variant-bars-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7193,10 +11253,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "step-indicator-variant-numbers-child",
+                        Id = "step-indicator-variant-numbers-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Step Indicator" },
+                            { ["text"] = "Step Indicator One" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-variant-numbers-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Two" },
+                    },
+                    new()
+                    {
+                        Id = "step-indicator-variant-numbers-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Step Indicator Three" },
                     },
                 ],
             },
@@ -7225,10 +11299,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-default-child",
+                        Id = "toggles-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7247,10 +11335,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-disabled-true-child",
+                        Id = "toggles-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7269,10 +11371,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-disabled-false-child",
+                        Id = "toggles-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7291,10 +11407,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-size-sm-child",
+                        Id = "toggles-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7313,10 +11443,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-size-md-child",
+                        Id = "toggles-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7335,10 +11479,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-size-lg-child",
+                        Id = "toggles-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7357,10 +11515,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-state-unchecked-child",
+                        Id = "toggles-state-unchecked-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-state-unchecked-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-state-unchecked-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7379,10 +11551,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-state-checked-child",
+                        Id = "toggles-state-checked-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-state-checked-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-state-checked-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7401,10 +11587,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-state-indeterminate-child",
+                        Id = "toggles-state-indeterminate-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-state-indeterminate-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-state-indeterminate-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7423,10 +11623,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-type-checkbox-child",
+                        Id = "toggles-type-checkbox-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-type-checkbox-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-type-checkbox-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7445,10 +11659,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-type-radio-child",
+                        Id = "toggles-type-radio-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-type-radio-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-type-radio-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7467,10 +11695,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toggles-type-switch-child",
+                        Id = "toggles-type-switch-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toggles" },
+                            { ["text"] = "Toggles One" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-type-switch-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Two" },
+                    },
+                    new()
+                    {
+                        Id = "toggles-type-switch-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toggles Three" },
                     },
                 ],
             },
@@ -7500,10 +11742,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-default-child",
+                        Id = "alert-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7523,10 +11779,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-closable-true-child",
+                        Id = "alert-closable-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-closable-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-closable-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7546,10 +11816,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-closable-false-child",
+                        Id = "alert-closable-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-closable-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-closable-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7569,10 +11853,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-glow-true-child",
+                        Id = "alert-glow-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-glow-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-glow-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7592,10 +11890,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-glow-false-child",
+                        Id = "alert-glow-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-glow-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-glow-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7615,10 +11927,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-severity-info-child",
+                        Id = "alert-severity-info-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-severity-info-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-severity-info-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7638,10 +11964,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-severity-error-child",
+                        Id = "alert-severity-error-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-severity-error-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-severity-error-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7661,10 +12001,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-size-full-child",
+                        Id = "alert-size-full-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-size-full-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-size-full-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7684,10 +12038,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-size-compact-child",
+                        Id = "alert-size-compact-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-size-compact-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-size-compact-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7707,10 +12075,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-style-default-child",
+                        Id = "alert-style-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-style-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-style-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7730,10 +12112,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "alert-style-accent-child",
+                        Id = "alert-style-accent-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Notification" },
+                            { ["text"] = "Notification One" },
+                    },
+                    new()
+                    {
+                        Id = "alert-style-accent-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Two" },
+                    },
+                    new()
+                    {
+                        Id = "alert-style-accent-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Notification Three" },
                     },
                 ],
             },
@@ -7761,10 +12157,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-default-child",
+                        Id = "card-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7782,10 +12192,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-footervariant-actions-child",
+                        Id = "card-footervariant-actions-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-footervariant-actions-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-footervariant-actions-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7803,10 +12227,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-footervariant-helper-child",
+                        Id = "card-footervariant-helper-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-footervariant-helper-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-footervariant-helper-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7824,10 +12262,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-padding-sm-child",
+                        Id = "card-padding-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7845,10 +12297,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-padding-md-child",
+                        Id = "card-padding-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7866,10 +12332,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-padding-lg-child",
+                        Id = "card-padding-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7887,10 +12367,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-variant-default-child",
+                        Id = "card-variant-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7908,10 +12402,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-variant-elevated-child",
+                        Id = "card-variant-elevated-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-elevated-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-elevated-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7929,10 +12437,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "card-variant-ghost-child",
+                        Id = "card-variant-ghost-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Card" },
+                            { ["text"] = "Card One" },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-ghost-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Two" },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-ghost-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Card Three" },
                     },
                 ],
             },
@@ -7958,10 +12480,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "chat-default-child",
+                        Id = "chat-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Chat" },
+                            { ["text"] = "Chat One" },
+                    },
+                    new()
+                    {
+                        Id = "chat-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Chat Two" },
+                    },
+                    new()
+                    {
+                        Id = "chat-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Chat Three" },
                     },
                 ],
             },
@@ -7987,10 +12523,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "content-footer-default-child",
+                        Id = "content-footer-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "ContentFooter" },
+                            { ["text"] = "ContentFooter One" },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentFooter Two" },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentFooter Three" },
                     },
                 ],
             },
@@ -8006,10 +12556,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "content-footer-variant-actions-child",
+                        Id = "content-footer-variant-actions-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "ContentFooter" },
+                            { ["text"] = "ContentFooter One" },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-variant-actions-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentFooter Two" },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-variant-actions-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentFooter Three" },
                     },
                 ],
             },
@@ -8025,10 +12589,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "content-footer-variant-helper-child",
+                        Id = "content-footer-variant-helper-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "ContentFooter" },
+                            { ["text"] = "ContentFooter One" },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-variant-helper-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentFooter Two" },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-variant-helper-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentFooter Three" },
                     },
                 ],
             },
@@ -8055,10 +12633,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "content-header-default-child",
+                        Id = "content-header-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "ContentHeader" },
+                            { ["text"] = "ContentHeader One" },
+                    },
+                    new()
+                    {
+                        Id = "content-header-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentHeader Two" },
+                    },
+                    new()
+                    {
+                        Id = "content-header-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentHeader Three" },
                     },
                 ],
             },
@@ -8075,10 +12667,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "content-header-canclose-true-child",
+                        Id = "content-header-canclose-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "ContentHeader" },
+                            { ["text"] = "ContentHeader One" },
+                    },
+                    new()
+                    {
+                        Id = "content-header-canclose-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentHeader Two" },
+                    },
+                    new()
+                    {
+                        Id = "content-header-canclose-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentHeader Three" },
                     },
                 ],
             },
@@ -8095,10 +12701,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "content-header-canclose-false-child",
+                        Id = "content-header-canclose-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "ContentHeader" },
+                            { ["text"] = "ContentHeader One" },
+                    },
+                    new()
+                    {
+                        Id = "content-header-canclose-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentHeader Two" },
+                    },
+                    new()
+                    {
+                        Id = "content-header-canclose-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "ContentHeader Three" },
                     },
                 ],
             },
@@ -8124,10 +12744,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "empty-state-default-child",
+                        Id = "empty-state-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Empty States" },
+                            { ["text"] = "Empty States One" },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Empty States Two" },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Empty States Three" },
                     },
                 ],
             },
@@ -8143,10 +12777,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "empty-state-variant-default-child",
+                        Id = "empty-state-variant-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Empty States" },
+                            { ["text"] = "Empty States One" },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Empty States Two" },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Empty States Three" },
                     },
                 ],
             },
@@ -8162,10 +12810,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "empty-state-variant-compact-child",
+                        Id = "empty-state-variant-compact-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Empty States" },
+                            { ["text"] = "Empty States One" },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-compact-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Empty States Two" },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-compact-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Empty States Three" },
                     },
                 ],
             },
@@ -8181,10 +12843,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "empty-state-variant-card-child",
+                        Id = "empty-state-variant-card-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Empty States" },
+                            { ["text"] = "Empty States One" },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-card-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Empty States Two" },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-card-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Empty States Three" },
                     },
                 ],
             },
@@ -8214,10 +12890,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-default-child",
+                        Id = "list-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8237,10 +12927,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-bullet-disc-child",
+                        Id = "list-bullet-disc-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-bullet-disc-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-bullet-disc-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8260,10 +12964,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-bullet-circle-child",
+                        Id = "list-bullet-circle-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-bullet-circle-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-bullet-circle-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8283,10 +13001,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-bullet-square-child",
+                        Id = "list-bullet-square-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-bullet-square-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-bullet-square-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8306,10 +13038,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-bullet-dash-child",
+                        Id = "list-bullet-dash-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-bullet-dash-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-bullet-dash-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8329,10 +13075,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-horizontal-true-child",
+                        Id = "list-horizontal-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-horizontal-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-horizontal-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8352,10 +13112,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-horizontal-false-child",
+                        Id = "list-horizontal-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-horizontal-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-horizontal-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8370,15 +13144,29 @@ public static class NmKitchenSink
                 Horizontal = false,
                 Order = "decimal",
                 Size = "md",
-                Type = "unordered",
+                Type = "ordered",
                 Items =
                 [
                     new()
                     {
-                        Id = "list-order-decimal-child",
+                        Id = "list-order-decimal-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-decimal-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-decimal-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8393,15 +13181,29 @@ public static class NmKitchenSink
                 Horizontal = false,
                 Order = "decimal-leading-zero",
                 Size = "md",
-                Type = "unordered",
+                Type = "ordered",
                 Items =
                 [
                     new()
                     {
-                        Id = "list-order-decimal-leading-zero-child",
+                        Id = "list-order-decimal-leading-zero-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-decimal-leading-zero-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-decimal-leading-zero-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8416,15 +13218,29 @@ public static class NmKitchenSink
                 Horizontal = false,
                 Order = "lower-alpha",
                 Size = "md",
-                Type = "unordered",
+                Type = "ordered",
                 Items =
                 [
                     new()
                     {
-                        Id = "list-order-lower-alpha-child",
+                        Id = "list-order-lower-alpha-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-lower-alpha-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-lower-alpha-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8439,15 +13255,29 @@ public static class NmKitchenSink
                 Horizontal = false,
                 Order = "upper-alpha",
                 Size = "md",
-                Type = "unordered",
+                Type = "ordered",
                 Items =
                 [
                     new()
                     {
-                        Id = "list-order-upper-alpha-child",
+                        Id = "list-order-upper-alpha-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-upper-alpha-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-upper-alpha-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8462,15 +13292,29 @@ public static class NmKitchenSink
                 Horizontal = false,
                 Order = "lower-roman",
                 Size = "md",
-                Type = "unordered",
+                Type = "ordered",
                 Items =
                 [
                     new()
                     {
-                        Id = "list-order-lower-roman-child",
+                        Id = "list-order-lower-roman-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-lower-roman-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-lower-roman-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8485,15 +13329,29 @@ public static class NmKitchenSink
                 Horizontal = false,
                 Order = "upper-roman",
                 Size = "md",
-                Type = "unordered",
+                Type = "ordered",
                 Items =
                 [
                     new()
                     {
-                        Id = "list-order-upper-roman-child",
+                        Id = "list-order-upper-roman-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-upper-roman-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-order-upper-roman-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8513,10 +13371,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-size-sm-child",
+                        Id = "list-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8536,10 +13408,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-size-md-child",
+                        Id = "list-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8559,10 +13445,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-size-lg-child",
+                        Id = "list-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8582,10 +13482,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-type-unordered-child",
+                        Id = "list-type-unordered-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-type-unordered-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-type-unordered-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8605,10 +13519,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-type-ordered-child",
+                        Id = "list-type-ordered-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-type-ordered-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-type-ordered-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8628,10 +13556,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "list-type-icon-child",
+                        Id = "list-type-icon-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "List" },
+                            { ["text"] = "List One" },
+                    },
+                    new()
+                    {
+                        Id = "list-type-icon-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Two" },
+                    },
+                    new()
+                    {
+                        Id = "list-type-icon-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "List Three" },
                     },
                 ],
             },
@@ -8662,10 +13604,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-default-child",
+                        Id = "metrics-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8686,10 +13642,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-showicon-true-child",
+                        Id = "metrics-showicon-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-showicon-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-showicon-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8710,10 +13680,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-showicon-false-child",
+                        Id = "metrics-showicon-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-showicon-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-showicon-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8734,10 +13718,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-trend-up-child",
+                        Id = "metrics-trend-up-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-trend-up-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-trend-up-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8758,10 +13756,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-trend-down-child",
+                        Id = "metrics-trend-down-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-trend-down-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-trend-down-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8782,10 +13794,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-trend-neutral-child",
+                        Id = "metrics-trend-neutral-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-trend-neutral-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-trend-neutral-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8806,10 +13832,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-variant-default-child",
+                        Id = "metrics-variant-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-variant-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-variant-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8830,10 +13870,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-variant-card-child",
+                        Id = "metrics-variant-card-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-variant-card-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-variant-card-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8854,10 +13908,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "metrics-variant-compact-child",
+                        Id = "metrics-variant-compact-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Metrics" },
+                            { ["text"] = "Metrics One" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-variant-compact-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Two" },
+                    },
+                    new()
+                    {
+                        Id = "metrics-variant-compact-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Metrics Three" },
                     },
                 ],
             },
@@ -8886,10 +13954,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-default-child",
+                        Id = "table-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -8908,10 +13990,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-hover-true-child",
+                        Id = "table-hover-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-hover-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-hover-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -8930,10 +14026,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-hover-false-child",
+                        Id = "table-hover-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-hover-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-hover-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -8952,10 +14062,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-size-sm-child",
+                        Id = "table-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -8974,10 +14098,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-size-md-child",
+                        Id = "table-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -8996,10 +14134,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-size-lg-child",
+                        Id = "table-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -9018,10 +14170,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-striped-true-child",
+                        Id = "table-striped-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-striped-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-striped-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -9040,10 +14206,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-striped-false-child",
+                        Id = "table-striped-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-striped-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-striped-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -9062,10 +14242,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-variant-default-child",
+                        Id = "table-variant-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-variant-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-variant-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -9084,10 +14278,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-variant-bordered-child",
+                        Id = "table-variant-bordered-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-variant-bordered-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-variant-bordered-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -9106,10 +14314,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "table-variant-minimal-child",
+                        Id = "table-variant-minimal-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Table" },
+                            { ["text"] = "Table One" },
+                    },
+                    new()
+                    {
+                        Id = "table-variant-minimal-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Two" },
+                    },
+                    new()
+                    {
+                        Id = "table-variant-minimal-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Table Three" },
                     },
                 ],
             },
@@ -9140,10 +14362,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-default-child",
+                        Id = "color-picker-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9164,10 +14400,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-disabled-true-child",
+                        Id = "color-picker-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9188,10 +14438,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-disabled-false-child",
+                        Id = "color-picker-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9212,10 +14476,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-showinput-true-child",
+                        Id = "color-picker-showinput-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-showinput-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-showinput-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9236,10 +14514,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-showinput-false-child",
+                        Id = "color-picker-showinput-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-showinput-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-showinput-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9260,10 +14552,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-showpanel-true-child",
+                        Id = "color-picker-showpanel-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-showpanel-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-showpanel-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9284,10 +14590,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-showpanel-false-child",
+                        Id = "color-picker-showpanel-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-showpanel-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-showpanel-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9308,10 +14628,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-size-sm-child",
+                        Id = "color-picker-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9332,10 +14666,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-size-md-child",
+                        Id = "color-picker-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9356,10 +14704,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "color-picker-size-lg-child",
+                        Id = "color-picker-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Color Picker" },
+                            { ["text"] = "Color Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "color-picker-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Color Picker Three" },
                     },
                 ],
             },
@@ -9390,10 +14752,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "combobox-default-child",
+                        Id = "combobox-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Combobox" },
+                            { ["text"] = "Combobox One" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Two" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Three" },
                     },
                 ],
             },
@@ -9414,10 +14790,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "combobox-isloading-true-child",
+                        Id = "combobox-isloading-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Combobox" },
+                            { ["text"] = "Combobox One" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-isloading-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Two" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-isloading-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Three" },
                     },
                 ],
             },
@@ -9438,10 +14828,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "combobox-isloading-false-child",
+                        Id = "combobox-isloading-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Combobox" },
+                            { ["text"] = "Combobox One" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-isloading-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Two" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-isloading-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Three" },
                     },
                 ],
             },
@@ -9462,10 +14866,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "combobox-multiple-true-child",
+                        Id = "combobox-multiple-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Combobox" },
+                            { ["text"] = "Combobox One" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-multiple-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Two" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-multiple-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Three" },
                     },
                 ],
             },
@@ -9486,10 +14904,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "combobox-multiple-false-child",
+                        Id = "combobox-multiple-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Combobox" },
+                            { ["text"] = "Combobox One" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-multiple-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Two" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-multiple-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Three" },
                     },
                 ],
             },
@@ -9510,10 +14942,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "combobox-size-sm-child",
+                        Id = "combobox-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Combobox" },
+                            { ["text"] = "Combobox One" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Two" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Three" },
                     },
                 ],
             },
@@ -9534,10 +14980,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "combobox-size-md-child",
+                        Id = "combobox-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Combobox" },
+                            { ["text"] = "Combobox One" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Two" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Three" },
                     },
                 ],
             },
@@ -9558,10 +15018,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "combobox-size-lg-child",
+                        Id = "combobox-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Combobox" },
+                            { ["text"] = "Combobox One" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Two" },
+                    },
+                    new()
+                    {
+                        Id = "combobox-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Combobox Three" },
                     },
                 ],
             },
@@ -9587,10 +15061,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "command-palette-default-child",
+                        Id = "command-palette-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Ctrl + K" },
+                            { ["text"] = "Ctrl + K One" },
+                    },
+                    new()
+                    {
+                        Id = "command-palette-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Ctrl + K Two" },
+                    },
+                    new()
+                    {
+                        Id = "command-palette-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Ctrl + K Three" },
                     },
                 ],
             },
@@ -9617,10 +15105,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "date-picker-default-child",
+                        Id = "date-picker-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Date Picker" },
+                            { ["text"] = "Date Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Three" },
                     },
                 ],
             },
@@ -9637,10 +15139,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "date-picker-mode-single-child",
+                        Id = "date-picker-mode-single-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Date Picker" },
+                            { ["text"] = "Date Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-mode-single-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-mode-single-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Three" },
                     },
                 ],
             },
@@ -9657,10 +15173,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "date-picker-mode-range-child",
+                        Id = "date-picker-mode-range-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Date Picker" },
+                            { ["text"] = "Date Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-mode-range-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-mode-range-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Three" },
                     },
                 ],
             },
@@ -9677,10 +15207,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "date-picker-mode-year-month-child",
+                        Id = "date-picker-mode-year-month-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Date Picker" },
+                            { ["text"] = "Date Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-mode-year-month-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-mode-year-month-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Three" },
                     },
                 ],
             },
@@ -9697,10 +15241,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "date-picker-mode-dual-child",
+                        Id = "date-picker-mode-dual-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Date Picker" },
+                            { ["text"] = "Date Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-mode-dual-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-mode-dual-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Three" },
                     },
                 ],
             },
@@ -9717,10 +15275,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "date-picker-size-sm-child",
+                        Id = "date-picker-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Date Picker" },
+                            { ["text"] = "Date Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Three" },
                     },
                 ],
             },
@@ -9737,10 +15309,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "date-picker-size-md-child",
+                        Id = "date-picker-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Date Picker" },
+                            { ["text"] = "Date Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Three" },
                     },
                 ],
             },
@@ -9757,10 +15343,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "date-picker-size-lg-child",
+                        Id = "date-picker-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Date Picker" },
+                            { ["text"] = "Date Picker One" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Two" },
+                    },
+                    new()
+                    {
+                        Id = "date-picker-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Date Picker Three" },
                     },
                 ],
             },
@@ -9789,10 +15389,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-default-child",
+                        Id = "drawer-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9811,10 +15425,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-hasoverlay-true-child",
+                        Id = "drawer-hasoverlay-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-hasoverlay-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-hasoverlay-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9833,10 +15461,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-hasoverlay-false-child",
+                        Id = "drawer-hasoverlay-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-hasoverlay-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-hasoverlay-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9855,10 +15497,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-isopen-true-child",
+                        Id = "drawer-isopen-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-isopen-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-isopen-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9877,10 +15533,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-isopen-false-child",
+                        Id = "drawer-isopen-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-isopen-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-isopen-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9899,10 +15569,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-position-left-child",
+                        Id = "drawer-position-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9921,10 +15605,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-position-right-child",
+                        Id = "drawer-position-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9943,10 +15641,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-position-top-child",
+                        Id = "drawer-position-top-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-top-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-top-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9965,10 +15677,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-position-bottom-child",
+                        Id = "drawer-position-bottom-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-bottom-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-bottom-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -9987,10 +15713,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-size-sm-child",
+                        Id = "drawer-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -10009,10 +15749,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-size-md-child",
+                        Id = "drawer-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -10031,10 +15785,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-size-lg-child",
+                        Id = "drawer-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -10053,10 +15821,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "drawer-size-full-child",
+                        Id = "drawer-size-full-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Drawer" },
+                            { ["text"] = "Drawer One" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-full-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Two" },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-full-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Drawer Three" },
                     },
                 ],
             },
@@ -10082,10 +15864,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "dropdown-default-child",
+                        Id = "dropdown-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Dropdown" },
+                            { ["text"] = "Dropdown One" },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Dropdown Two" },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Dropdown Three" },
                     },
                 ],
             },
@@ -10101,10 +15897,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "dropdown-size-sm-child",
+                        Id = "dropdown-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Dropdown" },
+                            { ["text"] = "Dropdown One" },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Dropdown Two" },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Dropdown Three" },
                     },
                 ],
             },
@@ -10120,10 +15930,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "dropdown-size-md-child",
+                        Id = "dropdown-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Dropdown" },
+                            { ["text"] = "Dropdown One" },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Dropdown Two" },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Dropdown Three" },
                     },
                 ],
             },
@@ -10139,10 +15963,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "dropdown-size-lg-child",
+                        Id = "dropdown-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Dropdown" },
+                            { ["text"] = "Dropdown One" },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Dropdown Two" },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Dropdown Three" },
                     },
                 ],
             },
@@ -10169,10 +16007,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "modal-default-child",
+                        Id = "modal-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Modal" },
+                            { ["text"] = "Modal One" },
+                    },
+                    new()
+                    {
+                        Id = "modal-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Two" },
+                    },
+                    new()
+                    {
+                        Id = "modal-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Three" },
                     },
                 ],
             },
@@ -10189,10 +16041,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "modal-footervariant-actions-child",
+                        Id = "modal-footervariant-actions-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Modal" },
+                            { ["text"] = "Modal One" },
+                    },
+                    new()
+                    {
+                        Id = "modal-footervariant-actions-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Two" },
+                    },
+                    new()
+                    {
+                        Id = "modal-footervariant-actions-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Three" },
                     },
                 ],
             },
@@ -10209,10 +16075,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "modal-footervariant-helper-child",
+                        Id = "modal-footervariant-helper-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Modal" },
+                            { ["text"] = "Modal One" },
+                    },
+                    new()
+                    {
+                        Id = "modal-footervariant-helper-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Two" },
+                    },
+                    new()
+                    {
+                        Id = "modal-footervariant-helper-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Three" },
                     },
                 ],
             },
@@ -10229,10 +16109,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "modal-size-sm-child",
+                        Id = "modal-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Modal" },
+                            { ["text"] = "Modal One" },
+                    },
+                    new()
+                    {
+                        Id = "modal-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Two" },
+                    },
+                    new()
+                    {
+                        Id = "modal-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Three" },
                     },
                 ],
             },
@@ -10249,10 +16143,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "modal-size-md-child",
+                        Id = "modal-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Modal" },
+                            { ["text"] = "Modal One" },
+                    },
+                    new()
+                    {
+                        Id = "modal-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Two" },
+                    },
+                    new()
+                    {
+                        Id = "modal-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Three" },
                     },
                 ],
             },
@@ -10269,10 +16177,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "modal-size-lg-child",
+                        Id = "modal-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Modal" },
+                            { ["text"] = "Modal One" },
+                    },
+                    new()
+                    {
+                        Id = "modal-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Two" },
+                    },
+                    new()
+                    {
+                        Id = "modal-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Modal Three" },
                     },
                 ],
             },
@@ -10302,10 +16224,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-default-child",
+                        Id = "popover-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10325,10 +16261,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-isopen-true-child",
+                        Id = "popover-isopen-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-isopen-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-isopen-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10348,10 +16298,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-isopen-false-child",
+                        Id = "popover-isopen-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-isopen-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-isopen-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10371,10 +16335,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-position-top-child",
+                        Id = "popover-position-top-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-top-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-top-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10394,10 +16372,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-position-right-child",
+                        Id = "popover-position-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10417,10 +16409,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-position-bottom-child",
+                        Id = "popover-position-bottom-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-bottom-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-bottom-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10440,10 +16446,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-position-left-child",
+                        Id = "popover-position-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10463,10 +16483,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-showarrow-true-child",
+                        Id = "popover-showarrow-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-showarrow-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-showarrow-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10486,10 +16520,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-showarrow-false-child",
+                        Id = "popover-showarrow-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-showarrow-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-showarrow-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10509,10 +16557,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-showclose-true-child",
+                        Id = "popover-showclose-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-showclose-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-showclose-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10532,10 +16594,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-showclose-false-child",
+                        Id = "popover-showclose-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-showclose-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-showclose-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10555,10 +16631,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-size-sm-child",
+                        Id = "popover-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10578,10 +16668,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-size-md-child",
+                        Id = "popover-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10601,10 +16705,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "popover-size-lg-child",
+                        Id = "popover-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Popover" },
+                            { ["text"] = "Popover One" },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Two" },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Popover Three" },
                     },
                 ],
             },
@@ -10632,10 +16750,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "search-input-default-child",
+                        Id = "search-input-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Search Input" },
+                            { ["text"] = "Search Input One" },
+                    },
+                    new()
+                    {
+                        Id = "search-input-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Search Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "search-input-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Search Input Three" },
                     },
                 ],
             },
@@ -10653,10 +16785,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "search-input-size-sm-child",
+                        Id = "search-input-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Search Input" },
+                            { ["text"] = "Search Input One" },
+                    },
+                    new()
+                    {
+                        Id = "search-input-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Search Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "search-input-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Search Input Three" },
                     },
                 ],
             },
@@ -10674,10 +16820,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "search-input-size-md-child",
+                        Id = "search-input-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Search Input" },
+                            { ["text"] = "Search Input One" },
+                    },
+                    new()
+                    {
+                        Id = "search-input-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Search Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "search-input-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Search Input Three" },
                     },
                 ],
             },
@@ -10695,10 +16855,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "search-input-size-lg-child",
+                        Id = "search-input-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Search Input" },
+                            { ["text"] = "Search Input One" },
+                    },
+                    new()
+                    {
+                        Id = "search-input-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Search Input Two" },
+                    },
+                    new()
+                    {
+                        Id = "search-input-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Search Input Three" },
                     },
                 ],
             },
@@ -10727,10 +16901,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "select-default-child",
+                        Id = "select-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Select" },
+                            { ["text"] = "Select One" },
+                    },
+                    new()
+                    {
+                        Id = "select-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Two" },
+                    },
+                    new()
+                    {
+                        Id = "select-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Three" },
                     },
                 ],
             },
@@ -10749,10 +16937,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "select-disabled-true-child",
+                        Id = "select-disabled-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Select" },
+                            { ["text"] = "Select One" },
+                    },
+                    new()
+                    {
+                        Id = "select-disabled-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Two" },
+                    },
+                    new()
+                    {
+                        Id = "select-disabled-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Three" },
                     },
                 ],
             },
@@ -10771,10 +16973,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "select-disabled-false-child",
+                        Id = "select-disabled-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Select" },
+                            { ["text"] = "Select One" },
+                    },
+                    new()
+                    {
+                        Id = "select-disabled-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Two" },
+                    },
+                    new()
+                    {
+                        Id = "select-disabled-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Three" },
                     },
                 ],
             },
@@ -10793,10 +17009,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "select-error-true-child",
+                        Id = "select-error-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Select" },
+                            { ["text"] = "Select One" },
+                    },
+                    new()
+                    {
+                        Id = "select-error-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Two" },
+                    },
+                    new()
+                    {
+                        Id = "select-error-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Three" },
                     },
                 ],
             },
@@ -10815,10 +17045,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "select-error-false-child",
+                        Id = "select-error-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Select" },
+                            { ["text"] = "Select One" },
+                    },
+                    new()
+                    {
+                        Id = "select-error-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Two" },
+                    },
+                    new()
+                    {
+                        Id = "select-error-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Three" },
                     },
                 ],
             },
@@ -10837,10 +17081,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "select-size-sm-child",
+                        Id = "select-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Select" },
+                            { ["text"] = "Select One" },
+                    },
+                    new()
+                    {
+                        Id = "select-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Two" },
+                    },
+                    new()
+                    {
+                        Id = "select-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Three" },
                     },
                 ],
             },
@@ -10859,10 +17117,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "select-size-md-child",
+                        Id = "select-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Select" },
+                            { ["text"] = "Select One" },
+                    },
+                    new()
+                    {
+                        Id = "select-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Two" },
+                    },
+                    new()
+                    {
+                        Id = "select-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Three" },
                     },
                 ],
             },
@@ -10881,10 +17153,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "select-size-lg-child",
+                        Id = "select-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Select" },
+                            { ["text"] = "Select One" },
+                    },
+                    new()
+                    {
+                        Id = "select-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Two" },
+                    },
+                    new()
+                    {
+                        Id = "select-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Select Three" },
                     },
                 ],
             },
@@ -10918,10 +17204,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-default-child",
+                        Id = "toast-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -10945,10 +17245,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-closable-true-child",
+                        Id = "toast-closable-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-closable-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-closable-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -10972,10 +17286,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-closable-false-child",
+                        Id = "toast-closable-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-closable-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-closable-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -10999,10 +17327,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-position-top-left-child",
+                        Id = "toast-position-top-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-top-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-top-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11026,10 +17368,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-position-top-center-child",
+                        Id = "toast-position-top-center-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-top-center-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-top-center-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11053,10 +17409,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-position-top-right-child",
+                        Id = "toast-position-top-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-top-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-top-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11080,10 +17450,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-position-bottom-left-child",
+                        Id = "toast-position-bottom-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-bottom-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-bottom-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11107,10 +17491,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-position-bottom-center-child",
+                        Id = "toast-position-bottom-center-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-bottom-center-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-bottom-center-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11134,10 +17532,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-position-bottom-right-child",
+                        Id = "toast-position-bottom-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-bottom-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-position-bottom-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11161,10 +17573,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-showaction-true-child",
+                        Id = "toast-showaction-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showaction-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showaction-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11188,10 +17614,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-showaction-false-child",
+                        Id = "toast-showaction-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showaction-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showaction-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11215,10 +17655,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-showicon-true-child",
+                        Id = "toast-showicon-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showicon-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showicon-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11242,10 +17696,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-showicon-false-child",
+                        Id = "toast-showicon-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showicon-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showicon-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11269,10 +17737,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-showprogress-true-child",
+                        Id = "toast-showprogress-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showprogress-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showprogress-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11296,10 +17778,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-showprogress-false-child",
+                        Id = "toast-showprogress-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showprogress-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-showprogress-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11323,10 +17819,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-variant-default-child",
+                        Id = "toast-variant-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11350,10 +17860,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-variant-info-child",
+                        Id = "toast-variant-info-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-info-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-info-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11377,10 +17901,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-variant-success-child",
+                        Id = "toast-variant-success-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-success-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-success-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11404,10 +17942,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-variant-warning-child",
+                        Id = "toast-variant-warning-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-warning-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-warning-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11431,10 +17983,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "toast-variant-error-child",
+                        Id = "toast-variant-error-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Toast" },
+                            { ["text"] = "Toast One" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-error-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Two" },
+                    },
+                    new()
+                    {
+                        Id = "toast-variant-error-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Toast Three" },
                     },
                 ],
             },
@@ -11460,10 +18026,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tooltip-default-child",
+                        Id = "tooltip-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tooltip" },
+                            { ["text"] = "Tooltip One" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Two" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Three" },
                     },
                 ],
             },
@@ -11479,10 +18059,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tooltip-position-top-child",
+                        Id = "tooltip-position-top-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tooltip" },
+                            { ["text"] = "Tooltip One" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-position-top-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Two" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-position-top-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Three" },
                     },
                 ],
             },
@@ -11498,10 +18092,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tooltip-position-right-child",
+                        Id = "tooltip-position-right-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tooltip" },
+                            { ["text"] = "Tooltip One" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-position-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Two" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-position-right-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Three" },
                     },
                 ],
             },
@@ -11517,10 +18125,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tooltip-position-bottom-child",
+                        Id = "tooltip-position-bottom-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tooltip" },
+                            { ["text"] = "Tooltip One" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-position-bottom-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Two" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-position-bottom-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Three" },
                     },
                 ],
             },
@@ -11536,10 +18158,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tooltip-position-left-child",
+                        Id = "tooltip-position-left-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tooltip" },
+                            { ["text"] = "Tooltip One" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-position-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Two" },
+                    },
+                    new()
+                    {
+                        Id = "tooltip-position-left-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tooltip Three" },
                     },
                 ],
             },
@@ -11568,10 +18204,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-default-child",
+                        Id = "accordion-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11590,10 +18240,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-allowmultiple-true-child",
+                        Id = "accordion-allowmultiple-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11612,10 +18276,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-allowmultiple-false-child",
+                        Id = "accordion-allowmultiple-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11634,10 +18312,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-showchevron-true-child",
+                        Id = "accordion-showchevron-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-showchevron-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-showchevron-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11656,10 +18348,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-showchevron-false-child",
+                        Id = "accordion-showchevron-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-showchevron-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-showchevron-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11678,10 +18384,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-size-sm-child",
+                        Id = "accordion-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11700,10 +18420,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-size-md-child",
+                        Id = "accordion-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11722,10 +18456,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-size-lg-child",
+                        Id = "accordion-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11744,10 +18492,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-variant-default-child",
+                        Id = "accordion-variant-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-variant-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-variant-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11766,10 +18528,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-variant-bordered-child",
+                        Id = "accordion-variant-bordered-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-variant-bordered-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-variant-bordered-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11788,10 +18564,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "accordion-variant-ghost-child",
+                        Id = "accordion-variant-ghost-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Accordion" },
+                            { ["text"] = "Accordion One" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-variant-ghost-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Two" },
+                    },
+                    new()
+                    {
+                        Id = "accordion-variant-ghost-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Accordion Three" },
                     },
                 ],
             },
@@ -11821,10 +18611,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-default-child",
+                        Id = "carousel-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -11844,10 +18648,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-navoutside-true-child",
+                        Id = "carousel-navoutside-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-navoutside-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-navoutside-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -11867,10 +18685,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-navoutside-false-child",
+                        Id = "carousel-navoutside-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-navoutside-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-navoutside-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -11890,10 +18722,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-showdots-true-child",
+                        Id = "carousel-showdots-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-showdots-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-showdots-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -11913,10 +18759,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-showdots-false-child",
+                        Id = "carousel-showdots-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-showdots-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-showdots-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -11936,10 +18796,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-shownav-true-child",
+                        Id = "carousel-shownav-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-shownav-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-shownav-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -11959,10 +18833,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-shownav-false-child",
+                        Id = "carousel-shownav-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-shownav-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-shownav-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -11982,10 +18870,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-size-sm-child",
+                        Id = "carousel-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -12005,10 +18907,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-size-md-child",
+                        Id = "carousel-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -12028,10 +18944,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-size-lg-child",
+                        Id = "carousel-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -12051,10 +18981,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-size-full-child",
+                        Id = "carousel-size-full-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-full-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-full-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -12074,10 +19018,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-snap-true-child",
+                        Id = "carousel-snap-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-snap-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-snap-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -12097,10 +19055,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "carousel-snap-false-child",
+                        Id = "carousel-snap-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Carousel" },
+                            { ["text"] = "Carousel One" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-snap-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Two" },
+                    },
+                    new()
+                    {
+                        Id = "carousel-snap-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Carousel Three" },
                     },
                 ],
             },
@@ -12126,10 +19098,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "file-upload-default-child",
+                        Id = "file-upload-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "File Upload" },
+                            { ["text"] = "File Upload One" },
+                    },
+                    new()
+                    {
+                        Id = "file-upload-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "File Upload Two" },
+                    },
+                    new()
+                    {
+                        Id = "file-upload-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "File Upload Three" },
                     },
                 ],
             },
@@ -12156,10 +19142,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-default-child",
+                        Id = "navigation-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12176,10 +19176,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-activeindex-0-child",
+                        Id = "navigation-activeindex-0-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-0-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-0-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12196,10 +19210,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-activeindex-1-child",
+                        Id = "navigation-activeindex-1-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-1-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-1-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12216,10 +19244,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-activeindex-2-child",
+                        Id = "navigation-activeindex-2-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-2-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-2-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12236,10 +19278,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-activeindex-3-child",
+                        Id = "navigation-activeindex-3-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-3-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-3-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12256,10 +19312,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-activeindex-4-child",
+                        Id = "navigation-activeindex-4-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-4-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-activeindex-4-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12276,10 +19346,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-variant-horizontal-child",
+                        Id = "navigation-variant-horizontal-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-variant-horizontal-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-variant-horizontal-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12296,10 +19380,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-variant-vertical-child",
+                        Id = "navigation-variant-vertical-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-variant-vertical-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-variant-vertical-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12316,10 +19414,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "navigation-variant-pills-child",
+                        Id = "navigation-variant-pills-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Navigation" },
+                            { ["text"] = "Navigation One" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-variant-pills-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Two" },
+                    },
+                    new()
+                    {
+                        Id = "navigation-variant-pills-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Navigation Three" },
                     },
                 ],
             },
@@ -12347,10 +19459,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-default-child",
+                        Id = "stepper-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12368,10 +19494,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-activeindex-0-child",
+                        Id = "stepper-activeindex-0-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-activeindex-0-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-activeindex-0-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12389,10 +19529,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-activeindex-1-child",
+                        Id = "stepper-activeindex-1-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-activeindex-1-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-activeindex-1-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12410,10 +19564,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-activeindex-2-child",
+                        Id = "stepper-activeindex-2-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-activeindex-2-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-activeindex-2-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12431,10 +19599,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-activeindex-3-child",
+                        Id = "stepper-activeindex-3-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-activeindex-3-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-activeindex-3-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12452,10 +19634,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-orientation-horizontal-child",
+                        Id = "stepper-orientation-horizontal-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-orientation-horizontal-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-orientation-horizontal-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12473,10 +19669,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-orientation-vertical-child",
+                        Id = "stepper-orientation-vertical-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-orientation-vertical-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-orientation-vertical-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12494,10 +19704,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-size-sm-child",
+                        Id = "stepper-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12515,10 +19739,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-size-md-child",
+                        Id = "stepper-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12536,10 +19774,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "stepper-size-lg-child",
+                        Id = "stepper-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Stepper" },
+                            { ["text"] = "Stepper One" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Two" },
+                    },
+                    new()
+                    {
+                        Id = "stepper-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Stepper Three" },
                     },
                 ],
             },
@@ -12569,10 +19821,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-default-child",
+                        Id = "tabs-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12592,10 +19858,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-activeindex-0-child",
+                        Id = "tabs-activeindex-0-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-0-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-0-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12615,10 +19895,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-activeindex-1-child",
+                        Id = "tabs-activeindex-1-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-1-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-1-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12638,10 +19932,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-activeindex-2-child",
+                        Id = "tabs-activeindex-2-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-2-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-2-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12661,10 +19969,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-size-sm-child",
+                        Id = "tabs-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12684,10 +20006,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-size-md-child",
+                        Id = "tabs-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12707,10 +20043,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-size-lg-child",
+                        Id = "tabs-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12730,10 +20080,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-variant-line-child",
+                        Id = "tabs-variant-line-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-line-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-line-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12753,10 +20117,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-variant-pill-child",
+                        Id = "tabs-variant-pill-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-pill-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-pill-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12776,10 +20154,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tabs-variant-enclosed-child",
+                        Id = "tabs-variant-enclosed-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tabs" },
+                            { ["text"] = "Tabs One" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-enclosed-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Two" },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-enclosed-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tabs Three" },
                     },
                 ],
             },
@@ -12806,10 +20198,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tree-view-default-child",
+                        Id = "tree-view-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tree View" },
+                            { ["text"] = "Tree View One" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Two" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Three" },
                     },
                 ],
             },
@@ -12826,10 +20232,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tree-view-showlines-true-child",
+                        Id = "tree-view-showlines-true-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tree View" },
+                            { ["text"] = "Tree View One" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-showlines-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Two" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-showlines-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Three" },
                     },
                 ],
             },
@@ -12846,10 +20266,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tree-view-showlines-false-child",
+                        Id = "tree-view-showlines-false-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tree View" },
+                            { ["text"] = "Tree View One" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-showlines-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Two" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-showlines-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Three" },
                     },
                 ],
             },
@@ -12866,10 +20300,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tree-view-size-sm-child",
+                        Id = "tree-view-size-sm-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tree View" },
+                            { ["text"] = "Tree View One" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Two" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Three" },
                     },
                 ],
             },
@@ -12886,10 +20334,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tree-view-size-md-child",
+                        Id = "tree-view-size-md-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tree View" },
+                            { ["text"] = "Tree View One" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Two" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Three" },
                     },
                 ],
             },
@@ -12906,10 +20368,24 @@ public static class NmKitchenSink
                 [
                     new()
                     {
-                        Id = "tree-view-size-lg-child",
+                        Id = "tree-view-size-lg-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
-                            { ["text"] = "Tree View" },
+                            { ["text"] = "Tree View One" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Two" },
+                    },
+                    new()
+                    {
+                        Id = "tree-view-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                            { ["text"] = "Tree View Three" },
                     },
                 ],
             },
