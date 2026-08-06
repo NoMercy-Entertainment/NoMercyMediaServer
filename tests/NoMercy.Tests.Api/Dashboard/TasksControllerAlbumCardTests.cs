@@ -40,6 +40,9 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
     private const int QueuedTracks = 5;
     private const int AlbumTracks = EncodedTracks + QueuedTracks;
     private const string AlbumCover = "/25267951861-500.jpg";
+    private const string ArtistCover = "/various-artists-638e4492c76c6.jpg";
+    private static readonly Guid ArtistId = new("c1a0f2d4-55aa-4b0e-9a6f-0d9a1b2c3d4e");
+    private static readonly Guid BareReleaseId = new("d3e4f5a6-1122-4c33-8d44-55e6f7a8b9c0");
     private static readonly Guid ReleaseId = new("bb2d2f61-4d43-4f2a-9d51-19f3d3e2c0aa");
 
     private readonly HttpClient _authed;
@@ -55,7 +58,9 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
     private static Guid EncodedTrackId(int track) =>
         new($"0000000{track}-3333-3333-3333-333333333333");
 
-    private static string MusicPayload(int track)
+    private static string MusicPayload(int track) => MusicPayload(track, ReleaseId);
+
+    private static string MusicPayload(int track, Guid releaseId)
     {
         return $$"""
             {
@@ -64,7 +69,7 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
               "priority": 5,
               "libraryId": "01HQ5W4JJ9ZAX7721AQJZFQ7E1",
               "folderId": "01KXXNPYFBZF9ARJ8ZE2X6XCAP",
-              "releaseId": "{{ReleaseId}}",
+              "releaseId": "{{releaseId}}",
               "trackId": "0000000{{track}}-2222-2222-2222-222222222222",
               "artistName": "Eagles",
               "releaseName": "Hotel California",
@@ -86,7 +91,9 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
         Folder folder = new()
         {
             Id = _folderId,
-            Path = "Music/Eagles",
+            // Unique per run: the folder table is keyed on driver + path, so a fixed
+            // one collides with whatever a previous run left behind.
+            Path = $"Music/Eagles/{_folderId}",
             DriverId = Driver.SystemLocalDriverId,
         };
 
@@ -136,6 +143,35 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
             media.AlbumTrack.Add(new(ReleaseId, trackId));
         }
 
+        // A release with no cover of its own, and the artist it belongs to. A cover
+        // is fetched per release group and plenty of releases never get one — 284 of
+        // the 885 queued on the dev server — so the card fell back to a grey box for
+        // a third of a library while the artist's picture sat right there.
+        Artist artist = new()
+        {
+            Id = ArtistId,
+            Name = "Various Artists",
+            Cover = ArtistCover,
+            LibraryId = _libraryId,
+            FolderId = _folderId,
+            Folder = "/Various Artists",
+            HostFolder = "/Music/Various Artists",
+        };
+        media.Artists.Add(artist);
+        media.Albums.Add(
+            new()
+            {
+                Id = BareReleaseId,
+                Name = "No cover of its own",
+                LibraryId = _libraryId,
+                Library = library,
+                FolderId = _folderId,
+                LibraryFolder = folder,
+            }
+        );
+        await media.SaveChangesAsync();
+
+        media.AlbumArtist.Add(new(BareReleaseId, ArtistId));
         await media.SaveChangesAsync();
 
         await using QueueContext queue = new();
@@ -152,6 +188,17 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
                 }
             );
 
+        rows.Add(
+            new()
+            {
+                Queue = "encoder",
+                Priority = 5,
+                Payload = MusicPayload(1, BareReleaseId),
+                AvailableAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow,
+            }
+        );
+
         queue.QueueJobs.AddRange(rows);
         await queue.SaveChangesAsync();
         _rowIds.AddRange(rows.Select(row => row.Id));
@@ -166,6 +213,9 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
         List<Guid> trackIds = Enumerable.Range(1, EncodedTracks).Select(EncodedTrackId).ToList();
         await media.AlbumTrack.Where(link => link.AlbumId == ReleaseId).ExecuteDeleteAsync();
         await media.Tracks.Where(track => trackIds.Contains(track.Id)).ExecuteDeleteAsync();
+        await media.AlbumArtist.Where(link => link.AlbumId == BareReleaseId).ExecuteDeleteAsync();
+        await media.Artists.Where(artist => artist.Id == ArtistId).ExecuteDeleteAsync();
+        await media.Albums.Where(album => album.Id == BareReleaseId).ExecuteDeleteAsync();
         await media.Albums.Where(album => album.Id == ReleaseId).ExecuteDeleteAsync();
         await media.FolderLibrary.Where(link => link.FolderId == _folderId).ExecuteDeleteAsync();
         await media.Folders.Where(folder => folder.Id == _folderId).ExecuteDeleteAsync();
@@ -247,6 +297,21 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
             );
 
         card.GetProperty("title").GetString().Should().Contain("Hotel California");
+
+        JsonElement[] rows = await GetQueueAsync();
+        JsonElement bare = rows.Single(row =>
+            row.GetProperty("payload_id").GetString() == BareReleaseId.ToString()
+        );
+
+        bare.GetProperty("backdrop")
+            .GetString()
+            .Should()
+            .Be(
+                $"/images/music{ArtistCover}",
+                "a release with no cover of its own still belongs to an artist who has "
+                    + "one — a third of a queued library has no release cover, and a grey "
+                    + "box next to a picture that is already on disk is a choice"
+            );
         card.GetProperty("status").GetString().Should().Be("pending");
         card.GetProperty("kind")
             .ValueKind.Should()

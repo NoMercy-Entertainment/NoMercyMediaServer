@@ -643,6 +643,27 @@ public class TasksController(
             .Select(album => new AlbumCover(album.Id, album.Cover))
             .ToDictionaryAsync(album => album.Id, album => album.Cover);
 
+        // The artist's picture where the release has none of its own. A cover is
+        // fetched per release group and plenty of releases never get one — 284 of
+        // the 885 queued here — so the card that names an artist and an album
+        // showed a grey box for a third of a library. The artist is the one on
+        // the release, not a stand-in.
+        List<Guid> uncovered = releaseIds
+            .Where(id => covers.GetValueOrDefault(id) is null)
+            .ToList();
+
+        if (uncovered.Count > 0)
+        {
+            List<AlbumCover> artistCovers = await mediaContext
+                .AlbumArtist.AsNoTracking()
+                .Where(link => uncovered.Contains(link.AlbumId) && link.Artist.Cover != null)
+                .Select(link => new AlbumCover(link.AlbumId, link.Artist.Cover))
+                .ToListAsync();
+
+            foreach (IGrouping<Guid, AlbumCover> group in artistCovers.GroupBy(row => row.Id))
+                covers[group.Key] = group.First().Cover;
+        }
+
         return musicRows
             .GroupBy(row => row.Job.ReleaseId)
             .Select(group =>
