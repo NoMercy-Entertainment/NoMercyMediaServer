@@ -114,8 +114,6 @@ public static class MusicEncodeDispatcher
         // Everything the encoder writes lands under BasePath. Pointing that at the source
         // would leave the encode sitting in the download folder it came from, so it is the
         // library destination, laid out by the Picard rules the library already follows.
-        IStorage destination = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        string libraryRoot = destination.Driver.GetFullPath(folder.Path);
         string albumFolder = Sanitize(release, track);
 
         // Stored once for the whole album. Every track of a release needs the same
@@ -136,7 +134,12 @@ public static class MusicEncodeDispatcher
                 TrackId = track.Id,
                 InputFolder = inputFolder,
                 InputFile = file.Path,
-                BasePath = Path.Combine(libraryRoot, albumFolder).Replace('\\', '/'),
+                // Relative to the destination storage root, which is the library
+                // folder — the same contract a video encode's OutputDirectory
+                // follows. Sent as a full local path it was rejected outright:
+                // the encoder refuses a rooted OutputDirectory, and 3,817 music
+                // encodes failed on that one line without ever writing a byte.
+                BasePath = albumFolder.Replace('\\', '/'),
                 ArtistName =
                     release.ArtistCredit.FirstOrDefault()?.MusicBrainzArtist.Name ?? string.Empty,
                 ReleaseName = release.Title,

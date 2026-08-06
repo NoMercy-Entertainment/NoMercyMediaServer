@@ -30,6 +30,7 @@ using NoMercy.MediaProcessing.Recordings;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Storage;
+using NoMercy.Storage.Validation;
 using NoMercyQueue;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
@@ -152,7 +153,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
                 EncodingRequest request = new(
                     InputPath: MediaFile.Path,
-                    OutputDirectory: FolderMetaData.BasePath,
+                    OutputDirectory: AlbumOutputDirectory(FolderMetaData.BasePath),
                     Profile: encodingProfile,
                     SourceStorage: folderStorage,
                     DestinationStorage: folderStorage
@@ -241,6 +242,28 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
         }
     }
 
+    /// <summary>
+    /// The album folder the encoder writes into, relative to the destination
+    /// storage root — which is what an OutputDirectory has to be.
+    ///
+    /// <para>Rows queued before the dispatcher was corrected carry a whole local
+    /// path there, resolved against the running process rather than the library:
+    /// the encoder rejects a rooted OutputDirectory outright, so every one of
+    /// them failed without writing a byte, and there are thousands of them
+    /// waiting. Reading the album folder back out repairs those in place rather
+    /// than asking for a queue migration, and it costs a stored path nothing.</para>
+    /// </summary>
+    internal static string AlbumOutputDirectory(string basePath)
+    {
+        string normalized = basePath.Replace('\\', '/').TrimEnd('/');
+        if (normalized.Length == 0)
+            return string.Empty;
+
+        return StoragePathGuard.IsRootedAnyStyle(normalized)
+            ? normalized[(normalized.LastIndexOf('/') + 1)..]
+            : normalized;
+    }
+
     private async Task AddRecording(Folder folder)
     {
         await using MediaContext context = new();
@@ -269,12 +292,24 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
         await using MediaScan mediaScan = new(StorageDriver);
 
-        // V3 encoder writes to BasePath — scan picks up all encoded output in that folder
+        // V3 encoder writes to BasePath — scan picks up all encoded output in that folder.
+        //
+        // BasePath is relative to the destination storage root, which is what the
+        // encoder requires of an OutputDirectory. The scanner walks the filesystem
+        // and needs the whole path, so it is rebuilt here from the folder the
+        // library keeps rather than carried around absolute for one consumer's sake.
+        // Asked through the storage the encoder wrote with, which is rooted at the
+        // library folder on the folder's own driver. Asking a storage built with
+        // no root resolves the library's relative path against the running
+        // process instead of the driver's configured root, so the scan looked
+        // inside the application directory and found an empty folder.
+        string albumPath = StorageFactory
+            .For(folder.Id, folder.DriverId, folder.Path)
+            .GetFullPath(AlbumOutputDirectory(FolderMetaData.BasePath))
+            .Replace('\\', '/');
+
         MediaFolderExtend mediaFolder = (
-            await mediaScan
-                .EnableFileListing()
-                .FilterByMediaType("music")
-                .Process(FolderMetaData.BasePath)
+            await mediaScan.EnableFileListing().FilterByMediaType("music").Process(albumPath)
         ).First();
 
         CoverArtImageManagerManager.CoverPalette? coverPalette =
