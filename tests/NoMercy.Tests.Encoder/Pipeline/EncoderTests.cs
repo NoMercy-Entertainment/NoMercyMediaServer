@@ -22,6 +22,7 @@ using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Hdr;
+using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Jobs;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
@@ -111,6 +112,8 @@ public class EncoderTests : IDisposable
             new ChapterWriter(TestStorageFactory.CreateLocal()),
             new FontExtractor(TestStorageFactory.CreateLocal()),
             outputFactory,
+            new EncoderOptions { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            new Mock<IProcessRunner>().Object,
             NullLogger<FinalizeStage>.Instance,
             TestStorageFactory.CreateLocal(),
             blueprintWriter: new MediaBlueprintWriter(new MediaBlueprintBuilder())

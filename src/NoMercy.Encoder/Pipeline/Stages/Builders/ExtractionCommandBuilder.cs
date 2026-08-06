@@ -27,9 +27,19 @@ namespace NoMercy.Encoder.Pipeline.Stages;
 /// commands (one per bitmap subtitle stream, plus one for font attachments)
 /// into a single pass turns N+1 network reads into exactly one.
 ///
-/// Kept as its own dedicated command (never folded into the main encode
-/// command): the main encode can run for hours, and an extraction failure
-/// here must never sink an otherwise-successful encode.
+/// Kept as its own dedicated command whenever there is real extraction work
+/// (bitmap subtitles) to do: the main encode can run for hours, and a failure
+/// copying subtitles must never sink an otherwise-successful encode.
+///
+/// Attachments alone are the exception. With no bitmap subtitles the command
+/// degenerates to "-i source -f null -", a full read of a multi-GB source that
+/// produces nothing but fonts, so the dump is spliced into the encode's own
+/// source read instead (<see cref="InjectAttachmentDumpArgs"/>). Attachment
+/// names are sanitized up front, which removes the one failure mode that
+/// aborts ffmpeg on a dump; anything left (disk full, permissions) would sink
+/// the encode's own output regardless. A dump that still comes up short is
+/// repaired by FinalizeStage re-running it standalone, rather than by
+/// discarding the encode.
 /// </summary>
 public static class ExtractionCommandBuilder
 {
@@ -84,6 +94,63 @@ public static class ExtractionCommandBuilder
         }
 
         return new(ffmpegPath, args.ToArray(), outputDirectory);
+    }
+
+    /// <summary>
+    /// True when this input has bitmap subtitles to copy out, which means a
+    /// dedicated extraction command already exists to carry the attachment
+    /// dump. When false the dump has no run to ride along with here, and
+    /// <see cref="InjectAttachmentDumpArgs"/> folds it into the encode instead
+    /// of spawning a source read that produces nothing but fonts.
+    /// </summary>
+    public static bool HasBitmapSubtitleOutputs(
+        OutputPlan plan,
+        MediaInfo mediaInfo,
+        string outputDirectory,
+        string mediaTitle,
+        ISubtitleExtractor subtitleExtractor,
+        IStorage storage
+    ) =>
+        ResolveBitmapSubtitleOutputs(
+            plan,
+            mediaInfo,
+            outputDirectory,
+            mediaTitle,
+            subtitleExtractor,
+            storage
+        ).Count > 0;
+
+    /// <summary>
+    /// Splices the pre-input <c>-dump_attachment</c> flags into an already-built
+    /// command so the attachments come out of a source read that was happening
+    /// anyway. The flags are input options, so they go before the FIRST "-i" —
+    /// they attach to the source, never to a later input.
+    /// </summary>
+    public static FfmpegCommand InjectAttachmentDumpArgs(
+        FfmpegCommand command,
+        string outputDirectory,
+        IReadOnlyList<AttachmentInfo> attachments,
+        IFontExtractor fontExtractor,
+        IStorage storage
+    )
+    {
+        if (attachments.Count == 0)
+            return command;
+
+        int inputFlag = Array.IndexOf(command.Arguments, "-i");
+        if (inputFlag < 0)
+            return command;
+
+        List<string> dumpArgs = [];
+        AddAttachmentDumpArgs(dumpArgs, outputDirectory, attachments, fontExtractor, storage);
+
+        List<string> args = [.. command.Arguments];
+        args.InsertRange(inputFlag, dumpArgs);
+
+        return command with
+        {
+            Arguments = args.ToArray(),
+        };
     }
 
     // -dump_attachment is a pre-input flag, so these must be added before

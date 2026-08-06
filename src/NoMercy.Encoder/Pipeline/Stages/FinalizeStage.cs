@@ -13,8 +13,11 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Bundle;
+using NoMercy.Encoder.Commands;
+using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.PostProcess;
@@ -48,6 +51,8 @@ public class FinalizeStage(
     IChapterWriter chapterWriter,
     IFontExtractor fontExtractor,
     IOutputStrategyFactory outputStrategyFactory,
+    EncoderOptions options,
+    IProcessRunner processRunner,
     ILogger<FinalizeStage> logger,
     IStorage storage,
     IMediaBlueprintWriter? blueprintWriter = null
@@ -132,6 +137,15 @@ public class FinalizeStage(
                 int expectedFonts = context.MediaInfo is null
                     ? 0
                     : fontExtractor.CountFontAttachments(context.MediaInfo.Attachments);
+
+                // Fonts are dumped by whichever run already reads the source, so a
+                // short count means everything else in the bundle is present and
+                // only the attachment dump fell short. Discarding an hours-long
+                // encode to recover a few KB of fonts is the wrong trade: re-run
+                // the dump on its own — it is the one part that failed — and only
+                // fail when it is STILL short.
+                if (expectedFonts > 0 && fontsWritten < expectedFonts)
+                    fontsWritten = await RedumpAttachmentsAsync(input, context, fontsWritten, ct);
 
                 if (expectedFonts > 0 && fontsWritten < expectedFonts)
                     return new StageFailure(
@@ -243,6 +257,71 @@ public class FinalizeStage(
     /// still lists its padding is a cosmetic fault on one surface. It is not worth
     /// failing a finished encode over.</para>
     /// </summary>
+    /// <summary>
+    /// Runs the attachment dump as its own ffmpeg command and rewrites
+    /// fonts.json, returning the new font count. Used only as a repair when the
+    /// dump that rode along with an earlier run came up short — the standalone
+    /// command re-reads the source, which is why it is never the first choice.
+    /// Returns the caller's original count when there is nothing to retry with
+    /// or the retry itself fails, so the completeness gate still fails the
+    /// encode rather than publishing output with missing glyphs.
+    /// </summary>
+    private async Task<int> RedumpAttachmentsAsync(
+        FinalizeInput input,
+        EncodingContext context,
+        int fontsWritten,
+        CancellationToken ct
+    )
+    {
+        if (context.MediaInfo is null || string.IsNullOrWhiteSpace(context.InputPath))
+        {
+            logger.LogWarning(
+                "[{CorrelationId}] Font extraction came up short but the source path is "
+                    + "unknown, so the attachment dump cannot be retried.",
+                context.CorrelationId
+            );
+            return fontsWritten;
+        }
+
+        logger.LogWarning(
+            "[{CorrelationId}] Font extraction came up short; re-running the attachment "
+                + "dump on its own instead of failing the encode.",
+            context.CorrelationId
+        );
+
+        FfmpegCommand command = fontExtractor.BuildExtractionCommand(
+            options.FfmpegPath,
+            context.InputPath,
+            input.OutputDirectory,
+            context.MediaInfo.Attachments
+        );
+
+        // ffmpeg writes each attachment relative to the command's working
+        // directory (fonts/), and will not create it itself.
+        if (command.WorkingDirectory is { } workingDirectory)
+            (context.DestinationStorage ?? storage).CreateDirectory(workingDirectory);
+
+        ProcessResult result = await processRunner.RunAsync(
+            command.Executable,
+            command.Arguments,
+            command.WorkingDirectory,
+            ct
+        );
+
+        if (!result.IsSuccess)
+        {
+            logger.LogWarning(
+                "[{CorrelationId}] Attachment re-dump exited {ExitCode}: {StdErr}",
+                context.CorrelationId,
+                result.ExitCode,
+                result.StdErr
+            );
+            return fontsWritten;
+        }
+
+        return await fontExtractor.WriteFontManifestAsync(input.OutputDirectory, ct);
+    }
+
     private async Task TrimSpritePaddingCuesAsync(
         FinalizeInput input,
         EncodingContext context,
