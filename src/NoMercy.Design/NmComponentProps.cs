@@ -863,7 +863,7 @@ public record NMRatingProps : NmProps
 }
 
 /// <summary>
-/// Sliders &amp; Ranges.
+/// Slider.
 /// </summary>
 public record NMSliderProps : NmProps
 {

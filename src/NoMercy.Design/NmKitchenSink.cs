@@ -37,6 +37,25 @@ public record NmKitchenSinkComponent
     /// <summary>How elementary the component is; tier one composes into the rest.</summary>
     public required int Tier { get; init; }
 
+    /// <summary>
+    /// The category heading the designer files it under, and the only
+    /// grouping his own library has. Tier is ours and appears nowhere he
+    /// publishes, so a page grouped by tier is a page he would not recognise.
+    /// </summary>
+    public required string Group { get; init; }
+
+    /// <summary>Where that heading sits among his headings.</summary>
+    public required int GroupOrder { get; init; }
+
+    /// <summary>Position within that group, as he orders it. Not alphabetical.</summary>
+    public required int GroupIndex { get; init; }
+
+    /// <summary>False marks it Pro, which his sidebar draws a mark against.</summary>
+    public required bool Free { get; init; }
+
+    /// <summary>The sentence he writes under the name on his overview card.</summary>
+    public required string Description { get; init; }
+
     public required IReadOnlyList<NmKitchenSinkCase> Cases { get; init; }
 }
 
@@ -56,843 +75,15 @@ public static class NmKitchenSink
     [
         new()
         {
-            Slug = "avatar",
-            Name = "Avatar",
-            Component = "NMAvatar",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "avatar-default",
-                Label = "default",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-default" },
-            },
-            new()
-            {
-                Id = "avatar-size-xs",
-                Label = "size = xs",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "xs", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-xs" },
-            },
-            new()
-            {
-                Id = "avatar-size-sm",
-                Label = "size = sm",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "sm", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-sm" },
-            },
-            new()
-            {
-                Id = "avatar-size-md",
-                Label = "size = md",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-md" },
-            },
-            new()
-            {
-                Id = "avatar-size-lg",
-                Label = "size = lg",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "lg", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-lg" },
-            },
-            new()
-            {
-                Id = "avatar-size-xl",
-                Label = "size = xl",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "xl", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-xl" },
-            },
-            new()
-            {
-                Id = "avatar-square-true",
-                Label = "square = true",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = true, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-square-true" },
-            },
-            new()
-            {
-                Id = "avatar-square-false",
-                Label = "square = false",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-square-false" },
-            },
-            new()
-            {
-                Id = "avatar-status-none",
-                Label = "status = none",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-status-none" },
-            },
-            new()
-            {
-                Id = "avatar-status-online",
-                Label = "status = online",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "online", Type = "initials", TestId = "avatar-status-online" },
-            },
-            new()
-            {
-                Id = "avatar-status-offline",
-                Label = "status = offline",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "offline", Type = "initials", TestId = "avatar-status-offline" },
-            },
-            new()
-            {
-                Id = "avatar-status-away",
-                Label = "status = away",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "away", Type = "initials", TestId = "avatar-status-away" },
-            },
-            new()
-            {
-                Id = "avatar-status-busy",
-                Label = "status = busy",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "busy", Type = "initials", TestId = "avatar-status-busy" },
-            },
-            new()
-            {
-                Id = "avatar-type-icon",
-                Label = "type = icon",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "icon", TestId = "avatar-type-icon" },
-            },
-            new()
-            {
-                Id = "avatar-type-initial",
-                Label = "type = initial",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initial", TestId = "avatar-type-initial" },
-            },
-            new()
-            {
-                Id = "avatar-type-initials",
-                Label = "type = initials",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-type-initials" },
-            },
-            new()
-            {
-                Id = "avatar-type-image",
-                Label = "type = image",
-                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "image", TestId = "avatar-type-image" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "badge",
-            Name = "Badge",
-            Component = "NMBadge",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "badge-default",
-                Label = "default",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "md",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-default",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-default-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-dot-true",
-                Label = "dot = true",
-                Props = new NMBadgeProps
-            {
-                Dot = true,
-                Mode = "text",
-                Size = "md",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-dot-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-dot-true-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-dot-false",
-                Label = "dot = false",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "md",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-dot-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-dot-false-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-mode-text",
-                Label = "mode = text",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "md",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-mode-text",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-mode-text-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-mode-icon-only",
-                Label = "mode = icon-only",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "icon-only",
-                Size = "md",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-mode-icon-only",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-mode-icon-only-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-size-sm",
-                Label = "size = sm",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "sm",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-size-sm",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-size-sm-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-size-md",
-                Label = "size = md",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "md",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-size-md",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-size-md-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-size-lg",
-                Label = "size = lg",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "lg",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-size-lg",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-size-lg-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-variant-ghost",
-                Label = "variant = ghost",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "md",
-                Text = "Label",
-                Variant = "ghost",
-                TestId = "badge-variant-ghost",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-variant-ghost-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-variant-solid",
-                Label = "variant = solid",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "md",
-                Text = "Label",
-                Variant = "solid",
-                TestId = "badge-variant-solid",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-variant-solid-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "badge-variant-outline",
-                Label = "variant = outline",
-                Props = new NMBadgeProps
-            {
-                Dot = false,
-                Mode = "text",
-                Size = "md",
-                Text = "Label",
-                Variant = "outline",
-                TestId = "badge-variant-outline",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "badge-variant-outline-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "check",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "divider",
-            Name = "Divider",
-            Component = "NMDivider",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "divider-default",
-                Label = "default",
-                Props = new NMDividerProps
-            {
-                LabelText = "Divider",
-                Line = "solid",
-                Placement = "center",
-                TestId = "divider-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "divider-default-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Divider",
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["leading"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-default-child-1-leading-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                                ["trailing"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-default-child-1-trailing-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "divider-line-solid",
-                Label = "line = solid",
-                Props = new NMDividerProps
-            {
-                LabelText = "Divider",
-                Line = "solid",
-                Placement = "center",
-                TestId = "divider-line-solid",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "divider-line-solid-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Divider",
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["leading"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-line-solid-child-1-leading-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                                ["trailing"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-line-solid-child-1-trailing-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "divider-line-dashed",
-                Label = "line = dashed",
-                Props = new NMDividerProps
-            {
-                LabelText = "Divider",
-                Line = "dashed",
-                Placement = "center",
-                TestId = "divider-line-dashed",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "divider-line-dashed-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Divider",
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["leading"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-line-dashed-child-1-leading-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                                ["trailing"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-line-dashed-child-1-trailing-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "divider-line-dotted",
-                Label = "line = dotted",
-                Props = new NMDividerProps
-            {
-                LabelText = "Divider",
-                Line = "dotted",
-                Placement = "center",
-                TestId = "divider-line-dotted",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "divider-line-dotted-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Divider",
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["leading"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-line-dotted-child-1-leading-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                                ["trailing"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-line-dotted-child-1-trailing-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "divider-placement-left",
-                Label = "placement = left",
-                Props = new NMDividerProps
-            {
-                LabelText = "Divider",
-                Line = "solid",
-                Placement = "left",
-                TestId = "divider-placement-left",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "divider-placement-left-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Divider",
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["leading"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-placement-left-child-1-leading-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                                ["trailing"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-placement-left-child-1-trailing-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "divider-placement-center",
-                Label = "placement = center",
-                Props = new NMDividerProps
-            {
-                LabelText = "Divider",
-                Line = "solid",
-                Placement = "center",
-                TestId = "divider-placement-center",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "divider-placement-center-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Divider",
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["leading"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-placement-center-child-1-leading-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                                ["trailing"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-placement-center-child-1-trailing-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "divider-placement-right",
-                Label = "placement = right",
-                Props = new NMDividerProps
-            {
-                LabelText = "Divider",
-                Line = "solid",
-                Placement = "right",
-                TestId = "divider-placement-right",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "divider-placement-right-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Divider",
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["leading"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-placement-right-child-1-leading-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                                ["trailing"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "divider-placement-right-child-1-trailing-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "star",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            ],
-        },
-        new()
-        {
             Slug = "form-label",
             Name = "Label",
             Component = "NMFormLabel",
             Tier = 1,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 0,
+            Free = true,
+            Description = "Standalone label — use in forms, cards, sections, anywhere",
             Cases =
             [
             new()
@@ -1151,6 +342,11 @@ public static class NmKitchenSink
             Name = "Helper",
             Component = "NMHelper",
             Tier = 1,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 1,
+            Free = true,
+            Description = "Standalone helper text — use in forms, cards, sections, anywhere",
             Cases =
             [
             new()
@@ -1331,1346 +527,15 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "image",
-            Name = "Image",
-            Component = "NMImage",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "image-default",
-                Label = "default",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-default" },
-            },
-            new()
-            {
-                Id = "image-aspectratio-auto",
-                Label = "aspectRatio = auto",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-auto" },
-            },
-            new()
-            {
-                Id = "image-aspectratio-square",
-                Label = "aspectRatio = square",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "square", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-square" },
-            },
-            new()
-            {
-                Id = "image-aspectratio-video",
-                Label = "aspectRatio = video",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "video", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-video" },
-            },
-            new()
-            {
-                Id = "image-aspectratio-portrait",
-                Label = "aspectRatio = portrait",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "portrait", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-portrait" },
-            },
-            new()
-            {
-                Id = "image-aspectratio-landscape",
-                Label = "aspectRatio = landscape",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "landscape", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-landscape" },
-            },
-            new()
-            {
-                Id = "image-border-true",
-                Label = "border = true",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = true, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-border-true" },
-            },
-            new()
-            {
-                Id = "image-border-false",
-                Label = "border = false",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-border-false" },
-            },
-            new()
-            {
-                Id = "image-clickable-true",
-                Label = "clickable = true",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = true, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-clickable-true" },
-            },
-            new()
-            {
-                Id = "image-clickable-false",
-                Label = "clickable = false",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-clickable-false" },
-            },
-            new()
-            {
-                Id = "image-fit-cover",
-                Label = "fit = cover",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-fit-cover" },
-            },
-            new()
-            {
-                Id = "image-fit-contain",
-                Label = "fit = contain",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "contain", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-fit-contain" },
-            },
-            new()
-            {
-                Id = "image-fit-fill",
-                Label = "fit = fill",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "fill", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-fit-fill" },
-            },
-            new()
-            {
-                Id = "image-fit-none",
-                Label = "fit = none",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "none", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-fit-none" },
-            },
-            new()
-            {
-                Id = "image-rounded-none",
-                Label = "rounded = none",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "none", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-none" },
-            },
-            new()
-            {
-                Id = "image-rounded-sm",
-                Label = "rounded = sm",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "sm", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-sm" },
-            },
-            new()
-            {
-                Id = "image-rounded-md",
-                Label = "rounded = md",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "md", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-md" },
-            },
-            new()
-            {
-                Id = "image-rounded-lg",
-                Label = "rounded = lg",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-lg" },
-            },
-            new()
-            {
-                Id = "image-rounded-xl",
-                Label = "rounded = xl",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "xl", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-xl" },
-            },
-            new()
-            {
-                Id = "image-rounded-full",
-                Label = "rounded = full",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "full", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-full" },
-            },
-            new()
-            {
-                Id = "image-shadow-none",
-                Label = "shadow = none",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-none" },
-            },
-            new()
-            {
-                Id = "image-shadow-sm",
-                Label = "shadow = sm",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "sm", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-sm" },
-            },
-            new()
-            {
-                Id = "image-shadow-md",
-                Label = "shadow = md",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "md", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-md" },
-            },
-            new()
-            {
-                Id = "image-shadow-lg",
-                Label = "shadow = lg",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "lg", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-lg" },
-            },
-            new()
-            {
-                Id = "image-shadow-xl",
-                Label = "shadow = xl",
-                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "xl", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-xl" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "link",
-            Name = "Link",
-            Component = "NMLink",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "link-default",
-                Label = "default",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-default",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-disabled-true",
-                Label = "disabled = true",
-                Props = new NMLinkProps
-            {
-                Disabled = true,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-disabled-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-disabled-true-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-disabled-false",
-                Label = "disabled = false",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-disabled-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-disabled-false-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-external-true",
-                Label = "external = true",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = true,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-external-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-external-true-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-external-false",
-                Label = "external = false",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-external-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-external-false-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-icon-true",
-                Label = "icon = true",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = true,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-icon-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-icon-true-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-icon-false",
-                Label = "icon = false",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-icon-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-icon-false-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-iconposition-left",
-                Label = "iconPosition = left",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "left",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-iconposition-left",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-iconposition-left-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-iconposition-right",
-                Label = "iconPosition = right",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-iconposition-right",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-iconposition-right-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-size-sm",
-                Label = "size = sm",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "sm",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-size-sm",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-size-sm-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-size-md",
-                Label = "size = md",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-size-md",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-size-md-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-size-lg",
-                Label = "size = lg",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "lg",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-size-lg",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-size-lg-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-size-inherit",
-                Label = "size = inherit",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "inherit",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-size-inherit",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-size-inherit-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-variant-default",
-                Label = "variant = default",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "default",
-                TestId = "link-variant-default",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-variant-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-variant-subtle",
-                Label = "variant = subtle",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "subtle",
-                TestId = "link-variant-subtle",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-variant-subtle-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-variant-muted",
-                Label = "variant = muted",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "muted",
-                TestId = "link-variant-muted",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-variant-muted-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "link-variant-animated",
-                Label = "variant = animated",
-                Props = new NMLinkProps
-            {
-                Disabled = false,
-                External = false,
-                Icon = false,
-                IconPosition = "right",
-                Size = "md",
-                Text = "Click here to learn more",
-                Variant = "animated",
-                TestId = "link-variant-animated",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "link-variant-animated-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "arrowRight",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "progress",
-            Name = "Progress",
-            Component = "NMProgress",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "progress-default",
-                Label = "default",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 50, TestId = "progress-default" },
-            },
-            new()
-            {
-                Id = "progress-labelpos-none",
-                Label = "labelPos = none",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 50, TestId = "progress-labelpos-none" },
-            },
-            new()
-            {
-                Id = "progress-labelpos-label-left",
-                Label = "labelPos = label-left",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-left", Size = "md", Value = 50, TestId = "progress-labelpos-label-left" },
-            },
-            new()
-            {
-                Id = "progress-labelpos-label-right",
-                Label = "labelPos = label-right",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-right", Size = "md", Value = 50, TestId = "progress-labelpos-label-right" },
-            },
-            new()
-            {
-                Id = "progress-labelpos-label-above-left",
-                Label = "labelPos = label-above-left",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-above-left", Size = "md", Value = 50, TestId = "progress-labelpos-label-above-left" },
-            },
-            new()
-            {
-                Id = "progress-labelpos-label-above-right",
-                Label = "labelPos = label-above-right",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-above-right", Size = "md", Value = 50, TestId = "progress-labelpos-label-above-right" },
-            },
-            new()
-            {
-                Id = "progress-labelpos-tooltip-above",
-                Label = "labelPos = tooltip-above",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "tooltip-above", Size = "md", Value = 50, TestId = "progress-labelpos-tooltip-above" },
-            },
-            new()
-            {
-                Id = "progress-labelpos-tooltip-below",
-                Label = "labelPos = tooltip-below",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "tooltip-below", Size = "md", Value = 50, TestId = "progress-labelpos-tooltip-below" },
-            },
-            new()
-            {
-                Id = "progress-size-sm",
-                Label = "size = sm",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "sm", Value = 50, TestId = "progress-size-sm" },
-            },
-            new()
-            {
-                Id = "progress-size-md",
-                Label = "size = md",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 50, TestId = "progress-size-md" },
-            },
-            new()
-            {
-                Id = "progress-size-lg",
-                Label = "size = lg",
-                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "lg", Value = 50, TestId = "progress-size-lg" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "skeleton",
-            Name = "Skeleton",
-            Component = "NMSkeleton",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "skeleton-default",
-                Label = "default",
-                Props = new NMSkeletonProps { Variant = "text", TestId = "skeleton-default" },
-            },
-            new()
-            {
-                Id = "skeleton-variant-text",
-                Label = "variant = text",
-                Props = new NMSkeletonProps { Variant = "text", TestId = "skeleton-variant-text" },
-            },
-            new()
-            {
-                Id = "skeleton-variant-circle",
-                Label = "variant = circle",
-                Props = new NMSkeletonProps { Variant = "circle", TestId = "skeleton-variant-circle" },
-            },
-            new()
-            {
-                Id = "skeleton-variant-rectangle",
-                Label = "variant = rectangle",
-                Props = new NMSkeletonProps { Variant = "rectangle", TestId = "skeleton-variant-rectangle" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "spinner",
-            Name = "Spinner",
-            Component = "NMSpinner",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "spinner-default",
-                Label = "default",
-                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "md", TestId = "spinner-default" },
-            },
-            new()
-            {
-                Id = "spinner-size-sm",
-                Label = "size = sm",
-                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "sm", TestId = "spinner-size-sm" },
-            },
-            new()
-            {
-                Id = "spinner-size-md",
-                Label = "size = md",
-                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "md", TestId = "spinner-size-md" },
-            },
-            new()
-            {
-                Id = "spinner-size-lg",
-                Label = "size = lg",
-                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "lg", TestId = "spinner-size-lg" },
-            },
-            new()
-            {
-                Id = "spinner-size-xl",
-                Label = "size = xl",
-                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "xl", TestId = "spinner-size-xl" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "tag",
-            Name = "Tag",
-            Component = "NMTag",
-            Tier = 1,
-            Cases =
-            [
-            new()
-            {
-                Id = "tag-default",
-                Label = "default",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-default",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-default-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-avatar-true",
-                Label = "avatar = true",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-avatar-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-avatar-true-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-avatar-false",
-                Label = "avatar = false",
-                Props = new NMTagProps
-            {
-                Avatar = false,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-avatar-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-avatar-false-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-checkbox-true",
-                Label = "checkbox = true",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-checkbox-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-checkbox-true-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-checkbox-false",
-                Label = "checkbox = false",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = false,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-checkbox-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-checkbox-false-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-count-true",
-                Label = "count = true",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-count-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-count-true-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-count-false",
-                Label = "count = false",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = false,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-count-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-count-false-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-icon-true",
-                Label = "icon = true",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-icon-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-icon-true-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-icon-false",
-                Label = "icon = false",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = false,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-icon-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-icon-false-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-size-sm",
-                Label = "size = sm",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-size-sm",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-size-sm-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-size-md",
-                Label = "size = md",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "md",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-size-md",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-size-md-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-size-lg",
-                Label = "size = lg",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "lg",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-size-lg",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-size-lg-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-xclose-true",
-                Label = "xclose = true",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = true,
-                TestId = "tag-xclose-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-xclose-true-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tag-xclose-false",
-                Label = "xclose = false",
-                Props = new NMTagProps
-            {
-                Avatar = true,
-                Checkbox = true,
-                Count = true,
-                CountText = "5",
-                Icon = true,
-                Size = "sm",
-                Text = "Label",
-                Xclose = false,
-                TestId = "tag-xclose-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tag-xclose-false-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "tag",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            ],
-        },
-        new()
-        {
             Slug = "button",
             Name = "Button",
             Component = "NMButton",
             Tier = 2,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 2,
+            Free = true,
+            Description = "Primary actions and CTAs",
             Cases =
             [
             new()
@@ -3559,53 +1424,136 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "checkbox",
-            Name = "Checkbox",
-            Component = "NMCheckbox",
-            Tier = 2,
+            Slug = "button-group",
+            Name = "Button Group",
+            Component = "NMButtonGroup",
+            Tier = 3,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 3,
+            Free = false,
+            Description = "Segmented control for mutually exclusive options",
             Cases =
             [
             new()
             {
-                Id = "checkbox-default",
+                Id = "button-group-default",
                 Label = "default",
-                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-default" },
-            },
-            new()
+                Props = new NMButtonGroupProps
             {
-                Id = "checkbox-checked-indeterminate",
-                Label = "checked = indeterminate",
-                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "indeterminate", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-checked-indeterminate" },
+                TestId = "button-group-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-group-default-child-1",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "button-group-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Day",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["iconLeft"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "button-group-default-child-1-iconLeft-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "calendarDate",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "button-group-default-child-2",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "button-group-default-child-2-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Week",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["iconLeft"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "button-group-default-child-2-iconLeft-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "calendarDateRange",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "button-group-default-child-3",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "button-group-default-child-3-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Month",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["iconLeft"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "button-group-default-child-3-iconLeft-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "calendarDefault",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
             },
-            new()
-            {
-                Id = "checkbox-disabled-true",
-                Label = "disabled = true",
-                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = true, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-disabled-true" },
-            },
-            new()
-            {
-                Id = "checkbox-disabled-false",
-                Label = "disabled = false",
-                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-disabled-false" },
-            },
-            new()
-            {
-                Id = "checkbox-size-sm",
-                Label = "size = sm",
-                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "sm", TestId = "checkbox-size-sm" },
-            },
-            new()
-            {
-                Id = "checkbox-size-md",
-                Label = "size = md",
-                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-size-md" },
-            },
-            new()
-            {
-                Id = "checkbox-size-lg",
-                Label = "size = lg",
-                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "lg", TestId = "checkbox-size-lg" },
             },
             ],
         },
@@ -3615,6 +1563,11 @@ public static class NmKitchenSink
             Name = "Input",
             Component = "NMInput",
             Tier = 2,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 4,
+            Free = true,
+            Description = "Text field with label and validation",
             Cases =
             [
             new()
@@ -3853,310 +1806,15 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "radio",
-            Name = "Radio",
-            Component = "NMRadio",
-            Tier = 2,
-            Cases =
-            [
-            new()
-            {
-                Id = "radio-default",
-                Label = "default",
-                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-default" },
-            },
-            new()
-            {
-                Id = "radio-checked-true",
-                Label = "checked = true",
-                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-checked-true" },
-            },
-            new()
-            {
-                Id = "radio-checked-false",
-                Label = "checked = false",
-                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = false, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-checked-false" },
-            },
-            new()
-            {
-                Id = "radio-disabled-true",
-                Label = "disabled = true",
-                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = true, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-disabled-true" },
-            },
-            new()
-            {
-                Id = "radio-disabled-false",
-                Label = "disabled = false",
-                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-disabled-false" },
-            },
-            new()
-            {
-                Id = "radio-size-sm",
-                Label = "size = sm",
-                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "sm", Value = "keep", TestId = "radio-size-sm" },
-            },
-            new()
-            {
-                Id = "radio-size-md",
-                Label = "size = md",
-                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-size-md" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "rating",
-            Name = "Rating",
-            Component = "NMRating",
-            Tier = 2,
-            Cases =
-            [
-            new()
-            {
-                Id = "rating-default",
-                Label = "default",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-default" },
-            },
-            new()
-            {
-                Id = "rating-disabled-true",
-                Label = "disabled = true",
-                Props = new NMRatingProps { Count = 128, Disabled = true, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-disabled-true" },
-            },
-            new()
-            {
-                Id = "rating-disabled-false",
-                Label = "disabled = false",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-disabled-false" },
-            },
-            new()
-            {
-                Id = "rating-max-3",
-                Label = "max = 3",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "3", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-3" },
-            },
-            new()
-            {
-                Id = "rating-max-4",
-                Label = "max = 4",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "4", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-4" },
-            },
-            new()
-            {
-                Id = "rating-max-5",
-                Label = "max = 5",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-5" },
-            },
-            new()
-            {
-                Id = "rating-max-6",
-                Label = "max = 6",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "6", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-6" },
-            },
-            new()
-            {
-                Id = "rating-max-7",
-                Label = "max = 7",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "7", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-7" },
-            },
-            new()
-            {
-                Id = "rating-max-10",
-                Label = "max = 10",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "10", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-10" },
-            },
-            new()
-            {
-                Id = "rating-mode-readonly",
-                Label = "mode = readonly",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-mode-readonly" },
-            },
-            new()
-            {
-                Id = "rating-mode-interactive",
-                Label = "mode = interactive",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-mode-interactive" },
-            },
-            new()
-            {
-                Id = "rating-showlabel-true",
-                Label = "showLabel = true",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-showlabel-true" },
-            },
-            new()
-            {
-                Id = "rating-showlabel-false",
-                Label = "showLabel = false",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = false, Size = "md", Value = "3.5", TestId = "rating-showlabel-false" },
-            },
-            new()
-            {
-                Id = "rating-size-sm",
-                Label = "size = sm",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "sm", Value = "3.5", TestId = "rating-size-sm" },
-            },
-            new()
-            {
-                Id = "rating-size-md",
-                Label = "size = md",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-size-md" },
-            },
-            new()
-            {
-                Id = "rating-size-lg",
-                Label = "size = lg",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "lg", Value = "3.5", TestId = "rating-size-lg" },
-            },
-            new()
-            {
-                Id = "rating-value-0",
-                Label = "value = 0",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "0", TestId = "rating-value-0" },
-            },
-            new()
-            {
-                Id = "rating-value-0-5",
-                Label = "value = 0.5",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "0.5", TestId = "rating-value-0-5" },
-            },
-            new()
-            {
-                Id = "rating-value-1",
-                Label = "value = 1",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "1", TestId = "rating-value-1" },
-            },
-            new()
-            {
-                Id = "rating-value-1-5",
-                Label = "value = 1.5",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "1.5", TestId = "rating-value-1-5" },
-            },
-            new()
-            {
-                Id = "rating-value-2",
-                Label = "value = 2",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "2", TestId = "rating-value-2" },
-            },
-            new()
-            {
-                Id = "rating-value-2-5",
-                Label = "value = 2.5",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "2.5", TestId = "rating-value-2-5" },
-            },
-            new()
-            {
-                Id = "rating-value-3",
-                Label = "value = 3",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3", TestId = "rating-value-3" },
-            },
-            new()
-            {
-                Id = "rating-value-3-5",
-                Label = "value = 3.5",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-value-3-5" },
-            },
-            new()
-            {
-                Id = "rating-value-4",
-                Label = "value = 4",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "4", TestId = "rating-value-4" },
-            },
-            new()
-            {
-                Id = "rating-value-4-5",
-                Label = "value = 4.5",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "4.5", TestId = "rating-value-4-5" },
-            },
-            new()
-            {
-                Id = "rating-value-5",
-                Label = "value = 5",
-                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "5", TestId = "rating-value-5" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "slider",
-            Name = "Sliders & Ranges",
-            Component = "NMSlider",
-            Tier = 2,
-            Cases =
-            [
-            new()
-            {
-                Id = "slider-default",
-                Label = "default",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-default" },
-            },
-            new()
-            {
-                Id = "slider-disabled-true",
-                Label = "disabled = true",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = true, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-disabled-true" },
-            },
-            new()
-            {
-                Id = "slider-disabled-false",
-                Label = "disabled = false",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-disabled-false" },
-            },
-            new()
-            {
-                Id = "slider-isbivalue-true",
-                Label = "isBiValue = true",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = true, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-isbivalue-true" },
-            },
-            new()
-            {
-                Id = "slider-isbivalue-false",
-                Label = "isBiValue = false",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-isbivalue-false" },
-            },
-            new()
-            {
-                Id = "slider-labelmode-none",
-                Label = "labelMode = none",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-labelmode-none" },
-            },
-            new()
-            {
-                Id = "slider-labelmode-bottom",
-                Label = "labelMode = bottom",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "bottom", Size = "md", Value = 25, Value2 = 75, TestId = "slider-labelmode-bottom" },
-            },
-            new()
-            {
-                Id = "slider-labelmode-tooltip",
-                Label = "labelMode = tooltip",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "tooltip", Size = "md", Value = 25, Value2 = 75, TestId = "slider-labelmode-tooltip" },
-            },
-            new()
-            {
-                Id = "slider-size-sm",
-                Label = "size = sm",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "sm", Value = 25, Value2 = 75, TestId = "slider-size-sm" },
-            },
-            new()
-            {
-                Id = "slider-size-md",
-                Label = "size = md",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-size-md" },
-            },
-            new()
-            {
-                Id = "slider-size-lg",
-                Label = "size = lg",
-                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "lg", Value = 25, Value2 = 75, TestId = "slider-size-lg" },
-            },
-            ],
-        },
-        new()
-        {
             Slug = "textarea",
             Name = "Textarea",
             Component = "NMTextarea",
             Tier = 2,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 5,
+            Free = true,
+            Description = "Multi-line text input",
             Cases =
             [
             new()
@@ -4241,10 +1899,592 @@ public static class NmKitchenSink
         },
         new()
         {
+            Slug = "select",
+            Name = "Select",
+            Component = "NMSelect",
+            Tier = 5,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 6,
+            Free = true,
+            Description = "Dropdown selection control",
+            Cases =
+            [
+            new()
+            {
+                Id = "select-default",
+                Label = "default",
+                Props = new NMSelectProps
+            {
+                Disabled = false,
+                Error = false,
+                Options = [
+                    new NmSelectOption
+                    {
+                        Label = "Apple",
+                        Value = "apple",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Banana",
+                        Value = "banana",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Cherry",
+                        Value = "cherry",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Mango",
+                        Value = "mango",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Pineapple",
+                        Value = "pineapple",
+                    },
+                ],
+                Placeholder = "Select an option...",
+                Size = "md",
+                TestId = "select-default",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "select-default-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "bulletList",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "select-disabled-true",
+                Label = "disabled = true",
+                Props = new NMSelectProps
+            {
+                Disabled = true,
+                Error = false,
+                Options = [
+                    new NmSelectOption
+                    {
+                        Label = "Apple",
+                        Value = "apple",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Banana",
+                        Value = "banana",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Cherry",
+                        Value = "cherry",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Mango",
+                        Value = "mango",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Pineapple",
+                        Value = "pineapple",
+                    },
+                ],
+                Placeholder = "Select an option...",
+                Size = "md",
+                TestId = "select-disabled-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "select-disabled-true-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "bulletList",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "select-disabled-false",
+                Label = "disabled = false",
+                Props = new NMSelectProps
+            {
+                Disabled = false,
+                Error = false,
+                Options = [
+                    new NmSelectOption
+                    {
+                        Label = "Apple",
+                        Value = "apple",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Banana",
+                        Value = "banana",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Cherry",
+                        Value = "cherry",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Mango",
+                        Value = "mango",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Pineapple",
+                        Value = "pineapple",
+                    },
+                ],
+                Placeholder = "Select an option...",
+                Size = "md",
+                TestId = "select-disabled-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "select-disabled-false-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "bulletList",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "select-error-true",
+                Label = "error = true",
+                Props = new NMSelectProps
+            {
+                Disabled = false,
+                Error = true,
+                Options = [
+                    new NmSelectOption
+                    {
+                        Label = "Apple",
+                        Value = "apple",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Banana",
+                        Value = "banana",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Cherry",
+                        Value = "cherry",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Mango",
+                        Value = "mango",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Pineapple",
+                        Value = "pineapple",
+                    },
+                ],
+                Placeholder = "Select an option...",
+                Size = "md",
+                TestId = "select-error-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "select-error-true-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "bulletList",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "select-error-false",
+                Label = "error = false",
+                Props = new NMSelectProps
+            {
+                Disabled = false,
+                Error = false,
+                Options = [
+                    new NmSelectOption
+                    {
+                        Label = "Apple",
+                        Value = "apple",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Banana",
+                        Value = "banana",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Cherry",
+                        Value = "cherry",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Mango",
+                        Value = "mango",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Pineapple",
+                        Value = "pineapple",
+                    },
+                ],
+                Placeholder = "Select an option...",
+                Size = "md",
+                TestId = "select-error-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "select-error-false-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "bulletList",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "select-size-sm",
+                Label = "size = sm",
+                Props = new NMSelectProps
+            {
+                Disabled = false,
+                Error = false,
+                Options = [
+                    new NmSelectOption
+                    {
+                        Label = "Apple",
+                        Value = "apple",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Banana",
+                        Value = "banana",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Cherry",
+                        Value = "cherry",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Mango",
+                        Value = "mango",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Pineapple",
+                        Value = "pineapple",
+                    },
+                ],
+                Placeholder = "Select an option...",
+                Size = "sm",
+                TestId = "select-size-sm",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "select-size-sm-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "bulletList",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "select-size-md",
+                Label = "size = md",
+                Props = new NMSelectProps
+            {
+                Disabled = false,
+                Error = false,
+                Options = [
+                    new NmSelectOption
+                    {
+                        Label = "Apple",
+                        Value = "apple",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Banana",
+                        Value = "banana",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Cherry",
+                        Value = "cherry",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Mango",
+                        Value = "mango",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Pineapple",
+                        Value = "pineapple",
+                    },
+                ],
+                Placeholder = "Select an option...",
+                Size = "md",
+                TestId = "select-size-md",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "select-size-md-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "bulletList",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "select-size-lg",
+                Label = "size = lg",
+                Props = new NMSelectProps
+            {
+                Disabled = false,
+                Error = false,
+                Options = [
+                    new NmSelectOption
+                    {
+                        Label = "Apple",
+                        Value = "apple",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Banana",
+                        Value = "banana",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Cherry",
+                        Value = "cherry",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Mango",
+                        Value = "mango",
+                    },
+                    new NmSelectOption
+                    {
+                        Label = "Pineapple",
+                        Value = "pineapple",
+                    },
+                ],
+                Placeholder = "Select an option...",
+                Size = "lg",
+                TestId = "select-size-lg",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "select-size-lg-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "bulletList",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "checkbox",
+            Name = "Checkbox",
+            Component = "NMCheckbox",
+            Tier = 2,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 7,
+            Free = true,
+            Description = "The bare checkbox control — compose with label and helper via Toggles",
+            Cases =
+            [
+            new()
+            {
+                Id = "checkbox-default",
+                Label = "default",
+                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-default" },
+            },
+            new()
+            {
+                Id = "checkbox-checked-indeterminate",
+                Label = "checked = indeterminate",
+                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "indeterminate", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-checked-indeterminate" },
+            },
+            new()
+            {
+                Id = "checkbox-disabled-true",
+                Label = "disabled = true",
+                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = true, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-disabled-true" },
+            },
+            new()
+            {
+                Id = "checkbox-disabled-false",
+                Label = "disabled = false",
+                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-disabled-false" },
+            },
+            new()
+            {
+                Id = "checkbox-size-sm",
+                Label = "size = sm",
+                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "sm", TestId = "checkbox-size-sm" },
+            },
+            new()
+            {
+                Id = "checkbox-size-md",
+                Label = "size = md",
+                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "md", TestId = "checkbox-size-md" },
+            },
+            new()
+            {
+                Id = "checkbox-size-lg",
+                Label = "size = lg",
+                Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "lg", TestId = "checkbox-size-lg" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "radio",
+            Name = "Radio",
+            Component = "NMRadio",
+            Tier = 2,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 8,
+            Free = true,
+            Description = "The bare radio button control — compose with label and helper via Toggles",
+            Cases =
+            [
+            new()
+            {
+                Id = "radio-default",
+                Label = "default",
+                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-default" },
+            },
+            new()
+            {
+                Id = "radio-checked-true",
+                Label = "checked = true",
+                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-checked-true" },
+            },
+            new()
+            {
+                Id = "radio-checked-false",
+                Label = "checked = false",
+                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = false, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-checked-false" },
+            },
+            new()
+            {
+                Id = "radio-disabled-true",
+                Label = "disabled = true",
+                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = true, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-disabled-true" },
+            },
+            new()
+            {
+                Id = "radio-disabled-false",
+                Label = "disabled = false",
+                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-disabled-false" },
+            },
+            new()
+            {
+                Id = "radio-size-sm",
+                Label = "size = sm",
+                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "sm", Value = "keep", TestId = "radio-size-sm" },
+            },
+            new()
+            {
+                Id = "radio-size-md",
+                Label = "size = md",
+                Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-size-md" },
+            },
+            ],
+        },
+        new()
+        {
             Slug = "toggle",
             Name = "Switch",
             Component = "NMToggle",
             Tier = 2,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 9,
+            Free = true,
+            Description = "The bare switch/toggle control — compose with label and helper via Toggles",
             Cases =
             [
             new()
@@ -4293,464 +2533,15 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "badge-group",
-            Name = "Badge Group",
-            Component = "NMBadgeGroup",
-            Tier = 3,
-            Cases =
-            [
-            new()
-            {
-                Id = "badge-group-default",
-                Label = "default",
-                Props = new NMBadgeGroupProps
-            {
-                BadgePos = "left",
-                Size = "md",
-                Variant = "ghost",
-                TestId = "badge-group-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "badge-group-default-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "New",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "badge-group-default-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Three libraries finished scanning",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "badge-group-badgepos-left",
-                Label = "badgePos = left",
-                Props = new NMBadgeGroupProps
-            {
-                BadgePos = "left",
-                Size = "md",
-                Variant = "ghost",
-                TestId = "badge-group-badgepos-left",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "badge-group-badgepos-left-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "New",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "badge-group-badgepos-left-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Three libraries finished scanning",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "badge-group-badgepos-right",
-                Label = "badgePos = right",
-                Props = new NMBadgeGroupProps
-            {
-                BadgePos = "right",
-                Size = "md",
-                Variant = "ghost",
-                TestId = "badge-group-badgepos-right",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "badge-group-badgepos-right-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "New",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "badge-group-badgepos-right-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Three libraries finished scanning",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "badge-group-size-md",
-                Label = "size = md",
-                Props = new NMBadgeGroupProps
-            {
-                BadgePos = "left",
-                Size = "md",
-                Variant = "ghost",
-                TestId = "badge-group-size-md",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "badge-group-size-md-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "New",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "badge-group-size-md-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Three libraries finished scanning",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "badge-group-size-lg",
-                Label = "size = lg",
-                Props = new NMBadgeGroupProps
-            {
-                BadgePos = "left",
-                Size = "lg",
-                Variant = "ghost",
-                TestId = "badge-group-size-lg",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "badge-group-size-lg-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "New",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "badge-group-size-lg-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Three libraries finished scanning",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "badge-group-variant-ghost",
-                Label = "variant = ghost",
-                Props = new NMBadgeGroupProps
-            {
-                BadgePos = "left",
-                Size = "md",
-                Variant = "ghost",
-                TestId = "badge-group-variant-ghost",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "badge-group-variant-ghost-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "New",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "badge-group-variant-ghost-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Three libraries finished scanning",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "badge-group-variant-solid",
-                Label = "variant = solid",
-                Props = new NMBadgeGroupProps
-            {
-                BadgePos = "left",
-                Size = "md",
-                Variant = "solid",
-                TestId = "badge-group-variant-solid",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "badge-group-variant-solid-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "New",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "badge-group-variant-solid-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Three libraries finished scanning",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "badge-group-variant-outline",
-                Label = "variant = outline",
-                Props = new NMBadgeGroupProps
-            {
-                BadgePos = "left",
-                Size = "md",
-                Variant = "outline",
-                TestId = "badge-group-variant-outline",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "badge-group-variant-outline-child-1",
-                        Component = "NMBadge",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "New",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "badge-group-variant-outline-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Three libraries finished scanning",
-                        },
-                    },
-                ],
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "breadcrumb",
-            Name = "Breadcrumb",
-            Component = "NMBreadcrumb",
-            Tier = 3,
-            Cases =
-            [
-            new()
-            {
-                Id = "breadcrumb-default",
-                Label = "default",
-                Props = new NMBreadcrumbProps { Labels = [
-                    "Library",
-                    "Films",
-                    "Arrival",
-                ], Separator = "chevron", TestId = "breadcrumb-default" },
-            },
-            new()
-            {
-                Id = "breadcrumb-separator-slash",
-                Label = "separator = slash",
-                Props = new NMBreadcrumbProps { Labels = [
-                    "Library",
-                    "Films",
-                    "Arrival",
-                ], Separator = "slash", TestId = "breadcrumb-separator-slash" },
-            },
-            new()
-            {
-                Id = "breadcrumb-separator-chevron",
-                Label = "separator = chevron",
-                Props = new NMBreadcrumbProps { Labels = [
-                    "Library",
-                    "Films",
-                    "Arrival",
-                ], Separator = "chevron", TestId = "breadcrumb-separator-chevron" },
-            },
-            new()
-            {
-                Id = "breadcrumb-separator-dot",
-                Label = "separator = dot",
-                Props = new NMBreadcrumbProps { Labels = [
-                    "Library",
-                    "Films",
-                    "Arrival",
-                ], Separator = "dot", TestId = "breadcrumb-separator-dot" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "button-group",
-            Name = "Button Group",
-            Component = "NMButtonGroup",
-            Tier = 3,
-            Cases =
-            [
-            new()
-            {
-                Id = "button-group-default",
-                Label = "default",
-                Props = new NMButtonGroupProps
-            {
-                TestId = "button-group-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "button-group-default-child-1",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "button-group-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Day",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["iconLeft"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "button-group-default-child-1-iconLeft-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "calendarDate",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "button-group-default-child-2",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "button-group-default-child-2-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Week",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["iconLeft"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "button-group-default-child-2-iconLeft-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "calendarDateRange",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "button-group-default-child-3",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "button-group-default-child-3-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Month",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["iconLeft"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "button-group-default-child-3-iconLeft-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "calendarDefault",
-                                            ["size"] = "sm",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            ],
-        },
-        new()
-        {
             Slug = "checkbox-group",
             Name = "Checkbox Group",
             Component = "NMCheckboxGroup",
             Tier = 3,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 10,
+            Free = false,
+            Description = "Group multiple checkboxes with shared layout and error handling",
             Cases =
             [
             new()
@@ -5813,44 +3604,15 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "pagination",
-            Name = "Pagination",
-            Component = "NMPagination",
-            Tier = 3,
-            Cases =
-            [
-            new()
-            {
-                Id = "pagination-default",
-                Label = "default",
-                Props = new NMPaginationProps { CurrentPage = 3, Size = "md", TotalPages = 10, TestId = "pagination-default" },
-            },
-            new()
-            {
-                Id = "pagination-size-sm",
-                Label = "size = sm",
-                Props = new NMPaginationProps { CurrentPage = 3, Size = "sm", TotalPages = 10, TestId = "pagination-size-sm" },
-            },
-            new()
-            {
-                Id = "pagination-size-md",
-                Label = "size = md",
-                Props = new NMPaginationProps { CurrentPage = 3, Size = "md", TotalPages = 10, TestId = "pagination-size-md" },
-            },
-            new()
-            {
-                Id = "pagination-size-lg",
-                Label = "size = lg",
-                Props = new NMPaginationProps { CurrentPage = 3, Size = "lg", TotalPages = 10, TestId = "pagination-size-lg" },
-            },
-            ],
-        },
-        new()
-        {
             Slug = "radio-group",
             Name = "Radio Group",
             Component = "NMRadioGroup",
             Tier = 3,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 11,
+            Free = false,
+            Description = "Group radio buttons - always use radios in a group with shared error state",
             Cases =
             [
             new()
@@ -6913,10 +4675,183 @@ public static class NmKitchenSink
         },
         new()
         {
+            Slug = "toggles",
+            Name = "Toggles",
+            Component = "NMToggles",
+            Tier = 3,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 12,
+            Free = false,
+            Description = "Checkbox, radio &amp; switch — combined pattern with label and helper",
+            Cases =
+            [
+            new()
+            {
+                Id = "toggles-default",
+                Label = "default",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-default" },
+            },
+            new()
+            {
+                Id = "toggles-disabled-true",
+                Label = "disabled = true",
+                Props = new NMTogglesProps { Disabled = true, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-disabled-true" },
+            },
+            new()
+            {
+                Id = "toggles-disabled-false",
+                Label = "disabled = false",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-disabled-false" },
+            },
+            new()
+            {
+                Id = "toggles-size-sm",
+                Label = "size = sm",
+                Props = new NMTogglesProps { Disabled = false, Size = "sm", State = "checked", Type = "checkbox", TestId = "toggles-size-sm" },
+            },
+            new()
+            {
+                Id = "toggles-size-md",
+                Label = "size = md",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-size-md" },
+            },
+            new()
+            {
+                Id = "toggles-size-lg",
+                Label = "size = lg",
+                Props = new NMTogglesProps { Disabled = false, Size = "lg", State = "checked", Type = "checkbox", TestId = "toggles-size-lg" },
+            },
+            new()
+            {
+                Id = "toggles-state-unchecked",
+                Label = "state = unchecked",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "checkbox", TestId = "toggles-state-unchecked" },
+            },
+            new()
+            {
+                Id = "toggles-state-checked",
+                Label = "state = checked",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-state-checked" },
+            },
+            new()
+            {
+                Id = "toggles-state-indeterminate",
+                Label = "state = indeterminate",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "indeterminate", Type = "checkbox", TestId = "toggles-state-indeterminate" },
+            },
+            new()
+            {
+                Id = "toggles-type-checkbox",
+                Label = "type = checkbox",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-type-checkbox" },
+            },
+            new()
+            {
+                Id = "toggles-type-radio",
+                Label = "type = radio",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "radio", TestId = "toggles-type-radio" },
+            },
+            new()
+            {
+                Id = "toggles-type-switch",
+                Label = "type = switch",
+                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "switch", TestId = "toggles-type-switch" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "slider",
+            Name = "Slider",
+            Component = "NMSlider",
+            Tier = 2,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 13,
+            Free = true,
+            Description = "Range input with custom track and thumb",
+            Cases =
+            [
+            new()
+            {
+                Id = "slider-default",
+                Label = "default",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-default" },
+            },
+            new()
+            {
+                Id = "slider-disabled-true",
+                Label = "disabled = true",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = true, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-disabled-true" },
+            },
+            new()
+            {
+                Id = "slider-disabled-false",
+                Label = "disabled = false",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-disabled-false" },
+            },
+            new()
+            {
+                Id = "slider-isbivalue-true",
+                Label = "isBiValue = true",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = true, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-isbivalue-true" },
+            },
+            new()
+            {
+                Id = "slider-isbivalue-false",
+                Label = "isBiValue = false",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-isbivalue-false" },
+            },
+            new()
+            {
+                Id = "slider-labelmode-none",
+                Label = "labelMode = none",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-labelmode-none" },
+            },
+            new()
+            {
+                Id = "slider-labelmode-bottom",
+                Label = "labelMode = bottom",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "bottom", Size = "md", Value = 25, Value2 = 75, TestId = "slider-labelmode-bottom" },
+            },
+            new()
+            {
+                Id = "slider-labelmode-tooltip",
+                Label = "labelMode = tooltip",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "tooltip", Size = "md", Value = 25, Value2 = 75, TestId = "slider-labelmode-tooltip" },
+            },
+            new()
+            {
+                Id = "slider-size-sm",
+                Label = "size = sm",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "sm", Value = 25, Value2 = 75, TestId = "slider-size-sm" },
+            },
+            new()
+            {
+                Id = "slider-size-md",
+                Label = "size = md",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "md", Value = 25, Value2 = 75, TestId = "slider-size-md" },
+            },
+            new()
+            {
+                Id = "slider-size-lg",
+                Label = "size = lg",
+                Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "lg", Value = 25, Value2 = 75, TestId = "slider-size-lg" },
+            },
+            ],
+        },
+        new()
+        {
             Slug = "segmented",
             Name = "Segmented",
             Component = "NMSegmented",
             Tier = 3,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 14,
+            Free = false,
+            Description = "Mutually exclusive option group for compact view or mode switching",
             Cases =
             [
             new()
@@ -7224,2079 +5159,754 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "step-indicator",
-            Name = "Step Indicator",
-            Component = "NMStepIndicator",
-            Tier = 3,
+            Slug = "file-upload",
+            Name = "File Upload",
+            Component = "NMFileUpload",
+            Tier = 6,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 15,
+            Free = false,
+            Description = "Dropzone + File Items with upload, progress, and error states",
             Cases =
             [
             new()
             {
-                Id = "step-indicator-default",
+                Id = "file-upload-default",
                 Label = "default",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-default" },
-            },
-            new()
-            {
-                Id = "step-indicator-activeindex-0",
-                Label = "activeIndex = 0",
-                Props = new NMStepIndicatorProps { ActiveIndex = "0", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-0" },
-            },
-            new()
-            {
-                Id = "step-indicator-activeindex-1",
-                Label = "activeIndex = 1",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-1" },
-            },
-            new()
-            {
-                Id = "step-indicator-activeindex-2",
-                Label = "activeIndex = 2",
-                Props = new NMStepIndicatorProps { ActiveIndex = "2", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-2" },
-            },
-            new()
-            {
-                Id = "step-indicator-activeindex-3",
-                Label = "activeIndex = 3",
-                Props = new NMStepIndicatorProps { ActiveIndex = "3", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-3" },
-            },
-            new()
-            {
-                Id = "step-indicator-activeindex-4",
-                Label = "activeIndex = 4",
-                Props = new NMStepIndicatorProps { ActiveIndex = "4", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-4" },
-            },
-            new()
-            {
-                Id = "step-indicator-activeindex-5",
-                Label = "activeIndex = 5",
-                Props = new NMStepIndicatorProps { ActiveIndex = "5", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-5" },
-            },
-            new()
-            {
-                Id = "step-indicator-activeindex-6",
-                Label = "activeIndex = 6",
-                Props = new NMStepIndicatorProps { ActiveIndex = "6", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-6" },
-            },
-            new()
-            {
-                Id = "step-indicator-size-sm",
-                Label = "size = sm",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "sm", Steps = "4", Variant = "dots", TestId = "step-indicator-size-sm" },
-            },
-            new()
-            {
-                Id = "step-indicator-size-md",
-                Label = "size = md",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-size-md" },
-            },
-            new()
-            {
-                Id = "step-indicator-size-lg",
-                Label = "size = lg",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "lg", Steps = "4", Variant = "dots", TestId = "step-indicator-size-lg" },
-            },
-            new()
-            {
-                Id = "step-indicator-steps-3",
-                Label = "steps = 3",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "3", Variant = "dots", TestId = "step-indicator-steps-3" },
-            },
-            new()
-            {
-                Id = "step-indicator-steps-4",
-                Label = "steps = 4",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-steps-4" },
-            },
-            new()
-            {
-                Id = "step-indicator-steps-5",
-                Label = "steps = 5",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "5", Variant = "dots", TestId = "step-indicator-steps-5" },
-            },
-            new()
-            {
-                Id = "step-indicator-steps-6",
-                Label = "steps = 6",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "6", Variant = "dots", TestId = "step-indicator-steps-6" },
-            },
-            new()
-            {
-                Id = "step-indicator-steps-7",
-                Label = "steps = 7",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "7", Variant = "dots", TestId = "step-indicator-steps-7" },
-            },
-            new()
-            {
-                Id = "step-indicator-variant-dots",
-                Label = "variant = dots",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-variant-dots" },
-            },
-            new()
-            {
-                Id = "step-indicator-variant-bars",
-                Label = "variant = bars",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "bars", TestId = "step-indicator-variant-bars" },
-            },
-            new()
-            {
-                Id = "step-indicator-variant-numbers",
-                Label = "variant = numbers",
-                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "numbers", TestId = "step-indicator-variant-numbers" },
+                Props = new NMFileUploadProps { FileMeta = "1.2 MB · PNG", FileName = "design-brief.png", UploadPct = 40, TestId = "file-upload-default" },
             },
             ],
         },
         new()
         {
-            Slug = "toggles",
-            Name = "Toggles",
-            Component = "NMToggles",
-            Tier = 3,
+            Slug = "date-picker",
+            Name = "Date Picker",
+            Component = "NMDatePicker",
+            Tier = 5,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 16,
+            Free = false,
+            Description = "Calendar with day/range selection",
             Cases =
             [
             new()
             {
-                Id = "toggles-default",
+                Id = "date-picker-default",
                 Label = "default",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-default" },
+                Props = new NMDatePickerProps { Mode = "single", Size = "md", TestId = "date-picker-default" },
             },
             new()
             {
-                Id = "toggles-disabled-true",
+                Id = "date-picker-mode-single",
+                Label = "mode = single",
+                Props = new NMDatePickerProps { Mode = "single", Size = "md", TestId = "date-picker-mode-single" },
+            },
+            new()
+            {
+                Id = "date-picker-mode-range",
+                Label = "mode = range",
+                Props = new NMDatePickerProps { Mode = "range", Size = "md", TestId = "date-picker-mode-range" },
+            },
+            new()
+            {
+                Id = "date-picker-mode-year-month",
+                Label = "mode = year-month",
+                Props = new NMDatePickerProps { Mode = "year-month", Size = "md", TestId = "date-picker-mode-year-month" },
+            },
+            new()
+            {
+                Id = "date-picker-mode-dual",
+                Label = "mode = dual",
+                Props = new NMDatePickerProps { Mode = "dual", Size = "md", TestId = "date-picker-mode-dual" },
+            },
+            new()
+            {
+                Id = "date-picker-size-sm",
+                Label = "size = sm",
+                Props = new NMDatePickerProps { Mode = "single", Size = "sm", TestId = "date-picker-size-sm" },
+            },
+            new()
+            {
+                Id = "date-picker-size-md",
+                Label = "size = md",
+                Props = new NMDatePickerProps { Mode = "single", Size = "md", TestId = "date-picker-size-md" },
+            },
+            new()
+            {
+                Id = "date-picker-size-lg",
+                Label = "size = lg",
+                Props = new NMDatePickerProps { Mode = "single", Size = "lg", TestId = "date-picker-size-lg" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "combobox",
+            Name = "Combobox",
+            Component = "NMCombobox",
+            Tier = 5,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 17,
+            Free = false,
+            Description = "Autocomplete searchable select with filtering, keyboard navigation, and async loading",
+            Cases =
+            [
+            new()
+            {
+                Id = "combobox-default",
+                Label = "default",
+                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
+                    "Apple",
+                    "Cherry",
+                ], Size = "md", TestId = "combobox-default" },
+            },
+            new()
+            {
+                Id = "combobox-isloading-true",
+                Label = "isLoading = true",
+                Props = new NMComboboxProps { FilterText = "ap", IsLoading = true, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
+                    "Apple",
+                    "Cherry",
+                ], Size = "md", TestId = "combobox-isloading-true" },
+            },
+            new()
+            {
+                Id = "combobox-isloading-false",
+                Label = "isLoading = false",
+                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
+                    "Apple",
+                    "Cherry",
+                ], Size = "md", TestId = "combobox-isloading-false" },
+            },
+            new()
+            {
+                Id = "combobox-multiple-true",
+                Label = "multiple = true",
+                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = true, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
+                    "Apple",
+                    "Cherry",
+                ], Size = "md", TestId = "combobox-multiple-true" },
+            },
+            new()
+            {
+                Id = "combobox-multiple-false",
+                Label = "multiple = false",
+                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
+                    "Apple",
+                    "Cherry",
+                ], Size = "md", TestId = "combobox-multiple-false" },
+            },
+            new()
+            {
+                Id = "combobox-size-sm",
+                Label = "size = sm",
+                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
+                    "Apple",
+                    "Cherry",
+                ], Size = "sm", TestId = "combobox-size-sm" },
+            },
+            new()
+            {
+                Id = "combobox-size-md",
+                Label = "size = md",
+                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
+                    "Apple",
+                    "Cherry",
+                ], Size = "md", TestId = "combobox-size-md" },
+            },
+            new()
+            {
+                Id = "combobox-size-lg",
+                Label = "size = lg",
+                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
+                    "Apple",
+                    "Cherry",
+                ], Size = "lg", TestId = "combobox-size-lg" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "search-input",
+            Name = "Search Input",
+            Component = "NMSearchInput",
+            Tier = 5,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 18,
+            Free = false,
+            Description = "Input with leading search icon and trailing clear button",
+            Cases =
+            [
+            new()
+            {
+                Id = "search-input-default",
+                Label = "default",
+                Props = new NMSearchInputProps
+            {
+                Placeholder = "Search components...",
+                Size = "md",
+                Value = "arrival",
+                TestId = "search-input-default",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "search-input-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "searchMagnifyingGlass",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "search-input-size-sm",
+                Label = "size = sm",
+                Props = new NMSearchInputProps
+            {
+                Placeholder = "Search components...",
+                Size = "sm",
+                Value = "arrival",
+                TestId = "search-input-size-sm",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "search-input-size-sm-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "searchMagnifyingGlass",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "search-input-size-md",
+                Label = "size = md",
+                Props = new NMSearchInputProps
+            {
+                Placeholder = "Search components...",
+                Size = "md",
+                Value = "arrival",
+                TestId = "search-input-size-md",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "search-input-size-md-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "searchMagnifyingGlass",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "search-input-size-lg",
+                Label = "size = lg",
+                Props = new NMSearchInputProps
+            {
+                Placeholder = "Search components...",
+                Size = "lg",
+                Value = "arrival",
+                TestId = "search-input-size-lg",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "search-input-size-lg-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "searchMagnifyingGlass",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "rating",
+            Name = "Rating",
+            Component = "NMRating",
+            Tier = 2,
+            Group = "Form Controls",
+            GroupOrder = 0,
+            GroupIndex = 19,
+            Free = false,
+            Description = "Star rating for displaying scores or collecting user input with half-star support",
+            Cases =
+            [
+            new()
+            {
+                Id = "rating-default",
+                Label = "default",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-default" },
+            },
+            new()
+            {
+                Id = "rating-disabled-true",
                 Label = "disabled = true",
-                Props = new NMTogglesProps { Disabled = true, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-disabled-true" },
+                Props = new NMRatingProps { Count = 128, Disabled = true, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-disabled-true" },
             },
             new()
             {
-                Id = "toggles-disabled-false",
+                Id = "rating-disabled-false",
                 Label = "disabled = false",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-disabled-false" },
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-disabled-false" },
             },
             new()
             {
-                Id = "toggles-size-sm",
+                Id = "rating-max-3",
+                Label = "max = 3",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "3", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-3" },
+            },
+            new()
+            {
+                Id = "rating-max-4",
+                Label = "max = 4",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "4", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-4" },
+            },
+            new()
+            {
+                Id = "rating-max-5",
+                Label = "max = 5",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-5" },
+            },
+            new()
+            {
+                Id = "rating-max-6",
+                Label = "max = 6",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "6", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-6" },
+            },
+            new()
+            {
+                Id = "rating-max-7",
+                Label = "max = 7",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "7", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-7" },
+            },
+            new()
+            {
+                Id = "rating-max-10",
+                Label = "max = 10",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "10", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-max-10" },
+            },
+            new()
+            {
+                Id = "rating-mode-readonly",
+                Label = "mode = readonly",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "readonly", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-mode-readonly" },
+            },
+            new()
+            {
+                Id = "rating-mode-interactive",
+                Label = "mode = interactive",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-mode-interactive" },
+            },
+            new()
+            {
+                Id = "rating-showlabel-true",
+                Label = "showLabel = true",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-showlabel-true" },
+            },
+            new()
+            {
+                Id = "rating-showlabel-false",
+                Label = "showLabel = false",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = false, Size = "md", Value = "3.5", TestId = "rating-showlabel-false" },
+            },
+            new()
+            {
+                Id = "rating-size-sm",
                 Label = "size = sm",
-                Props = new NMTogglesProps { Disabled = false, Size = "sm", State = "checked", Type = "checkbox", TestId = "toggles-size-sm" },
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "sm", Value = "3.5", TestId = "rating-size-sm" },
             },
             new()
             {
-                Id = "toggles-size-md",
+                Id = "rating-size-md",
                 Label = "size = md",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-size-md" },
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-size-md" },
             },
             new()
             {
-                Id = "toggles-size-lg",
+                Id = "rating-size-lg",
                 Label = "size = lg",
-                Props = new NMTogglesProps { Disabled = false, Size = "lg", State = "checked", Type = "checkbox", TestId = "toggles-size-lg" },
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "lg", Value = "3.5", TestId = "rating-size-lg" },
             },
             new()
             {
-                Id = "toggles-state-unchecked",
-                Label = "state = unchecked",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "unchecked", Type = "checkbox", TestId = "toggles-state-unchecked" },
+                Id = "rating-value-0",
+                Label = "value = 0",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "0", TestId = "rating-value-0" },
             },
             new()
             {
-                Id = "toggles-state-checked",
-                Label = "state = checked",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-state-checked" },
+                Id = "rating-value-0-5",
+                Label = "value = 0.5",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "0.5", TestId = "rating-value-0-5" },
             },
             new()
             {
-                Id = "toggles-state-indeterminate",
-                Label = "state = indeterminate",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "indeterminate", Type = "checkbox", TestId = "toggles-state-indeterminate" },
+                Id = "rating-value-1",
+                Label = "value = 1",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "1", TestId = "rating-value-1" },
             },
             new()
             {
-                Id = "toggles-type-checkbox",
-                Label = "type = checkbox",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "checkbox", TestId = "toggles-type-checkbox" },
+                Id = "rating-value-1-5",
+                Label = "value = 1.5",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "1.5", TestId = "rating-value-1-5" },
             },
             new()
             {
-                Id = "toggles-type-radio",
-                Label = "type = radio",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "radio", TestId = "toggles-type-radio" },
+                Id = "rating-value-2",
+                Label = "value = 2",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "2", TestId = "rating-value-2" },
             },
             new()
             {
-                Id = "toggles-type-switch",
-                Label = "type = switch",
-                Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "switch", TestId = "toggles-type-switch" },
+                Id = "rating-value-2-5",
+                Label = "value = 2.5",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "2.5", TestId = "rating-value-2-5" },
+            },
+            new()
+            {
+                Id = "rating-value-3",
+                Label = "value = 3",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3", TestId = "rating-value-3" },
+            },
+            new()
+            {
+                Id = "rating-value-3-5",
+                Label = "value = 3.5",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "3.5", TestId = "rating-value-3-5" },
+            },
+            new()
+            {
+                Id = "rating-value-4",
+                Label = "value = 4",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "4", TestId = "rating-value-4" },
+            },
+            new()
+            {
+                Id = "rating-value-4-5",
+                Label = "value = 4.5",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "4.5", TestId = "rating-value-4-5" },
+            },
+            new()
+            {
+                Id = "rating-value-5",
+                Label = "value = 5",
+                Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "5", TestId = "rating-value-5" },
             },
             ],
         },
         new()
         {
-            Slug = "alert",
-            Name = "Notification",
-            Component = "NMAlert",
-            Tier = 4,
+            Slug = "image",
+            Name = "Image",
+            Component = "NMImage",
+            Tier = 1,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 0,
+            Free = false,
+            Description = "Responsive images with aspect ratio, fallback, and loading states",
             Cases =
             [
             new()
             {
-                Id = "alert-default",
+                Id = "image-default",
                 Label = "default",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "info",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-default-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-default" },
             },
             new()
             {
-                Id = "alert-closable-true",
-                Label = "closable = true",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "info",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-closable-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-closable-true-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-closable-true-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-closable-true-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-closable-true-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-aspectratio-auto",
+                Label = "aspectRatio = auto",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-auto" },
             },
             new()
             {
-                Id = "alert-closable-false",
-                Label = "closable = false",
-                Props = new NMAlertProps
-            {
-                Closable = false,
-                Glow = false,
-                Severity = "info",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-closable-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-closable-false-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-closable-false-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-closable-false-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-closable-false-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-aspectratio-square",
+                Label = "aspectRatio = square",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "square", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-square" },
             },
             new()
             {
-                Id = "alert-glow-true",
-                Label = "glow = true",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = true,
-                Severity = "info",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-glow-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-glow-true-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-glow-true-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-glow-true-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-glow-true-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-aspectratio-video",
+                Label = "aspectRatio = video",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "video", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-video" },
             },
             new()
             {
-                Id = "alert-glow-false",
-                Label = "glow = false",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "info",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-glow-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-glow-false-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-glow-false-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-glow-false-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-glow-false-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-aspectratio-portrait",
+                Label = "aspectRatio = portrait",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "portrait", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-portrait" },
             },
             new()
             {
-                Id = "alert-severity-info",
-                Label = "severity = info",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "info",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-severity-info",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-severity-info-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-severity-info-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-severity-info-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-severity-info-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-aspectratio-landscape",
+                Label = "aspectRatio = landscape",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "landscape", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-aspectratio-landscape" },
             },
             new()
             {
-                Id = "alert-severity-error",
-                Label = "severity = error",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "error",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-severity-error",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-severity-error-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-severity-error-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-severity-error-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-severity-error-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-border-true",
+                Label = "border = true",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = true, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-border-true" },
             },
             new()
             {
-                Id = "alert-size-full",
-                Label = "size = full",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "info",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-size-full",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-size-full-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-size-full-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-size-full-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-size-full-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-border-false",
+                Label = "border = false",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-border-false" },
             },
             new()
             {
-                Id = "alert-size-compact",
-                Label = "size = compact",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "info",
-                Size = "compact",
-                Style = "default",
-                TestId = "alert-size-compact",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-size-compact-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-size-compact-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-size-compact-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-size-compact-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-clickable-true",
+                Label = "clickable = true",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = true, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-clickable-true" },
             },
             new()
             {
-                Id = "alert-style-default",
-                Label = "style = default",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "info",
-                Size = "full",
-                Style = "default",
-                TestId = "alert-style-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-style-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-style-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-style-default-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-style-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "image-clickable-false",
+                Label = "clickable = false",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-clickable-false" },
             },
             new()
             {
-                Id = "alert-style-accent",
-                Label = "style = accent",
-                Props = new NMAlertProps
-            {
-                Closable = true,
-                Glow = false,
-                Severity = "info",
-                Size = "full",
-                Style = "accent",
-                TestId = "alert-style-accent",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "alert-style-accent-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "alert-style-accent-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Two files could not be matched.",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "alert-style-accent-child-2",
-                        Component = "NMLink",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Review them",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "alert-style-accent-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "alertTriangle",
-                            },
-                        },
-                    },
-                },
+                Id = "image-fit-cover",
+                Label = "fit = cover",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-fit-cover" },
             },
+            new()
+            {
+                Id = "image-fit-contain",
+                Label = "fit = contain",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "contain", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-fit-contain" },
+            },
+            new()
+            {
+                Id = "image-fit-fill",
+                Label = "fit = fill",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "fill", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-fit-fill" },
+            },
+            new()
+            {
+                Id = "image-fit-none",
+                Label = "fit = none",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "none", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-fit-none" },
+            },
+            new()
+            {
+                Id = "image-rounded-none",
+                Label = "rounded = none",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "none", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-none" },
+            },
+            new()
+            {
+                Id = "image-rounded-sm",
+                Label = "rounded = sm",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "sm", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-sm" },
+            },
+            new()
+            {
+                Id = "image-rounded-md",
+                Label = "rounded = md",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "md", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-md" },
+            },
+            new()
+            {
+                Id = "image-rounded-lg",
+                Label = "rounded = lg",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-lg" },
+            },
+            new()
+            {
+                Id = "image-rounded-xl",
+                Label = "rounded = xl",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "xl", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-xl" },
+            },
+            new()
+            {
+                Id = "image-rounded-full",
+                Label = "rounded = full",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "full", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-rounded-full" },
+            },
+            new()
+            {
+                Id = "image-shadow-none",
+                Label = "shadow = none",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "none", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-none" },
+            },
+            new()
+            {
+                Id = "image-shadow-sm",
+                Label = "shadow = sm",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "sm", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-sm" },
+            },
+            new()
+            {
+                Id = "image-shadow-md",
+                Label = "shadow = md",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "md", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-md" },
+            },
+            new()
+            {
+                Id = "image-shadow-lg",
+                Label = "shadow = lg",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "lg", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-lg" },
+            },
+            new()
+            {
+                Id = "image-shadow-xl",
+                Label = "shadow = xl",
+                Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "xl", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-xl" },
             },
             ],
         },
         new()
         {
-            Slug = "card",
-            Name = "Card",
-            Component = "NMCard",
-            Tier = 4,
+            Slug = "avatar",
+            Name = "Avatar",
+            Component = "NMAvatar",
+            Tier = 1,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 1,
+            Free = true,
+            Description = "User photo, initials, or icon",
             Cases =
             [
             new()
             {
-                Id = "card-default",
+                Id = "avatar-default",
                 Label = "default",
-                Props = new NMCardProps
-            {
-                FooterVariant = "actions",
-                Padding = "md",
-                Variant = "default",
-                TestId = "card-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-default-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-default-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-default" },
             },
             new()
             {
-                Id = "card-footervariant-actions",
-                Label = "footerVariant = actions",
-                Props = new NMCardProps
-            {
-                FooterVariant = "actions",
-                Padding = "md",
-                Variant = "default",
-                TestId = "card-footervariant-actions",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-footervariant-actions-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-footervariant-actions-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-footervariant-actions-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-footervariant-actions-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-size-xs",
+                Label = "size = xs",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "xs", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-xs" },
             },
             new()
             {
-                Id = "card-footervariant-helper",
-                Label = "footerVariant = helper",
-                Props = new NMCardProps
-            {
-                FooterVariant = "helper",
-                Padding = "md",
-                Variant = "default",
-                TestId = "card-footervariant-helper",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-footervariant-helper-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-footervariant-helper-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-footervariant-helper-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-footervariant-helper-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-size-sm",
+                Label = "size = sm",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "sm", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-sm" },
             },
             new()
             {
-                Id = "card-padding-sm",
-                Label = "padding = sm",
-                Props = new NMCardProps
-            {
-                FooterVariant = "actions",
-                Padding = "sm",
-                Variant = "default",
-                TestId = "card-padding-sm",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-padding-sm-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-padding-sm-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-padding-sm-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-padding-sm-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-size-md",
+                Label = "size = md",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-md" },
             },
             new()
             {
-                Id = "card-padding-md",
-                Label = "padding = md",
-                Props = new NMCardProps
-            {
-                FooterVariant = "actions",
-                Padding = "md",
-                Variant = "default",
-                TestId = "card-padding-md",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-padding-md-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-padding-md-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-padding-md-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-padding-md-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-size-lg",
+                Label = "size = lg",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "lg", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-lg" },
             },
             new()
             {
-                Id = "card-padding-lg",
-                Label = "padding = lg",
-                Props = new NMCardProps
-            {
-                FooterVariant = "actions",
-                Padding = "lg",
-                Variant = "default",
-                TestId = "card-padding-lg",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-padding-lg-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-padding-lg-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-padding-lg-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-padding-lg-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-size-xl",
+                Label = "size = xl",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "xl", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-size-xl" },
             },
             new()
             {
-                Id = "card-variant-default",
-                Label = "variant = default",
-                Props = new NMCardProps
-            {
-                FooterVariant = "actions",
-                Padding = "md",
-                Variant = "default",
-                TestId = "card-variant-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-variant-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-variant-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-variant-default-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-variant-default-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-square-true",
+                Label = "square = true",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = true, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-square-true" },
             },
             new()
             {
-                Id = "card-variant-elevated",
-                Label = "variant = elevated",
-                Props = new NMCardProps
-            {
-                FooterVariant = "actions",
-                Padding = "md",
-                Variant = "elevated",
-                TestId = "card-variant-elevated",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-variant-elevated-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-variant-elevated-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-variant-elevated-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-variant-elevated-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-square-false",
+                Label = "square = false",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-square-false" },
             },
             new()
             {
-                Id = "card-variant-ghost",
-                Label = "variant = ghost",
-                Props = new NMCardProps
-            {
-                FooterVariant = "actions",
-                Padding = "md",
-                Variant = "ghost",
-                TestId = "card-variant-ghost",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "card-variant-ghost-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "card-variant-ghost-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Films",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "card-variant-ghost-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "filmMedia",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "card-variant-ghost-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
-                        },
-                    },
-                ],
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "chat",
-            Name = "Chat",
-            Component = "NMChat",
-            Tier = 4,
-            Cases =
-            [
-            new()
-            {
-                Id = "chat-default",
-                Label = "default",
-                Props = new NMChatProps { Messages = [
-                    new NmChatMessage
-                    {
-                        Variant = "received",
-                        Text = "The encode finished.",
-                        Time = "09:41",
-                    },
-                    new NmChatMessage
-                    {
-                        Variant = "sent",
-                        Text = "Any errors?",
-                        Time = "09:42",
-                    },
-                    new NmChatMessage
-                    {
-                        Variant = "received",
-                        Text = "None. Two subtitle tracks were kept.",
-                        Time = "09:42",
-                    },
-                ], TestId = "chat-default" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "content-footer",
-            Name = "ContentFooter",
-            Component = "NMContentFooter",
-            Tier = 4,
-            Cases =
-            [
-            new()
-            {
-                Id = "content-footer-default",
-                Label = "default",
-                Props = new NMContentFooterProps
-            {
-                Variant = "actions",
-                TestId = "content-footer-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "content-footer-default-child-1",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "content-footer-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Cancel",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "content-footer-default-child-2",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "content-footer-default-child-2-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Save",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-status-none",
+                Label = "status = none",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-status-none" },
             },
             new()
             {
-                Id = "content-footer-variant-actions",
-                Label = "variant = actions",
-                Props = new NMContentFooterProps
-            {
-                Variant = "actions",
-                TestId = "content-footer-variant-actions",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "content-footer-variant-actions-child-1",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "content-footer-variant-actions-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Cancel",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "content-footer-variant-actions-child-2",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "content-footer-variant-actions-child-2-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Save",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
+                Id = "avatar-status-online",
+                Label = "status = online",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "online", Type = "initials", TestId = "avatar-status-online" },
             },
             new()
             {
-                Id = "content-footer-variant-helper",
-                Label = "variant = helper",
-                Props = new NMContentFooterProps
-            {
-                Variant = "helper",
-                TestId = "content-footer-variant-helper",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "content-footer-variant-helper-child-1",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "content-footer-variant-helper-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Cancel",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "content-footer-variant-helper-child-2",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "content-footer-variant-helper-child-2-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Save",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "content-header",
-            Name = "ContentHeader",
-            Component = "NMContentHeader",
-            Tier = 4,
-            Cases =
-            [
-            new()
-            {
-                Id = "content-header-default",
-                Label = "default",
-                Props = new NMContentHeaderProps
-            {
-                CanClose = true,
-                TitleId = "content-header-title",
-                TestId = "content-header-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "content-header-default-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Encoding queue",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "content-header-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "timer",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "avatar-status-offline",
+                Label = "status = offline",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "offline", Type = "initials", TestId = "avatar-status-offline" },
             },
             new()
             {
-                Id = "content-header-canclose-true",
-                Label = "canClose = true",
-                Props = new NMContentHeaderProps
-            {
-                CanClose = true,
-                TitleId = "content-header-title",
-                TestId = "content-header-canclose-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "content-header-canclose-true-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Encoding queue",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "content-header-canclose-true-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "timer",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "avatar-status-away",
+                Label = "status = away",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "away", Type = "initials", TestId = "avatar-status-away" },
             },
             new()
             {
-                Id = "content-header-canclose-false",
-                Label = "canClose = false",
-                Props = new NMContentHeaderProps
-            {
-                CanClose = false,
-                TitleId = "content-header-title",
-                TestId = "content-header-canclose-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "content-header-canclose-false-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Encoding queue",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "content-header-canclose-false-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "timer",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "empty-state",
-            Name = "Empty States",
-            Component = "NMEmptyState",
-            Tier = 4,
-            Cases =
-            [
-            new()
-            {
-                Id = "empty-state-default",
-                Label = "default",
-                Props = new NMEmptyStateProps
-            {
-                Variant = "default",
-                TestId = "empty-state-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "empty-state-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "empty-state-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Nothing in this library yet",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "empty-state-default-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Add a folder and NoMercy will scan it.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "empty-state-default-child-3",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "empty-state-default-child-3-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Add a folder",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "empty-state-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "folderOpen",
-                                ["size"] = "lg",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "avatar-status-busy",
+                Label = "status = busy",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "busy", Type = "initials", TestId = "avatar-status-busy" },
             },
             new()
             {
-                Id = "empty-state-variant-default",
-                Label = "variant = default",
-                Props = new NMEmptyStateProps
-            {
-                Variant = "default",
-                TestId = "empty-state-variant-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "empty-state-variant-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "empty-state-variant-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Nothing in this library yet",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "empty-state-variant-default-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Add a folder and NoMercy will scan it.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "empty-state-variant-default-child-3",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "empty-state-variant-default-child-3-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Add a folder",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "empty-state-variant-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "folderOpen",
-                                ["size"] = "lg",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "avatar-type-icon",
+                Label = "type = icon",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "icon", TestId = "avatar-type-icon" },
             },
             new()
             {
-                Id = "empty-state-variant-compact",
-                Label = "variant = compact",
-                Props = new NMEmptyStateProps
-            {
-                Variant = "compact",
-                TestId = "empty-state-variant-compact",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "empty-state-variant-compact-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "empty-state-variant-compact-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Nothing in this library yet",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "empty-state-variant-compact-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Add a folder and NoMercy will scan it.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "empty-state-variant-compact-child-3",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "empty-state-variant-compact-child-3-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Add a folder",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "empty-state-variant-compact-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "folderOpen",
-                                ["size"] = "lg",
-                            },
-                        },
-                    },
-                },
-            },
+                Id = "avatar-type-initial",
+                Label = "type = initial",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initial", TestId = "avatar-type-initial" },
             },
             new()
             {
-                Id = "empty-state-variant-card",
-                Label = "variant = card",
-                Props = new NMEmptyStateProps
-            {
-                Variant = "card",
-                TestId = "empty-state-variant-card",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "empty-state-variant-card-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "empty-state-variant-card-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Nothing in this library yet",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "empty-state-variant-card-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Add a folder and NoMercy will scan it.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "empty-state-variant-card-child-3",
-                        Component = "NMButton",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "empty-state-variant-card-child-3-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Add a folder",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "empty-state-variant-card-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "folderOpen",
-                                ["size"] = "lg",
-                            },
-                        },
-                    },
-                },
+                Id = "avatar-type-initials",
+                Label = "type = initials",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "initials", TestId = "avatar-type-initials" },
             },
+            new()
+            {
+                Id = "avatar-type-image",
+                Label = "type = image",
+                Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "image", TestId = "avatar-type-image" },
             },
             ],
         },
@@ -9306,6 +5916,11 @@ public static class NmKitchenSink
             Name = "List",
             Component = "NMList",
             Tier = 4,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 2,
+            Free = false,
+            Description = "Ordered and unordered lists with flexible content composition",
             Cases =
             [
             new()
@@ -10832,36 +7447,628 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "metrics",
-            Name = "Metrics",
-            Component = "NMMetrics",
-            Tier = 4,
+            Slug = "carousel",
+            Name = "Carousel",
+            Component = "NMCarousel",
+            Tier = 6,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 3,
+            Free = false,
+            Description = "Horizontal scrollable content with navigation controls and touch support",
             Cases =
             [
             new()
             {
-                Id = "metrics-default",
+                Id = "carousel-default",
                 Label = "default",
-                Props = new NMMetricsProps
+                Props = new NMCarouselProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = false,
-                Trend = "up",
-                Value = "$42,580",
-                Variant = "default",
-                TestId = "metrics-default",
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-default-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-navoutside-true",
+                Label = "navOutside = true",
+                Props = new NMCarouselProps
+            {
+                NavOutside = true,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-navoutside-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-navoutside-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-navoutside-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-navoutside-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-navoutside-false",
+                Label = "navOutside = false",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-navoutside-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-navoutside-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-navoutside-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-navoutside-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-showdots-true",
+                Label = "showDots = true",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-showdots-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-showdots-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-showdots-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-showdots-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-showdots-false",
+                Label = "showDots = false",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = false,
+                ShowNav = true,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-showdots-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-showdots-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-showdots-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-showdots-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-shownav-true",
+                Label = "showNav = true",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-shownav-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-shownav-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-shownav-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-shownav-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-shownav-false",
+                Label = "showNav = false",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = false,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-shownav-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-shownav-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-shownav-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-shownav-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-size-sm",
+                Label = "size = sm",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "sm",
+                Snap = false,
+                TestId = "carousel-size-sm",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-size-sm-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-size-md",
+                Label = "size = md",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-size-md",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-size-md-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-size-lg",
+                Label = "size = lg",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "lg",
+                Snap = false,
+                TestId = "carousel-size-lg",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-size-lg-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-size-full",
+                Label = "size = full",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "full",
+                Snap = false,
+                TestId = "carousel-size-full",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-size-full-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-full-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-size-full-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-snap-true",
+                Label = "snap = true",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "md",
+                Snap = true,
+                TestId = "carousel-snap-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-snap-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-snap-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-snap-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "carousel-snap-false",
+                Label = "snap = false",
+                Props = new NMCarouselProps
+            {
+                NavOutside = false,
+                ShowDots = true,
+                ShowNav = true,
+                Size = "md",
+                Snap = false,
+                TestId = "carousel-snap-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "carousel-snap-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 1",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-snap-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 2",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "carousel-snap-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Slide 3",
+                        },
+                    },
+                ],
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "badge",
+            Name = "Badge",
+            Component = "NMBadge",
+            Tier = 1,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 4,
+            Free = true,
+            Description = "Status indicator and label",
+            Cases =
+            [
+            new()
+            {
+                Id = "badge-default",
+                Label = "default",
+                Props = new NMBadgeProps
+            {
+                Dot = false,
+                Mode = "text",
+                Size = "md",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-default",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
-                    ["icon"] = new List<NmComponent>
+                    ["leading"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-default-icon-1",
+                            Id = "badge-default-leading-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["icon"] = "check",
+                                ["size"] = "sm",
                             },
                         },
                     },
@@ -10870,28 +8077,28 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "metrics-showicon-true",
-                Label = "showIcon = true",
-                Props = new NMMetricsProps
+                Id = "badge-dot-true",
+                Label = "dot = true",
+                Props = new NMBadgeProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = true,
-                Trend = "up",
-                Value = "$42,580",
-                Variant = "default",
-                TestId = "metrics-showicon-true",
+                Dot = true,
+                Mode = "text",
+                Size = "md",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-dot-true",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
-                    ["icon"] = new List<NmComponent>
+                    ["leading"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-showicon-true-icon-1",
+                            Id = "badge-dot-true-leading-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["icon"] = "check",
+                                ["size"] = "sm",
                             },
                         },
                     },
@@ -10900,28 +8107,28 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "metrics-showicon-false",
-                Label = "showIcon = false",
-                Props = new NMMetricsProps
+                Id = "badge-dot-false",
+                Label = "dot = false",
+                Props = new NMBadgeProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = false,
-                Trend = "up",
-                Value = "$42,580",
-                Variant = "default",
-                TestId = "metrics-showicon-false",
+                Dot = false,
+                Mode = "text",
+                Size = "md",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-dot-false",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
-                    ["icon"] = new List<NmComponent>
+                    ["leading"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-showicon-false-icon-1",
+                            Id = "badge-dot-false-leading-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["icon"] = "check",
+                                ["size"] = "sm",
                             },
                         },
                     },
@@ -10930,28 +8137,28 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "metrics-trend-up",
-                Label = "trend = up",
-                Props = new NMMetricsProps
+                Id = "badge-mode-text",
+                Label = "mode = text",
+                Props = new NMBadgeProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = false,
-                Trend = "up",
-                Value = "$42,580",
-                Variant = "default",
-                TestId = "metrics-trend-up",
+                Dot = false,
+                Mode = "text",
+                Size = "md",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-mode-text",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
-                    ["icon"] = new List<NmComponent>
+                    ["leading"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-trend-up-icon-1",
+                            Id = "badge-mode-text-leading-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["icon"] = "check",
+                                ["size"] = "sm",
                             },
                         },
                     },
@@ -10960,28 +8167,28 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "metrics-trend-down",
-                Label = "trend = down",
-                Props = new NMMetricsProps
+                Id = "badge-mode-icon-only",
+                Label = "mode = icon-only",
+                Props = new NMBadgeProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = false,
-                Trend = "down",
-                Value = "$42,580",
-                Variant = "default",
-                TestId = "metrics-trend-down",
+                Dot = false,
+                Mode = "icon-only",
+                Size = "md",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-mode-icon-only",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
-                    ["icon"] = new List<NmComponent>
+                    ["leading"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-trend-down-icon-1",
+                            Id = "badge-mode-icon-only-leading-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["icon"] = "check",
+                                ["size"] = "sm",
                             },
                         },
                     },
@@ -10990,28 +8197,28 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "metrics-trend-neutral",
-                Label = "trend = neutral",
-                Props = new NMMetricsProps
+                Id = "badge-size-sm",
+                Label = "size = sm",
+                Props = new NMBadgeProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = false,
-                Trend = "neutral",
-                Value = "$42,580",
-                Variant = "default",
-                TestId = "metrics-trend-neutral",
+                Dot = false,
+                Mode = "text",
+                Size = "sm",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-size-sm",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
-                    ["icon"] = new List<NmComponent>
+                    ["leading"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-trend-neutral-icon-1",
+                            Id = "badge-size-sm-leading-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["icon"] = "check",
+                                ["size"] = "sm",
                             },
                         },
                     },
@@ -11020,28 +8227,1899 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "metrics-variant-default",
+                Id = "badge-size-md",
+                Label = "size = md",
+                Props = new NMBadgeProps
+            {
+                Dot = false,
+                Mode = "text",
+                Size = "md",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-size-md",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "badge-size-md-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "check",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "badge-size-lg",
+                Label = "size = lg",
+                Props = new NMBadgeProps
+            {
+                Dot = false,
+                Mode = "text",
+                Size = "lg",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-size-lg",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "badge-size-lg-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "check",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "badge-variant-ghost",
+                Label = "variant = ghost",
+                Props = new NMBadgeProps
+            {
+                Dot = false,
+                Mode = "text",
+                Size = "md",
+                Text = "Label",
+                Variant = "ghost",
+                TestId = "badge-variant-ghost",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "badge-variant-ghost-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "check",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "badge-variant-solid",
+                Label = "variant = solid",
+                Props = new NMBadgeProps
+            {
+                Dot = false,
+                Mode = "text",
+                Size = "md",
+                Text = "Label",
+                Variant = "solid",
+                TestId = "badge-variant-solid",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "badge-variant-solid-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "check",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "badge-variant-outline",
+                Label = "variant = outline",
+                Props = new NMBadgeProps
+            {
+                Dot = false,
+                Mode = "text",
+                Size = "md",
+                Text = "Label",
+                Variant = "outline",
+                TestId = "badge-variant-outline",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "badge-variant-outline-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "check",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "badge-group",
+            Name = "Badge Group",
+            Component = "NMBadgeGroup",
+            Tier = 3,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 5,
+            Free = false,
+            Description = "Badge with descriptive text and arrow",
+            Cases =
+            [
+            new()
+            {
+                Id = "badge-group-default",
+                Label = "default",
+                Props = new NMBadgeGroupProps
+            {
+                BadgePos = "left",
+                Size = "md",
+                Variant = "ghost",
+                TestId = "badge-group-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "badge-group-default-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "New",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Three libraries finished scanning",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "badge-group-badgepos-left",
+                Label = "badgePos = left",
+                Props = new NMBadgeGroupProps
+            {
+                BadgePos = "left",
+                Size = "md",
+                Variant = "ghost",
+                TestId = "badge-group-badgepos-left",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "badge-group-badgepos-left-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "New",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-badgepos-left-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Three libraries finished scanning",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "badge-group-badgepos-right",
+                Label = "badgePos = right",
+                Props = new NMBadgeGroupProps
+            {
+                BadgePos = "right",
+                Size = "md",
+                Variant = "ghost",
+                TestId = "badge-group-badgepos-right",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "badge-group-badgepos-right-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "New",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-badgepos-right-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Three libraries finished scanning",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "badge-group-size-md",
+                Label = "size = md",
+                Props = new NMBadgeGroupProps
+            {
+                BadgePos = "left",
+                Size = "md",
+                Variant = "ghost",
+                TestId = "badge-group-size-md",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "badge-group-size-md-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "New",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Three libraries finished scanning",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "badge-group-size-lg",
+                Label = "size = lg",
+                Props = new NMBadgeGroupProps
+            {
+                BadgePos = "left",
+                Size = "lg",
+                Variant = "ghost",
+                TestId = "badge-group-size-lg",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "badge-group-size-lg-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "New",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Three libraries finished scanning",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "badge-group-variant-ghost",
+                Label = "variant = ghost",
+                Props = new NMBadgeGroupProps
+            {
+                BadgePos = "left",
+                Size = "md",
+                Variant = "ghost",
+                TestId = "badge-group-variant-ghost",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "badge-group-variant-ghost-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "New",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-ghost-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Three libraries finished scanning",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "badge-group-variant-solid",
+                Label = "variant = solid",
+                Props = new NMBadgeGroupProps
+            {
+                BadgePos = "left",
+                Size = "md",
+                Variant = "solid",
+                TestId = "badge-group-variant-solid",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "badge-group-variant-solid-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "New",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-solid-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Three libraries finished scanning",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "badge-group-variant-outline",
+                Label = "variant = outline",
+                Props = new NMBadgeGroupProps
+            {
+                BadgePos = "left",
+                Size = "md",
+                Variant = "outline",
+                TestId = "badge-group-variant-outline",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "badge-group-variant-outline-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "New",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "badge-group-variant-outline-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Three libraries finished scanning",
+                        },
+                    },
+                ],
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "tag",
+            Name = "Tag",
+            Component = "NMTag",
+            Tier = 1,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 6,
+            Free = false,
+            Description = "Compact labeled container with utility slots",
+            Cases =
+            [
+            new()
+            {
+                Id = "tag-default",
+                Label = "default",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-default",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-default-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-avatar-true",
+                Label = "avatar = true",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-avatar-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-avatar-true-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-avatar-false",
+                Label = "avatar = false",
+                Props = new NMTagProps
+            {
+                Avatar = false,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-avatar-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-avatar-false-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-checkbox-true",
+                Label = "checkbox = true",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-checkbox-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-checkbox-true-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-checkbox-false",
+                Label = "checkbox = false",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = false,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-checkbox-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-checkbox-false-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-count-true",
+                Label = "count = true",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-count-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-count-true-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-count-false",
+                Label = "count = false",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = false,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-count-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-count-false-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-icon-true",
+                Label = "icon = true",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-icon-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-icon-true-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-icon-false",
+                Label = "icon = false",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = false,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-icon-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-icon-false-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-size-sm",
+                Label = "size = sm",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-size-sm",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-size-sm-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-size-md",
+                Label = "size = md",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "md",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-size-md",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-size-md-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-size-lg",
+                Label = "size = lg",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "lg",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-size-lg",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-size-lg-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-xclose-true",
+                Label = "xclose = true",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = true,
+                TestId = "tag-xclose-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-xclose-true-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tag-xclose-false",
+                Label = "xclose = false",
+                Props = new NMTagProps
+            {
+                Avatar = true,
+                Checkbox = true,
+                Count = true,
+                CountText = "5",
+                Icon = true,
+                Size = "sm",
+                Text = "Label",
+                Xclose = false,
+                TestId = "tag-xclose-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["leading"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tag-xclose-false-leading-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "tag",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "card",
+            Name = "Card",
+            Component = "NMCard",
+            Tier = 4,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 7,
+            Free = false,
+            Description = "Content container with optional ContentHeader and ContentFooter",
+            Cases =
+            [
+            new()
+            {
+                Id = "card-default",
+                Label = "default",
+                Props = new NMCardProps
+            {
+                FooterVariant = "actions",
+                Padding = "md",
+                Variant = "default",
+                TestId = "card-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-default-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-default-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-default-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "card-footervariant-actions",
+                Label = "footerVariant = actions",
+                Props = new NMCardProps
+            {
+                FooterVariant = "actions",
+                Padding = "md",
+                Variant = "default",
+                TestId = "card-footervariant-actions",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-footervariant-actions-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-footervariant-actions-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-footervariant-actions-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-footervariant-actions-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "card-footervariant-helper",
+                Label = "footerVariant = helper",
+                Props = new NMCardProps
+            {
+                FooterVariant = "helper",
+                Padding = "md",
+                Variant = "default",
+                TestId = "card-footervariant-helper",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-footervariant-helper-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-footervariant-helper-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-footervariant-helper-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-footervariant-helper-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "card-padding-sm",
+                Label = "padding = sm",
+                Props = new NMCardProps
+            {
+                FooterVariant = "actions",
+                Padding = "sm",
+                Variant = "default",
+                TestId = "card-padding-sm",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-padding-sm-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-padding-sm-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-padding-sm-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-sm-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "card-padding-md",
+                Label = "padding = md",
+                Props = new NMCardProps
+            {
+                FooterVariant = "actions",
+                Padding = "md",
+                Variant = "default",
+                TestId = "card-padding-md",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-padding-md-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-padding-md-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-padding-md-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-md-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "card-padding-lg",
+                Label = "padding = lg",
+                Props = new NMCardProps
+            {
+                FooterVariant = "actions",
+                Padding = "lg",
+                Variant = "default",
+                TestId = "card-padding-lg",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-padding-lg-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-padding-lg-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-padding-lg-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-padding-lg-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "card-variant-default",
                 Label = "variant = default",
-                Props = new NMMetricsProps
+                Props = new NMCardProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = false,
-                Trend = "up",
-                Value = "$42,580",
+                FooterVariant = "actions",
+                Padding = "md",
                 Variant = "default",
-                TestId = "metrics-variant-default",
+                TestId = "card-variant-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-variant-default-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-variant-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-variant-default-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-default-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "card-variant-elevated",
+                Label = "variant = elevated",
+                Props = new NMCardProps
+            {
+                FooterVariant = "actions",
+                Padding = "md",
+                Variant = "elevated",
+                TestId = "card-variant-elevated",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-variant-elevated-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-variant-elevated-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-variant-elevated-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-elevated-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "card-variant-ghost",
+                Label = "variant = ghost",
+                Props = new NMCardProps
+            {
+                FooterVariant = "actions",
+                Padding = "md",
+                Variant = "ghost",
+                TestId = "card-variant-ghost",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "card-variant-ghost-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "card-variant-ghost-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Films",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "card-variant-ghost-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "filmMedia",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "card-variant-ghost-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "1 284 titles, last scanned an hour ago.",
+                        },
+                    },
+                ],
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "divider",
+            Name = "Divider",
+            Component = "NMDivider",
+            Tier = 1,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 8,
+            Free = false,
+            Description = "Horizontal separator with optional centered content",
+            Cases =
+            [
+            new()
+            {
+                Id = "divider-default",
+                Label = "default",
+                Props = new NMDividerProps
+            {
+                LabelText = "Divider",
+                Line = "solid",
+                Placement = "center",
+                TestId = "divider-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "divider-default-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Divider",
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["leading"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-default-child-1-leading-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                                ["trailing"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-default-child-1-trailing-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "divider-line-solid",
+                Label = "line = solid",
+                Props = new NMDividerProps
+            {
+                LabelText = "Divider",
+                Line = "solid",
+                Placement = "center",
+                TestId = "divider-line-solid",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "divider-line-solid-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Divider",
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["leading"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-line-solid-child-1-leading-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                                ["trailing"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-line-solid-child-1-trailing-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "divider-line-dashed",
+                Label = "line = dashed",
+                Props = new NMDividerProps
+            {
+                LabelText = "Divider",
+                Line = "dashed",
+                Placement = "center",
+                TestId = "divider-line-dashed",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "divider-line-dashed-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Divider",
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["leading"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-line-dashed-child-1-leading-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                                ["trailing"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-line-dashed-child-1-trailing-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "divider-line-dotted",
+                Label = "line = dotted",
+                Props = new NMDividerProps
+            {
+                LabelText = "Divider",
+                Line = "dotted",
+                Placement = "center",
+                TestId = "divider-line-dotted",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "divider-line-dotted-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Divider",
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["leading"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-line-dotted-child-1-leading-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                                ["trailing"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-line-dotted-child-1-trailing-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "divider-placement-left",
+                Label = "placement = left",
+                Props = new NMDividerProps
+            {
+                LabelText = "Divider",
+                Line = "solid",
+                Placement = "left",
+                TestId = "divider-placement-left",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "divider-placement-left-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Divider",
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["leading"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-placement-left-child-1-leading-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                                ["trailing"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-placement-left-child-1-trailing-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "divider-placement-center",
+                Label = "placement = center",
+                Props = new NMDividerProps
+            {
+                LabelText = "Divider",
+                Line = "solid",
+                Placement = "center",
+                TestId = "divider-placement-center",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "divider-placement-center-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Divider",
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["leading"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-placement-center-child-1-leading-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                                ["trailing"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-placement-center-child-1-trailing-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "divider-placement-right",
+                Label = "placement = right",
+                Props = new NMDividerProps
+            {
+                LabelText = "Divider",
+                Line = "solid",
+                Placement = "right",
+                TestId = "divider-placement-right",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "divider-placement-right-child-1",
+                        Component = "NMBadge",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Divider",
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["leading"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-placement-right-child-1-leading-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                                ["trailing"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "divider-placement-right-child-1-trailing-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "star",
+                                            ["size"] = "sm",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "tooltip",
+            Name = "Tooltip",
+            Component = "NMTooltip",
+            Tier = 5,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 9,
+            Free = true,
+            Description = "Contextual popup on hover",
+            Cases =
+            [
+            new()
+            {
+                Id = "tooltip-default",
+                Label = "default",
+                Props = new NMTooltipProps
+            {
+                Position = "top",
+                TestId = "tooltip-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tooltip-default-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Rescans this library now",
+                        },
+                    },
+                ],
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
-                    ["icon"] = new List<NmComponent>
+                    ["trigger"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-variant-default-icon-1",
-                            Component = "NMIcon",
+                            Id = "tooltip-default-trigger-1",
+                            Component = "NMButton",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["items"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "tooltip-default-trigger-1-1",
+                                        Component = "NMText",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["text"] = "Rescan",
+                                        },
+                                    },
+                                },
                             },
                         },
                     },
@@ -11050,28 +10128,46 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "metrics-variant-card",
-                Label = "variant = card",
-                Props = new NMMetricsProps
+                Id = "tooltip-position-top",
+                Label = "position = top",
+                Props = new NMTooltipProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = false,
-                Trend = "up",
-                Value = "$42,580",
-                Variant = "card",
-                TestId = "metrics-variant-card",
+                Position = "top",
+                TestId = "tooltip-position-top",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tooltip-position-top-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Rescans this library now",
+                        },
+                    },
+                ],
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
-                    ["icon"] = new List<NmComponent>
+                    ["trigger"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-variant-card-icon-1",
-                            Component = "NMIcon",
+                            Id = "tooltip-position-top-trigger-1",
+                            Component = "NMButton",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["items"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "tooltip-position-top-trigger-1-1",
+                                        Component = "NMText",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["text"] = "Rescan",
+                                        },
+                                    },
+                                },
                             },
                         },
                     },
@@ -11080,28 +10176,508 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "metrics-variant-compact",
+                Id = "tooltip-position-right",
+                Label = "position = right",
+                Props = new NMTooltipProps
+            {
+                Position = "right",
+                TestId = "tooltip-position-right",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tooltip-position-right-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Rescans this library now",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["trigger"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tooltip-position-right-trigger-1",
+                            Component = "NMButton",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["items"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "tooltip-position-right-trigger-1-1",
+                                        Component = "NMText",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["text"] = "Rescan",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tooltip-position-bottom",
+                Label = "position = bottom",
+                Props = new NMTooltipProps
+            {
+                Position = "bottom",
+                TestId = "tooltip-position-bottom",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tooltip-position-bottom-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Rescans this library now",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["trigger"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tooltip-position-bottom-trigger-1",
+                            Component = "NMButton",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["items"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "tooltip-position-bottom-trigger-1-1",
+                                        Component = "NMText",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["text"] = "Rescan",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "tooltip-position-left",
+                Label = "position = left",
+                Props = new NMTooltipProps
+            {
+                Position = "left",
+                TestId = "tooltip-position-left",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tooltip-position-left-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Rescans this library now",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["trigger"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "tooltip-position-left-trigger-1",
+                            Component = "NMButton",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["items"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "tooltip-position-left-trigger-1-1",
+                                        Component = "NMText",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["text"] = "Rescan",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "skeleton",
+            Name = "Skeleton",
+            Component = "NMSkeleton",
+            Tier = 1,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 10,
+            Free = false,
+            Description = "Loading placeholder shapes",
+            Cases =
+            [
+            new()
+            {
+                Id = "skeleton-default",
+                Label = "default",
+                Props = new NMSkeletonProps { Variant = "text", TestId = "skeleton-default" },
+            },
+            new()
+            {
+                Id = "skeleton-variant-text",
+                Label = "variant = text",
+                Props = new NMSkeletonProps { Variant = "text", TestId = "skeleton-variant-text" },
+            },
+            new()
+            {
+                Id = "skeleton-variant-circle",
+                Label = "variant = circle",
+                Props = new NMSkeletonProps { Variant = "circle", TestId = "skeleton-variant-circle" },
+            },
+            new()
+            {
+                Id = "skeleton-variant-rectangle",
+                Label = "variant = rectangle",
+                Props = new NMSkeletonProps { Variant = "rectangle", TestId = "skeleton-variant-rectangle" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "empty-state",
+            Name = "Empty States",
+            Component = "NMEmptyState",
+            Tier = 4,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 11,
+            Free = false,
+            Description = "Placeholder for empty content with icon and actions",
+            Cases =
+            [
+            new()
+            {
+                Id = "empty-state-default",
+                Label = "default",
+                Props = new NMEmptyStateProps
+            {
+                Variant = "default",
+                TestId = "empty-state-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "empty-state-default-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "empty-state-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Nothing in this library yet",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-default-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Add a folder and NoMercy will scan it.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-default-child-3",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "empty-state-default-child-3-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Add a folder",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "empty-state-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "folderOpen",
+                                ["size"] = "lg",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "empty-state-variant-default",
+                Label = "variant = default",
+                Props = new NMEmptyStateProps
+            {
+                Variant = "default",
+                TestId = "empty-state-variant-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "empty-state-variant-default-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "empty-state-variant-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Nothing in this library yet",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-default-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Add a folder and NoMercy will scan it.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-default-child-3",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "empty-state-variant-default-child-3-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Add a folder",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "empty-state-variant-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "folderOpen",
+                                ["size"] = "lg",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "empty-state-variant-compact",
                 Label = "variant = compact",
-                Props = new NMMetricsProps
+                Props = new NMEmptyStateProps
             {
-                Change = "+12.5%",
-                Label = "Revenue",
-                ShowIcon = false,
-                Trend = "up",
-                Value = "$42,580",
                 Variant = "compact",
-                TestId = "metrics-variant-compact",
+                TestId = "empty-state-variant-compact",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "empty-state-variant-compact-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "empty-state-variant-compact-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Nothing in this library yet",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-compact-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Add a folder and NoMercy will scan it.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-compact-child-3",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "empty-state-variant-compact-child-3-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Add a folder",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
                     ["icon"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "metrics-variant-compact-icon-1",
+                            Id = "empty-state-variant-compact-icon-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "arrowTrendingUp",
+                                ["icon"] = "folderOpen",
+                                ["size"] = "lg",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "empty-state-variant-card",
+                Label = "variant = card",
+                Props = new NMEmptyStateProps
+            {
+                Variant = "card",
+                TestId = "empty-state-variant-card",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "empty-state-variant-card-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "empty-state-variant-card-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Nothing in this library yet",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-card-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Add a folder and NoMercy will scan it.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "empty-state-variant-card-child-3",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "empty-state-variant-card-child-3-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Add a folder",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "empty-state-variant-card-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "folderOpen",
+                                ["size"] = "lg",
                             },
                         },
                     },
@@ -11116,6 +10692,11 @@ public static class NmKitchenSink
             Name = "Table",
             Component = "NMTable",
             Tier = 4,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 12,
+            Free = false,
+            Description = "Data table with flexible cell types: checkbox, avatar-text, text, badge, rating, actions",
             Cases =
             [
             new()
@@ -12002,234 +11583,281 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "color-picker",
-            Name = "Color Picker",
-            Component = "NMColorPicker",
-            Tier = 5,
+            Slug = "metrics",
+            Name = "Metrics",
+            Component = "NMMetrics",
+            Tier = 4,
+            Group = "Data Display",
+            GroupOrder = 1,
+            GroupIndex = 13,
+            Free = false,
+            Description = "Stat cards with trend indicators",
             Cases =
             [
             new()
             {
-                Id = "color-picker-default",
+                Id = "metrics-default",
                 Label = "default",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-default" },
-            },
-            new()
+                Props = new NMMetricsProps
             {
-                Id = "color-picker-disabled-true",
-                Label = "disabled = true",
-                Props = new NMColorPickerProps { Disabled = true, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-disabled-true" },
-            },
-            new()
-            {
-                Id = "color-picker-disabled-false",
-                Label = "disabled = false",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-disabled-false" },
-            },
-            new()
-            {
-                Id = "color-picker-showinput-true",
-                Label = "showInput = true",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-showinput-true" },
-            },
-            new()
-            {
-                Id = "color-picker-showinput-false",
-                Label = "showInput = false",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = false, ShowPanel = true, Size = "md", TestId = "color-picker-showinput-false" },
-            },
-            new()
-            {
-                Id = "color-picker-showpanel-true",
-                Label = "showPanel = true",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-showpanel-true" },
-            },
-            new()
-            {
-                Id = "color-picker-showpanel-false",
-                Label = "showPanel = false",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = false, Size = "md", TestId = "color-picker-showpanel-false" },
-            },
-            new()
-            {
-                Id = "color-picker-size-sm",
-                Label = "size = sm",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "sm", TestId = "color-picker-size-sm" },
-            },
-            new()
-            {
-                Id = "color-picker-size-md",
-                Label = "size = md",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-size-md" },
-            },
-            new()
-            {
-                Id = "color-picker-size-lg",
-                Label = "size = lg",
-                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "lg", TestId = "color-picker-size-lg" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "combobox",
-            Name = "Combobox",
-            Component = "NMCombobox",
-            Tier = 5,
-            Cases =
-            [
-            new()
-            {
-                Id = "combobox-default",
-                Label = "default",
-                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
-                    "Apple",
-                    "Cherry",
-                ], Size = "md", TestId = "combobox-default" },
-            },
-            new()
-            {
-                Id = "combobox-isloading-true",
-                Label = "isLoading = true",
-                Props = new NMComboboxProps { FilterText = "ap", IsLoading = true, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
-                    "Apple",
-                    "Cherry",
-                ], Size = "md", TestId = "combobox-isloading-true" },
-            },
-            new()
-            {
-                Id = "combobox-isloading-false",
-                Label = "isLoading = false",
-                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
-                    "Apple",
-                    "Cherry",
-                ], Size = "md", TestId = "combobox-isloading-false" },
-            },
-            new()
-            {
-                Id = "combobox-multiple-true",
-                Label = "multiple = true",
-                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = true, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
-                    "Apple",
-                    "Cherry",
-                ], Size = "md", TestId = "combobox-multiple-true" },
-            },
-            new()
-            {
-                Id = "combobox-multiple-false",
-                Label = "multiple = false",
-                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
-                    "Apple",
-                    "Cherry",
-                ], Size = "md", TestId = "combobox-multiple-false" },
-            },
-            new()
-            {
-                Id = "combobox-size-sm",
-                Label = "size = sm",
-                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
-                    "Apple",
-                    "Cherry",
-                ], Size = "sm", TestId = "combobox-size-sm" },
-            },
-            new()
-            {
-                Id = "combobox-size-md",
-                Label = "size = md",
-                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
-                    "Apple",
-                    "Cherry",
-                ], Size = "md", TestId = "combobox-size-md" },
-            },
-            new()
-            {
-                Id = "combobox-size-lg",
-                Label = "size = lg",
-                Props = new NMComboboxProps { FilterText = "ap", IsLoading = false, Multiple = false, Placeholder = "Search options...", Selected = "Apple", SelectedItems = [
-                    "Apple",
-                    "Cherry",
-                ], Size = "lg", TestId = "combobox-size-lg" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "command-palette",
-            Name = "Ctrl + K",
-            Component = "NMCommandPalette",
-            Tier = 5,
-            Cases =
-            [
-            new()
-            {
-                Id = "command-palette-default",
-                Label = "default",
-                Props = new NMCommandPaletteProps
-            {
-                SearchText = "scan",
-                TestId = "command-palette-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "command-palette-default-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Go to Home",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "command-palette-default-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Open Dashboard",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "command-palette-default-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Start a scan",
-                        },
-                    },
-                ],
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = false,
+                Trend = "up",
+                Value = "$42,580",
+                Variant = "default",
+                TestId = "metrics-default",
                 Slots = new Dictionary<string, List<NmComponent>>
                 {
                     ["icon"] = new List<NmComponent>
                     {
                         new()
                         {
-                            Id = "command-palette-default-icon-1",
+                            Id = "metrics-default-icon-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "home",
-                                ["size"] = "sm",
+                                ["icon"] = "arrowTrendingUp",
                             },
                         },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "metrics-showicon-true",
+                Label = "showIcon = true",
+                Props = new NMMetricsProps
+            {
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = true,
+                Trend = "up",
+                Value = "$42,580",
+                Variant = "default",
+                TestId = "metrics-showicon-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
                         new()
                         {
-                            Id = "command-palette-default-icon-2",
+                            Id = "metrics-showicon-true-icon-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "dashboard",
-                                ["size"] = "sm",
+                                ["icon"] = "arrowTrendingUp",
                             },
                         },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "metrics-showicon-false",
+                Label = "showIcon = false",
+                Props = new NMMetricsProps
+            {
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = false,
+                Trend = "up",
+                Value = "$42,580",
+                Variant = "default",
+                TestId = "metrics-showicon-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
                         new()
                         {
-                            Id = "command-palette-default-icon-3",
+                            Id = "metrics-showicon-false-icon-1",
                             Component = "NMIcon",
                             Props = new Dictionary<string, object?>
                             {
-                                ["icon"] = "rotate",
-                                ["size"] = "sm",
+                                ["icon"] = "arrowTrendingUp",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "metrics-trend-up",
+                Label = "trend = up",
+                Props = new NMMetricsProps
+            {
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = false,
+                Trend = "up",
+                Value = "$42,580",
+                Variant = "default",
+                TestId = "metrics-trend-up",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "metrics-trend-up-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowTrendingUp",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "metrics-trend-down",
+                Label = "trend = down",
+                Props = new NMMetricsProps
+            {
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = false,
+                Trend = "down",
+                Value = "$42,580",
+                Variant = "default",
+                TestId = "metrics-trend-down",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "metrics-trend-down-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowTrendingUp",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "metrics-trend-neutral",
+                Label = "trend = neutral",
+                Props = new NMMetricsProps
+            {
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = false,
+                Trend = "neutral",
+                Value = "$42,580",
+                Variant = "default",
+                TestId = "metrics-trend-neutral",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "metrics-trend-neutral-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowTrendingUp",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "metrics-variant-default",
+                Label = "variant = default",
+                Props = new NMMetricsProps
+            {
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = false,
+                Trend = "up",
+                Value = "$42,580",
+                Variant = "default",
+                TestId = "metrics-variant-default",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "metrics-variant-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowTrendingUp",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "metrics-variant-card",
+                Label = "variant = card",
+                Props = new NMMetricsProps
+            {
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = false,
+                Trend = "up",
+                Value = "$42,580",
+                Variant = "card",
+                TestId = "metrics-variant-card",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "metrics-variant-card-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowTrendingUp",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "metrics-variant-compact",
+                Label = "variant = compact",
+                Props = new NMMetricsProps
+            {
+                Change = "+12.5%",
+                Label = "Revenue",
+                ShowIcon = false,
+                Trend = "up",
+                Value = "$42,580",
+                Variant = "compact",
+                TestId = "metrics-variant-compact",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "metrics-variant-compact-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowTrendingUp",
                             },
                         },
                     },
@@ -12240,515 +11868,348 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "date-picker",
-            Name = "Date Picker",
-            Component = "NMDatePicker",
-            Tier = 5,
+            Slug = "accordion",
+            Name = "Accordion",
+            Component = "NMAccordion",
+            Tier = 6,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 0,
+            Free = false,
+            Description = "Collapsible content sections with animated expand/collapse",
             Cases =
             [
             new()
             {
-                Id = "date-picker-default",
+                Id = "accordion-default",
                 Label = "default",
-                Props = new NMDatePickerProps { Mode = "single", Size = "md", TestId = "date-picker-default" },
+                Props = new NMAccordionProps
+            {
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
+                Size = "md",
+                Variant = "default",
+                TestId = "accordion-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "accordion-default-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "General",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Security",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Notifications",
+                        },
+                    },
+                ],
+            },
             },
             new()
             {
-                Id = "date-picker-mode-single",
-                Label = "mode = single",
-                Props = new NMDatePickerProps { Mode = "single", Size = "md", TestId = "date-picker-mode-single" },
+                Id = "accordion-allowmultiple-true",
+                Label = "allowMultiple = true",
+                Props = new NMAccordionProps
+            {
+                AllowMultiple = true,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
+                Size = "md",
+                Variant = "default",
+                TestId = "accordion-allowmultiple-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "General",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Security",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Notifications",
+                        },
+                    },
+                ],
+            },
             },
             new()
             {
-                Id = "date-picker-mode-range",
-                Label = "mode = range",
-                Props = new NMDatePickerProps { Mode = "range", Size = "md", TestId = "date-picker-mode-range" },
+                Id = "accordion-allowmultiple-false",
+                Label = "allowMultiple = false",
+                Props = new NMAccordionProps
+            {
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
+                Size = "md",
+                Variant = "default",
+                TestId = "accordion-allowmultiple-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "General",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Security",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-allowmultiple-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Notifications",
+                        },
+                    },
+                ],
+            },
             },
             new()
             {
-                Id = "date-picker-mode-year-month",
-                Label = "mode = year-month",
-                Props = new NMDatePickerProps { Mode = "year-month", Size = "md", TestId = "date-picker-mode-year-month" },
+                Id = "accordion-showchevron-true",
+                Label = "showChevron = true",
+                Props = new NMAccordionProps
+            {
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
+                Size = "md",
+                Variant = "default",
+                TestId = "accordion-showchevron-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "accordion-showchevron-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "General",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-showchevron-true-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Security",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-showchevron-true-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Notifications",
+                        },
+                    },
+                ],
+            },
             },
             new()
             {
-                Id = "date-picker-mode-dual",
-                Label = "mode = dual",
-                Props = new NMDatePickerProps { Mode = "dual", Size = "md", TestId = "date-picker-mode-dual" },
+                Id = "accordion-showchevron-false",
+                Label = "showChevron = false",
+                Props = new NMAccordionProps
+            {
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = false,
+                Size = "md",
+                Variant = "default",
+                TestId = "accordion-showchevron-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "accordion-showchevron-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "General",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-showchevron-false-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Security",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-showchevron-false-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Notifications",
+                        },
+                    },
+                ],
+            },
             },
             new()
             {
-                Id = "date-picker-size-sm",
+                Id = "accordion-size-sm",
                 Label = "size = sm",
-                Props = new NMDatePickerProps { Mode = "single", Size = "sm", TestId = "date-picker-size-sm" },
-            },
-            new()
+                Props = new NMAccordionProps
             {
-                Id = "date-picker-size-md",
-                Label = "size = md",
-                Props = new NMDatePickerProps { Mode = "single", Size = "md", TestId = "date-picker-size-md" },
-            },
-            new()
-            {
-                Id = "date-picker-size-lg",
-                Label = "size = lg",
-                Props = new NMDatePickerProps { Mode = "single", Size = "lg", TestId = "date-picker-size-lg" },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "drawer",
-            Name = "Drawer",
-            Component = "NMDrawer",
-            Tier = 5,
-            Cases =
-            [
-            new()
-            {
-                Id = "drawer-default",
-                Label = "default",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "right",
-                Size = "md",
-                TestId = "drawer-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-default-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
                 ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-hasoverlay-true",
-                Label = "hasOverlay = true",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "right",
-                Size = "md",
-                TestId = "drawer-hasoverlay-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-hasoverlay-true-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-hasoverlay-true-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-hasoverlay-true-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-hasoverlay-false",
-                Label = "hasOverlay = false",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = false,
-                IsOpen = true,
-                Position = "right",
-                Size = "md",
-                TestId = "drawer-hasoverlay-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-hasoverlay-false-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-hasoverlay-false-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-hasoverlay-false-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-isopen-true",
-                Label = "isOpen = true",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "right",
-                Size = "md",
-                TestId = "drawer-isopen-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-isopen-true-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-isopen-true-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-isopen-true-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-isopen-false",
-                Label = "isOpen = false",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = false,
-                Position = "right",
-                Size = "md",
-                TestId = "drawer-isopen-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-isopen-false-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-isopen-false-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-isopen-false-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-position-left",
-                Label = "position = left",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "left",
-                Size = "md",
-                TestId = "drawer-position-left",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-position-left-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-position-left-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-position-left-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-position-right",
-                Label = "position = right",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "right",
-                Size = "md",
-                TestId = "drawer-position-right",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-position-right-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-position-right-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-position-right-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-position-top",
-                Label = "position = top",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "top",
-                Size = "md",
-                TestId = "drawer-position-top",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-position-top-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-position-top-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-position-top-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-position-bottom",
-                Label = "position = bottom",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "bottom",
-                Size = "md",
-                TestId = "drawer-position-bottom",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-position-bottom-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-position-bottom-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-position-bottom-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "drawer-size-sm",
-                Label = "size = sm",
-                Props = new NMDrawerProps
-            {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "right",
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
                 Size = "sm",
-                TestId = "drawer-size-sm",
+                Variant = "default",
+                TestId = "accordion-size-sm",
                 Items =
                 [
                     new()
                     {
-                        Id = "drawer-size-sm-child-1",
-                        Component = "NMContentHeader",
+                        Id = "accordion-size-sm-child-1",
+                        Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-size-sm-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
+                            ["text"] = "General",
                         },
                     },
                     new()
                     {
-                        Id = "drawer-size-sm-child-2",
-                        Component = "NMHelper",
+                        Id = "accordion-size-sm-child-2",
+                        Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["helperText"] = "Narrow the list without leaving the page.",
+                            ["text"] = "Security",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Notifications",
                         },
                     },
                 ],
@@ -12756,44 +12217,55 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "drawer-size-md",
+                Id = "accordion-size-md",
                 Label = "size = md",
-                Props = new NMDrawerProps
+                Props = new NMAccordionProps
             {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "right",
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
                 Size = "md",
-                TestId = "drawer-size-md",
+                Variant = "default",
+                TestId = "accordion-size-md",
                 Items =
                 [
                     new()
                     {
-                        Id = "drawer-size-md-child-1",
-                        Component = "NMContentHeader",
+                        Id = "accordion-size-md-child-1",
+                        Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-size-md-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
+                            ["text"] = "General",
                         },
                     },
                     new()
                     {
-                        Id = "drawer-size-md-child-2",
-                        Component = "NMHelper",
+                        Id = "accordion-size-md-child-2",
+                        Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["helperText"] = "Narrow the list without leaving the page.",
+                            ["text"] = "Security",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Notifications",
                         },
                     },
                 ],
@@ -12801,44 +12273,55 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "drawer-size-lg",
+                Id = "accordion-size-lg",
                 Label = "size = lg",
-                Props = new NMDrawerProps
+                Props = new NMAccordionProps
             {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "right",
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
                 Size = "lg",
-                TestId = "drawer-size-lg",
+                Variant = "default",
+                TestId = "accordion-size-lg",
                 Items =
                 [
                     new()
                     {
-                        Id = "drawer-size-lg-child-1",
-                        Component = "NMContentHeader",
+                        Id = "accordion-size-lg-child-1",
+                        Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-size-lg-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
+                            ["text"] = "General",
                         },
                     },
                     new()
                     {
-                        Id = "drawer-size-lg-child-2",
-                        Component = "NMHelper",
+                        Id = "accordion-size-lg-child-2",
+                        Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["helperText"] = "Narrow the list without leaving the page.",
+                            ["text"] = "Security",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "accordion-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Notifications",
                         },
                     },
                 ],
@@ -12846,2101 +12329,170 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "drawer-size-full",
-                Label = "size = full",
-                Props = new NMDrawerProps
+                Id = "accordion-variant-default",
+                Label = "variant = default",
+                Props = new NMAccordionProps
             {
-                HasOverlay = true,
-                IsOpen = true,
-                Position = "right",
-                Size = "full",
-                TestId = "drawer-size-full",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "drawer-size-full-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "drawer-size-full-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Filters",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "drawer-size-full-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Narrow the list without leaving the page.",
-                        },
-                    },
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
                 ],
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "dropdown",
-            Name = "Dropdown",
-            Component = "NMDropdown",
-            Tier = 5,
-            Cases =
-            [
-            new()
-            {
-                Id = "dropdown-default",
-                Label = "default",
-                Props = new NMDropdownProps
-            {
-                Size = "md",
-                TestId = "dropdown-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "dropdown-default-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Edit",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-default-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Duplicate",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-default-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Share",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-default-child-4",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Favourite",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-default-child-5",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Archive",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
+                DisabledItems = new Dictionary<string, bool>
                 {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "dropdown-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "edit",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-default-icon-2",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "fileCopy",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-default-icon-3",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "shareSquare",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-default-icon-4",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "star",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-default-icon-5",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "archiveBox",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
+                    ["2"] = true,
                 },
-            },
-            },
-            new()
-            {
-                Id = "dropdown-size-sm",
-                Label = "size = sm",
-                Props = new NMDropdownProps
-            {
-                Size = "sm",
-                TestId = "dropdown-size-sm",
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
+                Size = "md",
+                Variant = "default",
+                TestId = "accordion-variant-default",
                 Items =
                 [
                     new()
                     {
-                        Id = "dropdown-size-sm-child-1",
+                        Id = "accordion-variant-default-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Edit",
+                            ["text"] = "General",
                         },
                     },
                     new()
                     {
-                        Id = "dropdown-size-sm-child-2",
+                        Id = "accordion-variant-default-child-2",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Duplicate",
+                            ["text"] = "Security",
                         },
                     },
                     new()
                     {
-                        Id = "dropdown-size-sm-child-3",
+                        Id = "accordion-variant-default-child-3",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Share",
+                            ["text"] = "Notifications",
                         },
                     },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "accordion-variant-bordered",
+                Label = "variant = bordered",
+                Props = new NMAccordionProps
+            {
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
+                Size = "md",
+                Variant = "bordered",
+                TestId = "accordion-variant-bordered",
+                Items =
+                [
                     new()
                     {
-                        Id = "dropdown-size-sm-child-4",
+                        Id = "accordion-variant-bordered-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Favourite",
+                            ["text"] = "General",
                         },
                     },
                     new()
                     {
-                        Id = "dropdown-size-sm-child-5",
+                        Id = "accordion-variant-bordered-child-2",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Archive",
+                            ["text"] = "Security",
                         },
                     },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "dropdown-size-sm-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "edit",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-sm-icon-2",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "fileCopy",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-sm-icon-3",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "shareSquare",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-sm-icon-4",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "star",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-sm-icon-5",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "archiveBox",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "dropdown-size-md",
-                Label = "size = md",
-                Props = new NMDropdownProps
-            {
-                Size = "md",
-                TestId = "dropdown-size-md",
-                Items =
-                [
                     new()
                     {
-                        Id = "dropdown-size-md-child-1",
+                        Id = "accordion-variant-bordered-child-3",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Edit",
+                            ["text"] = "Notifications",
                         },
                     },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "accordion-variant-ghost",
+                Label = "variant = ghost",
+                Props = new NMAccordionProps
+            {
+                AllowMultiple = false,
+                Content = [
+                    "Names, locations and how often they are scanned.",
+                    "Who can reach this server, and with which account.",
+                    "What you are told about, and where.",
+                ],
+                DisabledItems = new Dictionary<string, bool>
+                {
+                    ["2"] = true,
+                },
+                OpenItems = new Dictionary<string, bool>
+                {
+                    ["0"] = true,
+                },
+                ShowChevron = true,
+                Size = "md",
+                Variant = "ghost",
+                TestId = "accordion-variant-ghost",
+                Items =
+                [
                     new()
                     {
-                        Id = "dropdown-size-md-child-2",
+                        Id = "accordion-variant-ghost-child-1",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Duplicate",
+                            ["text"] = "General",
                         },
                     },
                     new()
                     {
-                        Id = "dropdown-size-md-child-3",
+                        Id = "accordion-variant-ghost-child-2",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Share",
+                            ["text"] = "Security",
                         },
                     },
                     new()
                     {
-                        Id = "dropdown-size-md-child-4",
+                        Id = "accordion-variant-ghost-child-3",
                         Component = "NMText",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Favourite",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-size-md-child-5",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Archive",
+                            ["text"] = "Notifications",
                         },
                     },
                 ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "dropdown-size-md-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "edit",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-md-icon-2",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "fileCopy",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-md-icon-3",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "shareSquare",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-md-icon-4",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "star",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-md-icon-5",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "archiveBox",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "dropdown-size-lg",
-                Label = "size = lg",
-                Props = new NMDropdownProps
-            {
-                Size = "lg",
-                TestId = "dropdown-size-lg",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "dropdown-size-lg-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Edit",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-size-lg-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Duplicate",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-size-lg-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Share",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-size-lg-child-4",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Favourite",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "dropdown-size-lg-child-5",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Archive",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "dropdown-size-lg-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "edit",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-lg-icon-2",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "fileCopy",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-lg-icon-3",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "shareSquare",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-lg-icon-4",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "star",
-                                ["size"] = "sm",
-                            },
-                        },
-                        new()
-                        {
-                            Id = "dropdown-size-lg-icon-5",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "archiveBox",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "modal",
-            Name = "Modal",
-            Component = "NMModal",
-            Tier = 5,
-            Cases =
-            [
-            new()
-            {
-                Id = "modal-default",
-                Label = "default",
-                Props = new NMModalProps
-            {
-                FooterVariant = "actions",
-                Size = "md",
-                TestId = "modal-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "modal-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "modal-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Remove this library?",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "modal-default-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "alertTriangle",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "modal-default-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "modal-footervariant-actions",
-                Label = "footerVariant = actions",
-                Props = new NMModalProps
-            {
-                FooterVariant = "actions",
-                Size = "md",
-                TestId = "modal-footervariant-actions",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "modal-footervariant-actions-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "modal-footervariant-actions-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Remove this library?",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "modal-footervariant-actions-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "alertTriangle",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "modal-footervariant-actions-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "modal-footervariant-helper",
-                Label = "footerVariant = helper",
-                Props = new NMModalProps
-            {
-                FooterVariant = "helper",
-                Size = "md",
-                TestId = "modal-footervariant-helper",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "modal-footervariant-helper-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "modal-footervariant-helper-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Remove this library?",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "modal-footervariant-helper-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "alertTriangle",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "modal-footervariant-helper-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "modal-size-sm",
-                Label = "size = sm",
-                Props = new NMModalProps
-            {
-                FooterVariant = "actions",
-                Size = "sm",
-                TestId = "modal-size-sm",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "modal-size-sm-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "modal-size-sm-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Remove this library?",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "modal-size-sm-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "alertTriangle",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "modal-size-sm-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "modal-size-md",
-                Label = "size = md",
-                Props = new NMModalProps
-            {
-                FooterVariant = "actions",
-                Size = "md",
-                TestId = "modal-size-md",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "modal-size-md-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "modal-size-md-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Remove this library?",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "modal-size-md-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "alertTriangle",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "modal-size-md-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "modal-size-lg",
-                Label = "size = lg",
-                Props = new NMModalProps
-            {
-                FooterVariant = "actions",
-                Size = "lg",
-                TestId = "modal-size-lg",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "modal-size-lg-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "modal-size-lg-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Remove this library?",
-                                    },
-                                },
-                            },
-                            ["slots"] = new Dictionary<string, List<NmComponent>>
-                            {
-                                ["icon"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "modal-size-lg-child-1-icon-1",
-                                        Component = "NMIcon",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["icon"] = "alertTriangle",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "modal-size-lg-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
-                        },
-                    },
-                ],
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "popover",
-            Name = "Popover",
-            Component = "NMPopover",
-            Tier = 5,
-            Cases =
-            [
-            new()
-            {
-                Id = "popover-default",
-                Label = "default",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-default-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-default-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-default-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-isopen-true",
-                Label = "isOpen = true",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-isopen-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-isopen-true-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-isopen-true-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-isopen-true-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-isopen-false",
-                Label = "isOpen = false",
-                Props = new NMPopoverProps
-            {
-                IsOpen = false,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-isopen-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-isopen-false-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-isopen-false-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-isopen-false-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-position-top",
-                Label = "position = top",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "top",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-position-top",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-position-top-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-position-top-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-position-top-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-position-right",
-                Label = "position = right",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "right",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-position-right",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-position-right-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-position-right-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-position-right-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-position-bottom",
-                Label = "position = bottom",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-position-bottom",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-position-bottom-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-position-bottom-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-position-bottom-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-position-left",
-                Label = "position = left",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "left",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-position-left",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-position-left-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-position-left-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-position-left-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-showarrow-true",
-                Label = "showArrow = true",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-showarrow-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-showarrow-true-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-showarrow-true-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-showarrow-true-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-showarrow-false",
-                Label = "showArrow = false",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = false,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-showarrow-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-showarrow-false-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-showarrow-false-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-showarrow-false-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-showclose-true",
-                Label = "showClose = true",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-showclose-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-showclose-true-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-showclose-true-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-showclose-true-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-showclose-false",
-                Label = "showClose = false",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = false,
-                Size = "md",
-                TestId = "popover-showclose-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-showclose-false-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-showclose-false-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-showclose-false-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-size-sm",
-                Label = "size = sm",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "sm",
-                TestId = "popover-size-sm",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-size-sm-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-size-sm-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-size-sm-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-size-md",
-                Label = "size = md",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "md",
-                TestId = "popover-size-md",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-size-md-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-size-md-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-size-md-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "popover-size-lg",
-                Label = "size = lg",
-                Props = new NMPopoverProps
-            {
-                IsOpen = true,
-                Position = "bottom",
-                ShowArrow = true,
-                ShowClose = true,
-                Size = "lg",
-                TestId = "popover-size-lg",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "popover-size-lg-child-1",
-                        Component = "NMContentHeader",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["items"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "popover-size-lg-child-1-1",
-                                    Component = "NMText",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["text"] = "Sort by",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                    new()
-                    {
-                        Id = "popover-size-lg-child-2",
-                        Component = "NMHelper",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["helperText"] = "Recently added",
-                        },
-                    },
-                ],
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "search-input",
-            Name = "Search Input",
-            Component = "NMSearchInput",
-            Tier = 5,
-            Cases =
-            [
-            new()
-            {
-                Id = "search-input-default",
-                Label = "default",
-                Props = new NMSearchInputProps
-            {
-                Placeholder = "Search components...",
-                Size = "md",
-                Value = "arrival",
-                TestId = "search-input-default",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "search-input-default-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "searchMagnifyingGlass",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "search-input-size-sm",
-                Label = "size = sm",
-                Props = new NMSearchInputProps
-            {
-                Placeholder = "Search components...",
-                Size = "sm",
-                Value = "arrival",
-                TestId = "search-input-size-sm",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "search-input-size-sm-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "searchMagnifyingGlass",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "search-input-size-md",
-                Label = "size = md",
-                Props = new NMSearchInputProps
-            {
-                Placeholder = "Search components...",
-                Size = "md",
-                Value = "arrival",
-                TestId = "search-input-size-md",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "search-input-size-md-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "searchMagnifyingGlass",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "search-input-size-lg",
-                Label = "size = lg",
-                Props = new NMSearchInputProps
-            {
-                Placeholder = "Search components...",
-                Size = "lg",
-                Value = "arrival",
-                TestId = "search-input-size-lg",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["icon"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "search-input-size-lg-icon-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "searchMagnifyingGlass",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "select",
-            Name = "Select",
-            Component = "NMSelect",
-            Tier = 5,
-            Cases =
-            [
-            new()
-            {
-                Id = "select-default",
-                Label = "default",
-                Props = new NMSelectProps
-            {
-                Disabled = false,
-                Error = false,
-                Options = [
-                    new NmSelectOption
-                    {
-                        Label = "Apple",
-                        Value = "apple",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Banana",
-                        Value = "banana",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Cherry",
-                        Value = "cherry",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Mango",
-                        Value = "mango",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Pineapple",
-                        Value = "pineapple",
-                    },
-                ],
-                Placeholder = "Select an option...",
-                Size = "md",
-                TestId = "select-default",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "select-default-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "bulletList",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "select-disabled-true",
-                Label = "disabled = true",
-                Props = new NMSelectProps
-            {
-                Disabled = true,
-                Error = false,
-                Options = [
-                    new NmSelectOption
-                    {
-                        Label = "Apple",
-                        Value = "apple",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Banana",
-                        Value = "banana",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Cherry",
-                        Value = "cherry",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Mango",
-                        Value = "mango",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Pineapple",
-                        Value = "pineapple",
-                    },
-                ],
-                Placeholder = "Select an option...",
-                Size = "md",
-                TestId = "select-disabled-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "select-disabled-true-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "bulletList",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "select-disabled-false",
-                Label = "disabled = false",
-                Props = new NMSelectProps
-            {
-                Disabled = false,
-                Error = false,
-                Options = [
-                    new NmSelectOption
-                    {
-                        Label = "Apple",
-                        Value = "apple",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Banana",
-                        Value = "banana",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Cherry",
-                        Value = "cherry",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Mango",
-                        Value = "mango",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Pineapple",
-                        Value = "pineapple",
-                    },
-                ],
-                Placeholder = "Select an option...",
-                Size = "md",
-                TestId = "select-disabled-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "select-disabled-false-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "bulletList",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "select-error-true",
-                Label = "error = true",
-                Props = new NMSelectProps
-            {
-                Disabled = false,
-                Error = true,
-                Options = [
-                    new NmSelectOption
-                    {
-                        Label = "Apple",
-                        Value = "apple",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Banana",
-                        Value = "banana",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Cherry",
-                        Value = "cherry",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Mango",
-                        Value = "mango",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Pineapple",
-                        Value = "pineapple",
-                    },
-                ],
-                Placeholder = "Select an option...",
-                Size = "md",
-                TestId = "select-error-true",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "select-error-true-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "bulletList",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "select-error-false",
-                Label = "error = false",
-                Props = new NMSelectProps
-            {
-                Disabled = false,
-                Error = false,
-                Options = [
-                    new NmSelectOption
-                    {
-                        Label = "Apple",
-                        Value = "apple",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Banana",
-                        Value = "banana",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Cherry",
-                        Value = "cherry",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Mango",
-                        Value = "mango",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Pineapple",
-                        Value = "pineapple",
-                    },
-                ],
-                Placeholder = "Select an option...",
-                Size = "md",
-                TestId = "select-error-false",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "select-error-false-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "bulletList",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "select-size-sm",
-                Label = "size = sm",
-                Props = new NMSelectProps
-            {
-                Disabled = false,
-                Error = false,
-                Options = [
-                    new NmSelectOption
-                    {
-                        Label = "Apple",
-                        Value = "apple",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Banana",
-                        Value = "banana",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Cherry",
-                        Value = "cherry",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Mango",
-                        Value = "mango",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Pineapple",
-                        Value = "pineapple",
-                    },
-                ],
-                Placeholder = "Select an option...",
-                Size = "sm",
-                TestId = "select-size-sm",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "select-size-sm-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "bulletList",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "select-size-md",
-                Label = "size = md",
-                Props = new NMSelectProps
-            {
-                Disabled = false,
-                Error = false,
-                Options = [
-                    new NmSelectOption
-                    {
-                        Label = "Apple",
-                        Value = "apple",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Banana",
-                        Value = "banana",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Cherry",
-                        Value = "cherry",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Mango",
-                        Value = "mango",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Pineapple",
-                        Value = "pineapple",
-                    },
-                ],
-                Placeholder = "Select an option...",
-                Size = "md",
-                TestId = "select-size-md",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "select-size-md-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "bulletList",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "select-size-lg",
-                Label = "size = lg",
-                Props = new NMSelectProps
-            {
-                Disabled = false,
-                Error = false,
-                Options = [
-                    new NmSelectOption
-                    {
-                        Label = "Apple",
-                        Value = "apple",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Banana",
-                        Value = "banana",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Cherry",
-                        Value = "cherry",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Mango",
-                        Value = "mango",
-                    },
-                    new NmSelectOption
-                    {
-                        Label = "Pineapple",
-                        Value = "pineapple",
-                    },
-                ],
-                Placeholder = "Select an option...",
-                Size = "lg",
-                TestId = "select-size-lg",
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["leading"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "select-size-lg-leading-1",
-                            Component = "NMIcon",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["icon"] = "bulletList",
-                                ["size"] = "sm",
-                            },
-                        },
-                    },
-                },
             },
             },
             ],
@@ -14951,6 +12503,11 @@ public static class NmKitchenSink
             Name = "Toast",
             Component = "NMToast",
             Tier = 5,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 1,
+            Free = true,
+            Description = "Auto-dismissing notifications with stacking, timeout, and actions",
             Cases =
             [
             new()
@@ -15717,1367 +13274,882 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "tooltip",
-            Name = "Tooltip",
-            Component = "NMTooltip",
-            Tier = 5,
+            Slug = "alert",
+            Name = "Notification",
+            Component = "NMAlert",
+            Tier = 4,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 2,
+            Free = false,
+            Description = "Floating card notifications with optional accent color and glow",
             Cases =
             [
             new()
             {
-                Id = "tooltip-default",
+                Id = "alert-default",
                 Label = "default",
-                Props = new NMTooltipProps
+                Props = new NMAlertProps
             {
-                Position = "top",
-                TestId = "tooltip-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tooltip-default-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Rescans this library now",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["trigger"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tooltip-default-trigger-1",
-                            Component = "NMButton",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["items"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "tooltip-default-trigger-1-1",
-                                        Component = "NMText",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["text"] = "Rescan",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tooltip-position-top",
-                Label = "position = top",
-                Props = new NMTooltipProps
-            {
-                Position = "top",
-                TestId = "tooltip-position-top",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tooltip-position-top-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Rescans this library now",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["trigger"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tooltip-position-top-trigger-1",
-                            Component = "NMButton",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["items"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "tooltip-position-top-trigger-1-1",
-                                        Component = "NMText",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["text"] = "Rescan",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tooltip-position-right",
-                Label = "position = right",
-                Props = new NMTooltipProps
-            {
-                Position = "right",
-                TestId = "tooltip-position-right",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tooltip-position-right-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Rescans this library now",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["trigger"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tooltip-position-right-trigger-1",
-                            Component = "NMButton",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["items"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "tooltip-position-right-trigger-1-1",
-                                        Component = "NMText",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["text"] = "Rescan",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tooltip-position-bottom",
-                Label = "position = bottom",
-                Props = new NMTooltipProps
-            {
-                Position = "bottom",
-                TestId = "tooltip-position-bottom",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tooltip-position-bottom-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Rescans this library now",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["trigger"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tooltip-position-bottom-trigger-1",
-                            Component = "NMButton",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["items"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "tooltip-position-bottom-trigger-1-1",
-                                        Component = "NMText",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["text"] = "Rescan",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            new()
-            {
-                Id = "tooltip-position-left",
-                Label = "position = left",
-                Props = new NMTooltipProps
-            {
-                Position = "left",
-                TestId = "tooltip-position-left",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tooltip-position-left-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Rescans this library now",
-                        },
-                    },
-                ],
-                Slots = new Dictionary<string, List<NmComponent>>
-                {
-                    ["trigger"] = new List<NmComponent>
-                    {
-                        new()
-                        {
-                            Id = "tooltip-position-left-trigger-1",
-                            Component = "NMButton",
-                            Props = new Dictionary<string, object?>
-                            {
-                                ["items"] = new List<NmComponent>
-                                {
-                                    new()
-                                    {
-                                        Id = "tooltip-position-left-trigger-1-1",
-                                        Component = "NMText",
-                                        Props = new Dictionary<string, object?>
-                                        {
-                                            ["text"] = "Rescan",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "accordion",
-            Name = "Accordion",
-            Component = "NMAccordion",
-            Tier = 6,
-            Cases =
-            [
-            new()
-            {
-                Id = "accordion-default",
-                Label = "default",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "md",
-                Variant = "default",
-                TestId = "accordion-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-default-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-default-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-default-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-allowmultiple-true",
-                Label = "allowMultiple = true",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = true,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "md",
-                Variant = "default",
-                TestId = "accordion-allowmultiple-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-allowmultiple-true-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-allowmultiple-true-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-allowmultiple-true-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-allowmultiple-false",
-                Label = "allowMultiple = false",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "md",
-                Variant = "default",
-                TestId = "accordion-allowmultiple-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-allowmultiple-false-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-allowmultiple-false-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-allowmultiple-false-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-showchevron-true",
-                Label = "showChevron = true",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "md",
-                Variant = "default",
-                TestId = "accordion-showchevron-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-showchevron-true-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-showchevron-true-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-showchevron-true-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-showchevron-false",
-                Label = "showChevron = false",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = false,
-                Size = "md",
-                Variant = "default",
-                TestId = "accordion-showchevron-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-showchevron-false-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-showchevron-false-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-showchevron-false-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-size-sm",
-                Label = "size = sm",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "sm",
-                Variant = "default",
-                TestId = "accordion-size-sm",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-size-sm-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-size-sm-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-size-sm-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-size-md",
-                Label = "size = md",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "md",
-                Variant = "default",
-                TestId = "accordion-size-md",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-size-md-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-size-md-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-size-md-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-size-lg",
-                Label = "size = lg",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "lg",
-                Variant = "default",
-                TestId = "accordion-size-lg",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-size-lg-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-size-lg-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-size-lg-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-variant-default",
-                Label = "variant = default",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "md",
-                Variant = "default",
-                TestId = "accordion-variant-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-variant-default-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-variant-default-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-variant-default-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-variant-bordered",
-                Label = "variant = bordered",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "md",
-                Variant = "bordered",
-                TestId = "accordion-variant-bordered",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-variant-bordered-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-variant-bordered-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-variant-bordered-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "accordion-variant-ghost",
-                Label = "variant = ghost",
-                Props = new NMAccordionProps
-            {
-                AllowMultiple = false,
-                Content = [
-                    "Names, locations and how often they are scanned.",
-                    "Who can reach this server, and with which account.",
-                    "What you are told about, and where.",
-                ],
-                DisabledItems = new Dictionary<string, bool>
-                {
-                    ["2"] = true,
-                },
-                OpenItems = new Dictionary<string, bool>
-                {
-                    ["0"] = true,
-                },
-                ShowChevron = true,
-                Size = "md",
-                Variant = "ghost",
-                TestId = "accordion-variant-ghost",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "accordion-variant-ghost-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "General",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-variant-ghost-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Security",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "accordion-variant-ghost-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Notifications",
-                        },
-                    },
-                ],
-            },
-            },
-            ],
-        },
-        new()
-        {
-            Slug = "carousel",
-            Name = "Carousel",
-            Component = "NMCarousel",
-            Tier = 6,
-            Cases =
-            [
-            new()
-            {
-                Id = "carousel-default",
-                Label = "default",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
-                Size = "md",
-                Snap = false,
-                TestId = "carousel-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-default-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-default-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-default-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-navoutside-true",
-                Label = "navOutside = true",
-                Props = new NMCarouselProps
-            {
-                NavOutside = true,
-                ShowDots = true,
-                ShowNav = true,
-                Size = "md",
-                Snap = false,
-                TestId = "carousel-navoutside-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-navoutside-true-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-navoutside-true-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-navoutside-true-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-navoutside-false",
-                Label = "navOutside = false",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
-                Size = "md",
-                Snap = false,
-                TestId = "carousel-navoutside-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-navoutside-false-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-navoutside-false-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-navoutside-false-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-showdots-true",
-                Label = "showDots = true",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
-                Size = "md",
-                Snap = false,
-                TestId = "carousel-showdots-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-showdots-true-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-showdots-true-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-showdots-true-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-showdots-false",
-                Label = "showDots = false",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = false,
-                ShowNav = true,
-                Size = "md",
-                Snap = false,
-                TestId = "carousel-showdots-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-showdots-false-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-showdots-false-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-showdots-false-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-shownav-true",
-                Label = "showNav = true",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
-                Size = "md",
-                Snap = false,
-                TestId = "carousel-shownav-true",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-shownav-true-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-shownav-true-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-shownav-true-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-shownav-false",
-                Label = "showNav = false",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = false,
-                Size = "md",
-                Snap = false,
-                TestId = "carousel-shownav-false",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-shownav-false-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-shownav-false-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-shownav-false-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-size-sm",
-                Label = "size = sm",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
-                Size = "sm",
-                Snap = false,
-                TestId = "carousel-size-sm",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-size-sm-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-size-sm-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-size-sm-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-size-md",
-                Label = "size = md",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
-                Size = "md",
-                Snap = false,
-                TestId = "carousel-size-md",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-size-md-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-size-md-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-size-md-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-size-lg",
-                Label = "size = lg",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
-                Size = "lg",
-                Snap = false,
-                TestId = "carousel-size-lg",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "carousel-size-lg-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 1",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-size-lg-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-size-lg-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
-                        },
-                    },
-                ],
-            },
-            },
-            new()
-            {
-                Id = "carousel-size-full",
-                Label = "size = full",
-                Props = new NMCarouselProps
-            {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
+                Closable = true,
+                Glow = false,
+                Severity = "info",
                 Size = "full",
-                Snap = false,
-                TestId = "carousel-size-full",
+                Style = "default",
+                TestId = "alert-default",
                 Items =
                 [
                     new()
                     {
-                        Id = "carousel-size-full-child-1",
-                        Component = "NMText",
+                        Id = "alert-default-child-1",
+                        Component = "NMContentHeader",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Slide 1",
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
                         },
                     },
                     new()
                     {
-                        Id = "carousel-size-full-child-2",
-                        Component = "NMText",
+                        Id = "alert-default-child-2",
+                        Component = "NMLink",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Slide 2",
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-closable-true",
+                Label = "closable = true",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = false,
+                Severity = "info",
+                Size = "full",
+                Style = "default",
+                TestId = "alert-closable-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-closable-true-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-closable-true-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
                         },
                     },
                     new()
                     {
-                        Id = "carousel-size-full-child-3",
-                        Component = "NMText",
+                        Id = "alert-closable-true-child-2",
+                        Component = "NMLink",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Slide 3",
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-closable-true-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-closable-false",
+                Label = "closable = false",
+                Props = new NMAlertProps
+            {
+                Closable = false,
+                Glow = false,
+                Severity = "info",
+                Size = "full",
+                Style = "default",
+                TestId = "alert-closable-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-closable-false-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-closable-false-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-closable-false-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-closable-false-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-glow-true",
+                Label = "glow = true",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = true,
+                Severity = "info",
+                Size = "full",
+                Style = "default",
+                TestId = "alert-glow-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-glow-true-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-glow-true-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-glow-true-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-glow-true-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-glow-false",
+                Label = "glow = false",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = false,
+                Severity = "info",
+                Size = "full",
+                Style = "default",
+                TestId = "alert-glow-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-glow-false-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-glow-false-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-glow-false-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-glow-false-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-severity-info",
+                Label = "severity = info",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = false,
+                Severity = "info",
+                Size = "full",
+                Style = "default",
+                TestId = "alert-severity-info",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-severity-info-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-severity-info-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-severity-info-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-severity-info-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-severity-error",
+                Label = "severity = error",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = false,
+                Severity = "error",
+                Size = "full",
+                Style = "default",
+                TestId = "alert-severity-error",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-severity-error-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-severity-error-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-severity-error-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-severity-error-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-size-full",
+                Label = "size = full",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = false,
+                Severity = "info",
+                Size = "full",
+                Style = "default",
+                TestId = "alert-size-full",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-size-full-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-size-full-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-size-full-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-size-full-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-size-compact",
+                Label = "size = compact",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = false,
+                Severity = "info",
+                Size = "compact",
+                Style = "default",
+                TestId = "alert-size-compact",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-size-compact-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-size-compact-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-size-compact-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-size-compact-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-style-default",
+                Label = "style = default",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = false,
+                Severity = "info",
+                Size = "full",
+                Style = "default",
+                TestId = "alert-style-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-style-default-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-style-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-style-default-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-style-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "alert-style-accent",
+                Label = "style = accent",
+                Props = new NMAlertProps
+            {
+                Closable = true,
+                Glow = false,
+                Severity = "info",
+                Size = "full",
+                Style = "accent",
+                TestId = "alert-style-accent",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "alert-style-accent-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "alert-style-accent-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Two files could not be matched.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "alert-style-accent-child-2",
+                        Component = "NMLink",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Review them",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "alert-style-accent-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "alertTriangle",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "progress",
+            Name = "Progress",
+            Component = "NMProgress",
+            Tier = 1,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 3,
+            Free = true,
+            Description = "Determinate progress indicator",
+            Cases =
+            [
+            new()
+            {
+                Id = "progress-default",
+                Label = "default",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 50, TestId = "progress-default" },
+            },
+            new()
+            {
+                Id = "progress-labelpos-none",
+                Label = "labelPos = none",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 50, TestId = "progress-labelpos-none" },
+            },
+            new()
+            {
+                Id = "progress-labelpos-label-left",
+                Label = "labelPos = label-left",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-left", Size = "md", Value = 50, TestId = "progress-labelpos-label-left" },
+            },
+            new()
+            {
+                Id = "progress-labelpos-label-right",
+                Label = "labelPos = label-right",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-right", Size = "md", Value = 50, TestId = "progress-labelpos-label-right" },
+            },
+            new()
+            {
+                Id = "progress-labelpos-label-above-left",
+                Label = "labelPos = label-above-left",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-above-left", Size = "md", Value = 50, TestId = "progress-labelpos-label-above-left" },
+            },
+            new()
+            {
+                Id = "progress-labelpos-label-above-right",
+                Label = "labelPos = label-above-right",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "label-above-right", Size = "md", Value = 50, TestId = "progress-labelpos-label-above-right" },
+            },
+            new()
+            {
+                Id = "progress-labelpos-tooltip-above",
+                Label = "labelPos = tooltip-above",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "tooltip-above", Size = "md", Value = 50, TestId = "progress-labelpos-tooltip-above" },
+            },
+            new()
+            {
+                Id = "progress-labelpos-tooltip-below",
+                Label = "labelPos = tooltip-below",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "tooltip-below", Size = "md", Value = 50, TestId = "progress-labelpos-tooltip-below" },
+            },
+            new()
+            {
+                Id = "progress-size-sm",
+                Label = "size = sm",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "sm", Value = 50, TestId = "progress-size-sm" },
+            },
+            new()
+            {
+                Id = "progress-size-md",
+                Label = "size = md",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "md", Value = 50, TestId = "progress-size-md" },
+            },
+            new()
+            {
+                Id = "progress-size-lg",
+                Label = "size = lg",
+                Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "lg", Value = 50, TestId = "progress-size-lg" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "spinner",
+            Name = "Spinner",
+            Component = "NMSpinner",
+            Tier = 1,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 4,
+            Free = true,
+            Description = "Indeterminate loading indicator",
+            Cases =
+            [
+            new()
+            {
+                Id = "spinner-default",
+                Label = "default",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "md", TestId = "spinner-default" },
+            },
+            new()
+            {
+                Id = "spinner-size-sm",
+                Label = "size = sm",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "sm", TestId = "spinner-size-sm" },
+            },
+            new()
+            {
+                Id = "spinner-size-md",
+                Label = "size = md",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "md", TestId = "spinner-size-md" },
+            },
+            new()
+            {
+                Id = "spinner-size-lg",
+                Label = "size = lg",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "lg", TestId = "spinner-size-lg" },
+            },
+            new()
+            {
+                Id = "spinner-size-xl",
+                Label = "size = xl",
+                Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "xl", TestId = "spinner-size-xl" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "modal",
+            Name = "Modal",
+            Component = "NMModal",
+            Tier = 5,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 5,
+            Free = false,
+            Description = "Full-featured modal with ContentHeader, cover image, description, input fields, and ContentFooter",
+            Cases =
+            [
+            new()
+            {
+                Id = "modal-default",
+                Label = "default",
+                Props = new NMModalProps
+            {
+                FooterVariant = "actions",
+                Size = "md",
+                TestId = "modal-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "modal-default-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "modal-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Remove this library?",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "modal-default-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "alertTriangle",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "modal-default-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
                         },
                     },
                 ],
@@ -17085,43 +14157,57 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "carousel-snap-true",
-                Label = "snap = true",
-                Props = new NMCarouselProps
+                Id = "modal-footervariant-actions",
+                Label = "footerVariant = actions",
+                Props = new NMModalProps
             {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
+                FooterVariant = "actions",
                 Size = "md",
-                Snap = true,
-                TestId = "carousel-snap-true",
+                TestId = "modal-footervariant-actions",
                 Items =
                 [
                     new()
                     {
-                        Id = "carousel-snap-true-child-1",
-                        Component = "NMText",
+                        Id = "modal-footervariant-actions-child-1",
+                        Component = "NMContentHeader",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Slide 1",
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "modal-footervariant-actions-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Remove this library?",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "modal-footervariant-actions-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "alertTriangle",
+                                        },
+                                    },
+                                },
+                            },
                         },
                     },
                     new()
                     {
-                        Id = "carousel-snap-true-child-2",
-                        Component = "NMText",
+                        Id = "modal-footervariant-actions-child-2",
+                        Component = "NMHelper",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Slide 2",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "carousel-snap-true-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "Slide 3",
+                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
                         },
                     },
                 ],
@@ -17129,43 +14215,231 @@ public static class NmKitchenSink
             },
             new()
             {
-                Id = "carousel-snap-false",
-                Label = "snap = false",
-                Props = new NMCarouselProps
+                Id = "modal-footervariant-helper",
+                Label = "footerVariant = helper",
+                Props = new NMModalProps
             {
-                NavOutside = false,
-                ShowDots = true,
-                ShowNav = true,
+                FooterVariant = "helper",
                 Size = "md",
-                Snap = false,
-                TestId = "carousel-snap-false",
+                TestId = "modal-footervariant-helper",
                 Items =
                 [
                     new()
                     {
-                        Id = "carousel-snap-false-child-1",
-                        Component = "NMText",
+                        Id = "modal-footervariant-helper-child-1",
+                        Component = "NMContentHeader",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Slide 1",
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "modal-footervariant-helper-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Remove this library?",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "modal-footervariant-helper-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "alertTriangle",
+                                        },
+                                    },
+                                },
+                            },
                         },
                     },
                     new()
                     {
-                        Id = "carousel-snap-false-child-2",
-                        Component = "NMText",
+                        Id = "modal-footervariant-helper-child-2",
+                        Component = "NMHelper",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Slide 2",
+                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "modal-size-sm",
+                Label = "size = sm",
+                Props = new NMModalProps
+            {
+                FooterVariant = "actions",
+                Size = "sm",
+                TestId = "modal-size-sm",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "modal-size-sm-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "modal-size-sm-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Remove this library?",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "modal-size-sm-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "alertTriangle",
+                                        },
+                                    },
+                                },
+                            },
                         },
                     },
                     new()
                     {
-                        Id = "carousel-snap-false-child-3",
-                        Component = "NMText",
+                        Id = "modal-size-sm-child-2",
+                        Component = "NMHelper",
                         Props = new Dictionary<string, object?>
                         {
-                            ["text"] = "Slide 3",
+                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "modal-size-md",
+                Label = "size = md",
+                Props = new NMModalProps
+            {
+                FooterVariant = "actions",
+                Size = "md",
+                TestId = "modal-size-md",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "modal-size-md-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "modal-size-md-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Remove this library?",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "modal-size-md-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "alertTriangle",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "modal-size-md-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "modal-size-lg",
+                Label = "size = lg",
+                Props = new NMModalProps
+            {
+                FooterVariant = "actions",
+                Size = "lg",
+                TestId = "modal-size-lg",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "modal-size-lg-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "modal-size-lg-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Remove this library?",
+                                    },
+                                },
+                            },
+                            ["slots"] = new Dictionary<string, List<NmComponent>>
+                            {
+                                ["icon"] = new List<NmComponent>
+                                {
+                                    new()
+                                    {
+                                        Id = "modal-size-lg-child-1-icon-1",
+                                        Component = "NMIcon",
+                                        Props = new Dictionary<string, object?>
+                                        {
+                                            ["icon"] = "alertTriangle",
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "modal-size-lg-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "The files stay on disk. Only the entry is removed.",
                         },
                     },
                 ],
@@ -17175,17 +14449,3232 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "file-upload",
-            Name = "File Upload",
-            Component = "NMFileUpload",
-            Tier = 6,
+            Slug = "content-header",
+            Name = "ContentHeader",
+            Component = "NMContentHeader",
+            Tier = 4,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 6,
+            Free = false,
+            Description = "Content card header with optional icon, subtitle, and close button (uses Button component)",
             Cases =
             [
             new()
             {
-                Id = "file-upload-default",
+                Id = "content-header-default",
                 Label = "default",
-                Props = new NMFileUploadProps { FileMeta = "1.2 MB · PNG", FileName = "design-brief.png", UploadPct = 40, TestId = "file-upload-default" },
+                Props = new NMContentHeaderProps
+            {
+                CanClose = true,
+                TitleId = "content-header-title",
+                TestId = "content-header-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "content-header-default-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Encoding queue",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "content-header-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "timer",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "content-header-canclose-true",
+                Label = "canClose = true",
+                Props = new NMContentHeaderProps
+            {
+                CanClose = true,
+                TitleId = "content-header-title",
+                TestId = "content-header-canclose-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "content-header-canclose-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Encoding queue",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "content-header-canclose-true-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "timer",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "content-header-canclose-false",
+                Label = "canClose = false",
+                Props = new NMContentHeaderProps
+            {
+                CanClose = false,
+                TitleId = "content-header-title",
+                TestId = "content-header-canclose-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "content-header-canclose-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Encoding queue",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "content-header-canclose-false-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "timer",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "content-footer",
+            Name = "ContentFooter",
+            Component = "NMContentFooter",
+            Tier = 4,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 7,
+            Free = false,
+            Description = "Content card footer with Actions or Helper Action variants (uses Button component)",
+            Cases =
+            [
+            new()
+            {
+                Id = "content-footer-default",
+                Label = "default",
+                Props = new NMContentFooterProps
+            {
+                Variant = "actions",
+                TestId = "content-footer-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "content-footer-default-child-1",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "content-footer-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Cancel",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-default-child-2",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "content-footer-default-child-2-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Save",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "content-footer-variant-actions",
+                Label = "variant = actions",
+                Props = new NMContentFooterProps
+            {
+                Variant = "actions",
+                TestId = "content-footer-variant-actions",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "content-footer-variant-actions-child-1",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "content-footer-variant-actions-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Cancel",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-variant-actions-child-2",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "content-footer-variant-actions-child-2-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Save",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "content-footer-variant-helper",
+                Label = "variant = helper",
+                Props = new NMContentFooterProps
+            {
+                Variant = "helper",
+                TestId = "content-footer-variant-helper",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "content-footer-variant-helper-child-1",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "content-footer-variant-helper-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Cancel",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "content-footer-variant-helper-child-2",
+                        Component = "NMButton",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "content-footer-variant-helper-child-2-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Save",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ],
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "chat",
+            Name = "Chat",
+            Component = "NMChat",
+            Tier = 4,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 8,
+            Free = false,
+            Description = "Message bubbles with sent, received, system",
+            Cases =
+            [
+            new()
+            {
+                Id = "chat-default",
+                Label = "default",
+                Props = new NMChatProps { Messages = [
+                    new NmChatMessage
+                    {
+                        Variant = "received",
+                        Text = "The encode finished.",
+                        Time = "09:41",
+                    },
+                    new NmChatMessage
+                    {
+                        Variant = "sent",
+                        Text = "Any errors?",
+                        Time = "09:42",
+                    },
+                    new NmChatMessage
+                    {
+                        Variant = "received",
+                        Text = "None. Two subtitle tracks were kept.",
+                        Time = "09:42",
+                    },
+                ], TestId = "chat-default" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "popover",
+            Name = "Popover",
+            Component = "NMPopover",
+            Tier = 5,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 9,
+            Free = false,
+            Description = "Floating content panel triggered by click with optional title, close button, and directional arrow",
+            Cases =
+            [
+            new()
+            {
+                Id = "popover-default",
+                Label = "default",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-default-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-default-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-isopen-true",
+                Label = "isOpen = true",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-isopen-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-isopen-true-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-isopen-true-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-isopen-true-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-isopen-false",
+                Label = "isOpen = false",
+                Props = new NMPopoverProps
+            {
+                IsOpen = false,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-isopen-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-isopen-false-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-isopen-false-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-isopen-false-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-position-top",
+                Label = "position = top",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "top",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-position-top",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-position-top-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-position-top-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-top-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-position-right",
+                Label = "position = right",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "right",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-position-right",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-position-right-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-position-right-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-right-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-position-bottom",
+                Label = "position = bottom",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-position-bottom",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-position-bottom-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-position-bottom-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-bottom-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-position-left",
+                Label = "position = left",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "left",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-position-left",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-position-left-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-position-left-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-position-left-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-showarrow-true",
+                Label = "showArrow = true",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-showarrow-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-showarrow-true-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-showarrow-true-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-showarrow-true-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-showarrow-false",
+                Label = "showArrow = false",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = false,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-showarrow-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-showarrow-false-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-showarrow-false-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-showarrow-false-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-showclose-true",
+                Label = "showClose = true",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-showclose-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-showclose-true-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-showclose-true-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-showclose-true-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-showclose-false",
+                Label = "showClose = false",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = false,
+                Size = "md",
+                TestId = "popover-showclose-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-showclose-false-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-showclose-false-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-showclose-false-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-size-sm",
+                Label = "size = sm",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "sm",
+                TestId = "popover-size-sm",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-size-sm-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-size-sm-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-sm-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-size-md",
+                Label = "size = md",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "md",
+                TestId = "popover-size-md",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-size-md-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-size-md-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-md-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "popover-size-lg",
+                Label = "size = lg",
+                Props = new NMPopoverProps
+            {
+                IsOpen = true,
+                Position = "bottom",
+                ShowArrow = true,
+                ShowClose = true,
+                Size = "lg",
+                TestId = "popover-size-lg",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "popover-size-lg-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "popover-size-lg-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Sort by",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "popover-size-lg-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Recently added",
+                        },
+                    },
+                ],
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "drawer",
+            Name = "Drawer",
+            Component = "NMDrawer",
+            Tier = 5,
+            Group = "Feedback",
+            GroupOrder = 2,
+            GroupIndex = 10,
+            Free = false,
+            Description = "Slide-out side panel with overlay backdrop, scrollable body, and optional footer actions",
+            Cases =
+            [
+            new()
+            {
+                Id = "drawer-default",
+                Label = "default",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "right",
+                Size = "md",
+                TestId = "drawer-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-default-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-default-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-default-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-hasoverlay-true",
+                Label = "hasOverlay = true",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "right",
+                Size = "md",
+                TestId = "drawer-hasoverlay-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-hasoverlay-true-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-hasoverlay-true-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-hasoverlay-true-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-hasoverlay-false",
+                Label = "hasOverlay = false",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = false,
+                IsOpen = true,
+                Position = "right",
+                Size = "md",
+                TestId = "drawer-hasoverlay-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-hasoverlay-false-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-hasoverlay-false-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-hasoverlay-false-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-isopen-true",
+                Label = "isOpen = true",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "right",
+                Size = "md",
+                TestId = "drawer-isopen-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-isopen-true-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-isopen-true-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-isopen-true-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-isopen-false",
+                Label = "isOpen = false",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = false,
+                Position = "right",
+                Size = "md",
+                TestId = "drawer-isopen-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-isopen-false-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-isopen-false-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-isopen-false-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-position-left",
+                Label = "position = left",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "left",
+                Size = "md",
+                TestId = "drawer-position-left",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-position-left-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-position-left-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-left-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-position-right",
+                Label = "position = right",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "right",
+                Size = "md",
+                TestId = "drawer-position-right",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-position-right-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-position-right-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-right-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-position-top",
+                Label = "position = top",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "top",
+                Size = "md",
+                TestId = "drawer-position-top",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-position-top-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-position-top-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-top-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-position-bottom",
+                Label = "position = bottom",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "bottom",
+                Size = "md",
+                TestId = "drawer-position-bottom",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-position-bottom-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-position-bottom-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-position-bottom-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-size-sm",
+                Label = "size = sm",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "right",
+                Size = "sm",
+                TestId = "drawer-size-sm",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-size-sm-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-size-sm-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-sm-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-size-md",
+                Label = "size = md",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "right",
+                Size = "md",
+                TestId = "drawer-size-md",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-size-md-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-size-md-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-md-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-size-lg",
+                Label = "size = lg",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "right",
+                Size = "lg",
+                TestId = "drawer-size-lg",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-size-lg-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-size-lg-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-lg-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "drawer-size-full",
+                Label = "size = full",
+                Props = new NMDrawerProps
+            {
+                HasOverlay = true,
+                IsOpen = true,
+                Position = "right",
+                Size = "full",
+                TestId = "drawer-size-full",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "drawer-size-full-child-1",
+                        Component = "NMContentHeader",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["items"] = new List<NmComponent>
+                            {
+                                new()
+                                {
+                                    Id = "drawer-size-full-child-1-1",
+                                    Component = "NMText",
+                                    Props = new Dictionary<string, object?>
+                                    {
+                                        ["text"] = "Filters",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    new()
+                    {
+                        Id = "drawer-size-full-child-2",
+                        Component = "NMHelper",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["helperText"] = "Narrow the list without leaving the page.",
+                        },
+                    },
+                ],
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "link",
+            Name = "Link",
+            Component = "NMLink",
+            Tier = 1,
+            Group = "Navigation",
+            GroupOrder = 3,
+            GroupIndex = 0,
+            Free = true,
+            Description = "Interactive text element with icon support, font inheritance, and external indicator",
+            Cases =
+            [
+            new()
+            {
+                Id = "link-default",
+                Label = "default",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-default",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-disabled-true",
+                Label = "disabled = true",
+                Props = new NMLinkProps
+            {
+                Disabled = true,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-disabled-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-disabled-true-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-disabled-false",
+                Label = "disabled = false",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-disabled-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-disabled-false-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-external-true",
+                Label = "external = true",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = true,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-external-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-external-true-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-external-false",
+                Label = "external = false",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-external-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-external-false-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-icon-true",
+                Label = "icon = true",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = true,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-icon-true",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-icon-true-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-icon-false",
+                Label = "icon = false",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-icon-false",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-icon-false-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-iconposition-left",
+                Label = "iconPosition = left",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "left",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-iconposition-left",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-iconposition-left-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-iconposition-right",
+                Label = "iconPosition = right",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-iconposition-right",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-iconposition-right-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-size-sm",
+                Label = "size = sm",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "sm",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-size-sm",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-size-sm-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-size-md",
+                Label = "size = md",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-size-md",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-size-md-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-size-lg",
+                Label = "size = lg",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "lg",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-size-lg",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-size-lg-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-size-inherit",
+                Label = "size = inherit",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "inherit",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-size-inherit",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-size-inherit-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-variant-default",
+                Label = "variant = default",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "default",
+                TestId = "link-variant-default",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-variant-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-variant-subtle",
+                Label = "variant = subtle",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "subtle",
+                TestId = "link-variant-subtle",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-variant-subtle-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-variant-muted",
+                Label = "variant = muted",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "muted",
+                TestId = "link-variant-muted",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-variant-muted-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "link-variant-animated",
+                Label = "variant = animated",
+                Props = new NMLinkProps
+            {
+                Disabled = false,
+                External = false,
+                Icon = false,
+                IconPosition = "right",
+                Size = "md",
+                Text = "Click here to learn more",
+                Variant = "animated",
+                TestId = "link-variant-animated",
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "link-variant-animated-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "arrowRight",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "tabs",
+            Name = "Tabs",
+            Component = "NMTabs",
+            Tier = 6,
+            Group = "Navigation",
+            GroupOrder = 3,
+            GroupIndex = 1,
+            Free = false,
+            Description = "Content section switcher",
+            Cases =
+            [
+            new()
+            {
+                Id = "tabs-default",
+                Label = "default",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "0",
+                AriaLabel = "Server sections",
+                Size = "md",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "line",
+                TestId = "tabs-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-default-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-activeindex-0",
+                Label = "activeIndex = 0",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "0",
+                AriaLabel = "Server sections",
+                Size = "md",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "line",
+                TestId = "tabs-activeindex-0",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-activeindex-0-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-0-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-0-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-activeindex-1",
+                Label = "activeIndex = 1",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "1",
+                AriaLabel = "Server sections",
+                Size = "md",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "line",
+                TestId = "tabs-activeindex-1",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-activeindex-1-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-1-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-1-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-activeindex-2",
+                Label = "activeIndex = 2",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "2",
+                AriaLabel = "Server sections",
+                Size = "md",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "line",
+                TestId = "tabs-activeindex-2",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-activeindex-2-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-2-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-activeindex-2-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-size-sm",
+                Label = "size = sm",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "0",
+                AriaLabel = "Server sections",
+                Size = "sm",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "line",
+                TestId = "tabs-size-sm",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-size-sm-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-size-md",
+                Label = "size = md",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "0",
+                AriaLabel = "Server sections",
+                Size = "md",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "line",
+                TestId = "tabs-size-md",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-size-md-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-size-lg",
+                Label = "size = lg",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "0",
+                AriaLabel = "Server sections",
+                Size = "lg",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "line",
+                TestId = "tabs-size-lg",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-size-lg-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-variant-line",
+                Label = "variant = line",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "0",
+                AriaLabel = "Server sections",
+                Size = "md",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "line",
+                TestId = "tabs-variant-line",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-variant-line-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-line-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-line-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-variant-pill",
+                Label = "variant = pill",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "0",
+                AriaLabel = "Server sections",
+                Size = "md",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "pill",
+                TestId = "tabs-variant-pill",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-variant-pill-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-pill-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-pill-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            new()
+            {
+                Id = "tabs-variant-enclosed",
+                Label = "variant = enclosed",
+                Props = new NMTabsProps
+            {
+                ActiveIndex = "0",
+                AriaLabel = "Server sections",
+                Size = "md",
+                TabLabels = [
+                    "Overview",
+                    "Activity",
+                    "Settings",
+                ],
+                TablistId = "tabs-tablist",
+                Variant = "enclosed",
+                TestId = "tabs-variant-enclosed",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "tabs-variant-enclosed-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What this server is doing right now.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-enclosed-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What it has done lately.",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "tabs-variant-enclosed-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "What you can change about it.",
+                        },
+                    },
+                ],
+            },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "breadcrumb",
+            Name = "Breadcrumb",
+            Component = "NMBreadcrumb",
+            Tier = 3,
+            Group = "Navigation",
+            GroupOrder = 3,
+            GroupIndex = 2,
+            Free = true,
+            Description = "Hierarchical page trail",
+            Cases =
+            [
+            new()
+            {
+                Id = "breadcrumb-default",
+                Label = "default",
+                Props = new NMBreadcrumbProps { Labels = [
+                    "Library",
+                    "Films",
+                    "Arrival",
+                ], Separator = "chevron", TestId = "breadcrumb-default" },
+            },
+            new()
+            {
+                Id = "breadcrumb-separator-slash",
+                Label = "separator = slash",
+                Props = new NMBreadcrumbProps { Labels = [
+                    "Library",
+                    "Films",
+                    "Arrival",
+                ], Separator = "slash", TestId = "breadcrumb-separator-slash" },
+            },
+            new()
+            {
+                Id = "breadcrumb-separator-chevron",
+                Label = "separator = chevron",
+                Props = new NMBreadcrumbProps { Labels = [
+                    "Library",
+                    "Films",
+                    "Arrival",
+                ], Separator = "chevron", TestId = "breadcrumb-separator-chevron" },
+            },
+            new()
+            {
+                Id = "breadcrumb-separator-dot",
+                Label = "separator = dot",
+                Props = new NMBreadcrumbProps { Labels = [
+                    "Library",
+                    "Films",
+                    "Arrival",
+                ], Separator = "dot", TestId = "breadcrumb-separator-dot" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "pagination",
+            Name = "Pagination",
+            Component = "NMPagination",
+            Tier = 3,
+            Group = "Navigation",
+            GroupOrder = 3,
+            GroupIndex = 3,
+            Free = false,
+            Description = "Page navigation controls",
+            Cases =
+            [
+            new()
+            {
+                Id = "pagination-default",
+                Label = "default",
+                Props = new NMPaginationProps { CurrentPage = 3, Size = "md", TotalPages = 10, TestId = "pagination-default" },
+            },
+            new()
+            {
+                Id = "pagination-size-sm",
+                Label = "size = sm",
+                Props = new NMPaginationProps { CurrentPage = 3, Size = "sm", TotalPages = 10, TestId = "pagination-size-sm" },
+            },
+            new()
+            {
+                Id = "pagination-size-md",
+                Label = "size = md",
+                Props = new NMPaginationProps { CurrentPage = 3, Size = "md", TotalPages = 10, TestId = "pagination-size-md" },
+            },
+            new()
+            {
+                Id = "pagination-size-lg",
+                Label = "size = lg",
+                Props = new NMPaginationProps { CurrentPage = 3, Size = "lg", TotalPages = 10, TestId = "pagination-size-lg" },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "dropdown",
+            Name = "Dropdown",
+            Component = "NMDropdown",
+            Tier = 5,
+            Group = "Navigation",
+            GroupOrder = 3,
+            GroupIndex = 4,
+            Free = false,
+            Description = "Action or option menu",
+            Cases =
+            [
+            new()
+            {
+                Id = "dropdown-default",
+                Label = "default",
+                Props = new NMDropdownProps
+            {
+                Size = "md",
+                TestId = "dropdown-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "dropdown-default-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Edit",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Duplicate",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Share",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-default-child-4",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Favourite",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-default-child-5",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Archive",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "dropdown-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "edit",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-default-icon-2",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "fileCopy",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-default-icon-3",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "shareSquare",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-default-icon-4",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "star",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-default-icon-5",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "archiveBox",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "dropdown-size-sm",
+                Label = "size = sm",
+                Props = new NMDropdownProps
+            {
+                Size = "sm",
+                TestId = "dropdown-size-sm",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "dropdown-size-sm-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Edit",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-sm-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Duplicate",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-sm-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Share",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-sm-child-4",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Favourite",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-sm-child-5",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Archive",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "dropdown-size-sm-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "edit",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-sm-icon-2",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "fileCopy",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-sm-icon-3",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "shareSquare",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-sm-icon-4",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "star",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-sm-icon-5",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "archiveBox",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "dropdown-size-md",
+                Label = "size = md",
+                Props = new NMDropdownProps
+            {
+                Size = "md",
+                TestId = "dropdown-size-md",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "dropdown-size-md-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Edit",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-md-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Duplicate",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-md-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Share",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-md-child-4",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Favourite",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-md-child-5",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Archive",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "dropdown-size-md-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "edit",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-md-icon-2",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "fileCopy",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-md-icon-3",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "shareSquare",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-md-icon-4",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "star",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-md-icon-5",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "archiveBox",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "dropdown-size-lg",
+                Label = "size = lg",
+                Props = new NMDropdownProps
+            {
+                Size = "lg",
+                TestId = "dropdown-size-lg",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "dropdown-size-lg-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Edit",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-lg-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Duplicate",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-lg-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Share",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-lg-child-4",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Favourite",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "dropdown-size-lg-child-5",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Archive",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "dropdown-size-lg-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "edit",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-lg-icon-2",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "fileCopy",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-lg-icon-3",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "shareSquare",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-lg-icon-4",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "star",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "dropdown-size-lg-icon-5",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "archiveBox",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
             },
             ],
         },
@@ -17195,6 +17684,11 @@ public static class NmKitchenSink
             Name = "Navigation",
             Component = "NMNavigation",
             Tier = 6,
+            Group = "Navigation",
+            GroupOrder = 3,
+            GroupIndex = 5,
+            Free = false,
+            Description = "Horizontal, vertical, or pill nav links",
             Cases =
             [
             new()
@@ -17894,10 +18388,106 @@ public static class NmKitchenSink
         },
         new()
         {
+            Slug = "command-palette",
+            Name = "Ctrl + K",
+            Component = "NMCommandPalette",
+            Tier = 5,
+            Group = "Navigation",
+            GroupOrder = 3,
+            GroupIndex = 6,
+            Free = false,
+            Description = "Command palette with groups and shortcuts",
+            Cases =
+            [
+            new()
+            {
+                Id = "command-palette-default",
+                Label = "default",
+                Props = new NMCommandPaletteProps
+            {
+                SearchText = "scan",
+                TestId = "command-palette-default",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "command-palette-default-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Go to Home",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "command-palette-default-child-2",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Open Dashboard",
+                        },
+                    },
+                    new()
+                    {
+                        Id = "command-palette-default-child-3",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["icon"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "command-palette-default-icon-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "home",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "command-palette-default-icon-2",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "dashboard",
+                                ["size"] = "sm",
+                            },
+                        },
+                        new()
+                        {
+                            Id = "command-palette-default-icon-3",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                                ["size"] = "sm",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            ],
+        },
+        new()
+        {
             Slug = "stepper",
             Name = "Stepper",
             Component = "NMStepper",
             Tier = 6,
+            Group = "Indicators & Pickers",
+            GroupOrder = 4,
+            GroupIndex = 0,
+            Free = false,
+            Description = "Multi-step wizard indicator with numbered circles, connectors, and optional descriptions",
             Cases =
             [
             new()
@@ -18124,501 +18714,130 @@ public static class NmKitchenSink
         },
         new()
         {
-            Slug = "tabs",
-            Name = "Tabs",
-            Component = "NMTabs",
-            Tier = 6,
+            Slug = "step-indicator",
+            Name = "Step Indicator",
+            Component = "NMStepIndicator",
+            Tier = 3,
+            Group = "Indicators & Pickers",
+            GroupOrder = 4,
+            GroupIndex = 1,
+            Free = false,
+            Description = "Minimal dots, bars, or number indicators showing position in a multi-step flow",
             Cases =
             [
             new()
             {
-                Id = "tabs-default",
+                Id = "step-indicator-default",
                 Label = "default",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "0",
-                AriaLabel = "Server sections",
-                Size = "md",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "line",
-                TestId = "tabs-default",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-default-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-default-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-default-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-default" },
             },
             new()
             {
-                Id = "tabs-activeindex-0",
+                Id = "step-indicator-activeindex-0",
                 Label = "activeIndex = 0",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "0",
-                AriaLabel = "Server sections",
-                Size = "md",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "line",
-                TestId = "tabs-activeindex-0",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-activeindex-0-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-activeindex-0-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-activeindex-0-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Props = new NMStepIndicatorProps { ActiveIndex = "0", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-0" },
             },
             new()
             {
-                Id = "tabs-activeindex-1",
+                Id = "step-indicator-activeindex-1",
                 Label = "activeIndex = 1",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "1",
-                AriaLabel = "Server sections",
-                Size = "md",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "line",
-                TestId = "tabs-activeindex-1",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-activeindex-1-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-activeindex-1-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-activeindex-1-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-1" },
             },
             new()
             {
-                Id = "tabs-activeindex-2",
+                Id = "step-indicator-activeindex-2",
                 Label = "activeIndex = 2",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "2",
-                AriaLabel = "Server sections",
-                Size = "md",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "line",
-                TestId = "tabs-activeindex-2",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-activeindex-2-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-activeindex-2-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-activeindex-2-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Props = new NMStepIndicatorProps { ActiveIndex = "2", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-2" },
             },
             new()
             {
-                Id = "tabs-size-sm",
+                Id = "step-indicator-activeindex-3",
+                Label = "activeIndex = 3",
+                Props = new NMStepIndicatorProps { ActiveIndex = "3", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-3" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-4",
+                Label = "activeIndex = 4",
+                Props = new NMStepIndicatorProps { ActiveIndex = "4", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-4" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-5",
+                Label = "activeIndex = 5",
+                Props = new NMStepIndicatorProps { ActiveIndex = "5", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-5" },
+            },
+            new()
+            {
+                Id = "step-indicator-activeindex-6",
+                Label = "activeIndex = 6",
+                Props = new NMStepIndicatorProps { ActiveIndex = "6", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-activeindex-6" },
+            },
+            new()
+            {
+                Id = "step-indicator-size-sm",
                 Label = "size = sm",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "0",
-                AriaLabel = "Server sections",
-                Size = "sm",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "line",
-                TestId = "tabs-size-sm",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-size-sm-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-size-sm-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-size-sm-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "sm", Steps = "4", Variant = "dots", TestId = "step-indicator-size-sm" },
             },
             new()
             {
-                Id = "tabs-size-md",
+                Id = "step-indicator-size-md",
                 Label = "size = md",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "0",
-                AriaLabel = "Server sections",
-                Size = "md",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "line",
-                TestId = "tabs-size-md",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-size-md-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-size-md-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-size-md-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-size-md" },
             },
             new()
             {
-                Id = "tabs-size-lg",
+                Id = "step-indicator-size-lg",
                 Label = "size = lg",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "0",
-                AriaLabel = "Server sections",
-                Size = "lg",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "line",
-                TestId = "tabs-size-lg",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-size-lg-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-size-lg-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-size-lg-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "lg", Steps = "4", Variant = "dots", TestId = "step-indicator-size-lg" },
             },
             new()
             {
-                Id = "tabs-variant-line",
-                Label = "variant = line",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "0",
-                AriaLabel = "Server sections",
-                Size = "md",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "line",
-                TestId = "tabs-variant-line",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-variant-line-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-variant-line-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-variant-line-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Id = "step-indicator-steps-3",
+                Label = "steps = 3",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "3", Variant = "dots", TestId = "step-indicator-steps-3" },
             },
             new()
             {
-                Id = "tabs-variant-pill",
-                Label = "variant = pill",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "0",
-                AriaLabel = "Server sections",
-                Size = "md",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "pill",
-                TestId = "tabs-variant-pill",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-variant-pill-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-variant-pill-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-variant-pill-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
-            },
+                Id = "step-indicator-steps-4",
+                Label = "steps = 4",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-steps-4" },
             },
             new()
             {
-                Id = "tabs-variant-enclosed",
-                Label = "variant = enclosed",
-                Props = new NMTabsProps
-            {
-                ActiveIndex = "0",
-                AriaLabel = "Server sections",
-                Size = "md",
-                TabLabels = [
-                    "Overview",
-                    "Activity",
-                    "Settings",
-                ],
-                TablistId = "tabs-tablist",
-                Variant = "enclosed",
-                TestId = "tabs-variant-enclosed",
-                Items =
-                [
-                    new()
-                    {
-                        Id = "tabs-variant-enclosed-child-1",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What this server is doing right now.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-variant-enclosed-child-2",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What it has done lately.",
-                        },
-                    },
-                    new()
-                    {
-                        Id = "tabs-variant-enclosed-child-3",
-                        Component = "NMText",
-                        Props = new Dictionary<string, object?>
-                        {
-                            ["text"] = "What you can change about it.",
-                        },
-                    },
-                ],
+                Id = "step-indicator-steps-5",
+                Label = "steps = 5",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "5", Variant = "dots", TestId = "step-indicator-steps-5" },
             },
+            new()
+            {
+                Id = "step-indicator-steps-6",
+                Label = "steps = 6",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "6", Variant = "dots", TestId = "step-indicator-steps-6" },
+            },
+            new()
+            {
+                Id = "step-indicator-steps-7",
+                Label = "steps = 7",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "7", Variant = "dots", TestId = "step-indicator-steps-7" },
+            },
+            new()
+            {
+                Id = "step-indicator-variant-dots",
+                Label = "variant = dots",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "dots", TestId = "step-indicator-variant-dots" },
+            },
+            new()
+            {
+                Id = "step-indicator-variant-bars",
+                Label = "variant = bars",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "bars", TestId = "step-indicator-variant-bars" },
+            },
+            new()
+            {
+                Id = "step-indicator-variant-numbers",
+                Label = "variant = numbers",
+                Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "numbers", TestId = "step-indicator-variant-numbers" },
             },
             ],
         },
@@ -18628,6 +18847,11 @@ public static class NmKitchenSink
             Name = "Tree View",
             Component = "NMTreeView",
             Tier = 6,
+            Group = "Indicators & Pickers",
+            GroupOrder = 4,
+            GroupIndex = 2,
+            Free = false,
+            Description = "Hierarchical collapsible list for file trees, category trees, and nested data",
             Cases =
             [
             new()
@@ -19445,6 +19669,81 @@ public static class NmKitchenSink
                     },
                 ],
             },
+            },
+            ],
+        },
+        new()
+        {
+            Slug = "color-picker",
+            Name = "Color Picker",
+            Component = "NMColorPicker",
+            Tier = 5,
+            Group = "Indicators & Pickers",
+            GroupOrder = 4,
+            GroupIndex = 3,
+            Free = false,
+            Description = "Swatch trigger that opens a palette panel with hex input for colour selection",
+            Cases =
+            [
+            new()
+            {
+                Id = "color-picker-default",
+                Label = "default",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-default" },
+            },
+            new()
+            {
+                Id = "color-picker-disabled-true",
+                Label = "disabled = true",
+                Props = new NMColorPickerProps { Disabled = true, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-disabled-true" },
+            },
+            new()
+            {
+                Id = "color-picker-disabled-false",
+                Label = "disabled = false",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-disabled-false" },
+            },
+            new()
+            {
+                Id = "color-picker-showinput-true",
+                Label = "showInput = true",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-showinput-true" },
+            },
+            new()
+            {
+                Id = "color-picker-showinput-false",
+                Label = "showInput = false",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = false, ShowPanel = true, Size = "md", TestId = "color-picker-showinput-false" },
+            },
+            new()
+            {
+                Id = "color-picker-showpanel-true",
+                Label = "showPanel = true",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-showpanel-true" },
+            },
+            new()
+            {
+                Id = "color-picker-showpanel-false",
+                Label = "showPanel = false",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = false, Size = "md", TestId = "color-picker-showpanel-false" },
+            },
+            new()
+            {
+                Id = "color-picker-size-sm",
+                Label = "size = sm",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "sm", TestId = "color-picker-size-sm" },
+            },
+            new()
+            {
+                Id = "color-picker-size-md",
+                Label = "size = md",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "md", TestId = "color-picker-size-md" },
+            },
+            new()
+            {
+                Id = "color-picker-size-lg",
+                Label = "size = lg",
+                Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "lg", TestId = "color-picker-size-lg" },
             },
             ],
         },
