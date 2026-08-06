@@ -10,12 +10,16 @@
 // -----------------------------------------------------------------------------
 
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Information;
 
 namespace NoMercy.Encoder.Hardware;
 
-public partial class FfmpegCapabilities(IProcessRunner processRunner) : IFfmpegCapabilities
+public partial class FfmpegCapabilities(
+    IProcessRunner processRunner,
+    ILogger<FfmpegCapabilities>? logger = null
+) : IFfmpegCapabilities
 {
     private HashSet<string> _encoders = [];
     private HashSet<string> _decoders = [];
@@ -37,13 +41,65 @@ public partial class FfmpegCapabilities(IProcessRunner processRunner) : IFfmpegC
 
     public bool HasProtocol(string name) => _protocols.Contains(name);
 
+    /// <summary>
+    /// Re-reads what this ffmpeg build can do. Every list is replaced only when
+    /// the new one has entries.
+    /// <para>
+    /// ffmpeg can exit 0 and print nothing — a truncated pipe, a binary being
+    /// replaced, a host too loaded to flush. Parsing that produced an empty set
+    /// which then replaced a good one, and an empty encoder set reads downstream
+    /// as "software-only host": PlanStage drops hevc_nvenc from its candidates
+    /// and resolves libx265 instead, silently, for every encode planned after
+    /// that moment. 81 GPU-capable 1080p HEVC encodes were queued to libx265
+    /// that way while the card sat idle, and the choice is frozen into the queue
+    /// payload, so it outlives the process that made it. A probe that found
+    /// nothing has learned nothing — the previous answer stands.
+    /// </para>
+    /// </summary>
     public async Task ProbeAsync(CancellationToken ct = default)
     {
-        _encoders = await ProbeListAsync("-encoders", EncoderPattern(), ct);
-        _decoders = await ProbeListAsync("-decoders", EncoderPattern(), ct);
-        _demuxers = await ProbeListAsync("-demuxers", DemuxerPattern(), ct);
-        _filters = await ProbeListAsync("-filters", FilterPattern(), ct);
-        _protocols = await ProbeListAsync("-protocols", ProtocolPattern(), ct);
+        _encoders = Adopt(
+            "-encoders",
+            _encoders,
+            await ProbeListAsync("-encoders", EncoderPattern(), ct)
+        );
+        _decoders = Adopt(
+            "-decoders",
+            _decoders,
+            await ProbeListAsync("-decoders", EncoderPattern(), ct)
+        );
+        _demuxers = Adopt(
+            "-demuxers",
+            _demuxers,
+            await ProbeListAsync("-demuxers", DemuxerPattern(), ct)
+        );
+        _filters = Adopt(
+            "-filters",
+            _filters,
+            await ProbeListAsync("-filters", FilterPattern(), ct)
+        );
+        _protocols = Adopt(
+            "-protocols",
+            _protocols,
+            await ProbeListAsync("-protocols", ProtocolPattern(), ct)
+        );
+    }
+
+    private HashSet<string> Adopt(string flag, HashSet<string> current, HashSet<string> probed)
+    {
+        if (probed.Count > 0)
+            return probed;
+
+        if (current.Count == 0)
+            return current;
+
+        logger?.LogWarning(
+            "ffmpeg {Flag} parsed to nothing — keeping the {Count} entries already known rather than reporting this host as having none",
+            flag,
+            current.Count
+        );
+
+        return current;
     }
 
     private async Task<HashSet<string>> ProbeListAsync(
