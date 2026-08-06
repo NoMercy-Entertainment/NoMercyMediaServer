@@ -677,7 +677,13 @@ public class TasksController(
                     // track count is what moves — which is the point.
                     PayloadId = group.Key.ToString(),
                     Title = title.Length > 0 ? title : Path.GetFileName(first.Job.InputFile),
-                    Backdrop = covers.GetValueOrDefault(group.Key),
+                    // Rooted here, because a release's cover is not served from
+                    // where a backdrop is. Every client roots this field at
+                    // /images/original, so an album with perfectly good artwork
+                    // drew an empty box.
+                    Backdrop = covers.GetValueOrDefault(group.Key) is { } cover
+                        ? $"/images/music{cover}"
+                        : null,
                     Type = nameof(MusicEncodeJob),
                     Status = group.Any(row => row.Row.ReservedAt is not null)
                         ? "running"
@@ -1441,6 +1447,11 @@ public class QueueJobDto
     /// it is about from the moment the job is queued rather than waiting for the
     /// first frame of encoding to arrive.
     /// </summary>
+    /// <para>Usually a bare provider path that the client roots at
+    /// <c>/images/original</c>. A release's cover is not served from there — it
+    /// lives under <c>/images/music</c> — so an album card states the rooted
+    /// path instead, and a value already starting <c>/images/</c> is used as it
+    /// stands.</para>
     [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 

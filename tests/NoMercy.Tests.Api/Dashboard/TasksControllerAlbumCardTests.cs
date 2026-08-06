@@ -39,6 +39,7 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
     private const int EncodedTracks = 3;
     private const int QueuedTracks = 5;
     private const int AlbumTracks = EncodedTracks + QueuedTracks;
+    private const string AlbumCover = "/25267951861-500.jpg";
     private static readonly Guid ReleaseId = new("bb2d2f61-4d43-4f2a-9d51-19f3d3e2c0aa");
 
     private readonly HttpClient _authed;
@@ -110,6 +111,7 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
                 Library = library,
                 FolderId = _folderId,
                 LibraryFolder = folder,
+                Cover = AlbumCover,
                 Tracks = 42,
             }
         );
@@ -233,6 +235,16 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
     public async Task TheAlbumCard_NamesTheReleaseAndReadsAsAnEncode()
     {
         JsonElement card = await AlbumCardAsync();
+
+        card.GetProperty("backdrop")
+            .GetString()
+            .Should()
+            .Be(
+                $"/images/music{AlbumCover}",
+                "a release's cover is not served from where a backdrop is — rooted at "
+                    + "/images/original it 404s, and the card drew an empty box next to "
+                    + "artwork that was already on disk"
+            );
 
         card.GetProperty("title").GetString().Should().Contain("Hotel California");
         card.GetProperty("status").GetString().Should().Be("pending");
