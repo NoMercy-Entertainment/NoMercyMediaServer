@@ -30,6 +30,7 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core;
@@ -107,7 +108,20 @@ public class EncodeTaskJob
         if (Task.Resources?.GpuDeviceKey is null)
             return null; // already CPU-only — nothing to degrade
 
-        Task = Task with { Resources = Task.Resources with { GpuDeviceKey = null, GpuSlots = 0 } };
+        // Without a GPU this is a full software encode, so it must reserve a
+        // software encode's share. Keeping the hardware task's smaller count
+        // reported a cheap run to the budget and let a second encode start
+        // beside it. Max, not assignment — a CPU-tonemap task already reserves
+        // at least this much and degrading must never shrink a reservation.
+        Task = Task with
+        {
+            Resources = Task.Resources with
+            {
+                GpuDeviceKey = null,
+                GpuSlots = 0,
+                CpuThreads = Math.Max(Task.Resources.CpuThreads, EncodeThreadBudget.SoftwareEncode),
+            },
+        };
 
         return this;
     }

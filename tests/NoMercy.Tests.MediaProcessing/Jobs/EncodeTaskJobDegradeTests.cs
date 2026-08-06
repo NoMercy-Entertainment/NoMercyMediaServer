@@ -11,6 +11,7 @@
 
 using NoMercy.Encoder.Decomposition;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.Resources;
 using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Resources;
@@ -58,9 +59,39 @@ public class EncodeTaskJobDegradeTests
         Assert.Same(job, degraded);
         Assert.Null(job.Task.Resources!.GpuDeviceKey);
         Assert.Equal(0, job.Task.Resources.GpuSlots);
-        Assert.Equal(2, job.Task.Resources.CpuThreads);
         Assert.Equal(QueueNames.EncoderCpu, job.QueueName);
         Assert.Equal(QueueNames.EncoderCpu, degraded.QueueName);
+    }
+
+    // The degraded task no longer has a GPU to encode on — it becomes a full
+    // software encode. Carrying the hardware task's small CPU reservation over
+    // told the budget this was a cheap run and let a second encode start
+    // beside it, which is precisely the host-pegging the budget exists to stop.
+    [Fact]
+    public void DegradeToSoftware_RaisesCpuReservationToASoftwareEncodeShare()
+    {
+        EncodeTaskJob job = BuildJob(
+            new ResourceRequirement(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: 2)
+        );
+
+        job.DegradeToSoftware();
+
+        Assert.Equal(EncodeThreadBudget.SoftwareEncode, job.Task.Resources!.CpuThreads);
+    }
+
+    [Fact]
+    public void DegradeToSoftware_NeverLowersAnAlreadyLargerReservation()
+    {
+        // A CPU-tonemap hardware task already reserves the software share;
+        // degrading it must not shrink the reservation.
+        int oversized = EncodeThreadBudget.SoftwareEncode + 4;
+        EncodeTaskJob job = BuildJob(
+            new ResourceRequirement(GpuDeviceKey: "h264_amf", GpuSlots: 1, CpuThreads: oversized)
+        );
+
+        job.DegradeToSoftware();
+
+        Assert.Equal(oversized, job.Task.Resources!.CpuThreads);
     }
 
     [Fact]

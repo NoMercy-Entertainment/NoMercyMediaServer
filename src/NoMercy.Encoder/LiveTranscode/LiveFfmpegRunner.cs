@@ -19,6 +19,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode.Protocol;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.LiveTranscode;
@@ -72,7 +73,7 @@ public class LiveFfmpegRunner(
         // queued software encode start alongside a live session and stall it.
         int cpuThreads = input.AudioRenditionOnly ? 1 : 2;
         ResourceRequirement requirement = requiresGpu
-            ? new(gpuName, GpuSlots: 1, CpuThreads: Math.Max(2, Environment.ProcessorCount / 4))
+            ? new(gpuName, GpuSlots: 1, CpuThreads: EncodeThreadBudget.GpuEncodeWithCpuFilters)
             : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: cpuThreads);
 
         // Declared outside the try so the outer finally can always see whether

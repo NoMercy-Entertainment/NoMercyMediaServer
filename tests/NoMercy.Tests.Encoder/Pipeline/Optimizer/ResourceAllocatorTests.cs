@@ -214,18 +214,8 @@ public class ResourceAllocatorTests
         );
 
         IResourceMonitor loadedGpu0Monitor = new FixedGpuSampleMonitor([
-            new(
-                Pid: 100,
-                GpuIndex: 0,
-                EncoderUtilizationPercent: 80,
-                EncoderMemoryBytes: 0
-            ),
-            new(
-                Pid: 101,
-                GpuIndex: 1,
-                EncoderUtilizationPercent: 20,
-                EncoderMemoryBytes: 0
-            ),
+            new(Pid: 100, GpuIndex: 0, EncoderUtilizationPercent: 80, EncoderMemoryBytes: 0),
+            new(Pid: 101, GpuIndex: 1, EncoderUtilizationPercent: 20, EncoderMemoryBytes: 0),
         ]);
 
         ResourceAllocator allocator = new(twoGpuHardware, loadedGpu0Monitor);
@@ -245,6 +235,56 @@ public class ResourceAllocatorTests
         await allocator.AllocateResourcesAsync(groups);
 
         groups[0].DeviceId.Should().Be("GPU-1");
+    }
+
+    // A GPU group used to be handed a device and nothing else, leaving
+    // CpuThreadsRequired at 0 — declaring that a hardware encode needs no CPU
+    // at all. It does: decode and the filter graph stay on the CPU, so the
+    // group must state that share or the planner packs work beside it that the
+    // host cannot carry.
+    [Fact]
+    public async Task AllocateResources_GpuGroup_AlsoDeclaresItsCpuShare()
+    {
+        ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
+        List<ExecutionGroup> groups =
+        [
+            new(
+                GroupId: "group_0",
+                Nodes: [new("encode_0", OperationType.Encode, [], new())],
+                DeviceId: null,
+                GpuSlotsRequired: 1,
+                CpuThreadsRequired: 0,
+                RequiresGpu: true,
+                Priority: 1
+            ),
+        ];
+
+        await allocator.AllocateResourcesAsync(groups);
+
+        groups[0].DeviceId.Should().NotBeNull();
+        groups[0].CpuThreadsRequired.Should().Be(EncodeThreadBudget.GpuEncodeWithCpuFilters);
+    }
+
+    [Fact]
+    public async Task AllocateResources_GpuGroup_KeepsAnExplicitCpuShare()
+    {
+        ResourceAllocator allocator = new(MakeGpuCaps(), NullMonitor);
+        List<ExecutionGroup> groups =
+        [
+            new(
+                GroupId: "group_0",
+                Nodes: [new("encode_0", OperationType.Encode, [], new())],
+                DeviceId: null,
+                GpuSlotsRequired: 1,
+                CpuThreadsRequired: 12,
+                RequiresGpu: true,
+                Priority: 1
+            ),
+        ];
+
+        await allocator.AllocateResourcesAsync(groups);
+
+        groups[0].CpuThreadsRequired.Should().Be(12);
     }
 }
 

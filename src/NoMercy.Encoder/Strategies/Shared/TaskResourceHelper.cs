@@ -11,6 +11,7 @@
 
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Output;
+using NoMercy.Resources;
 
 namespace NoMercy.Encoder.Strategies.Shared;
 
@@ -34,8 +35,6 @@ internal static class TaskResourceHelper
         .GpuEncoderTokens
         .VendorPrefixes;
 
-    private static int SoftwareEncodeThreads => Math.Max(1, Environment.ProcessorCount / 2);
-
     public static ResourceRequirement ForVideoOutput(VideoOutputPlan video, GpuAccelPlan? gpuAccel)
     {
         if (IsGpuEncoder(video.EncoderName))
@@ -45,24 +44,24 @@ internal static class TaskResourceHelper
                 CpuThreads: GpuEncodeThreads(video, gpuAccel)
             );
 
-        return new(null, GpuSlots: 0, CpuThreads: SoftwareEncodeThreads);
+        return new(null, GpuSlots: 0, CpuThreads: EncodeThreadBudget.SoftwareEncode);
     }
 
     private static int GpuEncodeThreads(VideoOutputPlan video, GpuAccelPlan? gpuAccel)
     {
-        // Decode and scale are GPU-resident — only ffmpeg's demux/mux and
-        // NVENC's own helper threads touch the CPU.
         if (gpuAccel is not null)
-            return 2;
+            return EncodeThreadBudget.GpuResidentEncode;
 
         // CPU tonemapping (zscale/tonemap) dominates an HDR→SDR pass and costs
         // as much as a software encode of the same rung; the encoder being
         // nvenc buys nothing here.
         if (video.ConvertHdrToSdr || video.TonemapFilterChain is not null)
-            return Math.Max(2, SoftwareEncodeThreads);
+            return Math.Max(
+                EncodeThreadBudget.GpuResidentEncode,
+                EncodeThreadBudget.SoftwareEncode
+            );
 
-        // CPU decode plus the CPU filter graph, feeding a GPU encoder.
-        return Math.Max(2, Environment.ProcessorCount / 4);
+        return EncodeThreadBudget.GpuEncodeWithCpuFilters;
     }
 
     public static ResourceRequirement CpuOnly(int cpuThreads = 1) =>
