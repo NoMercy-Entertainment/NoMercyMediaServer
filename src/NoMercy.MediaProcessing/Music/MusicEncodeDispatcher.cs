@@ -102,7 +102,6 @@ public static class MusicEncodeDispatcher
     /// </summary>
     public static async Task Dispatch(
         IStorageFactory storageFactory,
-        IQueueJobBlobStore blobStore,
         Library library,
         Folder folder,
         MusicBrainzReleaseAppends release,
@@ -115,14 +114,6 @@ public static class MusicEncodeDispatcher
         // would leave the encode sitting in the download folder it came from, so it is the
         // library destination, laid out by the Picard rules the library already follows.
         string albumFolder = Sanitize(release, track);
-
-        // Stored once for the whole album. Every track of a release needs the same
-        // graph, and serializing it into each job wrote the same megabyte once per
-        // track — 11.7GB of queue holding 0.5GB of distinct releases.
-        await blobStore.WriteAsync(
-            AbstractMusicEncoderJob.KeyFor(release.Id),
-            JsonConvert.SerializeObject(release)
-        );
 
         QueueRunner.Current!.Dispatcher.Dispatch(
             new MusicEncodeJob

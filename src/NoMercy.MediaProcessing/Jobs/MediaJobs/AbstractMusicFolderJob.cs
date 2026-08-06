@@ -34,15 +34,13 @@ public abstract class AbstractMusicFolderJob : IShouldQueue
         IStorageFactory storageFactory,
         IStorageDriver storageDriver,
         IAudioFingerprinter audioFingerprinter,
-        ILoggerFactory loggerFactory,
-        IQueueJobBlobStore blobStore
+        ILoggerFactory loggerFactory
     )
     {
         StorageFactory = storageFactory;
         StorageDriver = storageDriver;
         AudioFingerprinter = audioFingerprinter;
         LoggerFactory = loggerFactory;
-        BlobStore = blobStore;
     }
 
     public string InputFolder { get; set; } = string.Empty;
@@ -62,8 +60,6 @@ public abstract class AbstractMusicFolderJob : IShouldQueue
     [JsonIgnore]
     public ILoggerFactory LoggerFactory { get; private set; } = null!;
 
-    [JsonIgnore]
-    public IQueueJobBlobStore BlobStore { get; private set; } = null!;
 
     [JsonIgnore]
     protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());

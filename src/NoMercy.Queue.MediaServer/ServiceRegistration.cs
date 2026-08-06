@@ -30,7 +30,6 @@ public static class ServiceRegistration
     {
         services.AddSingleton<IQueueContext>(_ => new EfQueueContextAdapter());
         services.AddSingleton<IConfigurationStore, MediaConfigurationStore>();
-        services.AddSingleton<IQueueJobBlobStore, QueueJobBlobStore>();
         services.AddScoped<QueuePayloadCompaction>();
 
         // TryAdd so this shares the same instance as the encoder's own

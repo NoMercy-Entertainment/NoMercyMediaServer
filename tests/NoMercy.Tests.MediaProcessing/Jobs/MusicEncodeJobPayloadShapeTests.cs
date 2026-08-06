@@ -84,19 +84,4 @@ public class MusicEncodeJobPayloadShapeTests
         job.FoundTrack.Id.Should().Be(TrackId);
     }
 
-    [Fact]
-    public void SharedInputKey_NamesTheRelease_SoTheSweepCanFindWhatIsStillInUse()
-    {
-        MusicEncodeJob job = new() { ReleaseId = ReleaseId };
-
-        job.SharedInputKey.Should().Be($"release:{ReleaseId}");
-    }
-
-    [Fact]
-    public void JobWithNoRelease_ClaimsNoSharedInput()
-    {
-        MusicEncodeJob job = new();
-
-        job.SharedInputKey.Should().BeNull("a sweep must not treat 'release:empty' as live input");
-    }
 }

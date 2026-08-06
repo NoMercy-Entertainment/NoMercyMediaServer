@@ -26,16 +26,16 @@ namespace NoMercy.Queue.MediaServer;
 /// <para>A music encode used to serialize the whole MusicBrainz release into every
 /// track's payload. Those rows deserialize into the current job shape with no
 /// release id and no destination path, which would make each one a no-op — a
-/// silent way to lose a library's worth of queued encodes. This lifts the release
-/// out to the shared store and rewrites the row to point at it, so the work is
-/// preserved and the space is returned.</para>
+/// silent way to lose a library's worth of queued encodes. This rewrites the row
+/// down to the ids the job hydrates from, so the work is preserved and the space
+/// is returned. The release itself is not copied anywhere: the provider cache
+/// already holds the response the import fetched.</para>
 ///
 /// <para>Unmigrated rows are exactly the rows with no payload hash, which is an
 /// indexed lookup, so this is idempotent and costs nothing once it has run.</para>
 /// </summary>
 public class QueuePayloadCompaction(
     IDbContextFactory<QueueContext> contextFactory,
-    IQueueJobBlobStore blobStore,
     ILogger<QueuePayloadCompaction> logger
 )
 {
@@ -169,11 +169,6 @@ public class QueuePayloadCompaction(
         // would encode one track's audio under another track's name.
         if (releaseId == Guid.Empty || trackId == Guid.Empty)
             return null;
-
-        await blobStore.WriteAsync(
-            SharedInputKeys.Release(releaseId),
-            release.ToString(Formatting.None)
-        );
 
         parsed["releaseId"] = releaseId;
         parsed["trackId"] = trackId;

@@ -39,10 +39,9 @@ public class ReleaseImportJob : AbstractMusicFolderJob
         IStorageFactory storageFactory,
         IStorageDriver storageDriver,
         IAudioFingerprinter audioFingerprinter,
-        ILoggerFactory loggerFactory,
-        IQueueJobBlobStore blobStore
+        ILoggerFactory loggerFactory
     )
-        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory, blobStore) { }
+        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
 
     public override string QueueName => "import";
 

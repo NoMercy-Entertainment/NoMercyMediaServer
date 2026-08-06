@@ -64,13 +64,10 @@ public class QueueContext : DbContext
             .Property(j => j.PayloadHash)
             .HasMaxLength(QueuePayloadHash.Length);
 
-        modelBuilder.Entity<QueueJobBlob>().Property(b => b.Data).HasMaxLength(int.MaxValue);
-
         base.OnModelCreating(modelBuilder);
     }
 
     public virtual DbSet<QueueJob> QueueJobs { get; set; }
-    public virtual DbSet<QueueJobBlob> QueueJobBlobs { get; set; }
     public virtual DbSet<FailedJob> FailedJobs { get; set; }
     public virtual DbSet<CronJob> CronJobs { get; set; }
 }

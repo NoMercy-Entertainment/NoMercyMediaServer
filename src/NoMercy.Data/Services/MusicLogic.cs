@@ -42,7 +42,6 @@ public partial class MusicLogic : IAsyncDisposable
     private readonly IDbContextFactory<MediaContext> _mediaContextFactory;
     private readonly IStorageFactory _storageFactory;
     private readonly IAudioFingerprinter _audioFingerprinter;
-    private readonly IQueueJobBlobStore _blobStore;
     private ConcurrentBag<MediaFile>? Files { get; set; }
     private MediaFolderExtend ListPath { get; set; }
 
@@ -60,15 +59,13 @@ public partial class MusicLogic : IAsyncDisposable
         MediaFolderExtend listPath,
         IDbContextFactory<MediaContext> mediaContextFactory,
         IStorageFactory storageFactory,
-        IAudioFingerprinter audioFingerprinter,
-        IQueueJobBlobStore blobStore
+        IAudioFingerprinter audioFingerprinter
     )
     {
         _logger = logger;
         _mediaContextFactory = mediaContextFactory;
         _storageFactory = storageFactory;
         _audioFingerprinter = audioFingerprinter;
-        _blobStore = blobStore;
         Library = library;
         ListPath = listPath;
 
@@ -352,7 +349,6 @@ public partial class MusicLogic : IAsyncDisposable
 
         await MusicEncodeDispatcher.Dispatch(
             _storageFactory,
-            _blobStore,
             Library,
             Folder,
             release,

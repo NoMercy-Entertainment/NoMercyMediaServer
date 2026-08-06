@@ -117,10 +117,9 @@ public class QueuePayloadCompactionTests : IAsyncLifetime
         return job.Id;
     }
 
-    private QueuePayloadCompaction BuildCompaction(out IQueueJobBlobStore blobStore)
+    private QueuePayloadCompaction BuildCompaction()
     {
-        blobStore = new QueueJobBlobStore(_factory);
-        return new(_factory, blobStore, NullLogger<QueuePayloadCompaction>.Instance);
+        return new(_factory, NullLogger<QueuePayloadCompaction>.Instance);
     }
 
     [Fact]
@@ -128,7 +127,7 @@ public class QueuePayloadCompactionTests : IAsyncLifetime
     {
         int rowId = await SeedLegacyRowAsync(TrackOneId, "Chug All Night");
 
-        QueuePayloadCompaction compaction = BuildCompaction(out IQueueJobBlobStore blobStore);
+        QueuePayloadCompaction compaction = BuildCompaction();
         await compaction.RunAsync();
 
         await using QueueContext context = await _factory.CreateDbContextAsync();
@@ -151,11 +150,13 @@ public class QueuePayloadCompactionTests : IAsyncLifetime
                 "the destination was computed at dispatch and must not be re-derived"
             );
 
-        row.SharedInputKey.Should().Be(SharedInputKeys.Release(ReleaseId));
-
-        string? stored = await blobStore.ReadAsync(SharedInputKeys.Release(ReleaseId));
-        stored.Should().NotBeNull();
-        GuidOf(JObject.Parse(stored!), "id").Should().Be(ReleaseId);
+        payload
+            .Value<string>("$type")
+            .Should()
+            .Contain(
+                "MusicEncodeJob",
+                "the row still names the job it is — only the release copy is gone"
+            );
     }
 
     /// <summary>Ids are JSON strings; JToken will not cast one to a Guid.</summary>
@@ -167,20 +168,24 @@ public class QueuePayloadCompactionTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Compaction_StoresOneReleaseForEveryTrackThatSharesIt()
+    public async Task Compaction_KeepsEveryTrackOfAReleaseWithoutCopyingTheRelease()
     {
         await SeedLegacyRowAsync(TrackOneId, "Chug All Night");
         await SeedLegacyRowAsync(TrackTwoId, "Take It Easy");
 
-        QueuePayloadCompaction compaction = BuildCompaction(out _);
+        QueuePayloadCompaction compaction = BuildCompaction();
         await compaction.RunAsync();
 
         await using QueueContext context = await _factory.CreateDbContextAsync();
 
         context
-            .QueueJobBlobs.Count()
+            .QueueJobs.Select(job => job.Payload)
             .Should()
-            .Be(1, "both tracks are the same release — storing it twice is the original bug");
+            .OnlyContain(
+                payload => !payload.Contains("folderMetaData"),
+                "the release the payload used to carry is not stored anywhere now — the "
+                    + "job rebuilds it from its id, out of the provider cache"
+            );
 
         context
             .QueueJobs.Select(job => job.Payload)
@@ -194,7 +199,7 @@ public class QueuePayloadCompactionTests : IAsyncLifetime
     {
         int rowId = await SeedLegacyRowAsync(TrackOneId, "Chug All Night");
 
-        QueuePayloadCompaction compaction = BuildCompaction(out _);
+        QueuePayloadCompaction compaction = BuildCompaction();
         await compaction.RunAsync();
 
         await using QueueContext first = await _factory.CreateDbContextAsync();
@@ -207,28 +212,6 @@ public class QueuePayloadCompactionTests : IAsyncLifetime
 
         secondRun.Should().Be(0, "a compacted row has a hash, which is what marks it done");
         afterSecond.Should().Be(afterFirst);
-    }
-
-    [Fact]
-    public async Task Sweep_DropsOnlyTheInputNoQueuedJobStillReads()
-    {
-        await SeedLegacyRowAsync(TrackOneId, "Chug All Night");
-
-        QueuePayloadCompaction compaction = BuildCompaction(out IQueueJobBlobStore blobStore);
-        await compaction.RunAsync();
-
-        (await blobStore.SweepUnreferencedAsync())
-            .Should()
-            .Be(0, "the encode is still queued, so its release is still input for real work");
-
-        await using (QueueContext context = await _factory.CreateDbContextAsync())
-        {
-            await context.QueueJobs.ExecuteDeleteAsync();
-        }
-
-        (await blobStore.SweepUnreferencedAsync())
-            .Should()
-            .Be(1, "with the job gone the release is input for work that is over");
     }
 
     private class TestContextFactory(SqliteConnection connection) : IDbContextFactory<QueueContext>

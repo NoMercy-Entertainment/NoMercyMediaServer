@@ -48,10 +48,9 @@ public class AudioImportJob : AbstractMusicFolderJob
         IStorageFactory storageFactory,
         IStorageDriver storageDriver,
         IAudioFingerprinter audioFingerprinter,
-        ILoggerFactory loggerFactory,
-        IQueueJobBlobStore blobStore
+        ILoggerFactory loggerFactory
     )
-        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory, blobStore) { }
+        : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
 
     public override string QueueName => "import";
     public override int Priority => 6;
@@ -580,7 +579,6 @@ public class AudioImportJob : AbstractMusicFolderJob
 
             await MusicEncodeDispatcher.Dispatch(
                 StorageFactory,
-                BlobStore,
                 albumLibrary,
                 folderLibrary,
                 release,

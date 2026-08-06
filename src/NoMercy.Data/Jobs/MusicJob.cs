@@ -53,8 +53,6 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
 
     private IDbContextFactory<MediaContext> _mediaContextFactory = null!;
 
-    private IQueueJobBlobStore _blobStore = null!;
-
     // Constructor injection: the queue worker builds the job via
     // ActivatorUtilities; [ActivatorUtilitiesConstructor] selects this ctor
     // over the serialized-data ctor. The parameterless ctor is kept for
@@ -66,8 +64,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         IStorageDriver storageDriver,
         IAudioFingerprinter audioFingerprinter,
         ILogger<MusicLogic> musicLogicLogger,
-        IDbContextFactory<MediaContext> mediaContextFactory,
-        IQueueJobBlobStore blobStore
+        IDbContextFactory<MediaContext> mediaContextFactory
     )
     {
         LoggerFactory = loggerFactory;
@@ -76,7 +73,6 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         AudioFingerprinter = audioFingerprinter;
         _musicLogicLogger = musicLogicLogger;
         _mediaContextFactory = mediaContextFactory;
-        _blobStore = blobStore;
     }
 
     public MusicJob()
@@ -100,7 +96,6 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         _mediaContextFactory = serviceProvider.GetRequiredService<
             IDbContextFactory<MediaContext>
         >();
-        _blobStore = serviceProvider.GetRequiredService<IQueueJobBlobStore>();
     }
 
     public async Task Handle()
@@ -126,8 +121,7 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
                 list,
                 _mediaContextFactory,
                 StorageFactory,
-                AudioFingerprinter,
-                _blobStore
+                AudioFingerprinter
             );
             await music.Process();
         }
