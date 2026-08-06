@@ -116,7 +116,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(_homeFactory);
+        TvShowRepository repository = new(_homeFactory, new StubMediaTypeClassifier());
         _interceptor.Clear();
 
         await repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
@@ -132,7 +132,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvPlaylistAsync_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(_homeFactory);
+        TvShowRepository repository = new(_homeFactory, new StubMediaTypeClassifier());
         _interceptor.Clear();
 
         await repository.GetPlaylistAsync(SeedConstants.UserId, 1399, "en", "US");
@@ -148,7 +148,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_DeleteTvAsync_GeneratesDeleteSql()
     {
-        TvShowRepository repository = new(_homeFactory);
+        TvShowRepository repository = new(_homeFactory, new StubMediaTypeClassifier());
         _interceptor.Clear();
 
         await repository.DeleteAsync(999);
@@ -162,7 +162,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetMissingLibraryShows_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(_homeFactory);
+        TvShowRepository repository = new(_homeFactory, new StubMediaTypeClassifier());
         _interceptor.Clear();
 
         await repository.GetMissingLibraryShows(SeedConstants.UserId, 1399, "en");
@@ -911,7 +911,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAsync_SplitQuery_GeneratesExpectedSql()
     {
-        TvShowRepository repository = new(_homeFactory);
+        TvShowRepository repository = new(_homeFactory, new StubMediaTypeClassifier());
         _interceptor.Clear();
 
         await repository.GetTvAsync(SeedConstants.UserId, 1399, "en", "US");
@@ -987,7 +987,7 @@ public class QueryOutputTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetMissingLibraryShows_UsesExistsForEmptyVideoFiles()
     {
-        TvShowRepository repository = new(_homeFactory);
+        TvShowRepository repository = new(_homeFactory, new StubMediaTypeClassifier());
         _interceptor.Clear();
 
         await repository.GetMissingLibraryShows(SeedConstants.UserId, 1399, "en");

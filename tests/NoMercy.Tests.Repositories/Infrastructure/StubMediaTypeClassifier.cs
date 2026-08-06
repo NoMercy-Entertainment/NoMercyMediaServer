@@ -8,22 +8,19 @@
 //
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
-using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.KitsuIo;
+
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.Providers.TMDB.Models.TV;
 
-namespace NoMercy.MediaProcessing.Shows;
+namespace NoMercy.Tests.Repositories.Infrastructure;
 
-public class MediaTypeClassifier : IMediaTypeClassifier
+/// <summary>
+/// No-network test double for repository tests that construct a
+/// TvShowRepository but do not exercise classification behavior.
+/// </summary>
+public class StubMediaTypeClassifier : IMediaTypeClassifier
 {
-    public Task<string> ClassifyAsync(TmdbTvShowAppends show)
-    {
-        return ClassifyAsync(show.Name, show.FirstAirDate.ParseYear());
-    }
+    public Task<string> ClassifyAsync(TmdbTvShowAppends show) => Task.FromResult("tv");
 
-    public async Task<string> ClassifyAsync(string name, int? year)
-    {
-        bool isAnime = await KitsuIoClient.IsAnime(name, year ?? 0);
-        return isAnime ? "anime" : "tv";
-    }
+    public Task<string> ClassifyAsync(string name, int? year) => Task.FromResult("tv");
 }

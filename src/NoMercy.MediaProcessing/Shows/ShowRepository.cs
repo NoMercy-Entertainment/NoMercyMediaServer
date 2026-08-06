@@ -120,6 +120,11 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .RunAsync();
     }
 
+    public Task<Library?> GetLibraryByTypeAsync(string type)
+    {
+        return context.Libraries.AsNoTracking().FirstOrDefaultAsync(l => l.Type == type);
+    }
+
     public Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles)
     {
         return context

@@ -18,14 +18,17 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Database.Models.Users;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.KitsuIo;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.Data.Repositories;
 
-public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : ITvShowRepository
+public class TvShowRepository(
+    IDbContextFactory<MediaContext> contextFactory,
+    IMediaTypeClassifier mediaTypeClassifier
+) : ITvShowRepository
 {
     public async Task<TvDetail?> GetTvAsync(
         Guid userId,
@@ -326,21 +329,13 @@ public class TvShowRepository(IDbContextFactory<MediaContext> contextFactory) : 
         if (show == null)
             return;
 
-        bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
-
-        // Require Japanese origin to avoid false positives on western co-productions
-        if (
-            isAnime
-            && !show.OriginCountry.Any(c =>
-                string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
-            )
-        )
-            isAnime = false;
+        string mediaType = await mediaTypeClassifier.ClassifyAsync(
+            show.Name,
+            show.FirstAirDate.ParseYear()
+        );
 
         Library? tvLibrary =
-            await context
-                .Libraries.Where(f => f.Type == (isAnime ? "anime" : "tv"))
-                .FirstOrDefaultAsync()
+            await context.Libraries.Where(f => f.Type == mediaType).FirstOrDefaultAsync()
             ?? await context.Libraries.Where(f => f.Type == "tv").FirstOrDefaultAsync();
 
         if (tvLibrary == null)

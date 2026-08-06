@@ -24,6 +24,7 @@ public interface IShowRepository
     Task AddAsync(Tv show);
     Task Remove(int id);
     Task LinkToLibrary(Library library, Tv show);
+    Task<Library?> GetLibraryByTypeAsync(string type);
     Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
     Task StoreTranslations(IEnumerable<Translation> translations);
     Task StoreContentRatings(IEnumerable<CertificationTv> certifications);

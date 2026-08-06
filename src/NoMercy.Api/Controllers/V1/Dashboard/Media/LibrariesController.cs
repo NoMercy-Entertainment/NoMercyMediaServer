@@ -34,6 +34,7 @@ using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
 using FolderPresetDto = NoMercy.Data.DTOs.Encoder.FolderPresetDto;
@@ -60,6 +61,7 @@ public class LibrariesController(
     IDefaultEncodingPresetLinker defaultEncodingPresetLinker,
     IMediaAnalyzer mediaAnalyzer,
     IFilenameParserPipeline filenameParser,
+    IAnimeClassificationAuditService animeClassificationAuditService,
     ILogger<LibrariesController> logger
 ) : BaseController
 {
@@ -891,6 +893,31 @@ public class LibrariesController(
         {
             return InternalServerErrorResponse("Something went wrong deleting the encoder profile");
         }
+    }
+
+    /// <summary>
+    /// Read-only diagnostic: re-runs every existing Tv row through the
+    /// shared Kitsu-backed classifier and reports rows whose classification
+    /// disagrees with the Type of the Library they are currently filed
+    /// under. Detection only — does not move files or rewrite any row.
+    /// </summary>
+    [HttpGet]
+    [Route("anime-classification-audit")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> AnimeClassificationAudit()
+    {
+        IReadOnlyList<AnimeClassificationMismatch> mismatches =
+            await animeClassificationAuditService.FindMismatchesAsync(HttpContext.RequestAborted);
+
+        return Ok(
+            new StatusResponseDto<IReadOnlyList<AnimeClassificationMismatch>>
+            {
+                Status = "ok",
+                Message = "Found {0} shows filed under the wrong library type.",
+                Args = [mismatches.Count.ToString()],
+                Data = mismatches,
+            }
+        );
     }
 
     [HttpPost]

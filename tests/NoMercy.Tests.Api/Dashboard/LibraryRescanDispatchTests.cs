@@ -56,6 +56,7 @@ public class LibraryRescanDispatchTests
             Mock.Of<NoMercy.MediaProcessing.Libraries.IDefaultEncodingPresetLinker>(),
             Mock.Of<NoMercy.Encoder.Analysis.IMediaAnalyzer>(),
             Mock.Of<NoMercy.MediaProcessing.Files.Parsing.IFilenameParserPipeline>(),
+            Mock.Of<NoMercy.MediaProcessing.Shows.IAnimeClassificationAuditService>(),
             Mock.Of<Microsoft.Extensions.Logging.ILogger<LibrariesController>>()
         );
     }

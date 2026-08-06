@@ -59,6 +59,28 @@ public class ShowManager(
         string baseUrl = BaseUrl(showAppends.Name, showAppends.FirstAirDate);
         string mediaType = await mediaTypeClassifier.ClassifyAsync(showAppends);
 
+        if (library.Type != mediaType)
+        {
+            Library? resolvedLibrary = await showRepository.GetLibraryByTypeAsync(mediaType);
+            resolvedLibrary ??= await showRepository.GetLibraryByTypeAsync("tv");
+
+            if (resolvedLibrary is not null)
+            {
+                logger.LogInformation(
+                    "Show {Id}: Reclassified as {MediaType}, filing under Library {Title} instead of {OriginalTitle}",
+                    [id, mediaType, resolvedLibrary.Title, library.Title]
+                );
+                library = resolvedLibrary;
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Show {Id}: Classified as {MediaType} but no matching library exists (and no fallback \"tv\" library either); keeping original Library {Title}",
+                    [id, mediaType, library.Title]
+                );
+            }
+        }
+
         DateTime folderCreatedAt = DateTime.UtcNow;
 
         foreach (FolderLibrary folderLibrary in library.FolderLibraries ?? [])
@@ -149,7 +171,8 @@ public class ShowManager(
         await StoreTranslations(showAppends);
 
         logger.LogInformation(
-            "Show {Name}: Added to Library {Title}", [showAppends.Name, library.Title]
+            "Show {Name}: Added to Library {Title}",
+            [showAppends.Name, library.Title]
         );
 
         jobDispatcher.DispatchColorPaletteJob("tv", show.Id.ToString());

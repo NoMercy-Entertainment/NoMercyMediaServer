@@ -12,6 +12,7 @@
 using Moq;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.MediaProcessing.Inbox;
+using NoMercy.MediaProcessing.Shows;
 
 namespace NoMercy.Tests.MediaProcessing.Inbox;
 
@@ -24,12 +25,29 @@ public class InboxClassifierTests
 
     private static InboxClassifier MakeClassifier(
         IInboxMetadataProbe? probe = null,
-        IInboxAudioTagReader? tagReader = null
+        IInboxAudioTagReader? tagReader = null,
+        IMediaTypeClassifier? mediaTypeClassifier = null
     )
     {
         probe ??= new Mock<IInboxMetadataProbe>().Object;
         tagReader ??= new Mock<IInboxAudioTagReader>().Object;
-        return new(probe, tagReader);
+        mediaTypeClassifier ??= NonAnimeClassifier().Object;
+        return new(probe, tagReader, mediaTypeClassifier);
+    }
+
+    private static Mock<IMediaTypeClassifier> NonAnimeClassifier()
+    {
+        Mock<IMediaTypeClassifier> mock = new();
+        mock.Setup(c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<int?>())).ReturnsAsync("tv");
+        return mock;
+    }
+
+    private static Mock<IMediaTypeClassifier> AnimeClassifier()
+    {
+        Mock<IMediaTypeClassifier> mock = new();
+        mock.Setup(c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync("anime");
+        return mock;
     }
 
     private static Mock<IInboxMetadataProbe> EmptyProbe()
@@ -153,11 +171,15 @@ public class InboxClassifierTests
         InboxClassifier.StructuralType(path).Should().Be(expected);
     }
 
+    // Fansub-bracket filenames are structurally episodic ("tv-shaped"); the
+    // anime/tv split itself is decided by IMediaTypeClassifier (Kitsu), not
+    // by StructuralType, so normally-named anime with no bracket still
+    // classifies correctly.
     [Theory]
-    [InlineData("Inbox/[SubsPlease] Frieren - 01 (1080p).mkv", "anime")]
-    [InlineData("Inbox/[Erai-raws] Bleach - 366 [1080p].mkv", "anime")]
-    [InlineData("Inbox/[HorribleSubs] Attack on Titan - 25 [720p].mkv", "anime")]
-    public void StructuralType_AnimeShapes_ReturnAnime(string path, string expected)
+    [InlineData("Inbox/[SubsPlease] Frieren - 01 (1080p).mkv", "tv")]
+    [InlineData("Inbox/[Erai-raws] Bleach - 366 [1080p].mkv", "tv")]
+    [InlineData("Inbox/[HorribleSubs] Attack on Titan - 25 [720p].mkv", "tv")]
+    public void StructuralType_FansubShapes_ReturnTv(string path, string expected)
     {
         InboxClassifier.StructuralType(path).Should().Be(expected);
     }
@@ -243,7 +265,10 @@ public class InboxClassifierTests
     {
         Mock<IInboxMetadataProbe> probe = EmptyProbe();
 
-        InboxClassifier classifier = MakeClassifier(probe: probe.Object);
+        InboxClassifier classifier = MakeClassifier(
+            probe: probe.Object,
+            mediaTypeClassifier: AnimeClassifier().Object
+        );
         ClassificationResult result = await classifier.Classify(
             "Inbox/[SubsPlease] Frieren - 01 (1080p).mkv",
             Ulid.NewUlid(),
@@ -252,6 +277,28 @@ public class InboxClassifierTests
 
         result.DetectedType.Should().Be("anime");
         result.Confidence.Should().Be("low");
+    }
+
+    // The bug this slice fixes: a normally-named anime file with no fansub
+    // bracket used to structurally classify as "tv" and stop there. It must
+    // now be handed to the Kitsu-backed classifier the same as a bracketed
+    // fansub file, and land as "anime" when Kitsu says so.
+    [Fact]
+    public async Task Classify_NormallyNamedAnimeNoFansubBracket_DelegatesToClassifierReturnsAnime()
+    {
+        Mock<IInboxMetadataProbe> probe = EmptyProbe();
+
+        InboxClassifier classifier = MakeClassifier(
+            probe: probe.Object,
+            mediaTypeClassifier: AnimeClassifier().Object
+        );
+        ClassificationResult result = await classifier.Classify(
+            "Inbox/Attack on Titan/Season 01/Attack on Titan S01E01.mkv",
+            Ulid.NewUlid(),
+            CancellationToken.None
+        );
+
+        result.DetectedType.Should().Be("anime");
     }
 
     // -----------------------------------------------------------------------
@@ -511,7 +558,10 @@ public class InboxClassifierTests
         string expectedType
     )
     {
-        InboxClassifier classifier = MakeClassifier(probe: EmptyProbe().Object);
+        InboxClassifier classifier = MakeClassifier(
+            probe: EmptyProbe().Object,
+            mediaTypeClassifier: AnimeClassifier().Object
+        );
         ClassificationResult result = await classifier.Classify(
             path,
             Ulid.NewUlid(),

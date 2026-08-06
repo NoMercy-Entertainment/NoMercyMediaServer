@@ -17,6 +17,7 @@ using NoMercy.Events;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
 using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Auth;
 using NoMercy.Notifications.Push;
@@ -168,7 +169,9 @@ public static class EventHandlerExtensions
         {
             IInboxMetadataProbe probe = sp.GetRequiredService<IInboxMetadataProbe>();
             IInboxAudioTagReader tagReader = sp.GetRequiredService<IInboxAudioTagReader>();
-            return new(probe, tagReader);
+            IMediaTypeClassifier mediaTypeClassifier =
+                sp.GetRequiredService<IMediaTypeClassifier>();
+            return new(probe, tagReader, mediaTypeClassifier);
         });
         services.AddSingleton<InboxRoutingService>(sp =>
         {
