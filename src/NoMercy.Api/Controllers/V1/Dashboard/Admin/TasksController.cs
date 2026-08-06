@@ -643,24 +643,25 @@ public class TasksController(
             .Select(album => new AlbumCover(album.Id, album.Cover))
             .ToDictionaryAsync(album => album.Id, album => album.Cover);
 
-        // The artist's picture where the release has none of its own. A cover is
-        // fetched per release group and plenty of releases never get one — 284 of
-        // the 885 queued here — so the card that names an artist and an album
-        // showed a grey box for a third of a library. The artist is the one on
-        // the release, not a stand-in.
+        // The same release cover, read off the album's tracks when the album row
+        // itself has none. It is one image per release and every track stores it,
+        // but the album row is written before the cover-art job answers and only
+        // that job fills it in — so 106 of the 885 queued albums have a blank
+        // column while their own tracks carry the artwork. Still the release's
+        // cover: an artist's picture would be a different album's image.
         List<Guid> uncovered = releaseIds
             .Where(id => covers.GetValueOrDefault(id) is null)
             .ToList();
 
         if (uncovered.Count > 0)
         {
-            List<AlbumCover> artistCovers = await mediaContext
-                .AlbumArtist.AsNoTracking()
-                .Where(link => uncovered.Contains(link.AlbumId) && link.Artist.Cover != null)
-                .Select(link => new AlbumCover(link.AlbumId, link.Artist.Cover))
+            List<AlbumCover> trackCovers = await mediaContext
+                .AlbumTrack.AsNoTracking()
+                .Where(link => uncovered.Contains(link.AlbumId) && link.Track.Cover != null)
+                .Select(link => new AlbumCover(link.AlbumId, link.Track.Cover))
                 .ToListAsync();
 
-            foreach (IGrouping<Guid, AlbumCover> group in artistCovers.GroupBy(row => row.Id))
+            foreach (IGrouping<Guid, AlbumCover> group in trackCovers.GroupBy(row => row.Id))
                 covers[group.Key] = group.First().Cover;
         }
 

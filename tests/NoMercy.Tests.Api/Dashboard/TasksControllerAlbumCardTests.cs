@@ -41,7 +41,9 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
     private const int AlbumTracks = EncodedTracks + QueuedTracks;
     private const string AlbumCover = "/25267951861-500.jpg";
     private const string ArtistCover = "/various-artists-638e4492c76c6.jpg";
+    private const string BareReleaseTrackCover = "/10029608662-500.jpg";
     private static readonly Guid ArtistId = new("c1a0f2d4-55aa-4b0e-9a6f-0d9a1b2c3d4e");
+    private static readonly Guid BareReleaseTrackId = new("e4f5a6b7-2233-4d44-9e55-66f7a8b9c0d1");
     private static readonly Guid BareReleaseId = new("d3e4f5a6-1122-4c33-8d44-55e6f7a8b9c0");
     private static readonly Guid ReleaseId = new("bb2d2f61-4d43-4f2a-9d51-19f3d3e2c0aa");
 
@@ -174,6 +176,25 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
         media.AlbumArtist.Add(new(BareReleaseId, ArtistId));
         await media.SaveChangesAsync();
 
+        // The release's own cover, stored where every track of it keeps it. The
+        // artist above has a picture too, and it must lose: it is a different
+        // image of a different thing.
+        media.Tracks.Add(
+            new()
+            {
+                Id = BareReleaseTrackId,
+                Name = "Track that carries the release cover",
+                FolderId = _folderId,
+                Folder = "/Music/Bare",
+                Filename = "/bare.flac",
+                Cover = BareReleaseTrackCover,
+            }
+        );
+        await media.SaveChangesAsync();
+
+        media.AlbumTrack.Add(new(BareReleaseId, BareReleaseTrackId));
+        await media.SaveChangesAsync();
+
         await using QueueContext queue = new();
         List<QueueJob> rows = [];
         for (int track = 1; track <= QueuedTracks; track++)
@@ -210,8 +231,14 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
         await queue.QueueJobs.Where(job => _rowIds.Contains(job.Id)).ExecuteDeleteAsync();
 
         await using MediaContext media = new();
-        List<Guid> trackIds = Enumerable.Range(1, EncodedTracks).Select(EncodedTrackId).ToList();
-        await media.AlbumTrack.Where(link => link.AlbumId == ReleaseId).ExecuteDeleteAsync();
+        List<Guid> trackIds =
+        [
+            .. Enumerable.Range(1, EncodedTracks).Select(EncodedTrackId),
+            BareReleaseTrackId,
+        ];
+        await media
+            .AlbumTrack.Where(link => link.AlbumId == ReleaseId || link.AlbumId == BareReleaseId)
+            .ExecuteDeleteAsync();
         await media.Tracks.Where(track => trackIds.Contains(track.Id)).ExecuteDeleteAsync();
         await media.AlbumArtist.Where(link => link.AlbumId == BareReleaseId).ExecuteDeleteAsync();
         await media.Artists.Where(artist => artist.Id == ArtistId).ExecuteDeleteAsync();
@@ -307,10 +334,11 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
             .GetString()
             .Should()
             .Be(
-                $"/images/music{ArtistCover}",
-                "a release with no cover of its own still belongs to an artist who has "
-                    + "one — a third of a queued library has no release cover, and a grey "
-                    + "box next to a picture that is already on disk is a choice"
+                $"/images/music{BareReleaseTrackCover}",
+                "the card shows the release's cover. The album row is written before the "
+                    + "cover-art job answers, so the artwork lives on the album's tracks "
+                    + "until it is filled in — and the artist's picture, which this album "
+                    + "also has, is a different image of a different thing"
             );
         card.GetProperty("status").GetString().Should().Be("pending");
         card.GetProperty("kind")
