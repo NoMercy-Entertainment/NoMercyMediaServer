@@ -64,7 +64,7 @@ public class HlsSinglePassStrategy(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.ForVideoOutput(video),
+                    Resources: TaskResourceHelper.ForVideoOutput(video, plan.GpuAccel),
                     EstimatedCostUnits: EstimateVideoCost(video),
                     Label: $"{resolution}{hdr} {video.EncoderName}",
                     VideoWidth: video.Width,

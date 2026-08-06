@@ -71,7 +71,7 @@ public abstract class TwoPassStrategyBase(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Pass1,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.ForVideoOutput(video),
+                    Resources: TaskResourceHelper.ForVideoOutput(video, plan.GpuAccel),
                     EstimatedCostUnits: EstimateVideoCost(video),
                     Label: $"pass1 {video.Width}p {video.EncoderName}"
                 )
@@ -88,7 +88,7 @@ public abstract class TwoPassStrategyBase(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Pass2,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.ForVideoOutput(video),
+                    Resources: TaskResourceHelper.ForVideoOutput(video, plan.GpuAccel),
                     EstimatedCostUnits: EstimateVideoCost(video),
                     StatsFilePath: null,
                     Label: $"pass2 {video.Width}p {video.EncoderName}"
