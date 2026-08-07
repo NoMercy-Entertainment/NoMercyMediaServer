@@ -172,6 +172,36 @@ public class StuckReservationReaperHostedServiceTests
         Assert.Empty(context.FailedJobs);
     }
 
+    [Fact]
+    public async Task ReapOnceAsync_MusicEncodeJobOnEncoderQueue_IsReclaimed()
+    {
+        (StuckReservationReaperHostedService service, TestQueueContextAdapter context) =
+            BuildService();
+
+        // MusicEncodeJob deliberately shares the plain "encoder" queue with
+        // VideoEncodeJob for priority ordering, but a single track is bounded
+        // like Image/File — not hours-long like a real video encode — and has
+        // no OutputDirectory for the checkpoint-resume path either. A wedged
+        // reservation here must not inherit the video jobs' exclusion.
+        QueueJobModel wedgedTrack = new()
+        {
+            Queue = EncoderQueue,
+            Payload =
+                "{\"$type\":\"NoMercy.MediaProcessing.Jobs.MediaJobs.MusicEncodeJob, NoMercy.MediaProcessing\",\"id\":\"release-1\"}",
+            Priority = 5,
+            Attempts = 1,
+            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(1),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
+        };
+        context.AddJob(wedgedTrack);
+
+        await service.ReapOnceAsync(CancellationToken.None);
+
+        QueueJobModel reclaimed = Assert.Single(context.Jobs);
+        Assert.Null(reclaimed.ReservedAt);
+        Assert.Empty(context.FailedJobs);
+    }
+
     // ── Attempt-budget convergence (no refund on the periodic path) ────────
 
     [Fact]

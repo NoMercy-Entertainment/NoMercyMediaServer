@@ -37,9 +37,10 @@ public sealed class MusicBrainzBaseClientTests : ProviderHttpHarness
             string url,
             Dictionary<string, string?>? query = null,
             bool? priority = false,
-            bool skipCache = false
+            bool skipCache = false,
+            TimeSpan? maxCacheAge = null
         )
-            where T : class => base.Get<T>(url, query, priority, skipCache);
+            where T : class => base.Get<T>(url, query, priority, skipCache, maxCacheAge);
     }
 
     [Fact]

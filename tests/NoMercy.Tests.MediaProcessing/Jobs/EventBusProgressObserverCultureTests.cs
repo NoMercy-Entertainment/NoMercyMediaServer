@@ -19,10 +19,14 @@ using NoMercy.MediaProcessing.Jobs.MediaJobs.Support;
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
 /// <summary>
-/// <see cref="EventBusProgressObserver.OnStageCompleted"/> bakes an elapsed
-/// duration into the "message" field of the SignalR dashboard payload. On a
-/// comma-decimal server locale a bare ":F1" turns "(3.2s)" into "(3,2s)" in
-/// that payload — this pins InvariantCulture on the formatter.
+/// <see cref="EventBusProgressObserver.OnStageCompleted"/> used to bake an
+/// elapsed duration into the "message" field of the SignalR dashboard
+/// payload as a formatted string — "Completed: VideoEncode (3.2s)" — which on
+/// a comma-decimal server locale turned "(3.2s)" into "(3,2s)" in that
+/// payload, and grew the dashboard card's task-name text every heartbeat
+/// instead of the card's own dedicated numbers row. The duration now travels
+/// as a separate numeric "elapsed_seconds" field, which the JSON serializer
+/// always writes invariant regardless of thread culture — this pins that.
 /// </summary>
 [Collection("EventBusProvider")]
 public class EventBusProgressObserverCultureTests
@@ -45,7 +49,9 @@ public class EventBusProgressObserverCultureTests
     [InlineData("de-DE")]
     [InlineData("nl-NL")]
     [InlineData("fr-FR")]
-    public void OnStageCompleted_Message_StaysPeriodDecimalUnderCommaCulture(string culture)
+    public void OnStageCompleted_ElapsedSeconds_StaysPeriodDecimalUnderCommaCulture(
+        string culture
+    )
     {
         CultureInfo previousCulture = Thread.CurrentThread.CurrentCulture;
         IEventBus? previousBus = GetCurrentInstance();
@@ -74,8 +80,10 @@ public class EventBusProgressObserverCultureTests
 
             Assert.NotNull(captured);
             string message = (string)GetField(captured.ProgressData, "message")!;
-            Assert.Contains("(3.2s)", message);
-            Assert.DoesNotContain(",", message);
+            Assert.Equal("Completed: VideoEncode", message);
+
+            double? elapsedSeconds = (double?)GetField(captured.ProgressData, "elapsed_seconds");
+            Assert.Equal(3.2, elapsedSeconds);
         }
         finally
         {

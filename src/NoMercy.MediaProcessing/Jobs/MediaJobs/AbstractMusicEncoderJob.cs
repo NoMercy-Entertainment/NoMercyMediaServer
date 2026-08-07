@@ -74,7 +74,6 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue, IJobStorageInjecto
 
     public bool ShouldSerializeMediaFile() => false;
 
-
     /// <summary>
     /// Rebuilds the release-derived state the payload no longer carries, from the
     /// release id it does carry.
@@ -96,8 +95,19 @@ public abstract class AbstractMusicEncoderJob : IShouldQueue, IJobStorageInjecto
         if (FolderMetaData is not null)
             return true;
 
+        // The 1-day generic cache TTL is fine for a fresh lookup, but a release
+        // already imported and sitting behind a deep encoder queue outlives it
+        // easily — every track then falls through to a live MusicBrainz call,
+        // and MusicBrainzBaseClient throttles those to one per 1.5s across the
+        // whole provider, serializing the entire queue behind that limit. The
+        // release graph for an already-imported album does not change; give
+        // this specific read a TTL long enough to survive any realistic queue
+        // backlog instead of re-fetching per track.
         using MusicBrainzReleaseClient releaseClient = new();
-        MusicBrainzReleaseAppends? release = await releaseClient.WithAllAppends(ReleaseId);
+        MusicBrainzReleaseAppends? release = await releaseClient.WithAllAppends(
+            ReleaseId,
+            maxCacheAge: TimeSpan.FromDays(30)
+        );
         if (release is null)
             return false;
 

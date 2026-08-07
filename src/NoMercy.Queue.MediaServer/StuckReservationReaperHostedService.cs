@@ -39,7 +39,15 @@ namespace NoMercy.Queue.MediaServer;
 /// <item><description>Encoder queues (encoder/encoder-gpu/encoder-cpu)
 /// legitimately hold a reservation for hours. Excluded entirely — they stay
 /// owned by the boot pass plus their checkpoint-resume path
-/// (<see cref="IOrphanCheckpointLookup"/>).</description></item>
+/// (<see cref="IOrphanCheckpointLookup"/>). The one exception is
+/// <c>MusicEncodeJob</c>: it deliberately shares the plain <c>encoder</c>
+/// queue with <c>VideoEncodeJob</c> so priority ordering between video and
+/// music works (see its <c>QueueName</c>/<c>Priority</c> doc comments), but a
+/// single track is bounded like <c>Image</c>/<c>File</c>, not hours-long like
+/// a video encode. It has no <c>OutputDirectory</c> for the checkpoint-resume
+/// path either, so a wedged reservation was invisible to every recovery path
+/// until the next full server restart — see
+/// <c>IsReclaimableEncoderJob</c>.</description></item>
 /// <item><description><c>library</c> and <c>import</c> also excluded:
 /// <c>LibraryScanJob</c>/<c>ShowImportJob</c> can legitimately run well past
 /// this reaper's cutoff (a first-time import of a large collection makes
@@ -141,9 +149,7 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
             DateTime cutoffUtc = DateTime.UtcNow.Subtract(_cutoff);
             IReadOnlyList<QueueJobModel> reserved = context.GetReservedJobsOlderThan(cutoffUtc);
 
-            List<QueueJobModel> candidates = reserved
-                .Where(job => AllowedQueues.Contains(job.Queue))
-                .ToList();
+            List<QueueJobModel> candidates = reserved.Where(IsReclaimable).ToList();
 
             if (candidates.Count == 0)
                 return;
@@ -205,6 +211,22 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
             );
         }
     }
+
+    /// <summary>
+    /// True for anything on <see cref="AllowedQueues"/>, plus the one
+    /// deliberate carve-out: a <c>MusicEncodeJob</c> reserved on the plain
+    /// <c>encoder</c> queue. That queue is otherwise excluded because
+    /// <c>VideoEncodeJob</c>/<c>EncodeTaskJob</c> legitimately hold it for
+    /// hours — but a music track shares the queue for priority ordering only
+    /// and is bounded like the other allow-listed queues, so it must not
+    /// inherit the video jobs' exclusion.
+    /// </summary>
+    private static bool IsReclaimable(QueueJobModel job) =>
+        AllowedQueues.Contains(job.Queue)
+        || (
+            job.Queue == QueueNames.Encoder
+            && JobPayloadTypeReader.ReadShortTypeName(job.Payload) == "MusicEncodeJob"
+        );
 
     private static string BuildDeadLetterReason(QueueJobModel job) =>
         $"job.reclaimed_stuck_repeatedly (periodic reaper, attempts={job.Attempts})";

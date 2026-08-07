@@ -32,11 +32,12 @@ public class TmdbBaseClientTests : TmdbTestBase
             string url,
             Dictionary<string, string?>? query = null,
             bool? priority = false,
-            bool skipCache = false
+            bool skipCache = false,
+            TimeSpan? maxCacheAge = null
         )
             where T : class
         {
-            return base.Get<T>(url, query, priority, skipCache);
+            return base.Get<T>(url, query, priority, skipCache, maxCacheAge);
         }
 
         public new Task<List<T>?> Paginated<T>(string url, int limit)

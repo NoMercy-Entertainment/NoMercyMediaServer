@@ -86,7 +86,14 @@ public static class CacheController
         return Convert.ToHexString(hashBytes);
     }
 
-    public static async Task<(bool Found, T? Value)> ReadAsync<T>(string url, bool xml = false)
+    public static Task<(bool Found, T? Value)> ReadAsync<T>(string url, bool xml = false)
+        where T : class? => ReadAsync<T>(url, TimeSpan.FromDays(1), xml);
+
+    public static async Task<(bool Found, T? Value)> ReadAsync<T>(
+        string url,
+        TimeSpan maxAge,
+        bool xml = false
+    )
         where T : class?
     {
         // No cache configured (e.g. unit tests that never call Initialize) —
@@ -107,8 +114,7 @@ public static class CacheController
                 return (false, default);
             }
 
-            // invalidate cache after 1 day of last write time
-            if (storage.LastModified(fullname) < DateTimeOffset.UtcNow.AddDays(-1))
+            if (storage.LastModified(fullname) < DateTimeOffset.UtcNow.Subtract(maxAge))
             {
                 storage.Delete(fullname);
                 return (false, default);

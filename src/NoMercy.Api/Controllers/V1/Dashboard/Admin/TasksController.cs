@@ -292,8 +292,41 @@ public class TasksController(
             .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
 
+        // A decomposed video encode's coordinator row is never reserved itself —
+        // it hands its work to child EncodeTaskJob rows on encoder-gpu/encoder-cpu
+        // and sits with ReservedAt == null while ffmpeg actually runs. The
+        // "running" query above only catches jobs reserved on THIS queue, so
+        // every in-flight video encode was invisible unless its coordinator also
+        // happened to land in the banded sample — on a deep queue it usually
+        // didn't, and the panel showed no video progress at all despite ffmpeg
+        // actively encoding.
+        List<string> activeChildMediaIds = (
+            await queueContext
+                .QueueJobs.AsNoTracking()
+                .Where(j => j.Queue.StartsWith("encoder-") && j.ReservedAt != null)
+                .Select(j => j.Payload)
+                .ToListAsync()
+        )
+            .Select(payload => payload.FromJson<EncodeTaskJob>()?.Id?.ToString())
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Select(id => id!)
+            .Distinct()
+            .ToList();
+
+        List<QueueJob> activeCoordinators = [];
+        foreach (string mediaId in activeChildMediaIds)
+        {
+            activeCoordinators.AddRange(
+                await queueContext
+                    .QueueJobs.AsNoTracking()
+                    .Where(j => j.Queue == "encoder" && j.Payload.Contains($"\"id\":\"{mediaId}\""))
+                    .ToListAsync()
+            );
+        }
+
         ImmutableList<QueueJob> jobs = banded
             .Concat(running)
+            .Concat(activeCoordinators)
             .GroupBy(row => row.Id)
             .Select(group => group.First())
             .ToImmutableList();
@@ -621,21 +654,27 @@ public class TasksController(
 
         List<Guid> releaseIds = musicRows.Select(row => row.Job.ReleaseId).Distinct().ToList();
 
-        // Tracks of the release that are stored, which is to say encoded: the link
-        // between a track and its release is written when the encode succeeds and
-        // the recording is stored, so this count is exactly the work that is done.
+        // AlbumTrack looked like the right source for "encoded so far" — the link
+        // between a track and its release — but RecordingManager.Store() writes
+        // every track's link at IMPORT time, for the whole album at once, before
+        // any of them are handed to the encoder. That made this count equal
+        // Album.Tracks from the moment the scan finished and it never moved
+        // again: a card could sit at "44 of 44" while genuinely nothing had been
+        // encoded, or — worse — while every track was still queued, because the
+        // number this dictionary fed had already reached its ceiling before the
+        // first ffmpeg process ran.
         //
-        // Not Album.Tracks. That is the release's track count as the metadata
-        // provider states it, and it agrees with neither the library nor the
-        // queue — a compilation stored with two tracks and two queued carries
-        // Tracks = 20, so a card counting towards it opened at "18 of 20 done"
-        // for an album where nothing had been encoded at all.
-        Dictionary<Guid, int> encodedByRelease = await mediaContext
-            .AlbumTrack.AsNoTracking()
-            .Where(link => releaseIds.Contains(link.AlbumId))
-            .GroupBy(link => link.AlbumId)
-            .Select(group => new ReleaseEncodedCount(group.Key, group.Count()))
-            .ToDictionaryAsync(row => row.AlbumId, row => row.Encoded);
+        // Album.Tracks (the metadata-declared count) is the one number here that
+        // both is stable and does not carry that false-completion baggage — it
+        // is not touched by import identification, only read. Turning it into
+        // "completed" instead needs the remaining-in-queue count below: as each
+        // track's row leaves the queue (encoded or dead-lettered), remaining
+        // drops by one and declared minus remaining rises by one, so this now
+        // tracks the queue draining rather than the scan having already run.
+        Dictionary<Guid, int> declaredTracksByRelease = await mediaContext
+            .Albums.AsNoTracking()
+            .Where(album => releaseIds.Contains(album.Id))
+            .ToDictionaryAsync(album => album.Id, album => album.Tracks);
 
         Dictionary<Guid, string?> covers = await mediaContext
             .Albums.AsNoTracking()
@@ -673,13 +712,16 @@ public class TasksController(
                 MusicQueueRow current =
                     group.FirstOrDefault(row => row.Row.ReservedAt is not null) ?? first;
 
-                // What is left, and what is done, each counted from the thing that
-                // records it. Their sum is the album as this server knows it, so
-                // the card reaches 100% exactly when the queue runs dry — which a
-                // denominator from anywhere else could not promise.
+                // Total is the metadata-declared track count — stable, and set
+                // once at import, well before this card exists. Completed is
+                // derived from it rather than read directly, because the queue
+                // draining is the only signal here that moves in step with the
+                // encoder actually running: as each track's row leaves the
+                // queue, remaining falls and completed rises to match. The pair
+                // still reaches 100% exactly when the queue runs dry.
                 int remaining = remainingByRelease.GetValueOrDefault(group.Key, group.Count());
-                int completed = encodedByRelease.GetValueOrDefault(group.Key);
-                int total = completed + remaining;
+                int total = declaredTracksByRelease.GetValueOrDefault(group.Key, remaining);
+                int completed = Math.Max(0, total - remaining);
 
                 string title = string.Join(
                     " - ",
@@ -1429,9 +1471,6 @@ internal sealed class QueueTypeCount
     public int Pending { get; set; }
     public int Running { get; set; }
 }
-
-/// <summary>Tracks of a release that are stored, and so encoded.</summary>
-internal sealed record ReleaseEncodedCount(Guid AlbumId, int Encoded);
 
 /// <summary>A release's artwork, for the card that stands for it.</summary>
 internal sealed record AlbumCover(Guid Id, string? Cover);

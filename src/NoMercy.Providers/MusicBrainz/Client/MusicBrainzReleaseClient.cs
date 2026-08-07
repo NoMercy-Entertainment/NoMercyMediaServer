@@ -27,7 +27,8 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
     public Task<MusicBrainzReleaseAppends?> WithAppends(
         Guid? id,
         string[] appendices,
-        bool? priority = false
+        bool? priority = false,
+        TimeSpan? maxCacheAge = null
     )
     {
         Dictionary<string, string?> queryParams = new()
@@ -36,7 +37,12 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
             ["fmt"] = "json",
         };
 
-        return Get<MusicBrainzReleaseAppends>("release/" + id, queryParams, priority);
+        return Get<MusicBrainzReleaseAppends>(
+            "release/" + id,
+            queryParams,
+            priority,
+            maxCacheAge: maxCacheAge
+        );
     }
 
     public Task<MusicBrainzReleaseAppends?> WithAppends(string[] appendices, bool? priority = false)
@@ -50,7 +56,11 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
         return Get<MusicBrainzReleaseAppends>("release/" + Id, queryParams, priority);
     }
 
-    public Task<MusicBrainzReleaseAppends?> WithAllAppends(Guid? id, bool? priority = false)
+    public Task<MusicBrainzReleaseAppends?> WithAllAppends(
+        Guid? id,
+        bool? priority = false,
+        TimeSpan? maxCacheAge = null
+    )
     {
         return WithAppends(
             (Guid)id!,
@@ -81,7 +91,8 @@ public class MusicBrainzReleaseClient : MusicBrainzBaseClient
                 "genres",
                 "tags",
             },
-            priority
+            priority,
+            maxCacheAge
         );
     }
 
