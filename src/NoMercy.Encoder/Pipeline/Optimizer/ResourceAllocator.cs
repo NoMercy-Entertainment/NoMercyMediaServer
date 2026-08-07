@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Hardware;
+using NoMercy.Resources;
 
 namespace NoMercy.Encoder.Pipeline.Optimizer;
 
@@ -21,7 +22,6 @@ public class ResourceAllocator(IHardwareCapabilities hardware, IResourceMonitor 
             ? await monitor.SampleGpuAsync()
             : [];
         int leastLoadedGpuIndex = FindLeastLoadedGpuIndex(gpuSamples);
-        int softwareThreadBudget = Math.Max(1, Environment.ProcessorCount / 2);
 
         for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
         {
@@ -34,13 +34,26 @@ public class ResourceAllocator(IHardwareCapabilities hardware, IResourceMonitor 
                         ? hardware.Gpus[leastLoadedGpuIndex].Name
                         : hardware.Gpus[0].Name;
 
-                groups[groupIndex] = group with { DeviceId = gpuDeviceId };
+                // A GPU group still decodes and filters on the CPU, so it has
+                // to declare that share too. Leaving it at 0 told the planner a
+                // hardware encode was free and let it pack CPU work beside one.
+                groups[groupIndex] = group with
+                {
+                    DeviceId = gpuDeviceId,
+                    CpuThreadsRequired =
+                        group.CpuThreadsRequired == 0
+                            ? EncodeThreadBudget.GpuEncodeWithCpuFilters
+                            : group.CpuThreadsRequired,
+                };
                 continue;
             }
 
             if (group is { RequiresGpu: false, CpuThreadsRequired: 0 })
             {
-                groups[groupIndex] = group with { CpuThreadsRequired = softwareThreadBudget };
+                groups[groupIndex] = group with
+                {
+                    CpuThreadsRequired = EncodeThreadBudget.SoftwareEncode,
+                };
             }
         }
     }

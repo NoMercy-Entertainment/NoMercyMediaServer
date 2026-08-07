@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
+    <ProjectReference Include="..\NoMercyQueue.Core\NoMercyQueue.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

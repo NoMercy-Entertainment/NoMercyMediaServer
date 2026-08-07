@@ -12,23 +12,28 @@
 using System.Collections.Concurrent;
 using System.Net;
 using Microsoft.Extensions.Logging;
+using NoMercy.Authorization;
 using NoMercy.Data.Security;
 using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Security;
 using NoMercy.Database.Models.Users;
+using NoMercy.Events;
+using NoMercy.Events.Media;
 using NoMercy.Networking.Http;
 
 namespace NoMercy.Api.Security;
 
 /// <summary>
 /// fail2ban semantics for the request pipeline: offences accumulate inside a
-/// sliding window, crossing the threshold produces a timed ban, and the ban
-/// expires by itself.
+/// sliding window, and crossing the threshold produces a ban. A scanner is
+/// never a mistake, so a probe-triggered ban never expires on its own — only
+/// a moderator lifting it through UnbanAsync ends it.
 /// </summary>
 public class AbuseGuard(
     IIpBanRepository repository,
     IAbuseGuardSettings settings,
     IActivityLogger activityLogger,
+    IEventBus eventBus,
     ILogger<AbuseGuard> logger,
     TimeProvider timeProvider
 ) : IAbuseGuard
@@ -167,14 +172,10 @@ public class AbuseGuard(
         DateTime now = timeProvider.GetUtcNow().UtcDateTime;
         int priorBans = await repository.PriorBanCountAsync(address.ToString(), ct);
 
-        // Each repeat doubles the sentence. Something that comes back after the
-        // first hour is not a mistake, and an hour clearly did not deter it.
-        double multiplier = Math.Pow(2, Math.Min(priorBans, 16));
-        TimeSpan duration = settings.BanDuration * multiplier;
-        if (duration > settings.MaxBanDuration)
-            duration = settings.MaxBanDuration;
-
-        return await PersistAsync(
+        // A caller that tripped the probe detector is presumed malicious, not
+        // mistaken, so the ban does not expire on a timer — only a moderator
+        // lifting it through UnbanAsync ends it.
+        IpBan ban = await PersistAsync(
             address,
             reason: verdict.ToString(),
             path: path,
@@ -182,9 +183,38 @@ public class AbuseGuard(
             banNumber: priorBans + 1,
             manual: false,
             bannedAt: now,
-            expiresAt: now + duration,
+            expiresAt: DateTime.MaxValue,
             ct
         );
+
+        await NotifyOwnersAsync(address, verdict, path, offenceCount, ct);
+
+        return ban;
+    }
+
+    private async Task NotifyOwnersAsync(
+        IPAddress address,
+        ProbeVerdict verdict,
+        string path,
+        int offenceCount,
+        CancellationToken ct
+    )
+    {
+        foreach (User owner in UserCache.Current.Users.Where(user => user.Owner))
+        {
+            await eventBus.PublishAsync(
+                new UserNotifiedEvent
+                {
+                    Title = "IP banned",
+                    Message =
+                        $"{address} was permanently banned as a {verdict} after {offenceCount} offence(s) on {path}.",
+                    Type = "security",
+                    Route = "/settings/security/bans",
+                    UserId = owner.Id,
+                },
+                ct
+            );
+        }
     }
 
     private async Task<IpBan> PersistAsync(

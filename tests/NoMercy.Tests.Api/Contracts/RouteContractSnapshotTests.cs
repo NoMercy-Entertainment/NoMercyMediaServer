@@ -130,6 +130,7 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "GET api/v{version:apiVersion}/dashboard/inbox/{id:ulid}/matches [Inbox.Matches]",
         "GET api/v{version:apiVersion}/dashboard/intake [Intake.Index]",
         "GET api/v{version:apiVersion}/dashboard/libraries [Libraries.Index]",
+        "GET api/v{version:apiVersion}/dashboard/libraries/anime-classification-audit [Libraries.AnimeClassificationAudit]",
         "GET api/v{version:apiVersion}/dashboard/logs [Log.GetLogs]",
         "GET api/v{version:apiVersion}/dashboard/logs/levels [Log.GetLogLevels]",
         "GET api/v{version:apiVersion}/dashboard/logs/types [Log.GetLogTypes]",

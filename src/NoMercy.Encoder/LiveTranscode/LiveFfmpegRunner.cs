@@ -19,6 +19,7 @@ using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Hardware;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.LiveTranscode.Protocol;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.LiveTranscode;
@@ -66,9 +67,13 @@ public class LiveFfmpegRunner(
         // An audio-only rendition (AAC) is cheap — one thread, no GPU — so a raw
         // source's several language children don't each reserve a full video slot
         // and starve the video encoder.
+        // A GPU live session still decodes and filters on the CPU — the live
+        // path has no GpuAccelPlan — so it reserves the same share a queued
+        // GPU encode with a CPU filter graph does. Under-reserving here let a
+        // queued software encode start alongside a live session and stall it.
         int cpuThreads = input.AudioRenditionOnly ? 1 : 2;
         ResourceRequirement requirement = requiresGpu
-            ? new(gpuName, GpuSlots: 1, CpuThreads: 2)
+            ? new(gpuName, GpuSlots: 1, CpuThreads: EncodeThreadBudget.GpuEncodeWithCpuFilters)
             : new ResourceRequirement(null, GpuSlots: 0, CpuThreads: cpuThreads);
 
         // Declared outside the try so the outer finally can always see whether

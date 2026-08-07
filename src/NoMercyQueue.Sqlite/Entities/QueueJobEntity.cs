@@ -12,10 +12,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using NoMercyQueue.Core;
 
 namespace NoMercyQueue.Sqlite.Entities;
 
 [PrimaryKey(nameof(Id))]
+[Index(nameof(PayloadHash))]
 internal class QueueJobEntity
 {
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -24,8 +26,16 @@ internal class QueueJobEntity
     public int Priority { get; set; }
     public string Queue { get; set; } = "default";
 
-    [MaxLength(4096)]
     public required string Payload { get; set; }
+
+    /// <summary>
+    /// SHA-256 of <see cref="Payload"/>, carried so the enqueue dedup has a
+    /// fixed-width key to index. Indexing the payload itself meant a B-tree over
+    /// megabyte strings, which grew to the size of the table it indexed.
+    /// </summary>
+    [MaxLength(QueuePayloadHash.Length)]
+    public string PayloadHash { get; set; } = string.Empty;
+
     public byte Attempts { get; set; }
     public byte Interruptions { get; set; }
     public DateTime? ReservedAt { get; set; }
@@ -42,4 +52,11 @@ internal class QueueJobEntity
     /// </summary>
     [MaxLength(64)]
     public string? GroupTag { get; set; }
+
+    /// <summary>
+    /// Key of the shared input this job reads, for jobs whose input is too big to
+    /// copy into every payload.
+    /// </summary>
+    [MaxLength(128)]
+    public string? SharedInputKey { get; set; }
 }

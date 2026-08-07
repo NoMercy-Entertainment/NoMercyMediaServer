@@ -18,6 +18,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.AcoustId;
+using NoMercy.Queue.MediaServer;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -63,7 +64,8 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         IStorageDriver storageDriver,
         IAudioFingerprinter audioFingerprinter,
         ILogger<MusicLogic> musicLogicLogger,
-        IDbContextFactory<MediaContext> mediaContextFactory)
+        IDbContextFactory<MediaContext> mediaContextFactory
+    )
     {
         LoggerFactory = loggerFactory;
         StorageFactory = storageFactory;
@@ -91,7 +93,9 @@ public class MusicJob : IShouldQueue, IJobStorageInjector, IDisposable, IAsyncDi
         storageDriver = serviceProvider.GetRequiredService<IStorageDriver>();
         AudioFingerprinter = serviceProvider.GetRequiredService<IAudioFingerprinter>();
         _musicLogicLogger = serviceProvider.GetRequiredService<ILogger<MusicLogic>>();
-        _mediaContextFactory = serviceProvider.GetRequiredService<IDbContextFactory<MediaContext>>();
+        _mediaContextFactory = serviceProvider.GetRequiredService<
+            IDbContextFactory<MediaContext>
+        >();
     }
 
     public async Task Handle()

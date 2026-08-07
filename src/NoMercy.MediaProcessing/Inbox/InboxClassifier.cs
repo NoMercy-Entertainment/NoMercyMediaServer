@@ -12,6 +12,7 @@
 using System.Text.RegularExpressions;
 using MovieFileLibrary;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.MediaProcessing.Shows;
 
 namespace NoMercy.MediaProcessing.Inbox;
 
@@ -54,9 +55,13 @@ public sealed partial class InboxClassifier
     );
 
     // Fansub bracket at start of FILENAME: "[Group] Title - NNN ..."
-    // Conservative: only tag anime when the filename starts with a bracket
-    // group AND has an absolute episode number as " - NNN " (1-4 digits, for
-    // long-running shows like One Piece that exceed 999 episodes).
+    // Conservative: only flag an episodic (tv-shaped) file when the filename
+    // starts with a bracket group AND has an absolute episode number as
+    // " - NNN " (1-4 digits, for long-running shows like One Piece that
+    // exceed 999 episodes). This signals "episodic", not "anime" — the
+    // anime/tv split itself is decided by IMediaTypeClassifier (Kitsu),
+    // never by bracket-guessing, since normally-named anime files with no
+    // fansub bracket were routing to the wrong library.
     private static readonly Regex FansubAbsoluteEpPattern = new(
         @"^\[[^\]]+\].*\s-\s\d{1,4}\s",
         RegexOptions.Compiled
@@ -70,11 +75,17 @@ public sealed partial class InboxClassifier
 
     private readonly IInboxMetadataProbe _probe;
     private readonly IInboxAudioTagReader _tagReader;
+    private readonly IMediaTypeClassifier _mediaTypeClassifier;
 
-    public InboxClassifier(IInboxMetadataProbe probe, IInboxAudioTagReader tagReader)
+    public InboxClassifier(
+        IInboxMetadataProbe probe,
+        IInboxAudioTagReader tagReader,
+        IMediaTypeClassifier mediaTypeClassifier
+    )
     {
         _probe = probe;
         _tagReader = tagReader;
+        _mediaTypeClassifier = mediaTypeClassifier;
     }
 
     // -----------------------------------------------------------------------
@@ -99,7 +110,7 @@ public sealed partial class InboxClassifier
         string filename = Path.GetFileNameWithoutExtension(path);
 
         if (FansubAbsoluteEpPattern.IsMatch(filename))
-            return "anime";
+            return "tv";
 
         if (SeasonEpisodePattern.IsMatch(path))
             return "tv";
@@ -238,6 +249,16 @@ public sealed partial class InboxClassifier
         }
 
         int? year = ExtractYear(path, info);
+
+        // The structural signals only tell us the file is episodic
+        // ("tv-shaped"); whether it belongs in the anime or tv library is
+        // decided by the shared Kitsu-backed classifier, never by filename
+        // shape alone (e.g. a fansub bracket), so a normally-named anime
+        // file with no bracket still lands in the right library.
+        if (structuralType == "tv")
+        {
+            structuralType = await _mediaTypeClassifier.ClassifyAsync(title, year);
+        }
 
         // Probe both movie and tv to handle ambiguous cases
         CandidateMatch[] movieHits = await _probe.SearchMoviesAsync(title, year, ct);

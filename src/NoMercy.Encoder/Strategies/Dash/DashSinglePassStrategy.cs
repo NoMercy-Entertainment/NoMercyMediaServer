@@ -51,7 +51,7 @@ public class DashSinglePassStrategy(
                     GroupTag: groupTag,
                     Kind: EncodeTaskKind.Video,
                     OutputIndex: i,
-                    Resources: TaskResourceHelper.ForVideoOutput(video),
+                    Resources: TaskResourceHelper.ForVideoOutput(video, plan.GpuAccel),
                     EstimatedCostUnits: EstimateVideoCost(video),
                     Label: $"{video.Width}p {video.EncoderName}"
                 )

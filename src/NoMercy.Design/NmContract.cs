@@ -418,6 +418,153 @@ public record NmAccessibility
 }
 
 /// <summary>
+/// How a cell draws what its column points at. The design system builds the
+/// cell itself from this, which is why a table is described rather than
+/// assembled: a server that had to nest an avatar, a badge and a checkbox
+/// per row would restate the table's own anatomy on every screen.
+/// </summary>
+public static class NmTableCellKind
+{
+    public const string Text = "text";
+    public const string AvatarText = "avatar-text";
+    public const string Badge = "badge";
+    public const string Rating = "rating";
+    public const string Checkbox = "checkbox";
+    public const string Actions = "actions";
+}
+
+/// <summary>
+/// One column: what it is called, which field of a row it reads, and how
+/// that field draws.
+/// </summary>
+public record NmTableColumn
+{
+    /// <summary>
+    /// The header text. Empty for a column whose header is a control.
+    /// </summary>
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Label { get; set; }
+
+    /// <summary>
+    /// The row field this column reads.
+    /// </summary>
+    [JsonProperty("key", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Key { get; set; }
+
+    [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Type { get; set; }
+
+    /// <summary>
+    /// When true the header is a sort button carrying aria-sort.
+    /// </summary>
+    [JsonProperty("sortable", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Sortable { get; set; }
+
+}
+
+/// <summary>
+/// One row, as the fields its columns read. Values are flat on purpose: a
+/// cell's appearance is the column's decision, so a row carries data and
+/// never markup.
+/// </summary>
+public class NmTableRow : Dictionary<string, object?>;
+
+/// <summary>
+/// One choice in a select or a combobox: what a reader sees and what the
+/// form submits.
+/// </summary>
+public record NmSelectOption
+{
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Label { get; set; }
+
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Value { get; set; }
+
+}
+
+/// <summary>
+/// One node of a tree. A branch carries children and can be expanded; a
+/// leaf carries neither. The distinction is stated rather than inferred
+/// from whether `children` happens to be empty, because an empty folder is
+/// still a folder.
+/// </summary>
+public record NmTreeNode
+{
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Label { get; set; }
+
+    [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Type { get; set; }
+
+    [JsonProperty("expanded", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Expanded { get; set; }
+
+    [JsonProperty("selected", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Selected { get; set; }
+
+    [JsonProperty("children")]
+    public List<NmTreeNode> Children { get; set; } = [];
+
+}
+
+/// <summary>
+/// One message in a conversation. `variant` is who is speaking, which is
+/// what decides the side it sits on and the colour it takes.
+/// </summary>
+public record NmChatMessage
+{
+    [JsonProperty("variant", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Variant { get; set; }
+
+    [JsonProperty("text", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Text { get; set; }
+
+    [JsonProperty("time", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Time { get; set; }
+
+    [JsonProperty("avatar", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Avatar { get; set; }
+
+}
+
+/// <summary>
+/// One step of a stepper, and what it says about itself.
+/// </summary>
+public record NmStep
+{
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Label { get; set; }
+
+    [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Description { get; set; }
+
+}
+
+/// <summary>
+/// One option in a group that behaves as a set: a button group, a segmented
+/// control, a checkbox or radio group.
+/// </summary>
+public record NmChoice
+{
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Label { get; set; }
+
+    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Value { get; set; }
+
+    [JsonProperty("icon", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Icon { get; set; }
+
+    [JsonProperty("active", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Active { get; set; }
+
+    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Disabled { get; set; }
+
+}
+
+/// <summary>
 /// When and from where this component refreshes itself.
 /// </summary>
 public record NmUpdate
@@ -499,6 +646,16 @@ public record NmComponentBase
     /// </summary>
     [JsonProperty("items")]
     public List<NmComponent> Items { get; set; } = [];
+
+    /// <summary>
+    /// Children for a slot the component names, keyed by that name. A card
+    /// declares a header, a body and a footer; without this a payload could
+    /// reach none of them, because every renderer filled the default slot and
+    /// nothing else. Anything sent under a name the component does not declare
+    /// is ignored rather than drawn somewhere it does not belong.
+    /// </summary>
+    [JsonProperty("slots", NullValueHandling = NullValueHandling.Ignore)]
+    public Dictionary<string, List<NmComponent>>? Slots { get; set; }
 
     [JsonProperty("box", NullValueHandling = NullValueHandling.Ignore)]
     public NmBox? Box { get; set; }

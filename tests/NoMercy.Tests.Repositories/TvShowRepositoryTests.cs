@@ -32,7 +32,7 @@ public class TvShowRepositoryTests : IDisposable
     {
         (_factory, _connection) = TestMediaContextFactory.CreateSeededFactory();
         _context = _factory.CreateDbContext();
-        _repository = new(_factory);
+        _repository = new(_factory, new StubMediaTypeClassifier());
     }
 
     [Fact]
@@ -298,7 +298,7 @@ public class TvShowRepositoryTests : IDisposable
             SqlCaptureInterceptor interceptor,
             SqliteConnection connection
         ) = TestMediaContextFactory.CreateSeededFactoryWithInterceptor();
-        TvShowRepository repo = new(factory);
+        TvShowRepository repo = new(factory, new StubMediaTypeClassifier());
         using (MediaContext seedCtx = factory.CreateDbContext())
         {
             SeedDetailData(seedCtx);

@@ -529,7 +529,11 @@ public static partial class ServiceConfiguration
         services.AddScoped<MovieManager>();
         services.AddScoped<CollectionManager>();
         services.AddScoped<ShowManager>();
-        services.AddScoped<IMediaTypeClassifier, MediaTypeClassifier>();
+        // Singleton: stateless (delegates to the static KitsuIoClient) and
+        // consumed by the singleton InboxClassifier — a Scoped registration
+        // would be a captive dependency there.
+        services.AddSingleton<IMediaTypeClassifier, MediaTypeClassifier>();
+        services.AddScoped<IAnimeClassificationAuditService, AnimeClassificationAuditService>();
         services.AddScoped<SeasonManager>();
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();

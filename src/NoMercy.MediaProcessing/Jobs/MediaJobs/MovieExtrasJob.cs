@@ -52,7 +52,8 @@ public class MovieExtrasJob : AbstractMediaExraDataJob<TmdbMovieAppends>
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            LoggerFactory.CreateLogger<MovieManager>()
+            LoggerFactory.CreateLogger<MovieManager>(),
+            PluginMetadata
         );
 
         PersonRepository personRepository = new(

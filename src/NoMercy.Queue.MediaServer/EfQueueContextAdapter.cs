@@ -12,6 +12,7 @@
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
+using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 
@@ -46,9 +47,14 @@ public class EfQueueContextAdapter : IQueueContext
                 .FirstOrDefault()
     );
 
-    public static readonly Func<QueueContext, string, bool> ExistsQuery = EF.CompileQuery(
-        (QueueContext queueContext, string payloadString) =>
-            queueContext.QueueJobs.Any(queueJob => queueJob.Payload == payloadString)
+    // Narrowed by hash, decided on the payload: the hash is what the index can serve,
+    // and the payload comparison is what dedup has always meant, so a collision costs
+    // one extra row read rather than a silently swallowed job.
+    public static readonly Func<QueueContext, string, string, bool> ExistsQuery = EF.CompileQuery(
+        (QueueContext queueContext, string payloadHash, string payloadString) =>
+            queueContext.QueueJobs.Any(queueJob =>
+                queueJob.PayloadHash == payloadHash && queueJob.Payload == payloadString
+            )
     );
 
     private readonly Func<QueueContext> _contextFactory;
@@ -116,6 +122,8 @@ public class EfQueueContextAdapter : IQueueContext
                 Priority = job.Priority,
                 Queue = job.Queue,
                 Payload = job.Payload,
+                PayloadHash = QueuePayloadHash.For(job.Payload),
+                SharedInputKey = job.SharedInputKey,
                 Attempts = job.Attempts,
                 Interruptions = job.Interruptions,
                 ReservedAt = job.ReservedAt,
@@ -187,7 +195,8 @@ public class EfQueueContextAdapter : IQueueContext
 
     public bool JobExists(string payload)
     {
-        return Execute(context => ExistsQuery(context, payload));
+        string payloadHash = QueuePayloadHash.For(payload);
+        return Execute(context => ExistsQuery(context, payloadHash, payload));
     }
 
     public void UpdateJob(QueueJobModel job)
@@ -218,6 +227,7 @@ public class EfQueueContextAdapter : IQueueContext
                 return;
 
             entity.Payload = newPayload;
+            entity.PayloadHash = QueuePayloadHash.For(newPayload);
             entity.ReservedAt = null;
             entity.AvailableAt = availableAt;
             entity.Attempts = 0;
@@ -477,6 +487,7 @@ public class EfQueueContextAdapter : IQueueContext
             Priority = entity.Priority,
             Queue = entity.Queue,
             Payload = entity.Payload,
+            SharedInputKey = entity.SharedInputKey,
             Attempts = entity.Attempts,
             Interruptions = entity.Interruptions,
             ReservedAt = entity.ReservedAt,

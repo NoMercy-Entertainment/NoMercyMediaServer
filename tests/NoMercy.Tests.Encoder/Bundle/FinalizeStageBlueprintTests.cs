@@ -16,7 +16,9 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Bundle;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
 using NoMercy.Encoder.Output;
@@ -120,6 +122,8 @@ public class FinalizeStageBlueprintTests
             chapterWriterMock.Object,
             fontExtractorMock.Object,
             factoryMock.Object,
+            new EncoderOptions { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            new Mock<IProcessRunner>().Object,
             NullLogger<FinalizeStage>.Instance,
             storage,
             blueprintWriter

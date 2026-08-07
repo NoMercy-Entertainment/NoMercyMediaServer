@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using Microsoft.EntityFrameworkCore;
+using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 using NoMercyQueue.Sqlite.Entities;
@@ -41,10 +42,16 @@ public class SqliteQueueContext : IQueueContext
                 .FirstOrDefault()
     );
 
-    internal static readonly Func<QueueDbContext, string, bool> ExistsQuery = EF.CompileQuery(
-        (QueueDbContext context, string payloadString) =>
-            context.QueueJobs.Any(j => j.Payload == payloadString)
-    );
+    // Narrowed by hash, decided on the payload: the hash is what the index can serve,
+    // and the payload comparison is what dedup has always meant, so a collision costs
+    // one extra row read rather than a silently swallowed job.
+    internal static readonly Func<QueueDbContext, string, string, bool> ExistsQuery =
+        EF.CompileQuery(
+            (QueueDbContext context, string payloadHash, string payloadString) =>
+                context.QueueJobs.Any(j =>
+                    j.PayloadHash == payloadHash && j.Payload == payloadString
+                )
+        );
 
     internal SqliteQueueContext(QueueDbContext context)
     {
@@ -58,6 +65,8 @@ public class SqliteQueueContext : IQueueContext
             Priority = job.Priority,
             Queue = job.Queue,
             Payload = job.Payload,
+            PayloadHash = QueuePayloadHash.For(job.Payload),
+            SharedInputKey = job.SharedInputKey,
             Attempts = job.Attempts,
             Interruptions = job.Interruptions,
             ReservedAt = job.ReservedAt,
@@ -120,7 +129,7 @@ public class SqliteQueueContext : IQueueContext
 
     public bool JobExists(string payload)
     {
-        return ExistsQuery(_context, payload);
+        return ExistsQuery(_context, QueuePayloadHash.For(payload), payload);
     }
 
     public void UpdateJob(QueueJobModel job)
@@ -145,6 +154,7 @@ public class SqliteQueueContext : IQueueContext
             return;
 
         entity.Payload = newPayload;
+        entity.PayloadHash = QueuePayloadHash.For(newPayload);
         entity.ReservedAt = null;
         entity.AvailableAt = availableAt;
         entity.Attempts = 0;
@@ -388,6 +398,7 @@ public class SqliteQueueContext : IQueueContext
             Priority = entity.Priority,
             Queue = entity.Queue,
             Payload = entity.Payload,
+            SharedInputKey = entity.SharedInputKey,
             Attempts = entity.Attempts,
             Interruptions = entity.Interruptions,
             ReservedAt = entity.ReservedAt,

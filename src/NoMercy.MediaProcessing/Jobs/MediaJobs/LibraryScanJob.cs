@@ -70,7 +70,8 @@ public class LibraryScanJob : AbstractMediaJob
             _mediaAnalyzer,
             _filenameParser,
             LoggerFactory.CreateLogger<LibraryManager>(),
-            eventBus
+            eventBus,
+            PluginMediaSources
         );
 
         await libraryManager.ProcessNewLibraryItems(LibraryId);

@@ -33,6 +33,10 @@ public sealed class HardwareEncoderProbe(
     // device, so this is generous headroom, not a target.
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
 
+    // A probe that never answered is retried rather than believed.
+    private const int ProbeAttempts = 3;
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(2);
+
     public async Task<IReadOnlySet<string>> ProbeAsync(
         IEnumerable<string> candidateHardwareEncoders,
         CancellationToken ct = default
@@ -55,6 +59,20 @@ public sealed class HardwareEncoderProbe(
         return usable;
     }
 
+    /// <summary>
+    /// A hardware encoder is condemned only when ffmpeg answers. A timeout or a
+    /// crashed probe is not an answer.
+    /// <para>
+    /// The result of this probe is what PlanStage selects encoders from, and it
+    /// is taken once per process: an encoder dropped here is software-encoded
+    /// for the whole run, and that decision is frozen into every queue payload
+    /// written during it. The probe spawns ffmpeg, so it competes with whatever
+    /// the encoder queue is already running — on a host saturated by software
+    /// encodes it is exactly the moment a 10s allowance runs out, and the
+    /// timeout then produces more software encodes. Retrying costs one more
+    /// ffmpeg spawn; not retrying costs the GPU for the rest of the run.
+    /// </para>
+    /// </summary>
     private async Task<bool> ProbeOneAsync(string encoderName, CancellationToken ct)
     {
         string[]? arguments = BuildProbeArguments(encoderName);
@@ -67,6 +85,51 @@ public sealed class HardwareEncoderProbe(
             return false;
         }
 
+        for (int attempt = 1; attempt <= ProbeAttempts; attempt++)
+        {
+            ProbeVerdict verdict = await AttemptProbeAsync(encoderName, arguments, ct)
+                .ConfigureAwait(false);
+
+            if (verdict != ProbeVerdict.Inconclusive)
+                return verdict == ProbeVerdict.Usable;
+
+            if (attempt == ProbeAttempts)
+            {
+                logger.LogWarning(
+                    "Hardware encoder init probe never answered for {Encoder} after {Attempts} attempts — treating as unusable, so this run encodes in software",
+                    encoderName,
+                    ProbeAttempts
+                );
+                return false;
+            }
+
+            logger.LogWarning(
+                "Hardware encoder init probe did not answer for {Encoder} (attempt {Attempt}/{Attempts}) — retrying in {DelayMs}ms",
+                encoderName,
+                attempt,
+                ProbeAttempts,
+                RetryDelay.TotalMilliseconds
+            );
+
+            await Task.Delay(RetryDelay, ct).ConfigureAwait(false);
+        }
+
+        return false;
+    }
+
+    private enum ProbeVerdict
+    {
+        Usable,
+        Refused,
+        Inconclusive,
+    }
+
+    private async Task<ProbeVerdict> AttemptProbeAsync(
+        string encoderName,
+        string[] arguments,
+        CancellationToken ct
+    )
+    {
         using CancellationTokenSource timeoutCts = new(ProbeTimeout);
         using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
             ct,
@@ -82,7 +145,7 @@ public sealed class HardwareEncoderProbe(
             if (result.IsSuccess)
             {
                 logger.LogInformation("Hardware encoder init probe: {Encoder} usable", encoderName);
-                return true;
+                return ProbeVerdict.Usable;
             }
 
             // An encoder that fails to initialize is the expected outcome on any
@@ -92,27 +155,26 @@ public sealed class HardwareEncoderProbe(
             // the first line carries the actual cause (e.g. "Cannot load
             // libcuda.so.1", "No VA display found"); the rest is downstream noise.
             logger.LogDebug(
-                "Hardware encoder init probe: {Encoder} unusable (exit {Code}): {Err}", [encoderName, result.ExitCode, FirstMeaningfulLine(result.StdErr)]
+                "Hardware encoder init probe: {Encoder} unusable (exit {Code}): {Err}",
+                [encoderName, result.ExitCode, FirstMeaningfulLine(result.StdErr)]
             );
-            return false;
+            return ProbeVerdict.Refused;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             // Only the probe's own timeout fired — the caller's token is still
-            // live. A hang means the encoder cannot be trusted; never usable.
-            logger.LogWarning(
-                "Hardware encoder init probe timed out after {Timeout}: {Encoder} — treating as unusable", [ProbeTimeout, encoderName]
+            // live. ffmpeg never reached a verdict, which says nothing about the
+            // encoder and everything about how busy this host is.
+            logger.LogDebug(
+                "Hardware encoder init probe timed out after {Timeout}: {Encoder}",
+                [ProbeTimeout, encoderName]
             );
-            return false;
+            return ProbeVerdict.Inconclusive;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(
-                ex,
-                "Hardware encoder init probe threw for {Encoder} — treating as unusable",
-                encoderName
-            );
-            return false;
+            logger.LogDebug(ex, "Hardware encoder init probe threw for {Encoder}", encoderName);
+            return ProbeVerdict.Inconclusive;
         }
     }
 

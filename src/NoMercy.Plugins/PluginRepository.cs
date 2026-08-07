@@ -24,6 +24,16 @@ public class PluginRepository : IPluginRepository
     private readonly IStorage _storage;
     private readonly List<PluginRepositoryInfo> _repositories = [];
     private readonly List<PluginRepositoryEntry> _availablePlugins = [];
+
+    /// <summary>
+    /// The plugins a trusted repository lists, rebuilt on every refresh.
+    /// <para>
+    /// Kept apart from the entries themselves because an entry says what a
+    /// plugin is and this says where it came from — and the second one is the
+    /// only thing a trust decision may rest on.
+    /// </para>
+    /// </summary>
+    private readonly HashSet<Ulid> _trustedPluginIds = [];
     private readonly object _lock = new();
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -139,6 +149,7 @@ public class PluginRepository : IPluginRepository
         }
 
         List<PluginRepositoryEntry> allPlugins = [];
+        HashSet<Ulid> trusted = [];
 
         foreach (PluginRepositoryInfo repo in repos)
         {
@@ -149,6 +160,9 @@ public class PluginRepository : IPluginRepository
                     ct
                 );
                 allPlugins.AddRange(plugins);
+
+                if (repo.Trusted)
+                    trusted.UnionWith(plugins.Select(plugin => plugin.Id));
             }
             catch (Exception ex)
             {
@@ -163,6 +177,20 @@ public class PluginRepository : IPluginRepository
         {
             _availablePlugins.Clear();
             _availablePlugins.AddRange(allPlugins);
+
+            // Replaced rather than merged: a plugin dropped from a trusted index,
+            // or a repository the owner stopped trusting, has to stop being
+            // trusted here too, and a merge would keep it forever.
+            _trustedPluginIds.Clear();
+            _trustedPluginIds.UnionWith(trusted);
+        }
+    }
+
+    public bool IsFromTrustedRepository(Ulid pluginId)
+    {
+        lock (_lock)
+        {
+            return _trustedPluginIds.Contains(pluginId);
         }
     }
 
@@ -251,6 +279,10 @@ public class PluginRepository : IPluginRepository
         Name = "NoMercy Plugins",
         Url =
             "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-plugins/master/index.json",
+        // Someone running this server has already decided to trust what we
+        // publish. Asking them to approve our own plugins one at a time teaches
+        // them to click through the prompt that is supposed to mean something.
+        Trusted = true,
     };
 
     public async Task LoadRepositoriesFromDiskAsync(CancellationToken ct = default)

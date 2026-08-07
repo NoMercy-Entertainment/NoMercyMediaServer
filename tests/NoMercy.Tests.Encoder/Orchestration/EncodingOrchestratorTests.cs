@@ -63,7 +63,7 @@ public class EncodingOrchestratorTests
 
         EncodingResult result = await orchestrator.EncodeAsync(request);
 
-        Assert.True(result.Success);
+        Assert.True(result.Success, result.Error?.Message ?? "no error reported");
         strategy.Verify(
             s =>
                 s.EncodeAsync(
@@ -280,7 +280,13 @@ public class EncodingOrchestratorTests
             // '/' is native-OS-rooted on Linux too (not just Windows-style
             // absolutes), so it would now trip the cross-platform rootedness
             // guard the same way a genuine escape attempt does.
-            OutputDirectory: "out",
+            //
+            // Unique per request: this resolves under the transcode root, which
+            // in a test run is the machine's shared temp directory. A fixed name
+            // collides with whatever already sits there — a stray file called
+            // "out" is enough to fail the encode on one developer's box and pass
+            // on everyone else's.
+            OutputDirectory: $"nm-orch-{Guid.NewGuid():N}",
             Profile: new(
                 Id: Ulid.NewUlid(),
                 Name: "Test",

@@ -39,6 +39,7 @@ public class JobDispatcher : IJobDispatcher
             Payload = SerializationHelper.Serialize(job),
             AvailableAt = DateTime.UtcNow,
             Priority = priority,
+            SharedInputKey = (job as IJobWithSharedInput)?.SharedInputKey,
         };
 
         try
@@ -65,6 +66,7 @@ public class JobDispatcher : IJobDispatcher
             Payload = SerializationHelper.Serialize(job),
             AvailableAt = DateTime.UtcNow,
             Priority = priority,
+            SharedInputKey = (job as IJobWithSharedInput)?.SharedInputKey,
             ParentJobId = parentJobId,
             GroupTag = groupTag,
         };

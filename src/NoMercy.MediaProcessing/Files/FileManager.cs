@@ -23,6 +23,7 @@ using NoMercy.MediaProcessing.Files.Parsing;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Plugins.Hooks;
 using NoMercy.Storage;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
@@ -34,7 +35,8 @@ public partial class FileManager(
     IStorageFactory storageFactory,
     IStorageDriver storageDriver,
     IMediaAnalyzer mediaAnalyzer,
-    IFilenameParserPipeline filenameParser
+    IFilenameParserPipeline filenameParser,
+    IPluginMediaSourceProvider? pluginMediaSources = null
 ) : IFileManager
 {
     private readonly FilenameResolver _resolver = new(filenameParser);
@@ -134,6 +136,17 @@ public partial class FileManager(
 
             if (!files.IsEmpty)
                 Files.AddRange(files);
+
+            // What plugins found under the same folder, added before the names
+            // are resolved so their files go through the same parser as the
+            // scanner's own. Anything that skipped it has no episode, no tags
+            // and no duration, and the store drops it again without a word.
+            IReadOnlyList<MediaFolderExtend> fromPlugins = await (
+                pluginMediaSources ?? NullPluginMediaSourceProvider.Instance
+            ).ScanAsync(folder.Path);
+
+            if (fromPlugins.Count > 0)
+                Files.AddRange(fromPlugins);
         }
 
         ReResolveNames(library.Type);

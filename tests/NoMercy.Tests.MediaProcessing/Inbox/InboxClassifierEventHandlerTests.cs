@@ -21,6 +21,7 @@ using NoMercy.Events.Inbox;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
 using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
@@ -40,6 +41,7 @@ public class InboxClassifierEventHandlerTests : IDisposable
     private readonly Mock<IEventBus> _eventBusMock;
     private readonly Mock<IInboxMetadataProbe> _probeMock;
     private readonly Mock<IInboxAudioTagReader> _tagReaderMock;
+    private readonly Mock<IMediaTypeClassifier> _mediaTypeClassifierMock;
     private readonly Mock<IStorageFactory> _storageFactoryMock;
 
     public InboxClassifierEventHandlerTests()
@@ -96,6 +98,11 @@ public class InboxClassifierEventHandlerTests : IDisposable
             )
             .ReturnsAsync((InboxAudioTags?)null);
 
+        _mediaTypeClassifierMock = new();
+        _mediaTypeClassifierMock
+            .Setup(c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync("tv");
+
         _storageFactoryMock = new();
     }
 
@@ -115,7 +122,11 @@ public class InboxClassifierEventHandlerTests : IDisposable
 
     private InboxClassifierEventHandler MakeHandler()
     {
-        InboxClassifier classifier = new(_probeMock.Object, _tagReaderMock.Object);
+        InboxClassifier classifier = new(
+            _probeMock.Object,
+            _tagReaderMock.Object,
+            _mediaTypeClassifierMock.Object
+        );
         InboxRoutingService routing = new(_storageFactoryMock.Object, new());
 
         return new(
@@ -396,7 +407,16 @@ public class InboxClassifierEventHandlerTests : IDisposable
                 )
                 .ReturnsAsync((InboxAudioTags?)null);
 
-            InboxClassifier classifier = new(probeMock.Object, tagReaderMock.Object);
+            Mock<IMediaTypeClassifier> mediaTypeClassifierMock = new();
+            mediaTypeClassifierMock
+                .Setup(c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+                .ReturnsAsync("tv");
+
+            InboxClassifier classifier = new(
+                probeMock.Object,
+                tagReaderMock.Object,
+                mediaTypeClassifierMock.Object
+            );
             InboxRoutingService routing = new(realStorageFactory, new());
 
             MediaContext ContextFactory()

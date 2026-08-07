@@ -33,6 +33,7 @@ using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.CoverArt.Client;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Queue.MediaServer;
 using NoMercy.Storage;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -576,15 +577,14 @@ public class AudioImportJob : AbstractMusicFolderJob
                 mediaFile.Path
             );
 
-            MusicEncodeDispatcher.Dispatch(
+            await MusicEncodeDispatcher.Dispatch(
                 StorageFactory,
                 albumLibrary,
                 folderLibrary,
                 release,
                 musicBrainzTrack,
                 mediaFile,
-                InputFolder,
-                audioFiles.Select(audioFile => audioFile.MediaFile).ToList()
+                InputFolder
             );
 
             foreach (MusicBrainzArtistCredit artistCredit in musicBrainzRecording.ArtistCredit)

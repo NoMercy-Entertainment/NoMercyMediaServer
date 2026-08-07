@@ -20,4 +20,6 @@ namespace NoMercy.MediaProcessing.Shows;
 public interface IMediaTypeClassifier
 {
     Task<string> ClassifyAsync(TmdbTvShowAppends show);
+
+    Task<string> ClassifyAsync(string name, int? year);
 }

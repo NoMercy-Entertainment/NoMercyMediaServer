@@ -246,12 +246,56 @@ public class TasksController(
         // This panel polls, and the encoder queue is thousands of rows deep on a
         // library mid-encode. Tracking every one of them per poll is pure cost:
         // nothing here is written back.
-        ImmutableList<QueueJob> jobs = queueContext
+        //
+        // Bounded, for two failures rather than one.
+        //
+        // Unbounded, the sort had to buffer every matching row to order it,
+        // payload included, so a full encoder queue asked SQLite to spill
+        // gigabytes of temp and the poll died on "database or disk is full".
+        //
+        // Bounded by a single top-N, the whole panel came out of the busiest
+        // priority band: an album import queues music at 5 while video encodes
+        // sit at 4 and 0, so 13,779 music rows took every slot and the operator's
+        // video encodes were missing from a panel that claimed to list the queue.
+        // A share per band costs one small indexed query each and cannot starve.
+        List<int> priorities = await queueContext
             .QueueJobs.AsNoTracking()
             .Where(j => j.Queue == "encoder")
-            .OrderByDescending(j => j.Priority)
-            .ThenBy(j => j.CreatedAt)
-            .ThenBy(j => j.Id)
+            .Select(j => j.Priority)
+            .Distinct()
+            .OrderByDescending(priority => priority)
+            .ToListAsync();
+
+        int perBand = Math.Max(1, UiLimits.MaximumTasksInList / Math.Max(1, priorities.Count));
+
+        List<QueueJob> banded = [];
+        foreach (int priority in priorities)
+        {
+            banded.AddRange(
+                await queueContext
+                    .QueueJobs.AsNoTracking()
+                    .Where(j => j.Queue == "encoder" && j.Priority == priority)
+                    .OrderBy(j => j.CreatedAt)
+                    .ThenBy(j => j.Id)
+                    .Take(perBand)
+                    .ToListAsync()
+            );
+        }
+
+        // Work in flight is never a candidate for omission. It is a handful of
+        // rows, and a running encode missing from the panel is the one thing the
+        // operator is most certainly looking for.
+        List<QueueJob> running = await queueContext
+            .QueueJobs.AsNoTracking()
+            .Where(j => j.Queue == "encoder" && j.ReservedAt != null)
+            .OrderBy(j => j.Id)
+            .Take(UiLimits.MaximumTasksInList)
+            .ToListAsync();
+
+        ImmutableList<QueueJob> jobs = banded
+            .Concat(running)
+            .GroupBy(row => row.Id)
+            .Select(group => group.First())
             .ToImmutableList();
 
         // Each parsed payload stays paired with the row it came from: a payload
@@ -270,12 +314,28 @@ public class TasksController(
 
         List<QueueJobEntry> encoderJobs = parsedJobs.Where(entry => entry.Job is not null).ToList();
 
+        // A music encode is an encode, but it is not a VideoEncodeJob, so it read
+        // as neither one thing nor the other and was dropped from both lists.
+        // Video rows further down the queue hid that until an album import put
+        // thousands of music encodes above every one of them and the panel went
+        // blank while the server encoded an album.
+        List<MusicQueueRow> musicRows = parsedJobs
+            .Where(entry => entry.Job is null)
+            .Select(entry => ReadMusicEncodeJob(entry.Row))
+            .Where(entry => entry is not null)
+            .Select(entry => entry!)
+            .ToList();
+
+        List<QueueJobDto> musicJobs = await BuildAlbumCards(musicRows, queueContext);
+
+        HashSet<int> musicRowIds = musicRows.Select(row => row.Row.Id).ToHashSet();
+
         // Maintenance work sharing the encoder queue — preview rebuilds and
         // subtitle OCR — reported as itself rather than dressed up as an encode.
         // Hours of this can be queued at once, and a panel that shows none of it
         // is telling the operator the server is idle while it works.
         List<MaintenanceJob> maintenanceJobs = parsedJobs
-            .Where(entry => entry.Job is null)
+            .Where(entry => entry.Job is null && !musicRowIds.Contains(entry.Row.Id))
             .Select(entry => ReadMaintenanceJob(entry.Row))
             .Where(entry => entry is not null)
             .Select(entry => entry!)
@@ -424,6 +484,7 @@ public class TasksController(
                     Plan = ResolvePlan(presetIds, presetLookup, planByPresetSet),
                 };
             })
+            .Concat(musicJobs)
             .Concat(maintenanceJobs.Select(entry => entry.Dto))
             // Ordered here, not in SQL: both row columns SQL could sort on are
             // rewritten on every coordinator poll. Priority still leads, because
@@ -509,6 +570,182 @@ public class TasksController(
             // job type. Not this endpoint's problem to report.
             return null;
         }
+    }
+
+    /// <summary>
+    /// A queue row read as a music encode, or null when the row is something else.
+    /// </summary>
+    internal static MusicQueueRow? ReadMusicEncodeJob(QueueJob row)
+    {
+        MusicEncodeJob? job;
+        try
+        {
+            job = SerializationHelper.Deserialize<object>(row.Payload) as MusicEncodeJob;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+
+        return job is null ? null : new(row, job);
+    }
+
+    /// <summary>
+    /// A queued album as one card that fills up, rather than one card per track.
+    ///
+    /// <para>An album is a single piece of work to the person who asked for it. As
+    /// a card per track a twenty-track release pushed everything else off the
+    /// panel and each card sat at nothing until its own second of encoding, so
+    /// the panel showed no movement while an album was clearly being worked
+    /// through. One card counting its tracks says the same thing in one row and
+    /// actually moves.</para>
+    ///
+    /// <para>Deliberately carries no <see cref="QueueJobDto.Kind"/>: kind is what
+    /// marks a row as maintenance, and the dashboard renders any kind it does not
+    /// recognise as generic maintenance — no artwork, no progress. This is an
+    /// encode and reports as one.</para>
+    /// </summary>
+    private async Task<List<QueueJobDto>> BuildAlbumCards(
+        List<MusicQueueRow> musicRows,
+        QueueContext queueContext
+    )
+    {
+        if (musicRows.Count == 0)
+            return [];
+
+        // Counted over the WHOLE queue, not over the sampled rows this listing
+        // holds: the listing reads a share of each priority band, so the tracks it
+        // happens to carry say nothing about how much of the album is left. A card
+        // reporting "3 of 20" from a sample would count down as the panel scrolled.
+        Dictionary<Guid, int> remainingByRelease = await CountQueuedTracksByRelease(queueContext);
+
+        List<Guid> releaseIds = musicRows.Select(row => row.Job.ReleaseId).Distinct().ToList();
+
+        // Tracks of the release that are stored, which is to say encoded: the link
+        // between a track and its release is written when the encode succeeds and
+        // the recording is stored, so this count is exactly the work that is done.
+        //
+        // Not Album.Tracks. That is the release's track count as the metadata
+        // provider states it, and it agrees with neither the library nor the
+        // queue — a compilation stored with two tracks and two queued carries
+        // Tracks = 20, so a card counting towards it opened at "18 of 20 done"
+        // for an album where nothing had been encoded at all.
+        Dictionary<Guid, int> encodedByRelease = await mediaContext
+            .AlbumTrack.AsNoTracking()
+            .Where(link => releaseIds.Contains(link.AlbumId))
+            .GroupBy(link => link.AlbumId)
+            .Select(group => new ReleaseEncodedCount(group.Key, group.Count()))
+            .ToDictionaryAsync(row => row.AlbumId, row => row.Encoded);
+
+        Dictionary<Guid, string?> covers = await mediaContext
+            .Albums.AsNoTracking()
+            .Where(album => releaseIds.Contains(album.Id))
+            .Select(album => new AlbumCover(album.Id, album.Cover))
+            .ToDictionaryAsync(album => album.Id, album => album.Cover);
+
+        // The same release cover, read off the album's tracks when the album row
+        // itself has none. It is one image per release and every track stores it,
+        // but the album row is written before the cover-art job answers and only
+        // that job fills it in — so 106 of the 885 queued albums have a blank
+        // column while their own tracks carry the artwork. Still the release's
+        // cover: an artist's picture would be a different album's image.
+        List<Guid> uncovered = releaseIds
+            .Where(id => covers.GetValueOrDefault(id) is null)
+            .ToList();
+
+        if (uncovered.Count > 0)
+        {
+            List<AlbumCover> trackCovers = await mediaContext
+                .AlbumTrack.AsNoTracking()
+                .Where(link => uncovered.Contains(link.AlbumId) && link.Track.Cover != null)
+                .Select(link => new AlbumCover(link.AlbumId, link.Track.Cover))
+                .ToListAsync();
+
+            foreach (IGrouping<Guid, AlbumCover> group in trackCovers.GroupBy(row => row.Id))
+                covers[group.Key] = group.First().Cover;
+        }
+
+        return musicRows
+            .GroupBy(row => row.Job.ReleaseId)
+            .Select(group =>
+            {
+                MusicQueueRow first = group.OrderBy(row => row.Row.Id).First();
+                MusicQueueRow current =
+                    group.FirstOrDefault(row => row.Row.ReservedAt is not null) ?? first;
+
+                // What is left, and what is done, each counted from the thing that
+                // records it. Their sum is the album as this server knows it, so
+                // the card reaches 100% exactly when the queue runs dry — which a
+                // denominator from anywhere else could not promise.
+                int remaining = remainingByRelease.GetValueOrDefault(group.Key, group.Count());
+                int completed = encodedByRelease.GetValueOrDefault(group.Key);
+                int total = completed + remaining;
+
+                string title = string.Join(
+                    " - ",
+                    new[] { first.Job.ArtistName, first.Job.ReleaseName }.Where(part =>
+                        !string.IsNullOrWhiteSpace(part)
+                    )
+                );
+
+                return new QueueJobDto
+                {
+                    // The card acts on a real row — the one being encoded, or the
+                    // next in line — so removing it removes work that exists.
+                    Id = current.Row.Id,
+                    Priority = current.Row.Priority,
+                    // The release, so an album is one card. Progress events key on
+                    // the track, so a live overlay finds nothing here and the
+                    // track count is what moves — which is the point.
+                    PayloadId = group.Key.ToString(),
+                    Title = title.Length > 0 ? title : Path.GetFileName(first.Job.InputFile),
+                    // Rooted here, because a release's cover is not served from
+                    // where a backdrop is. Every client roots this field at
+                    // /images/original, so an album with perfectly good artwork
+                    // drew an empty box.
+                    Backdrop = covers.GetValueOrDefault(group.Key) is { } cover
+                        ? $"/images/music{cover}"
+                        : null,
+                    Type = nameof(MusicEncodeJob),
+                    Status = group.Any(row => row.Row.ReservedAt is not null)
+                        ? "running"
+                        : "pending",
+                    InputFile = current.Job.InputFile,
+                    CompletedItems = completed,
+                    TotalItems = total,
+                    Progress = total > 0 ? Math.Round(completed * 100d / total, 1) : null,
+                };
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Tracks still queued per release, counted in the database rather than by
+    /// materializing thousands of payloads into the poll that asks.
+    /// </summary>
+    private static async Task<Dictionary<Guid, int>> CountQueuedTracksByRelease(
+        QueueContext queueContext
+    )
+    {
+        List<ReleaseTrackCount> counts = await queueContext
+            .Database.SqlQueryRaw<ReleaseTrackCount>(
+                """
+                SELECT json_extract(Payload, '$.releaseId') AS ReleaseId,
+                       COUNT(*) AS Remaining
+                FROM QueueJobs
+                WHERE Queue = 'encoder'
+                  AND Payload LIKE '%MusicEncodeJob%'
+                GROUP BY json_extract(Payload, '$.releaseId')
+                """
+            )
+            .ToListAsync();
+
+        Dictionary<Guid, int> byRelease = [];
+        foreach (ReleaseTrackCount count in counts)
+            if (Guid.TryParse(count.ReleaseId, out Guid releaseId))
+                byRelease[releaseId] = count.Remaining;
+
+        return byRelease;
     }
 
     /// <summary>
@@ -841,11 +1078,55 @@ public class TasksController(
     /// "running" no matter what the server thought.</summary>
     [HttpGet]
     [Route("queue/status")]
-    public IActionResult EncoderQueueStatus()
+    public async Task<IActionResult> EncoderQueueStatus()
     {
         QueueRunner? runner = QueueRunner.Current;
         bool paused = runner is not null && EncoderQueueFamily.All(queue => runner.IsPaused(queue));
-        return Ok(new { paused });
+
+        await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
+
+        // What is actually in the queue, which the listing cannot say. That
+        // endpoint returns a bounded sample — a share of each priority band —
+        // so a panel counting the cards it was handed announced 38 queued
+        // encodes with 1,200 waiting. The depth is a count, it costs one query,
+        // and it is the number the operator is reading the panel for.
+        List<QueueTypeCount> counts = await queueContext
+            .Database.SqlQueryRaw<QueueTypeCount>(
+                """
+                SELECT CASE
+                         WHEN Payload LIKE '%VideoEncodeJob%' THEN 'video'
+                         WHEN Payload LIKE '%MusicEncodeJob%' THEN 'music'
+                         ELSE 'maintenance'
+                       END AS Kind,
+                       SUM(CASE WHEN ReservedAt IS NULL THEN 1 ELSE 0 END) AS Pending,
+                       SUM(CASE WHEN ReservedAt IS NULL THEN 0 ELSE 1 END) AS Running
+                FROM QueueJobs
+                WHERE Queue = 'encoder'
+                GROUP BY Kind
+                """
+            )
+            .ToListAsync();
+
+        // An album is one card, so it is one unit of queued work here too —
+        // counting its tracks would put the panel's heading and its cards in
+        // open disagreement.
+        int albums = (await CountQueuedTracksByRelease(queueContext)).Count;
+
+        int videoPending = counts.FirstOrDefault(row => row.Kind == "video")?.Pending ?? 0;
+        int maintenancePending =
+            counts.FirstOrDefault(row => row.Kind == "maintenance")?.Pending ?? 0;
+
+        return Ok(
+            new
+            {
+                paused,
+                pending = videoPending + maintenancePending + albums,
+                running = counts.Sum(row => row.Running),
+                video = videoPending,
+                music = albums,
+                maintenance = maintenancePending,
+            }
+        );
     }
 
     /// <summary>
@@ -1133,6 +1414,38 @@ public class TasksController(
 internal sealed record QueueJobEntry(QueueJob Row, VideoEncodeJob? Job);
 
 /// <summary>
+/// A queue row paired with the music encode read from its payload. The row owns
+/// the scheduling state; the payload names the release and the track.
+/// </summary>
+internal sealed record MusicQueueRow(QueueJob Row, MusicEncodeJob Job);
+
+/// <summary>
+/// How much encoder work of one kind is waiting and how much is in flight,
+/// counted over the whole queue rather than over the listing's sample.
+/// </summary>
+internal sealed class QueueTypeCount
+{
+    public string? Kind { get; set; }
+    public int Pending { get; set; }
+    public int Running { get; set; }
+}
+
+/// <summary>Tracks of a release that are stored, and so encoded.</summary>
+internal sealed record ReleaseEncodedCount(Guid AlbumId, int Encoded);
+
+/// <summary>A release's artwork, for the card that stands for it.</summary>
+internal sealed record AlbumCover(Guid Id, string? Cover);
+
+/// <summary>
+/// Tracks of one release still on the encoder queue, counted in SQL.
+/// </summary>
+internal sealed class ReleaseTrackCount
+{
+    public string? ReleaseId { get; set; }
+    public int Remaining { get; set; }
+}
+
+/// <summary>
 /// A maintenance row described as itself, alongside the media folder it works on.
 /// The folder is kept separate from the DTO because it is not part of the
 /// contract — it is the key the title and the still are looked up by.
@@ -1156,6 +1469,11 @@ public class QueueJobDto
     /// it is about from the moment the job is queued rather than waiting for the
     /// first frame of encoding to arrive.
     /// </summary>
+    /// <para>Usually a bare provider path that the client roots at
+    /// <c>/images/original</c>. A release's cover is not served from there — it
+    /// lives under <c>/images/music</c> — so an album card states the rooted
+    /// path instead, and a value already starting <c>/images/</c> is used as it
+    /// stands.</para>
     [JsonProperty("backdrop")]
     public string? Backdrop { get; set; }
 
@@ -1196,6 +1514,27 @@ public class QueueJobDto
     /// </summary>
     [JsonProperty("kind")]
     public string? Kind { get; set; }
+
+    /// <summary>
+    /// How far a card made of several jobs has got, as a percentage. An album is
+    /// one card over many track encodes, and its progress is how many of them are
+    /// done — the only progress a card like that can honestly report, because the
+    /// per-track progress events key on a track and this card is not one.
+    ///
+    /// <para>Null on a single-job card, where live progress events are the
+    /// authority and an older client already reads them. Additive, so a client
+    /// that has never heard of it keeps working.</para>
+    /// </summary>
+    [JsonProperty("progress")]
+    public double? Progress { get; set; }
+
+    /// <summary>Jobs of this card already finished. Null when the card is one job.</summary>
+    [JsonProperty("completed_items")]
+    public int? CompletedItems { get; set; }
+
+    /// <summary>Jobs this card covers in total. Null when the card is one job.</summary>
+    [JsonProperty("total_items")]
+    public int? TotalItems { get; set; }
 }
 
 public class PatchQueueItemDto

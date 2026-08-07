@@ -493,42 +493,6 @@ public class BuildStage(
             // happens; it just all lives in the auxiliary commands.
             List<FfmpegCommand> allCommands = [];
 
-            if (builder.HasOutputs)
-            {
-                FfmpegCommand mainCommand = builder.Build(
-                    options.FfmpegPath,
-                    input.OutputDirectory
-                );
-                bool copyMode = IsCopyMode(input.Plan.OutputPlan);
-                mainCommand = MetadataInjectionBuilder.InjectMetadataArgs(
-                    metadataInjector,
-                    metadataMerger,
-                    mainCommand,
-                    context.MediaItem,
-                    context,
-                    copyMode,
-                    context.EnableMetadataInjection
-                );
-
-                logger.LogInformation(
-                    "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
-                    context.CorrelationId,
-                    mainCommand.Executable,
-                    string.Join(" ", mainCommand.Arguments)
-                );
-
-                allCommands.Add(mainCommand);
-            }
-            else
-            {
-                logger.LogInformation(
-                    "[{CorrelationId}] No encoded output in this bundle; running only its auxiliary commands.",
-                    context.CorrelationId
-                );
-            }
-
-            allCommands.AddRange(spriteCommands);
-
             // Run-once semantics: when tasks are decomposed, fonts are extracted by
             // EXACTLY ONE task to keep the on-disk fonts/ dir stable. We gate on the
             // first video task (OutputIndex=0) or the Thumbnails task when there is
@@ -552,19 +516,88 @@ public class BuildStage(
                     ? context.MediaInfo.Attachments
                     : [];
 
-            // Bitmap subtitles and (when this task owns them) font attachments are
-            // pulled out into ONE dedicated ffmpeg command. input.InputPath is
-            // frequently a remote source (NFS/SMB/S3), so every extra "-i" is a
-            // full network re-read of a multi-GB file — merging what used to be
-            // one command per bitmap subtitle stream plus one for fonts turns
-            // N+1 network reads into exactly one. Kept separate from the main
-            // encode command so an extraction failure never sinks an otherwise
-            // successful, hours-long encode.
+            // With bitmap subtitles in the plan there is already a dedicated
+            // extraction command reading the source, and the dump rides on that.
+            // Without them, an attachments-only extraction command would be a
+            // second full read of a multi-GB source that emits nothing but fonts —
+            // so the dump rides on the encode's own read instead. Text/ASS
+            // subtitles are muxed by the main command, which makes this the
+            // ordinary case for subtitled anime.
+            bool dumpRidesOnEncode =
+                attachmentsToExtract.Count > 0
+                && builder.HasOutputs
+                && context.MediaInfo is not null
+                && !ExtractionCommandBuilder.HasBitmapSubtitleOutputs(
+                    input.Plan.OutputPlan,
+                    context.MediaInfo,
+                    input.OutputDirectory,
+                    input.MediaTitle,
+                    subtitleExtractor,
+                    effectiveStorage
+                );
+
+            if (builder.HasOutputs)
+            {
+                FfmpegCommand mainCommand = builder.Build(
+                    options.FfmpegPath,
+                    input.OutputDirectory
+                );
+                bool copyMode = IsCopyMode(input.Plan.OutputPlan);
+                mainCommand = MetadataInjectionBuilder.InjectMetadataArgs(
+                    metadataInjector,
+                    metadataMerger,
+                    mainCommand,
+                    context.MediaItem,
+                    context,
+                    copyMode,
+                    context.EnableMetadataInjection
+                );
+
+                if (dumpRidesOnEncode)
+                    mainCommand = ExtractionCommandBuilder.InjectAttachmentDumpArgs(
+                        mainCommand,
+                        input.OutputDirectory,
+                        attachmentsToExtract,
+                        fontExtractor,
+                        effectiveStorage
+                    );
+
+                logger.LogInformation(
+                    "[{CorrelationId}] FFmpeg command: {Executable} {Args}",
+                    context.CorrelationId,
+                    mainCommand.Executable,
+                    string.Join(" ", mainCommand.Arguments)
+                );
+
+                allCommands.Add(mainCommand);
+            }
+            else
+            {
+                logger.LogInformation(
+                    "[{CorrelationId}] No encoded output in this bundle; running only its auxiliary commands.",
+                    context.CorrelationId
+                );
+            }
+
+            allCommands.AddRange(spriteCommands);
+
+            // Bitmap subtitles, plus font attachments when the encode command did
+            // not already carry them, are pulled out into ONE dedicated ffmpeg
+            // command. input.InputPath is frequently a remote source (NFS/SMB/S3),
+            // so every extra "-i" is a full network re-read of a multi-GB file —
+            // merging what used to be one command per bitmap subtitle stream plus
+            // one for fonts turns N+1 network reads into exactly one. Kept separate
+            // from the main encode command so a subtitle extraction failure never
+            // sinks an otherwise successful, hours-long encode.
+            IReadOnlyList<AttachmentInfo> attachmentsForExtractionCommand = dumpRidesOnEncode
+                ? []
+                : attachmentsToExtract;
+
             if (
                 context.MediaInfo is not null
                 && (
                     input.Plan.OutputPlan.SubtitleOutputs.Length > 0
-                    || attachmentsToExtract.Count > 0
+                    || attachmentsForExtractionCommand.Count > 0
                 )
             )
             {
@@ -578,7 +611,7 @@ public class BuildStage(
                     subtitleExtractor,
                     fontExtractor,
                     effectiveStorage,
-                    attachmentsToExtract
+                    attachmentsForExtractionCommand
                 );
 
                 if (extractionCommand is not null)

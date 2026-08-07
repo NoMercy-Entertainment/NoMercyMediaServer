@@ -55,7 +55,8 @@ public class MovieImportJob : AbstractMediaJob
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            LoggerFactory.CreateLogger<MovieManager>()
+            LoggerFactory.CreateLogger<MovieManager>(),
+            PluginMetadata
         );
 
         Library? movieLibrary = await context

@@ -590,8 +590,12 @@ arch-packages/
 *.sqlite
 *.sqlite3
 *.db
-!src/NoMercy.Queue.Sqlite/
-!src/NoMercy.Queue.Sqlite/**
+# These name a source project, not a database. *.sqlite above matches the
+# directory too (Git compares case-insensitively on Windows and macOS), and the
+# exception used to spell a project name that no longer exists — so every file
+# under the real one was silently unaddable.
+!src/NoMercyQueue.Sqlite/
+!src/NoMercyQueue.Sqlite/**
 
 # Environment and configuration with sensitive data
 .env

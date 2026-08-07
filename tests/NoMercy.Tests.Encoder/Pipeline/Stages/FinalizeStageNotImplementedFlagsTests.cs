@@ -13,7 +13,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NoMercy.Encoder.BuildingBlocks;
 using NoMercy.Encoder.Codecs;
+using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
+using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Pipeline.Stages;
@@ -86,6 +88,8 @@ public class FinalizeStageNotImplementedFlagsTests
             chapterMock.Object,
             fontMock.Object,
             factoryMock.Object,
+            new EncoderOptions { FfmpegPathOverride = "ffmpeg", FfprobePathOverride = "ffprobe" },
+            new Mock<IProcessRunner>().Object,
             NullLogger<FinalizeStage>.Instance,
             storage
         );

@@ -16,6 +16,7 @@ using Moq;
 using NoMercy.Api.Security;
 using NoMercy.Database.Activity;
 using NoMercy.Database.Models.Security;
+using NoMercy.Events;
 using Xunit;
 
 namespace NoMercy.Tests.Api.Security;
@@ -36,6 +37,7 @@ public class AbuseGuardTests
             repository,
             settings ?? new AbuseGuardSettings(new FakeConfigurationStore()),
             Mock.Of<IActivityLogger>(),
+            Mock.Of<IEventBus>(),
             Mock.Of<ILogger<AbuseGuard>>(),
             time
         );
@@ -175,29 +177,47 @@ public class AbuseGuardTests
     }
 
     [Fact]
-    public async Task RecordAsync_RepeatOffender_GetsALongerBanEachTime()
+    public async Task RecordAsync_ProbeBan_NeverExpires()
     {
         TestTimeProvider time = new(Start);
         InMemoryIpBanRepository repository = new();
         AbuseGuard guard = CreateGuard(time, repository);
         IPAddress attacker = IPAddress.Parse("203.0.113.83");
 
-        DateTime firstNow = time.GetUtcNow().UtcDateTime;
         await guard.RecordAsync(attacker, WpLogin, CancellationToken.None);
         await guard.RecordAsync(attacker, RandomPhp, CancellationToken.None);
         IpBan first = repository.Rows.Single();
 
-        (first.ExpiresAt - firstNow).Should().Be(TimeSpan.FromMinutes(60));
+        first.ExpiresAt.Should().Be(DateTime.MaxValue);
         first.BanNumber.Should().Be(1);
 
-        time.Advance(TimeSpan.FromMinutes(120));
-        DateTime secondNow = time.GetUtcNow().UtcDateTime;
+        time.Advance(TimeSpan.FromDays(365));
+
+        (await guard.IsBannedAsync(attacker, CancellationToken.None)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task RecordAsync_RepeatOffenderAfterUnban_StartsAFreshBanNumber()
+    {
+        TestTimeProvider time = new(Start);
+        InMemoryIpBanRepository repository = new();
+        AbuseGuard guard = CreateGuard(time, repository);
+        IPAddress attacker = IPAddress.Parse("203.0.113.83");
+
+        await guard.RecordAsync(attacker, WpLogin, CancellationToken.None);
+        await guard.RecordAsync(attacker, RandomPhp, CancellationToken.None);
+        repository.Rows.Single().BanNumber.Should().Be(1);
+
+        // Unban removes the row, so the moderator's manual exemption also clears
+        // the offender's history — a re-offense after that is a fresh case.
+        await guard.UnbanAsync(attacker.ToString(), CancellationToken.None);
+
         await guard.RecordAsync(attacker, WpLogin, CancellationToken.None);
         await guard.RecordAsync(attacker, RandomPhp, CancellationToken.None);
         IpBan second = repository.Rows.Single();
 
-        (second.ExpiresAt - secondNow).Should().Be(TimeSpan.FromMinutes(120));
-        second.BanNumber.Should().Be(2);
+        second.ExpiresAt.Should().Be(DateTime.MaxValue);
+        second.BanNumber.Should().Be(1);
     }
 
     [Fact]

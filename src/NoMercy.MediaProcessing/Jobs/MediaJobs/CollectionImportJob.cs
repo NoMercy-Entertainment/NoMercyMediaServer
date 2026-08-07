@@ -54,7 +54,8 @@ public class CollectionImportJob : AbstractMediaJob
             movieRepository,
             jobDispatcher,
             StorageFactory,
-            LoggerFactory.CreateLogger<MovieManager>()
+            LoggerFactory.CreateLogger<MovieManager>(),
+            PluginMetadata
         );
 
         CollectionRepository collectionRepository = new(context);

@@ -24,6 +24,7 @@ using NoMercy.Events.Inbox;
 using NoMercy.MediaProcessing.EventHandlers;
 using NoMercy.MediaProcessing.Inbox;
 using NoMercy.MediaProcessing.Jobs;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Domain;
 using NoMercy.Providers.Helpers;
 using NoMercy.Storage;
@@ -521,7 +522,16 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
             .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
             .Returns(storageMock.Object);
 
-        InboxClassifier classifier = new(probeMock.Object, tagMock.Object);
+        Mock<IMediaTypeClassifier> mediaTypeClassifierMock = new();
+        mediaTypeClassifierMock
+            .Setup(c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync("tv");
+
+        InboxClassifier classifier = new(
+            probeMock.Object,
+            tagMock.Object,
+            mediaTypeClassifierMock.Object
+        );
         NoMercy.MediaProcessing.Jobs.JobDispatcher jobDispatcher = new();
         InboxRoutingService routing = new(storageFactoryMock.Object, jobDispatcher);
 

@@ -15,6 +15,7 @@
 
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using NoMercy.Plugins.Hooks;
 using NoMercy.Storage;
 using NoMercyQueue.Core.Interfaces;
 
@@ -58,6 +59,19 @@ public abstract class AbstractMediaExraDataJob<T> : IShouldQueue
 
     [JsonIgnore]
     public ILoggerFactory LoggerFactory { get; private set; } = null!;
+
+    /// <summary>
+    /// What plugins contribute to a scan, and what they know about a title.
+    /// Pulled from the scope like every other job dependency, because these jobs
+    /// build their managers by hand and a manager that only ever receives a
+    /// dispatcher through the container is a hook wired everywhere except where
+    /// the work happens.
+    /// </summary>
+    [JsonIgnore]
+    public IPluginMediaSourceProvider PluginMediaSources { get; private set; } = null!;
+
+    [JsonIgnore]
+    public IPluginMetadataResolver PluginMetadata { get; private set; } = null!;
 
     public abstract Task Handle();
 

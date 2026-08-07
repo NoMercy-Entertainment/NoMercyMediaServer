@@ -13,12 +13,13 @@
 // Imports
 // ---------------------------------------------------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NoMercy.Providers.AcoustId;
+using NoMercy.Queue.MediaServer;
 using NoMercy.Storage;
 using NoMercyQueue.Core.Interfaces;
 
-using Microsoft.Extensions.Logging;
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -58,6 +59,7 @@ public abstract class AbstractMusicFolderJob : IShouldQueue
 
     [JsonIgnore]
     public ILoggerFactory LoggerFactory { get; private set; } = null!;
+
 
     [JsonIgnore]
     protected ILogger Log => field ??= LoggerFactory.CreateLogger(GetType());

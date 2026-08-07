@@ -15,6 +15,7 @@ using NoMercy.Events.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Hub;
 using NoMercy.Plugins.Network;
+using NoMercy.Plugins.Player;
 using NoMercy.Storage;
 
 namespace NoMercy.Plugins;
@@ -33,6 +34,14 @@ public class PluginContext : IPluginContext
     public IPluginLibraryWriter? LibraryWriter { get; }
     public IPluginGrants Grants { get; }
     public IPluginHubContext Hub { get; }
+
+    /// <summary>
+    /// Playback, typed. Always present: the grants decide whether an intent
+    /// reaches anyone, and a plugin branching on null for a surface that is part
+    /// of its contract would be branching on how the host was wired rather than
+    /// on what it is allowed to do.
+    /// </summary>
+    public IPluginPlayer Player { get; }
 
     public PluginContext(
         Ulid pluginId,
@@ -70,6 +79,8 @@ public class PluginContext : IPluginContext
         // Never null: outside the web host there is no hub to map, and a plugin
         // calling Hub.PushAsync there should reach nobody rather than crash.
         Hub = hub ?? new NullPluginHubContext();
+
+        Player = new PluginPlayer(pluginId, Hub, grants);
 
         HttpClient = PluginHttpClientFactory.Create(
             capabilities,

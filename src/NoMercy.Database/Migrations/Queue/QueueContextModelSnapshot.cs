@@ -140,7 +140,12 @@ namespace NoMercy.Database.Migrations.Queue
 
                     b.Property<string>("Payload")
                         .IsRequired()
-                        .HasMaxLength(4096)
+                        .HasMaxLength(2147483647)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Priority")
@@ -154,9 +159,15 @@ namespace NoMercy.Database.Migrations.Queue
                     b.Property<DateTime?>("ReservedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SharedInputKey")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Payload");
+                    b.HasIndex("PayloadHash");
+
+                    b.HasIndex("SharedInputKey");
 
                     b.HasIndex("Priority", "CreatedAt")
                         .IsDescending(true, false);

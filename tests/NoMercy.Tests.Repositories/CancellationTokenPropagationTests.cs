@@ -83,7 +83,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_ThrowsWhenCancelled()
     {
-        TvShowRepository repository = new(_factory);
+        TvShowRepository repository = new(_factory, new StubMediaTypeClassifier());
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -95,7 +95,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task TvShowRepository_DeleteTvAsync_ThrowsWhenCancelled()
     {
-        TvShowRepository repository = new(_factory);
+        TvShowRepository repository = new(_factory, new StubMediaTypeClassifier());
         CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -204,7 +204,7 @@ public class CancellationTokenPropagationTests : IDisposable
     [Fact]
     public async Task TvShowRepository_GetTvAvailableAsync_WorksWithDefaultToken()
     {
-        TvShowRepository repository = new(_factory);
+        TvShowRepository repository = new(_factory, new StubMediaTypeClassifier());
 
         bool available = await repository.GetTvAvailableAsync(SeedConstants.UserId, 1399);
 

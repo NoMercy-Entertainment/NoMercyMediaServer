@@ -22,11 +22,14 @@ using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Plugins.Hooks;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Providers.TMDB.Models.Shared;
 using NoMercy.Storage;
+using PluginMediaMetadata = NoMercy.Plugins.Abstractions.MediaMetadata;
+using PluginMediaType = NoMercy.Plugins.Abstractions.MediaType;
 
 namespace NoMercy.MediaProcessing.Movies;
 
@@ -34,7 +37,8 @@ public class MovieManager(
     IMovieRepository movieRepository,
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
-    ILogger<MovieManager> logger
+    ILogger<MovieManager> logger,
+    IPluginMetadataResolver? pluginMetadata = null
 ) : BaseManager, IMovieManager
 {
     public async Task<TmdbMovieAppends?> Add(int id, Library library)
@@ -56,6 +60,14 @@ public class MovieManager(
             logger.LogWarning("Movie: {Id}: Title is null or empty, skipping.", id);
             return null;
         }
+
+        // What plugins know that TMDB did not answer. Asked after the provider
+        // and merged with ?? below, so a plugin fills a gap and never overwrites
+        // what TMDB already said — which would make a title's metadata depend on
+        // which plugin happened to load first.
+        PluginMediaMetadata? fromPlugins = await (
+            pluginMetadata ?? NullPluginMetadataResolver.Instance
+        ).ResolveAsync(title, PluginMediaType.Movie);
 
         string baseUrl = BaseUrl(title, movieAppends.ReleaseDate);
 
@@ -110,9 +122,9 @@ public class MovieManager(
             ImdbId = movieAppends.ImdbId,
             OriginalTitle = movieAppends.OriginalTitle,
             OriginalLanguage = movieAppends.OriginalLanguage,
-            Overview = movieAppends.Overview,
+            Overview = movieAppends.Overview ?? fromPlugins?.Overview,
             Popularity = movieAppends.Popularity,
-            Poster = movieAppends.PosterPath,
+            Poster = movieAppends.PosterPath ?? fromPlugins?.PosterUrl,
             ReleaseDate = movieAppends.ReleaseDate,
             Revenue = movieAppends.Revenue,
             Runtime = movieAppends.Runtime,
@@ -132,11 +144,15 @@ public class MovieManager(
         await movieRepository.LinkToLibrary(library, movie);
         logger.LogDebug("Movie: {Title}: Linked to Library {Title2}", [movie.Title, library.Title]);
 
-        await Task.WhenAll([StoreTranslations(movieAppends), StoreGenres(movieAppends), StoreContentRatings(movieAppends)]
-        );
+        await Task.WhenAll([
+            StoreTranslations(movieAppends),
+            StoreGenres(movieAppends),
+            StoreContentRatings(movieAppends),
+        ]);
 
         logger.LogInformation(
-            "Movie: {Title}: Added to Library {Title2}", [movieAppends.Title, library.Title]
+            "Movie: {Title}: Added to Library {Title2}",
+            [movieAppends.Title, library.Title]
         );
 
         jobDispatcher.DispatchColorPaletteJob("movie", movie.Id.ToString());

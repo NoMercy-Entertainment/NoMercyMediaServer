@@ -832,4 +832,12 @@
     <Key>Could not reach TV 'Tv in woonkamer': An error occurred while sending the request.</Key>
     <Value lang="nl">Kan tv 'Tv in woonkamer' niet bereiken: er is een fout opgetreden bij het verzenden van het verzoek.</Value>
   </Entry>
+  <Entry>
+    <Key>Re-queued</Key>
+    <Value lang="nl">Opnieuw in de wachtrij gezet</Value>
+  </Entry>
+  <Entry>
+    <Key>Incomplete encode record not found</Key>
+    <Value lang="nl">Onvolledige encode-registratie niet gevonden</Value>
+  </Entry>
 </I18N>

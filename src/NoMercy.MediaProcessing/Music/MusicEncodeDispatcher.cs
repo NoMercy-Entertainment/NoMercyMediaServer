@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Newtonsoft.Json;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Music;
 using NoMercy.MediaProcessing.Jobs.Dto;
@@ -17,6 +18,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Models;
+using NoMercy.Queue.MediaServer;
 using NoMercy.Storage;
 using NoMercyQueue;
 
@@ -98,22 +100,19 @@ public static class MusicEncodeDispatcher
     /// presets and asks the model for its own sanitized filename fragment
     /// (<see cref="Track.CreateTitle"/>) rather than assembling a path here.
     /// </summary>
-    public static void Dispatch(
+    public static async Task Dispatch(
         IStorageFactory storageFactory,
         Library library,
         Folder folder,
         MusicBrainzReleaseAppends release,
         MusicBrainzTrack track,
         MediaFile file,
-        string inputFolder,
-        List<MediaFile> folderFiles
+        string inputFolder
     )
     {
         // Everything the encoder writes lands under BasePath. Pointing that at the source
         // would leave the encode sitting in the download folder it came from, so it is the
         // library destination, laid out by the Picard rules the library already follows.
-        IStorage destination = storageFactory.For(folder.Id, folder.DriverId, string.Empty);
-        string libraryRoot = destination.Driver.GetFullPath(folder.Path);
         string albumFolder = Sanitize(release, track);
 
         QueueRunner.Current!.Dispatcher.Dispatch(
@@ -122,21 +121,20 @@ public static class MusicEncodeDispatcher
                 LibraryId = library.Id,
                 FolderId = folder.Id,
                 Id = release.Id,
-                FoundTrack = track,
-                MediaFile = file,
+                ReleaseId = release.Id,
+                TrackId = track.Id,
                 InputFolder = inputFolder,
                 InputFile = file.Path,
-                FolderMetaData = new()
-                {
-                    MusicBrainzRelease = release,
-                    BasePath = Path.Combine(libraryRoot, albumFolder).Replace('\\', '/'),
-                    Files = folderFiles,
-                    ArtistName =
-                        release.ArtistCredit.FirstOrDefault()?.MusicBrainzArtist.Name
-                        ?? string.Empty,
-                    ReleaseName = release.Title,
-                    Year = release.DateTime?.Year ?? 0,
-                },
+                // Relative to the destination storage root, which is the library
+                // folder — the same contract a video encode's OutputDirectory
+                // follows. Sent as a full local path it was rejected outright:
+                // the encoder refuses a rooted OutputDirectory, and 3,817 music
+                // encodes failed on that one line without ever writing a byte.
+                BasePath = albumFolder.Replace('\\', '/'),
+                ArtistName =
+                    release.ArtistCredit.FirstOrDefault()?.MusicBrainzArtist.Name ?? string.Empty,
+                ReleaseName = release.Title,
+                Year = release.DateTime?.Year ?? 0,
             }
         );
     }

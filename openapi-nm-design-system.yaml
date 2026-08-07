@@ -385,6 +385,147 @@ components:
           enum: [off, polite, assertive]
 
     # ===========================================
+    # Content a component draws rather than a way it looks
+    # ===========================================
+    NMTableCellKind:
+      type: string
+      description: |
+        How a cell draws what its column points at. The design system builds the
+        cell itself from this, which is why a table is described rather than
+        assembled: a server that had to nest an avatar, a badge and a checkbox
+        per row would restate the table's own anatomy on every screen.
+      enum: [text, avatar-text, badge, rating, checkbox, actions]
+
+    NMTableColumn:
+      type: object
+      description: |
+        One column: what it is called, which field of a row it reads, and how
+        that field draws.
+      required:
+        - label
+        - key
+        - type
+      properties:
+        label:
+          type: string
+          description: The header text. Empty for a column whose header is a control.
+        key:
+          type: string
+          description: The row field this column reads.
+        type:
+          $ref: '#/components/schemas/NMTableCellKind'
+        sortable:
+          type: boolean
+          nullable: true
+          description: When true the header is a sort button carrying aria-sort.
+
+    NMTableRow:
+      type: object
+      description: |
+        One row, as the fields its columns read. Values are flat on purpose: a
+        cell's appearance is the column's decision, so a row carries data and
+        never markup.
+      additionalProperties: true
+
+    NMSelectOption:
+      type: object
+      description: |
+        One choice in a select or a combobox: what a reader sees and what the
+        form submits.
+      required:
+        - label
+        - value
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+
+    NMTreeNode:
+      type: object
+      description: |
+        One node of a tree. A branch carries children and can be expanded; a leaf
+        carries neither. The distinction is stated rather than inferred from
+        whether `children` happens to be empty, because an empty folder is still
+        a folder.
+      required:
+        - label
+        - type
+      properties:
+        label:
+          type: string
+        type:
+          type: string
+          enum: [branch, leaf]
+        expanded:
+          type: boolean
+          nullable: true
+        selected:
+          type: boolean
+          nullable: true
+        children:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/NMTreeNode'
+
+    NMChatMessage:
+      type: object
+      description: |
+        One message in a conversation. `variant` is who is speaking, which is
+        what decides the side it sits on and the colour it takes.
+      required:
+        - variant
+        - text
+      properties:
+        variant:
+          type: string
+          enum: [sent, received]
+        text:
+          type: string
+        time:
+          type: string
+          nullable: true
+        avatar:
+          type: string
+          nullable: true
+
+    NMStep:
+      type: object
+      description: One step of a stepper, and what it says about itself.
+      required:
+        - label
+      properties:
+        label:
+          type: string
+        description:
+          type: string
+          nullable: true
+
+    NMChoice:
+      type: object
+      description: |
+        One option in a group that behaves as a set: a button group, a segmented
+        control, a checkbox or radio group.
+      required:
+        - label
+      properties:
+        label:
+          type: string
+        value:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+          nullable: true
+        disabled:
+          type: boolean
+          nullable: true
+
+    # ===========================================
     # The base every component's props extend
     # ===========================================
     NMComponentBase:
@@ -406,6 +547,19 @@ components:
             $ref: '#/components/schemas/DesignComponent'
           default: []
           description: Nested children, rendered inside this component.
+        slots:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/DesignComponent'
+          default: {}
+          description: |
+            Children for a slot the component names, keyed by that name. A card
+            declares a header, a body and a footer; without this a payload could
+            reach none of them, because every renderer filled the default slot
+            and nothing else. Anything sent under a name the component does not
+            declare is ignored rather than drawn somewhere it does not belong.
         box:
           $ref: '#/components/schemas/NMBox'
         surface:
