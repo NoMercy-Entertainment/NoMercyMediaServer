@@ -90,7 +90,7 @@ public class TaskResourceHelperTests
         ResourceRequirement req = TaskResourceHelper.ForVideoOutput(plan, gpuAccel: null);
 
         req.GpuSlots.Should().Be(1);
-        req.CpuThreads.Should().Be(Math.Max(2, Environment.ProcessorCount / 4));
+        req.CpuThreads.Should().Be(Math.Max(3, Environment.ProcessorCount / 4));
     }
 
     [Fact]

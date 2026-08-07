@@ -31,8 +31,13 @@ public static class EncodeThreadBudget
     /// <summary>
     /// A hardware encode fed by a CPU filter graph — CPU decode plus scaling,
     /// GPU encode. Measurably around a fifth of a desktop box per 1080p rung.
+    /// Floored at one more than <see cref="GpuResidentEncode"/>, not just 2: on
+    /// any host with 11 or fewer cores a floor of 2 collapses to the same
+    /// reservation as a fully GPU-resident encode, which is exactly the
+    /// under-reporting this class exists to prevent.
     /// </summary>
-    public static int GpuEncodeWithCpuFilters => Math.Max(2, Environment.ProcessorCount / 4);
+    public static int GpuEncodeWithCpuFilters =>
+        Math.Max(GpuResidentEncode + 1, Environment.ProcessorCount / 4);
 
     /// <summary>
     /// A hardware encode whose decode and scaling are GPU-resident: only
