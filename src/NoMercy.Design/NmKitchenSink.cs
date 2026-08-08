@@ -546,7 +546,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -588,7 +590,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = true,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -630,7 +634,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -666,13 +672,103 @@ public static class NmKitchenSink
             },
             new()
             {
+                Id = "button-full-true",
+                Label = "full = true",
+                Props = new NMButtonProps
+            {
+                AriaLabel = "Action button",
+                Disabled = false,
+                Full = true,
+                IconOnly = false,
+                Layout = "hug",
+                Loading = false,
+                Size = "lg",
+                Variant = "primary",
+                TestId = "button-full-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-full-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["iconLeft"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "button-full-true-iconLeft-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "button-full-false",
+                Label = "full = false",
+                Props = new NMButtonProps
+            {
+                AriaLabel = "Action button",
+                Disabled = false,
+                Full = false,
+                IconOnly = false,
+                Layout = "hug",
+                Loading = false,
+                Size = "lg",
+                Variant = "primary",
+                TestId = "button-full-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-full-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["iconLeft"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "button-full-false-iconLeft-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
                 Id = "button-icononly-true",
                 Label = "iconOnly = true",
                 Props = new NMButtonProps
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = true,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -714,7 +810,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -750,13 +848,103 @@ public static class NmKitchenSink
             },
             new()
             {
+                Id = "button-layout-hug",
+                Label = "layout = hug",
+                Props = new NMButtonProps
+            {
+                AriaLabel = "Action button",
+                Disabled = false,
+                Full = false,
+                IconOnly = false,
+                Layout = "hug",
+                Loading = false,
+                Size = "lg",
+                Variant = "primary",
+                TestId = "button-layout-hug",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-layout-hug-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["iconLeft"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "button-layout-hug-iconLeft-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "button-layout-full",
+                Label = "layout = full",
+                Props = new NMButtonProps
+            {
+                AriaLabel = "Action button",
+                Disabled = false,
+                Full = false,
+                IconOnly = false,
+                Layout = "full",
+                Loading = false,
+                Size = "lg",
+                Variant = "primary",
+                TestId = "button-layout-full",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-layout-full-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["iconLeft"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "button-layout-full-iconLeft-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
                 Id = "button-loading-true",
                 Label = "loading = true",
                 Props = new NMButtonProps
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = true,
                 Size = "lg",
                 Variant = "primary",
@@ -798,7 +986,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -840,7 +1030,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "sm",
                 Variant = "primary",
@@ -882,7 +1074,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "md",
                 Variant = "primary",
@@ -924,7 +1118,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -966,7 +1162,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "xl",
                 Variant = "primary",
@@ -1008,7 +1206,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "2xl",
                 Variant = "primary",
@@ -1050,7 +1250,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -1092,7 +1294,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "secondary",
@@ -1134,7 +1338,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "secondary-color",
@@ -1176,7 +1382,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "tertiary",
@@ -1218,7 +1426,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "tertiary-color",
@@ -1260,7 +1470,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "link",
@@ -1302,7 +1514,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "link-color",
@@ -1344,7 +1558,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "destructive",
@@ -1386,7 +1602,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "ghost-destructive",

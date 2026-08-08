@@ -888,11 +888,30 @@ public static class NMButtonExtensions
     }
 
     /// <summary>
+    /// Whether the button fills its container; content stays centred and the
+    /// icon edge padding is not applied
+    /// </summary>
+    public static NMButtonProps Full(this NMButtonProps props, bool value)
+    {
+        props.Full = value;
+        return props;
+    }
+
+    /// <summary>
     /// Whether to render as icon-only (hides label)
     /// </summary>
     public static NMButtonProps IconOnly(this NMButtonProps props, bool value)
     {
         props.IconOnly = value;
+        return props;
+    }
+
+    /// <summary>
+    /// Layout
+    /// </summary>
+    public static NMButtonProps Layout(this NMButtonProps props, string value)
+    {
+        props.Layout = value;
         return props;
     }
 
