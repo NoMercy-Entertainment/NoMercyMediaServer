@@ -458,17 +458,6 @@ internal sealed class PluginLoader(
                         await _storage.CreateDirectoryAsync(dataFolder, ct);
                     }
 
-                    IPluginContext context = _contextFactory.Create(
-                        instance.Id,
-                        dataFolder,
-                        _logger,
-                        capabilities: null,
-                        instance.Name,
-                        instance.Version
-                    );
-
-                    instance.Initialize(context);
-
                     // What the manifest said, if this plugin is already known.
                     // A reload reaches here with only the assembly — there is no
                     // plugin.json beside it to read — so everything the manifest
@@ -478,7 +467,25 @@ internal sealed class PluginLoader(
                     // waiting for approval therefore made it look approved,
                     // permanently, and the owner was left with a plugin the
                     // server would not run and no way to consent to it.
+                    //
+                    // Read before the context is built, not after: the context
+                    // carries the network allowlist, so a context built with no
+                    // capabilities denies every outbound host the manifest
+                    // declared. Internet Radio relayed nothing and every station
+                    // failed with PluginNetworkDeniedException, on a plugin whose
+                    // manifest names the hosts it needs.
                     _registry.TryGetValue(instance.Id, out LoadedPlugin? known);
+
+                    IPluginContext context = _contextFactory.Create(
+                        instance.Id,
+                        dataFolder,
+                        _logger,
+                        known?.Info.Capabilities,
+                        instance.Name,
+                        instance.Version
+                    );
+
+                    instance.Initialize(context);
 
                     PluginInfo info = new()
                     {
