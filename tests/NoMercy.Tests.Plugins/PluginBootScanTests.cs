@@ -209,6 +209,56 @@ public class PluginBootScanTests : IDisposable
         profile.AudioCodec.Should().Be("aac");
     }
 
+    /// <summary>
+    /// A reload keeps what the manifest said, because consent is decided by it.
+    ///
+    /// <para>
+    /// Enabling a plugin whose instance was discarded reloads it from the bare
+    /// assembly, and there is no plugin.json beside an assembly to read. Built
+    /// from the instance alone the entry lost its capabilities, so a plugin that
+    /// was waiting for approval came back looking as though it needed none —
+    /// permanently. The owner was left with a plugin the server would not run
+    /// and no way to consent to it.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task LoadPluginAssemblyAsync_ReloadingAScannedPlugin_KeepsWhatTheManifestDeclared()
+    {
+        StageEchoPlugin();
+
+        // The sample asks for nothing, and a plugin that asks for nothing needs
+        // no consent — so it could not show this defect. Its own manifest is
+        // amended rather than replaced, keeping the id and assembly the scan
+        // matches on.
+        string manifestPath = Path.Combine(_echoPluginDir, "plugin.json");
+        System.Text.Json.Nodes.JsonNode manifest =
+            System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(manifestPath))!;
+        manifest["capabilities"] = new System.Text.Json.Nodes.JsonObject
+        {
+            ["rest"] = true,
+        };
+        File.WriteAllText(manifestPath, manifest.ToJsonString());
+
+        // Scanned first, so the entry carries what its plugin.json declared.
+        await _manager.LoadAllAsync();
+
+        PluginInfo scanned = _manager.GetInstalledPlugins().Should().ContainSingle().Subject;
+        scanned
+            .Capabilities.Should()
+            .NotBeNull("the scan reads plugin.json, so the entry starts out knowing what it asked for");
+
+        // Then reloaded the way enabling reloads it: by assembly path, with no
+        // manifest anywhere near it.
+        await _manager.LoadPluginAssemblyAsync(
+            Path.Combine(_echoPluginDir, "NoMercy.Plugin.Samples.Echo.dll")
+        );
+
+        PluginInfo after = _manager.GetInstalledPlugins().Should().ContainSingle().Subject;
+        after
+            .Capabilities.Should()
+            .NotBeNull("a reload that forgets the capabilities can never ask for consent again");
+    }
+
     [Fact]
     public async Task LoadAllAsync_DisabledPluginWithSurvivingInstance_IsExcludedFromResults()
     {

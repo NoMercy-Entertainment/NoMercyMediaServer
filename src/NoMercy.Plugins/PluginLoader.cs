@@ -469,6 +469,17 @@ internal sealed class PluginLoader(
 
                     instance.Initialize(context);
 
+                    // What the manifest said, if this plugin is already known.
+                    // A reload reaches here with only the assembly — there is no
+                    // plugin.json beside it to read — so everything the manifest
+                    // carried would otherwise be dropped. Capabilities matter
+                    // most: consent is decided by them, and an entry that lost
+                    // them reads as needing none. Enabling a plugin that was
+                    // waiting for approval therefore made it look approved,
+                    // permanently, and the owner was left with a plugin the
+                    // server would not run and no way to consent to it.
+                    _registry.TryGetValue(instance.Id, out LoadedPlugin? known);
+
                     PluginInfo info = new()
                     {
                         Id = instance.Id,
@@ -477,6 +488,10 @@ internal sealed class PluginLoader(
                         Version = instance.Version,
                         Status = PluginStatus.Active,
                         AssemblyPath = assemblyPath,
+                        Capabilities = known?.Info.Capabilities,
+                        Author = known?.Info.Author,
+                        ProjectUrl = known?.Info.ProjectUrl,
+                        TargetAbi = known?.Info.TargetAbi,
                     };
 
                     LoadedPlugin loaded = new(info, instance, loadContext);
