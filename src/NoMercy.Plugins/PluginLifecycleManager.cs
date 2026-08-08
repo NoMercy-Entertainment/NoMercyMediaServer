@@ -144,6 +144,18 @@ internal sealed class PluginLifecycleManager(
         _releaseScheduledWork?.Invoke(pluginId);
 
         loaded.Instance?.Dispose();
+
+        // Dropped, not kept: a disposed instance is dead by IDisposable's own
+        // contract, and enabling again took the "Instance is not null" branch and
+        // called Initialize on the corpse. The plugin then reported Active while
+        // every view request it served hit its own disposed guard — the owner saw
+        // "this plugin is disabled or is being unloaded" on a plugin the dashboard
+        // listed as running, on every surface, until the server was restarted.
+        // Nulling it sends the next enable through the loader, which builds a
+        // fresh instance in a fresh load context. This is also what the field has
+        // always been documented to mean.
+        loaded.Instance = null;
+
         PluginLifecycle.Transition(loaded.Info, PluginStatus.Disabled);
 
         // Enabling announced itself and this did not, so a plugin's routes and

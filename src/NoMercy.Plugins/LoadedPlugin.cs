@@ -24,6 +24,6 @@ internal sealed class LoadedPlugin(
 )
 {
     public PluginInfo Info { get; } = info;
-    public IPlugin? Instance { get; } = instance;
+    public IPlugin? Instance { get; set; } = instance;
     public PluginLoadContext? LoadContext { get; } = loadContext;
 }
