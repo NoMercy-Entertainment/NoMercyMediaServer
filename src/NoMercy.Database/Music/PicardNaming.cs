@@ -199,5 +199,18 @@ public static partial class PicardNaming
     /// belonging to another.
     /// </summary>
     public static string Sanitize(string pathAndFileName) =>
-        UnsafeRun().Replace(pathAndFileName, "_");
+        UnsafeRun().Replace(FoldUnsafeUnicode(pathAndFileName), "_");
+
+    /// <summary>
+    /// One deviation from the byte-exact Picard reproduction, and a deliberate one:
+    /// U+2019 (’, the curly apostrophe Picard's own typography leaves in a title like
+    /// "I’m Into You") reproducibly fails to create a directory on Stoney's NAS —
+    /// confirmed identically across raw Win32 CreateDirectoryW, .NET's
+    /// Directory.CreateDirectory, and PowerShell's own New-Item cmdlet, and across both
+    /// soft and hard NFS mount modes. It isn't a transient fault a retry can outlast: a
+    /// directory that reports created with this character in its name is gone again
+    /// within minutes, server-side, every time. A path this exists to build has to
+    /// actually persist, so the ASCII apostrophe stands in for its curly rendering here.
+    /// </summary>
+    private static string FoldUnsafeUnicode(string value) => value.Replace('’', '\'');
 }

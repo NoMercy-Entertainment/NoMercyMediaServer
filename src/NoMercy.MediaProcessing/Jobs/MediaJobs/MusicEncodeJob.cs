@@ -257,7 +257,11 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
     /// </summary>
     internal static string AlbumOutputDirectory(string basePath)
     {
-        string normalized = basePath.Replace('\\', '/').TrimEnd('/');
+        // ’ (U+2019) reproducibly fails to create a directory on Stoney's NAS — see
+        // PicardNaming.FoldUnsafeUnicode. New dispatches never carry it, but a row
+        // queued before that fix still does, so it is repaired here the same way the
+        // rooted-path shape below is: on read, not by asking for a queue migration.
+        string normalized = basePath.Replace('\\', '/').TrimEnd('/').Replace('’', '\'');
         if (normalized.Length == 0)
             return string.Empty;
 

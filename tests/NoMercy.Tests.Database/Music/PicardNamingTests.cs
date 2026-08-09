@@ -225,6 +225,23 @@ public class PicardNamingTests
         Assert.Equal("U/U2/[1987] Album_ The _Reckoning_/01 Track_Name", sanitized);
     }
 
+    /// <summary>
+    /// U+2019 reproducibly fails to create a directory on Stoney's NAS — confirmed
+    /// identically across raw Win32 CreateDirectoryW, .NET's Directory.CreateDirectory,
+    /// and PowerShell's own New-Item, and across both soft and hard NFS mount modes. The
+    /// ASCII apostrophe is filesystem-safe everywhere and stands in for it on disk.
+    /// </summary>
+    [Fact]
+    public void A_curly_apostrophe_folds_to_ascii_so_the_folder_actually_persists()
+    {
+        MusicNamingContext context = JoshuaTree() with { AlbumName = "I’m Into You" };
+
+        string sanitized = PicardNaming.Sanitize(PicardNaming.BuildPath(context));
+
+        Assert.Contains("I'm Into You", sanitized);
+        Assert.DoesNotContain('’', sanitized);
+    }
+
     [Fact]
     public void An_overlong_title_is_trimmed_with_an_ellipsis()
     {
