@@ -74,7 +74,7 @@ public class TasksControllerMusicQueueTests : IClassFixture<NoMercyApiFactory>, 
 
         QueueJob row = new()
         {
-            Queue = "encoder",
+            Queue = "encoder-cpu",
             // Above the video encodes, which is exactly how it ended up alone at
             // the top of the listing.
             Priority = 5,

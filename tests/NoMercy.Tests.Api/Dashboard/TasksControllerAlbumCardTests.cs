@@ -201,7 +201,7 @@ public class TasksControllerAlbumCardTests : IClassFixture<NoMercyApiFactory>, I
             rows.Add(
                 new()
                 {
-                    Queue = "encoder",
+                    Queue = "encoder-cpu",
                     Priority = 5,
                     Payload = MusicPayload(track),
                     AvailableAt = DateTime.UtcNow,

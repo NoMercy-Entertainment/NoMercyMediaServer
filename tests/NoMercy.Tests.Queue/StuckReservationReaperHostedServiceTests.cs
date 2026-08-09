@@ -43,6 +43,7 @@ public class StuckReservationReaperHostedServiceTests
     private const string ImportQueue = "import";
     private const string EncoderQueue = "encoder";
     private const string EncoderGpuQueue = "encoder-gpu";
+    private const string EncoderCpuQueue = "encoder-cpu";
 
     private static readonly TimeSpan TestCutoff = TimeSpan.FromMinutes(20);
 
@@ -173,19 +174,19 @@ public class StuckReservationReaperHostedServiceTests
     }
 
     [Fact]
-    public async Task ReapOnceAsync_MusicEncodeJobOnEncoderQueue_IsReclaimed()
+    public async Task ReapOnceAsync_MusicEncodeJobOnEncoderCpuQueue_IsReclaimed()
     {
         (StuckReservationReaperHostedService service, TestQueueContextAdapter context) =
             BuildService();
 
-        // MusicEncodeJob deliberately shares the plain "encoder" queue with
-        // VideoEncodeJob for priority ordering, but a single track is bounded
-        // like Image/File — not hours-long like a real video encode — and has
-        // no OutputDirectory for the checkpoint-resume path either. A wedged
+        // MusicEncodeJob runs on encoder-cpu, the same lane EncodeTaskJob's
+        // real ffmpeg work uses, but a single track is bounded like
+        // Image/File — not hours-long like a real video encode — and has no
+        // OutputDirectory for the checkpoint-resume path either. A wedged
         // reservation here must not inherit the video jobs' exclusion.
         QueueJobModel wedgedTrack = new()
         {
-            Queue = EncoderQueue,
+            Queue = EncoderCpuQueue,
             Payload =
                 "{\"$type\":\"NoMercy.MediaProcessing.Jobs.MediaJobs.MusicEncodeJob, NoMercy.MediaProcessing\",\"id\":\"release-1\"}",
             Priority = 5,

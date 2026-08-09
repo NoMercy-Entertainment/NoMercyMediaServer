@@ -258,9 +258,18 @@ public class TasksController(
         // sit at 4 and 0, so 13,779 music rows took every slot and the operator's
         // video encodes were missing from a panel that claimed to list the queue.
         // A share per band costs one small indexed query each and cannot starve.
+        // MusicEncodeJob runs on encoder-cpu (the same lane EncodeTaskJob's real
+        // ffmpeg work uses), not the plain 'encoder' coordinator queue, so every
+        // query below that used to read one queue now reads both — scoped to
+        // MusicEncodeJob payloads only, so encoder-cpu's own EncodeTaskJob rows
+        // (video's actual ffmpeg subtasks) never leak into this coordinator-level
+        // panel.
         List<int> priorities = await queueContext
             .QueueJobs.AsNoTracking()
-            .Where(j => j.Queue == "encoder")
+            .Where(j =>
+                j.Queue == "encoder"
+                || (j.Queue == "encoder-cpu" && j.Payload.Contains("MusicEncodeJob"))
+            )
             .Select(j => j.Priority)
             .Distinct()
             .OrderByDescending(priority => priority)
@@ -274,7 +283,13 @@ public class TasksController(
             banded.AddRange(
                 await queueContext
                     .QueueJobs.AsNoTracking()
-                    .Where(j => j.Queue == "encoder" && j.Priority == priority)
+                    .Where(j =>
+                        (
+                            j.Queue == "encoder"
+                            || (j.Queue == "encoder-cpu" && j.Payload.Contains("MusicEncodeJob"))
+                        )
+                        && j.Priority == priority
+                    )
                     .OrderBy(j => j.CreatedAt)
                     .ThenBy(j => j.Id)
                     .Take(perBand)
@@ -287,7 +302,13 @@ public class TasksController(
         // operator is most certainly looking for.
         List<QueueJob> running = await queueContext
             .QueueJobs.AsNoTracking()
-            .Where(j => j.Queue == "encoder" && j.ReservedAt != null)
+            .Where(j =>
+                (
+                    j.Queue == "encoder"
+                    || (j.Queue == "encoder-cpu" && j.Payload.Contains("MusicEncodeJob"))
+                )
+                && j.ReservedAt != null
+            )
             .OrderBy(j => j.Id)
             .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
@@ -775,7 +796,7 @@ public class TasksController(
                 SELECT json_extract(Payload, '$.releaseId') AS ReleaseId,
                        COUNT(*) AS Remaining
                 FROM QueueJobs
-                WHERE Queue = 'encoder'
+                WHERE Queue = 'encoder-cpu'
                   AND Payload LIKE '%MusicEncodeJob%'
                 GROUP BY json_extract(Payload, '$.releaseId')
                 """
@@ -1144,6 +1165,7 @@ public class TasksController(
                        SUM(CASE WHEN ReservedAt IS NULL THEN 0 ELSE 1 END) AS Running
                 FROM QueueJobs
                 WHERE Queue = 'encoder'
+                   OR (Queue = 'encoder-cpu' AND Payload LIKE '%MusicEncodeJob%')
                 GROUP BY Kind
                 """
             )
@@ -1187,7 +1209,10 @@ public class TasksController(
         );
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
-        int queueDepth = await queueContext.QueueJobs.CountAsync(j => j.Queue == "encoder");
+        int queueDepth = await queueContext.QueueJobs.CountAsync(j =>
+            j.Queue == "encoder"
+            || (j.Queue == "encoder-cpu" && j.Payload.Contains("MusicEncodeJob"))
+        );
 
         if (recent.Count == 0 || queueDepth == 0)
         {
