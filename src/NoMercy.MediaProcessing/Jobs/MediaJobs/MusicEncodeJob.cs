@@ -268,29 +268,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
     private async Task AddRecording(Folder folder)
     {
-        await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-
-        MusicGenreRepository musicGenreRepository = new(context);
-
-        ArtistRepository artistRepository = new(context);
-        ArtistManager artistManager = new(
-            artistRepository,
-            musicGenreRepository,
-            jobDispatcher,
-            StorageFactory,
-            LoggerFactory.CreateLogger<ArtistManager>()
-        );
-
-        RecordingRepository recordingRepository = new(context);
-        RecordingManager recordingManager = new(
-            recordingRepository,
-            musicGenreRepository,
-            artistRepository,
-            StorageDriver,
-            StorageFactory,
-            LoggerFactory.CreateLogger<RecordingManager>()
-        );
 
         await using MediaScan mediaScan = new(StorageDriver);
 
@@ -324,6 +302,26 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             SystemParallelism.Options,
             async (media, t) =>
             {
+                // A fresh context per parallel iteration, deliberately — DbContext is
+                // not thread-safe, and the manager stack below used to be built once
+                // outside this loop and shared across every concurrent iteration.
+                // EF Core does not queue concurrent operations on one context; it
+                // throws "a second operation was started on this context instance
+                // before a previous operation completed", which is what 282 of the
+                // stored FailedJobs rows actually are.
+                await using MediaContext context = new();
+                MusicGenreRepository musicGenreRepository = new(context);
+                ArtistRepository artistRepository = new(context);
+                RecordingRepository recordingRepository = new(context);
+                RecordingManager recordingManager = new(
+                    recordingRepository,
+                    musicGenreRepository,
+                    artistRepository,
+                    StorageDriver,
+                    StorageFactory,
+                    LoggerFactory.CreateLogger<RecordingManager>()
+                );
+
                 if (
                     !await recordingManager.Store(
                         FolderMetaData.MusicBrainzRelease,
@@ -351,6 +349,20 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     SystemParallelism.Options,
                     async (artist, _) =>
                     {
+                        // Same reason as above: its own context, not the outer
+                        // iteration's — two nested parallel loops sharing one
+                        // context multiplies the race rather than avoiding it.
+                        await using MediaContext artistContext = new();
+                        MusicGenreRepository artistGenreRepository = new(artistContext);
+                        ArtistRepository perArtistRepository = new(artistContext);
+                        ArtistManager artistManager = new(
+                            perArtistRepository,
+                            artistGenreRepository,
+                            jobDispatcher,
+                            StorageFactory,
+                            LoggerFactory.CreateLogger<ArtistManager>()
+                        );
+
                         Log.LogTrace("Storing Artist: {Name}", artist.MusicBrainzArtist.Name);
                         await artistManager.Store(
                             artist.MusicBrainzArtist,
