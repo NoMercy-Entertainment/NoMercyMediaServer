@@ -16,6 +16,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
+using NoMercy.Database.Music;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
@@ -257,11 +258,14 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
     /// </summary>
     internal static string AlbumOutputDirectory(string basePath)
     {
-        // ’ (U+2019) reproducibly fails to create a directory on Stoney's NAS — see
-        // PicardNaming.FoldUnsafeUnicode. New dispatches never carry it, but a row
-        // queued before that fix still does, so it is repaired here the same way the
-        // rooted-path shape below is: on read, not by asking for a queue migration.
-        string normalized = basePath.Replace('\\', '/').TrimEnd('/').Replace('’', '\'');
+        // Any non-ASCII character reproducibly fails to create a directory on
+        // Stoney's NAS — see PicardNaming.FoldUnsafeUnicode. New dispatches never
+        // carry one, but a row queued before that fix still does, so it is repaired
+        // here the same way the rooted-path shape below is: on read, not by asking
+        // for a queue migration.
+        string normalized = PicardNaming.FoldUnsafeUnicode(
+            basePath.Replace('\\', '/').TrimEnd('/')
+        );
         if (normalized.Length == 0)
             return string.Empty;
 

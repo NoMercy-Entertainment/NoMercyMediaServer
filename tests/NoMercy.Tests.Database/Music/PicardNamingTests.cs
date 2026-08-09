@@ -242,6 +242,32 @@ public class PicardNamingTests
         Assert.DoesNotContain('’', sanitized);
     }
 
+    /// <summary>
+    /// Every accented Latin letter reproducibly fails the same way as the curly
+    /// apostrophe — confirmed live for é ñ ü à ö ç í ó ø å. NFD-decompose-and-strip
+    /// folds any base+diacritic letter without a per-character entry; ø is Unicode's
+    /// own counter-example (a distinct letter, not base+diacritic) and needs the
+    /// explicit map alongside it.
+    /// </summary>
+    [Theory]
+    [InlineData("Números", "Numeros")]
+    [InlineData("Café del Mar", "Cafe del Mar")]
+    [InlineData("Mötley Crüe", "Motley Crue")]
+    [InlineData("Björk", "Bjork")]
+    [InlineData("Sigur Rós", "Sigur Ros")]
+    [InlineData("Øystein", "Oystein")]
+    public void An_accented_or_non_decomposing_letter_folds_to_its_ascii_form(
+        string original,
+        string expectedAscii
+    )
+    {
+        MusicNamingContext context = JoshuaTree() with { AlbumName = original };
+
+        string sanitized = PicardNaming.Sanitize(PicardNaming.BuildPath(context));
+
+        Assert.Contains(expectedAscii, sanitized);
+    }
+
     [Fact]
     public void An_overlong_title_is_trimmed_with_an_ellipsis()
     {

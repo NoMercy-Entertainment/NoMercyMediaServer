@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace NoMercy.Database.Music;
@@ -202,15 +204,52 @@ public static partial class PicardNaming
         UnsafeRun().Replace(FoldUnsafeUnicode(pathAndFileName), "_");
 
     /// <summary>
-    /// One deviation from the byte-exact Picard reproduction, and a deliberate one:
-    /// U+2019 (’, the curly apostrophe Picard's own typography leaves in a title like
-    /// "I’m Into You") reproducibly fails to create a directory on Stoney's NAS —
-    /// confirmed identically across raw Win32 CreateDirectoryW, .NET's
-    /// Directory.CreateDirectory, and PowerShell's own New-Item cmdlet, and across both
-    /// soft and hard NFS mount modes. It isn't a transient fault a retry can outlast: a
-    /// directory that reports created with this character in its name is gone again
-    /// within minutes, server-side, every time. A path this exists to build has to
-    /// actually persist, so the ASCII apostrophe stands in for its curly rendering here.
+    /// A deliberate deviation from the byte-exact Picard reproduction: any character
+    /// outside ASCII reproducibly fails to create a directory on Stoney's NAS — the
+    /// export is reached through the Windows-mounted NFS client, and confirmed
+    /// identically for é ñ ü à ö ç í ó ø å and the curly apostrophe ’ across raw Win32
+    /// CreateDirectoryW, .NET's Directory.CreateDirectory, and PowerShell's New-Item,
+    /// and across both soft and hard NFS mount modes. It isn't a transient fault a
+    /// retry can outlast: a directory that reports created with a non-ASCII character
+    /// in its name is gone again within seconds, server-side, every time — the same
+    /// data reached over SMB persists it correctly, so this is a client-protocol
+    /// defect, not a filesystem limit. A path this exists to build has to actually
+    /// persist, so every accented/typographic character folds to its closest ASCII
+    /// form here rather than just the one Picard's own typography happens to emit.
     /// </summary>
-    private static string FoldUnsafeUnicode(string value) => value.Replace('’', '\'');
+    /// <summary>
+    /// Public: <see cref="MusicEncodeJob.AlbumOutputDirectory"/> repairs a legacy row's
+    /// stored path with this exact fold, so a directory built at dispatch time and one
+    /// rebuilt on read never diverge.
+    /// </summary>
+    public static string FoldUnsafeUnicode(string value)
+    {
+        // Two tiers, not one growing list: NFD-decompose below is the generative
+        // mechanism and covers every base+diacritic letter (é ñ ü à ö ç í ó å, any
+        // future one) with no new entries ever needed. This map is the closed
+        // remainder — characters Unicode defines as distinct letters/punctuation
+        // rather than base+diacritic, so NFD cannot decompose them by definition.
+        string quotesFolded = value
+            .Replace('’', '\'')
+            .Replace('‘', '\'')
+            .Replace('“', '"')
+            .Replace('”', '"')
+            .Replace('–', '-')
+            .Replace('—', '-')
+            .Replace('ø', 'o')
+            .Replace('Ø', 'O')
+            .Replace('đ', 'd')
+            .Replace('Đ', 'D')
+            .Replace('ł', 'l')
+            .Replace('Ł', 'L')
+            .Replace('ß', 's');
+
+        string decomposed = quotesFolded.Normalize(NormalizationForm.FormD);
+        StringBuilder builder = new(decomposed.Length);
+        foreach (char c in decomposed)
+            if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                builder.Append(c);
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
+    }
 }
