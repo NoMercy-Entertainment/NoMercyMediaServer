@@ -35,7 +35,28 @@ public sealed class LocalStorageDriver : IStorageDriver
 
     public bool DirectoryExists(string path) => Directory.Exists(path);
 
-    public void CreateDirectory(string path) => Directory.CreateDirectory(path);
+    // Retried, unlike every other call here — a folder on a network share the OS
+    // presents as a local path (an NFS/SMB mount, not NoMercy's own SmbStorageDriver)
+    // surfaces a transient link hiccup as IOException "Kan de opdracht niet
+    // uitvoeren door een fout in een I/O-apparaat" (ERROR_IO_DEVICE), and the very
+    // next Directory.CreateDirectory on the identical path succeeds. NfsStorageDriver
+    // already retries its own protocol-level EXPIRED faults; this mirrors that for
+    // the plain System.IO path, the one driver with none.
+    public void CreateDirectory(string path)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                Directory.CreateDirectory(path);
+                return;
+            }
+            catch (IOException) when (attempt < 3)
+            {
+                Thread.Sleep(attempt * 250);
+            }
+        }
+    }
 
     public void DeleteFile(string path) => File.Delete(path);
 
