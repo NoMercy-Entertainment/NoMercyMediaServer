@@ -9,10 +9,30 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Collections.Concurrent;
+
 namespace NoMercy.Storage.Drivers.Local;
 
 public sealed class LocalStorageDriver : IStorageDriver
 {
+    // Keyed by the exact directory path. A release's tracks each dispatch their
+    // own MusicEncodeJob and every one of them calls CreateDirectory on the SAME
+    // album folder — with several running in parallel, two workers hit an empty
+    // path at once and the network share hands one of them ERROR_IO_DEVICE
+    // instead of the ordinary "already exists" no-op a local disk gives for a
+    // plain race. Retrying alone still lost that race under load; only one
+    // thread may create a given path at a time now.
+    //
+    // SemaphoreSlim, not a bare `lock`: Directory.CreateDirectory against a
+    // genuinely unresponsive network mount can block indefinitely, and a plain
+    // lock has no way to time out of that — one wedged call would then hold
+    // every future create for the same album folder forever. Wait(timeout)
+    // bounds the wait and surfaces a timeout as an ordinary failure the job
+    // queue's own retry/dead-letter path already handles.
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> DirectoryLocks = new();
+
+    private static readonly TimeSpan DirectoryLockTimeout = TimeSpan.FromSeconds(30);
+
     public string BackendLabel => "Local";
 
     public char DirectorySeparator => Path.DirectorySeparatorChar;
@@ -35,7 +55,49 @@ public sealed class LocalStorageDriver : IStorageDriver
 
     public bool DirectoryExists(string path) => Directory.Exists(path);
 
-    public void CreateDirectory(string path) => Directory.CreateDirectory(path);
+    // Retried, unlike every other call here — a folder on a network share the OS
+    // presents as a local path (an NFS/SMB mount, not NoMercy's own SmbStorageDriver)
+    // surfaces a transient link hiccup as IOException "Kan de opdracht niet
+    // uitvoeren door een fout in een I/O-apparaat" (ERROR_IO_DEVICE), and the very
+    // next Directory.CreateDirectory on the identical path succeeds. NfsStorageDriver
+    // already retries its own protocol-level EXPIRED faults; this mirrors that for
+    // the plain System.IO path, the one driver with none.
+    public void CreateDirectory(string path)
+    {
+        // Never removed: a bounded number of distinct output directories exist
+        // over the process lifetime, and removing an entry here races a
+        // concurrent GetOrAdd into minting a second gate for the same path —
+        // which is exactly the serialization this exists to guarantee.
+        SemaphoreSlim gate = DirectoryLocks.GetOrAdd(
+            path.TrimEnd('/', '\\'),
+            static _ => new SemaphoreSlim(1, 1)
+        );
+
+        if (!gate.Wait(DirectoryLockTimeout))
+            throw new TimeoutException(
+                $"Timed out after {DirectoryLockTimeout} waiting to create directory: {path}"
+            );
+
+        try
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    Directory.CreateDirectory(path);
+                    return;
+                }
+                catch (IOException) when (attempt < 3)
+                {
+                    Thread.Sleep(attempt * 250);
+                }
+            }
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
 
     public void DeleteFile(string path) => File.Delete(path);
 

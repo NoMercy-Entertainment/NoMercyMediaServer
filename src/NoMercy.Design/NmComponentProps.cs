@@ -641,10 +641,23 @@ public record NMButtonProps : NmProps
     public bool? Disabled { get; set; }
 
     /// <summary>
+    /// Whether the button fills its container; content stays centred and the
+    /// icon edge padding is not applied
+    /// </summary>
+    [JsonProperty("full", NullValueHandling = NullValueHandling.Ignore)]
+    public bool? Full { get; set; }
+
+    /// <summary>
     /// Whether to render as icon-only (hides label)
     /// </summary>
     [JsonProperty("iconOnly", NullValueHandling = NullValueHandling.Ignore)]
     public bool? IconOnly { get; set; }
+
+    /// <summary>
+    /// Layout
+    /// </summary>
+    [JsonProperty("layout", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Layout { get; set; }
 
     /// <summary>
     /// Whether the button is in a loading state

@@ -16,6 +16,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Music;
+using NoMercy.Database.Music;
 using NoMercy.Encoder.Orchestration;
 using NoMercy.Encoder.Pipeline;
 using NoMercy.Encoder.Profiles;
@@ -32,6 +33,7 @@ using NoMercy.NmSystem.Dto;
 using NoMercy.Storage;
 using NoMercy.Storage.Validation;
 using NoMercyQueue;
+using NoMercyQueue.Core;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
@@ -46,16 +48,17 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
         _encodingOrchestrator = serviceProvider.GetRequiredService<IEncodingOrchestrator>();
     }
 
-    public override string QueueName => "encoder";
+    // Runs the real ffmpeg encode inline (orchestrator.EncodeAsync, below) rather than
+    // handing it to a child EncodeTaskJob the way VideoEncodeJob does. Queuing it on
+    // 'encoder' therefore blocked that queue's single coordinator worker for the full
+    // audio-encode duration per track — 16k+ queued tracks stalled every VideoEncodeJob's
+    // orchestration step behind it, not just outranked it. encoder-cpu is where this
+    // work actually belongs: the same lane EncodeTaskJob's CPU-side ffmpeg work runs on.
+    public override string QueueName => QueueNames.EncoderCpu;
 
-    // The queue reserves by OrderByDescending(Priority), so 3 sat below VideoEncodeJob's
-    // 4 and an album import never got a worker while any video backlog was outstanding —
-    // on a library mid-encode that is days, and the operator who just picked a release
-    // sees nothing appear.
-    //
-    // Outranking the video coordinator costs it nothing: EncodeTaskJob does the actual
-    // ffmpeg work on encoder-gpu/encoder-cpu, so the only thing yielding here is an
-    // analyze-then-WaitChildren step.
+    // The queue reserves by OrderByDescending(Priority); kept above EncodeTaskJob's
+    // usual footing so a freshly-imported album still surfaces promptly even while a
+    // video backlog occupies encoder-cpu.
     public override int Priority => 5;
 
     public string Status { get; set; } = "pending";
@@ -255,7 +258,14 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
     /// </summary>
     internal static string AlbumOutputDirectory(string basePath)
     {
-        string normalized = basePath.Replace('\\', '/').TrimEnd('/');
+        // Any non-ASCII character reproducibly fails to create a directory on
+        // Stoney's NAS — see PicardNaming.FoldUnsafeUnicode. New dispatches never
+        // carry one, but a row queued before that fix still does, so it is repaired
+        // here the same way the rooted-path shape below is: on read, not by asking
+        // for a queue migration.
+        string normalized = PicardNaming.FoldUnsafeUnicode(
+            basePath.Replace('\\', '/').TrimEnd('/')
+        );
         if (normalized.Length == 0)
             return string.Empty;
 
@@ -266,29 +276,7 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
 
     private async Task AddRecording(Folder folder)
     {
-        await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-
-        MusicGenreRepository musicGenreRepository = new(context);
-
-        ArtistRepository artistRepository = new(context);
-        ArtistManager artistManager = new(
-            artistRepository,
-            musicGenreRepository,
-            jobDispatcher,
-            StorageFactory,
-            LoggerFactory.CreateLogger<ArtistManager>()
-        );
-
-        RecordingRepository recordingRepository = new(context);
-        RecordingManager recordingManager = new(
-            recordingRepository,
-            musicGenreRepository,
-            artistRepository,
-            StorageDriver,
-            StorageFactory,
-            LoggerFactory.CreateLogger<RecordingManager>()
-        );
 
         await using MediaScan mediaScan = new(StorageDriver);
 
@@ -322,6 +310,26 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
             SystemParallelism.Options,
             async (media, t) =>
             {
+                // A fresh context per parallel iteration, deliberately — DbContext is
+                // not thread-safe, and the manager stack below used to be built once
+                // outside this loop and shared across every concurrent iteration.
+                // EF Core does not queue concurrent operations on one context; it
+                // throws "a second operation was started on this context instance
+                // before a previous operation completed", which is what 282 of the
+                // stored FailedJobs rows actually are.
+                await using MediaContext context = new();
+                MusicGenreRepository musicGenreRepository = new(context);
+                ArtistRepository artistRepository = new(context);
+                RecordingRepository recordingRepository = new(context);
+                RecordingManager recordingManager = new(
+                    recordingRepository,
+                    musicGenreRepository,
+                    artistRepository,
+                    StorageDriver,
+                    StorageFactory,
+                    LoggerFactory.CreateLogger<RecordingManager>()
+                );
+
                 if (
                     !await recordingManager.Store(
                         FolderMetaData.MusicBrainzRelease,
@@ -349,6 +357,20 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     SystemParallelism.Options,
                     async (artist, _) =>
                     {
+                        // Same reason as above: its own context, not the outer
+                        // iteration's — two nested parallel loops sharing one
+                        // context multiplies the race rather than avoiding it.
+                        await using MediaContext artistContext = new();
+                        MusicGenreRepository artistGenreRepository = new(artistContext);
+                        ArtistRepository perArtistRepository = new(artistContext);
+                        ArtistManager artistManager = new(
+                            perArtistRepository,
+                            artistGenreRepository,
+                            jobDispatcher,
+                            StorageFactory,
+                            LoggerFactory.CreateLogger<ArtistManager>()
+                        );
+
                         Log.LogTrace("Storing Artist: {Name}", artist.MusicBrainzArtist.Name);
                         await artistManager.Store(
                             artist.MusicBrainzArtist,

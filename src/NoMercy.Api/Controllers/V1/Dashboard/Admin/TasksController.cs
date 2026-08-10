@@ -258,9 +258,18 @@ public class TasksController(
         // sit at 4 and 0, so 13,779 music rows took every slot and the operator's
         // video encodes were missing from a panel that claimed to list the queue.
         // A share per band costs one small indexed query each and cannot starve.
+        // MusicEncodeJob runs on encoder-cpu (the same lane EncodeTaskJob's real
+        // ffmpeg work uses), not the plain 'encoder' coordinator queue, so every
+        // query below that used to read one queue now reads both — scoped to
+        // MusicEncodeJob payloads only, so encoder-cpu's own EncodeTaskJob rows
+        // (video's actual ffmpeg subtasks) never leak into this coordinator-level
+        // panel.
         List<int> priorities = await queueContext
             .QueueJobs.AsNoTracking()
-            .Where(j => j.Queue == "encoder")
+            .Where(j =>
+                j.Queue == "encoder"
+                || (j.Queue == "encoder-cpu" && j.Payload.Contains("MusicEncodeJob"))
+            )
             .Select(j => j.Priority)
             .Distinct()
             .OrderByDescending(priority => priority)
@@ -274,7 +283,13 @@ public class TasksController(
             banded.AddRange(
                 await queueContext
                     .QueueJobs.AsNoTracking()
-                    .Where(j => j.Queue == "encoder" && j.Priority == priority)
+                    .Where(j =>
+                        (
+                            j.Queue == "encoder"
+                            || (j.Queue == "encoder-cpu" && j.Payload.Contains("MusicEncodeJob"))
+                        )
+                        && j.Priority == priority
+                    )
                     .OrderBy(j => j.CreatedAt)
                     .ThenBy(j => j.Id)
                     .Take(perBand)
@@ -287,13 +302,52 @@ public class TasksController(
         // operator is most certainly looking for.
         List<QueueJob> running = await queueContext
             .QueueJobs.AsNoTracking()
-            .Where(j => j.Queue == "encoder" && j.ReservedAt != null)
+            .Where(j =>
+                (
+                    j.Queue == "encoder"
+                    || (j.Queue == "encoder-cpu" && j.Payload.Contains("MusicEncodeJob"))
+                )
+                && j.ReservedAt != null
+            )
             .OrderBy(j => j.Id)
             .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
 
+        // A decomposed video encode's coordinator row is never reserved itself —
+        // it hands its work to child EncodeTaskJob rows on encoder-gpu/encoder-cpu
+        // and sits with ReservedAt == null while ffmpeg actually runs. The
+        // "running" query above only catches jobs reserved on THIS queue, so
+        // every in-flight video encode was invisible unless its coordinator also
+        // happened to land in the banded sample — on a deep queue it usually
+        // didn't, and the panel showed no video progress at all despite ffmpeg
+        // actively encoding.
+        List<string> activeChildMediaIds = (
+            await queueContext
+                .QueueJobs.AsNoTracking()
+                .Where(j => j.Queue.StartsWith("encoder-") && j.ReservedAt != null)
+                .Select(j => j.Payload)
+                .ToListAsync()
+        )
+            .Select(payload => payload.FromJson<EncodeTaskJob>()?.Id?.ToString())
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Select(id => id!)
+            .Distinct()
+            .ToList();
+
+        List<QueueJob> activeCoordinators = [];
+        foreach (string mediaId in activeChildMediaIds)
+        {
+            activeCoordinators.AddRange(
+                await queueContext
+                    .QueueJobs.AsNoTracking()
+                    .Where(j => j.Queue == "encoder" && j.Payload.Contains($"\"id\":\"{mediaId}\""))
+                    .ToListAsync()
+            );
+        }
+
         ImmutableList<QueueJob> jobs = banded
             .Concat(running)
+            .Concat(activeCoordinators)
             .GroupBy(row => row.Id)
             .Select(group => group.First())
             .ToImmutableList();
@@ -621,21 +675,20 @@ public class TasksController(
 
         List<Guid> releaseIds = musicRows.Select(row => row.Job.ReleaseId).Distinct().ToList();
 
-        // Tracks of the release that are stored, which is to say encoded: the link
-        // between a track and its release is written when the encode succeeds and
-        // the recording is stored, so this count is exactly the work that is done.
-        //
-        // Not Album.Tracks. That is the release's track count as the metadata
-        // provider states it, and it agrees with neither the library nor the
-        // queue — a compilation stored with two tracks and two queued carries
-        // Tracks = 20, so a card counting towards it opened at "18 of 20 done"
-        // for an album where nothing had been encoded at all.
-        Dictionary<Guid, int> encodedByRelease = await mediaContext
+        // Encoded-so-far is the AlbumTrack link count, not Album.Tracks: the
+        // metadata-declared total is set once at import from what the provider
+        // says the release holds, and never moves — a card built on it could sit
+        // at "44 of 44" while genuinely nothing had been encoded, or worse, look
+        // complete while tracks were still queued, because the ceiling itself
+        // was wrong. AlbumTrack is written per track as its recording is stored,
+        // so its count is the real numerator, and total is that plus whatever is
+        // still queued for the release — the pair still reaches 100% exactly
+        // when the queue for it runs dry.
+        Dictionary<Guid, int> encodedTracksByRelease = await mediaContext
             .AlbumTrack.AsNoTracking()
             .Where(link => releaseIds.Contains(link.AlbumId))
             .GroupBy(link => link.AlbumId)
-            .Select(group => new ReleaseEncodedCount(group.Key, group.Count()))
-            .ToDictionaryAsync(row => row.AlbumId, row => row.Encoded);
+            .ToDictionaryAsync(group => group.Key, group => group.Count());
 
         Dictionary<Guid, string?> covers = await mediaContext
             .Albums.AsNoTracking()
@@ -673,12 +726,11 @@ public class TasksController(
                 MusicQueueRow current =
                     group.FirstOrDefault(row => row.Row.ReservedAt is not null) ?? first;
 
-                // What is left, and what is done, each counted from the thing that
-                // records it. Their sum is the album as this server knows it, so
-                // the card reaches 100% exactly when the queue runs dry — which a
-                // denominator from anywhere else could not promise.
+                // Completed is what AlbumTrack already links (real encoded
+                // work); total adds back what is still queued for the release,
+                // so the pair reaches 100% exactly when the queue runs dry.
                 int remaining = remainingByRelease.GetValueOrDefault(group.Key, group.Count());
-                int completed = encodedByRelease.GetValueOrDefault(group.Key);
+                int completed = encodedTracksByRelease.GetValueOrDefault(group.Key, 0);
                 int total = completed + remaining;
 
                 string title = string.Join(
@@ -733,7 +785,7 @@ public class TasksController(
                 SELECT json_extract(Payload, '$.releaseId') AS ReleaseId,
                        COUNT(*) AS Remaining
                 FROM QueueJobs
-                WHERE Queue = 'encoder'
+                WHERE Queue = 'encoder-cpu'
                   AND Payload LIKE '%MusicEncodeJob%'
                 GROUP BY json_extract(Payload, '$.releaseId')
                 """
@@ -1102,6 +1154,7 @@ public class TasksController(
                        SUM(CASE WHEN ReservedAt IS NULL THEN 0 ELSE 1 END) AS Running
                 FROM QueueJobs
                 WHERE Queue = 'encoder'
+                   OR (Queue = 'encoder-cpu' AND Payload LIKE '%MusicEncodeJob%')
                 GROUP BY Kind
                 """
             )
@@ -1145,7 +1198,10 @@ public class TasksController(
         );
 
         await using QueueContext queueContext = await queueContextFactory.CreateDbContextAsync();
-        int queueDepth = await queueContext.QueueJobs.CountAsync(j => j.Queue == "encoder");
+        int queueDepth = await queueContext.QueueJobs.CountAsync(j =>
+            j.Queue == "encoder"
+            || (j.Queue == "encoder-cpu" && j.Payload.Contains("MusicEncodeJob"))
+        );
 
         if (recent.Count == 0 || queueDepth == 0)
         {
@@ -1429,9 +1485,6 @@ internal sealed class QueueTypeCount
     public int Pending { get; set; }
     public int Running { get; set; }
 }
-
-/// <summary>Tracks of a release that are stored, and so encoded.</summary>
-internal sealed record ReleaseEncodedCount(Guid AlbumId, int Encoded);
 
 /// <summary>A release's artwork, for the card that stands for it.</summary>
 internal sealed record AlbumCover(Guid Id, string? Cover);

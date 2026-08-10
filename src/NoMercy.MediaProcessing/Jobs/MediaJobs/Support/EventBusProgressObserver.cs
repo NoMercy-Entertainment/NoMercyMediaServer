@@ -9,7 +9,6 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using System.Globalization;
 using NoMercy.Encoder.Errors;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Progress;
@@ -179,7 +178,7 @@ public class EventBusProgressObserver : IProgressObserver, IDisposable
             elapsed = DateTime.UtcNow - _currentStageStartedAt;
         }
 
-        Publish(status: "encoding", message: $"Stage: {stageName} ({elapsed.TotalSeconds:F0}s)");
+        Publish(status: "encoding", message: $"Stage: {stageName}", elapsedSeconds: elapsed.TotalSeconds);
     }
 
     public void OnProgress(EncodingProgress progress)
@@ -249,11 +248,10 @@ public class EventBusProgressObserver : IProgressObserver, IDisposable
         StopStageHeartbeat();
 
 
-        // This message rides the same SignalR "ProgressData" payload as the raw
-        // numeric fields below — keep it period-decimal regardless of host locale.
         Publish(
             status: "encoding",
-            message: $"Completed: {stageName} ({duration.TotalSeconds.ToString("F1", CultureInfo.InvariantCulture)}s)"
+            message: $"Completed: {stageName}",
+            elapsedSeconds: duration.TotalSeconds
         );
     }
 
@@ -287,7 +285,7 @@ public class EventBusProgressObserver : IProgressObserver, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private void Publish(string status, string message)
+    private void Publish(string status, string message, double? elapsedSeconds = null)
     {
         EventBusFireAndForget.Publish(
             new()
@@ -300,6 +298,10 @@ public class EventBusProgressObserver : IProgressObserver, IDisposable
                     value = 0,
                     status,
                     message,
+                    // The card's own dedicated numbers row renders this — the
+                    // message above stays a clean stage/phase label instead of
+                    // carrying a baked-in "(18s)" that grew every heartbeat.
+                    elapsed_seconds = elapsedSeconds,
                     progress = 0,
                     speed = 0,
                     has_gpu = _hasGpu,

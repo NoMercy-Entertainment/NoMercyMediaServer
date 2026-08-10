@@ -259,6 +259,31 @@ public class PluginLifecycleManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task DisableThenEnable_DoesNotReinitializeTheDisposedInstance()
+    {
+        Ulid id = Ulid.NewUlid();
+        FakePlugin plugin = new();
+        string assemblyPath = Path.Combine(_tempDir, "missing-plugin.dll");
+        _registry[id] = new(Info(id, PluginStatus.Active, assemblyPath), plugin, null);
+
+        await _lifecycle.DisablePluginAsync(id);
+
+        _registry.TryGetValue(id, out LoadedPlugin? disabled).Should().BeTrue();
+        disabled!
+            .Instance.Should()
+            .BeNull("a disposed instance must not stay in the registry as the live one");
+
+        await _lifecycle.EnablePluginAsync(id);
+
+        plugin
+            .InitializeCallCount.Should()
+            .Be(
+                0,
+                "enabling must build a fresh instance, not re-initialize the one that was disposed"
+            );
+    }
+
+    [Fact]
     public async Task DisablePluginAsync_ActiveWithNullInstance_DoesNotThrow()
     {
         Ulid id = Ulid.NewUlid();

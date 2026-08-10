@@ -90,7 +90,7 @@ public class TasksControllerQueueStarvationTests : IClassFixture<NoMercyApiFacto
             flood.Add(
                 new()
                 {
-                    Queue = "encoder",
+                    Queue = "encoder-cpu",
                     Priority = FloodPriority,
                     Payload = MusicPayload(index),
                     AvailableAt = DateTime.UtcNow,

@@ -133,7 +133,8 @@ public class TvdbBaseClient : ExternalApiClient
         string url,
         Dictionary<string, string?>? query = null,
         bool? priority = false,
-        bool skipCache = false
+        bool skipCache = false,
+        TimeSpan? maxCacheAge = null
     )
         where T : class
     {
@@ -146,7 +147,9 @@ public class TvdbBaseClient : ExternalApiClient
 
         if (!skipCache)
         {
-            (bool found, T? result) = await CacheController.ReadAsync<T>(newUrl);
+            (bool found, T? result) = maxCacheAge is { } age
+                ? await CacheController.ReadAsync<T>(newUrl, age)
+                : await CacheController.ReadAsync<T>(newUrl);
             if (found)
                 return result;
         }

@@ -11,11 +11,14 @@
 
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Events.Plugins;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Plugins.Capabilities;
+using NoMercy.Plugins.Verification;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -144,6 +147,94 @@ public class PluginLoaderFailureFixtureTests : IDisposable
     private static string GetAbstractionsAssemblyPath()
     {
         return typeof(IPlugin).Assembly.Location;
+    }
+
+    [Fact]
+    public async Task LoadPluginAssemblyAsync_KnownPlugin_BuildsTheContextWithTheDeclaredCapabilities()
+    {
+        // The reload path has only the assembly — no plugin.json beside it — so
+        // the capabilities have to come from what the registry already knows.
+        // Built without them, the context's network allowlist is empty and every
+        // host the manifest declared is denied at the first outbound request.
+        string dllPath = StageFailuresPluginDll();
+        PluginRegistry registry = new();
+        RecordingContextFactory factory = new(
+            TestPluginPlatform.ContextFactory(
+                _eventBus,
+                TestStorageHelper.CreateStorage(_tempPluginsDir)
+            )
+        );
+        PluginCapabilities declared = new() { Network = new() { Hosts = ["**"] } };
+
+        registry[ServiceRegistratorPluginId] = new(
+            new()
+            {
+                Id = ServiceRegistratorPluginId,
+                Name = "Sample",
+                Description = "d",
+                Version = new(1, 0, 0),
+                Status = PluginStatus.Disabled,
+                Capabilities = declared,
+            },
+            null,
+            null
+        );
+
+        PluginLoader loader = new(
+            _eventBus,
+            new MinimalServiceProvider(),
+            NullLogger.Instance,
+            _tempPluginsDir,
+            TestStorageHelper.CreateStorage(_tempPluginsDir),
+            registry,
+            new PluginVerifier(),
+            new PluginConsentService(new InMemoryConsentStore()),
+            factory
+        );
+
+        await loader.LoadPluginAssemblyAsync(dllPath);
+
+        factory
+            .CapabilitiesFor(ServiceRegistratorPluginId)
+            .Should()
+            .BeSameAs(
+                declared,
+                "a reload that drops the capabilities builds a context that denies every declared host"
+            );
+    }
+
+    /// <summary>
+    /// Passes every context build through to the real factory and remembers what
+    /// each plugin's context was built with.
+    /// </summary>
+    private sealed class RecordingContextFactory(IPluginContextFactory inner)
+        : IPluginContextFactory
+    {
+        private readonly Dictionary<Ulid, PluginCapabilities?> _seen = [];
+
+        public IPluginContext Create(
+            Ulid pluginId,
+            string dataFolderPath,
+            ILogger logger,
+            PluginCapabilities? capabilities,
+            string? pluginName = null,
+            Version? pluginVersion = null
+        )
+        {
+            _seen[pluginId] = capabilities;
+
+            return inner.Create(
+                pluginId,
+                dataFolderPath,
+                logger,
+                capabilities,
+                pluginName,
+                pluginVersion
+            );
+        }
+
+        public PluginCapabilities? CapabilitiesFor(Ulid pluginId) =>
+            _seen.TryGetValue(pluginId, out PluginCapabilities? capabilities) ? capabilities : null;
     }
 
     [Fact]

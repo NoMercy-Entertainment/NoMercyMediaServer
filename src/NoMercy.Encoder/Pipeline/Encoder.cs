@@ -184,14 +184,26 @@ public class Encoder(
             progress?.OnStageCompleted("Build", stopwatch.Elapsed);
 
             // Stage 5: Execute
-            progress?.OnStageStarted("Encode");
+            //
+            // A Thumbnails-only task filter runs sprite/vtt generation, not a video
+            // or audio encode — labeling it "Encode" told the dashboard this bundle
+            // was encoding when it was extracting sprite frames, and the ffmpeg
+            // command it actually runs (-f spritevtt) never emits the -progress
+            // output OnProgress parses, so the card was stuck on the stage
+            // heartbeat's elapsed-seconds counter for the bundle's entire run
+            // instead of ever showing a real percentage or ETA.
+            string executeStageName =
+                request.Options?.TaskFilter?.Kind == EncodeTaskKind.Thumbnails
+                    ? "Thumbnails"
+                    : "Encode";
+            progress?.OnStageStarted(executeStageName);
             ExecuteInput executeInput = new(commands, mediaInfo.Duration, progress);
             StageResult executeResult = await executeStage.ExecuteAsync(executeInput, context, ct);
             if (executeResult is StageFailure executeFailure)
                 return Fail(executeFailure.Error, stopwatch.Elapsed, progress);
 
             executionResults = ((StageSuccess<ExecutionResult[]>)executeResult).Value;
-            progress?.OnStageCompleted("Encode", stopwatch.Elapsed);
+            progress?.OnStageCompleted(executeStageName, stopwatch.Elapsed);
         }
 
         // Stage 6: Finalize

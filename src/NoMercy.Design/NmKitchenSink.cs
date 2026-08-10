@@ -25,6 +25,28 @@ public record NmKitchenSinkCase
     public required NmProps Props { get; init; }
 }
 
+/// <summary>
+/// One knob on a component, as the designer's own playground offers it.
+/// <para>
+/// His component page is a single live instance with these beside it, not a
+/// wall of every combination — so a reader configures the thing they are
+/// about to use rather than hunting for the drawing that matches.
+/// </para>
+/// </summary>
+public record NmKitchenSinkOption
+{
+    public required string Name { get; init; }
+
+    /// <summary>The control his viewer uses: select, toggle, input, icon-picker.</summary>
+    public required string Control { get; init; }
+
+    /// <summary>The values it can take. Empty for a control that is not a closed set.</summary>
+    public required IReadOnlyList<string> Values { get; init; }
+
+    /// <summary>What the designer's own state starts it at.</summary>
+    public required string? Default { get; init; }
+}
+
 /// <summary>Every drawing of one component.</summary>
 public record NmKitchenSinkComponent
 {
@@ -57,6 +79,9 @@ public record NmKitchenSinkComponent
     public required string Description { get; init; }
 
     public required IReadOnlyList<NmKitchenSinkCase> Cases { get; init; }
+
+    /// <summary>The knobs his playground offers for this component.</summary>
+    public required IReadOnlyList<NmKitchenSinkOption> Options { get; init; }
 }
 
 /// <summary>
@@ -335,6 +360,30 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "infoIcon",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "marker",
+                    Control = "select",
+                    Values = ["none", "required", "custom"],
+                    Default = "required",
+                },
+            ],
         },
         new()
         {
@@ -524,6 +573,23 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "icon",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "status",
+                    Control = "select",
+                    Values = ["default", "error", "disabled"],
+                    Default = "default",
+                },
+            ],
         },
         new()
         {
@@ -546,7 +612,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -588,7 +656,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = true,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -630,7 +700,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -666,13 +738,103 @@ public static class NmKitchenSink
             },
             new()
             {
+                Id = "button-full-true",
+                Label = "full = true",
+                Props = new NMButtonProps
+            {
+                AriaLabel = "Action button",
+                Disabled = false,
+                Full = true,
+                IconOnly = false,
+                Layout = "hug",
+                Loading = false,
+                Size = "lg",
+                Variant = "primary",
+                TestId = "button-full-true",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-full-true-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["iconLeft"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "button-full-true-iconLeft-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "button-full-false",
+                Label = "full = false",
+                Props = new NMButtonProps
+            {
+                AriaLabel = "Action button",
+                Disabled = false,
+                Full = false,
+                IconOnly = false,
+                Layout = "hug",
+                Loading = false,
+                Size = "lg",
+                Variant = "primary",
+                TestId = "button-full-false",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-full-false-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["iconLeft"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "button-full-false-iconLeft-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
                 Id = "button-icononly-true",
                 Label = "iconOnly = true",
                 Props = new NMButtonProps
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = true,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -714,7 +876,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -750,13 +914,103 @@ public static class NmKitchenSink
             },
             new()
             {
+                Id = "button-layout-hug",
+                Label = "layout = hug",
+                Props = new NMButtonProps
+            {
+                AriaLabel = "Action button",
+                Disabled = false,
+                Full = false,
+                IconOnly = false,
+                Layout = "hug",
+                Loading = false,
+                Size = "lg",
+                Variant = "primary",
+                TestId = "button-layout-hug",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-layout-hug-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["iconLeft"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "button-layout-hug-iconLeft-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
+                Id = "button-layout-full",
+                Label = "layout = full",
+                Props = new NMButtonProps
+            {
+                AriaLabel = "Action button",
+                Disabled = false,
+                Full = false,
+                IconOnly = false,
+                Layout = "full",
+                Loading = false,
+                Size = "lg",
+                Variant = "primary",
+                TestId = "button-layout-full",
+                Items =
+                [
+                    new()
+                    {
+                        Id = "button-layout-full-child-1",
+                        Component = "NMText",
+                        Props = new Dictionary<string, object?>
+                        {
+                            ["text"] = "Start a scan",
+                        },
+                    },
+                ],
+                Slots = new Dictionary<string, List<NmComponent>>
+                {
+                    ["iconLeft"] = new List<NmComponent>
+                    {
+                        new()
+                        {
+                            Id = "button-layout-full-iconLeft-1",
+                            Component = "NMIcon",
+                            Props = new Dictionary<string, object?>
+                            {
+                                ["icon"] = "rotate",
+                            },
+                        },
+                    },
+                },
+            },
+            },
+            new()
+            {
                 Id = "button-loading-true",
                 Label = "loading = true",
                 Props = new NMButtonProps
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = true,
                 Size = "lg",
                 Variant = "primary",
@@ -798,7 +1052,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -840,7 +1096,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "sm",
                 Variant = "primary",
@@ -882,7 +1140,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "md",
                 Variant = "primary",
@@ -924,7 +1184,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -966,7 +1228,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "xl",
                 Variant = "primary",
@@ -1008,7 +1272,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "2xl",
                 Variant = "primary",
@@ -1050,7 +1316,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "primary",
@@ -1092,7 +1360,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "secondary",
@@ -1134,7 +1404,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "secondary-color",
@@ -1176,7 +1448,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "tertiary",
@@ -1218,7 +1492,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "tertiary-color",
@@ -1260,7 +1536,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "link",
@@ -1302,7 +1580,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "link-color",
@@ -1344,7 +1624,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "destructive",
@@ -1386,7 +1668,9 @@ public static class NmKitchenSink
             {
                 AriaLabel = "Action button",
                 Disabled = false,
+                Full = false,
                 IconOnly = false,
+                Layout = "hug",
                 Loading = false,
                 Size = "lg",
                 Variant = "ghost-destructive",
@@ -1420,6 +1704,58 @@ public static class NmKitchenSink
                 },
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "full",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "iconOnly",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "layout",
+                    Control = "select",
+                    Values = ["hug", "full"],
+                    Default = "hug",
+                },
+                new()
+                {
+                    Name = "loading",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg", "xl", "2xl"],
+                    Default = "lg",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["primary", "secondary", "secondary-color", "tertiary", "tertiary-color", "link", "link-color", "destructive", "ghost-destructive"],
+                    Default = "primary",
+                },
             ],
         },
         new()
@@ -1555,6 +1891,9 @@ public static class NmKitchenSink
                 ],
             },
             },
+            ],
+            Options =
+            [
             ],
         },
         new()
@@ -1803,6 +2142,30 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "error",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -1895,6 +2258,44 @@ public static class NmKitchenSink
                 Label = "size = lg",
                 Props = new NMTextareaProps { Disabled = false, Error = false, MaxChars = 200, Placeholder = "Type here...", Resize = "vertical", ShowCounter = false, Size = "lg", TestId = "textarea-size-lg" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "error",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "resize",
+                    Control = "select",
+                    Values = ["vertical", "none", "both"],
+                    Default = "vertical",
+                },
+                new()
+                {
+                    Name = "showCounter",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -2359,6 +2760,30 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "error",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -2415,6 +2840,30 @@ public static class NmKitchenSink
                 Label = "size = lg",
                 Props = new NMCheckboxProps { AriaLabel = "Scan this folder", Checked = "false", Disabled = false, HelperText = "Subfolders are included.", LabelText = "Scan this folder", Size = "lg", TestId = "checkbox-size-lg" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "checked",
+                    Control = "select",
+                    Values = ["indeterminate"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -2473,6 +2922,30 @@ public static class NmKitchenSink
                 Props = new NMRadioProps { AriaLabel = "Keep the original file", Checked = true, Disabled = false, HelperText = "Nothing is re-encoded.", LabelText = "Keep the original file", Name = "disposition", Size = "md", Value = "keep", TestId = "radio-size-md" },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "checked",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -2529,6 +3002,30 @@ public static class NmKitchenSink
                 Label = "size = md",
                 Props = new NMToggleProps { AriaLabel = "Notify me when a scan finishes", Checked = true, Disabled = false, HelperText = "On every device you are signed in on.", LabelText = "Notify me when a scan finishes", Size = "md", TestId = "toggle-size-md" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "checked",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -3601,6 +4098,37 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "groupDisabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "groupError",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "layout",
+                    Control = "select",
+                    Values = ["vertical", "horizontal", "inline"],
+                    Default = "vertical",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -4672,6 +5200,37 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "groupDisabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "groupError",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "layout",
+                    Control = "select",
+                    Values = ["vertical", "horizontal", "inline"],
+                    Default = "vertical",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -4759,6 +5318,37 @@ public static class NmKitchenSink
                 Props = new NMTogglesProps { Disabled = false, Size = "md", State = "checked", Type = "switch", TestId = "toggles-type-switch" },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "state",
+                    Control = "select",
+                    Values = ["unchecked", "checked", "indeterminate"],
+                    Default = "checked",
+                },
+                new()
+                {
+                    Name = "type",
+                    Control = "select",
+                    Values = ["checkbox", "radio", "switch"],
+                    Default = "checkbox",
+                },
+            ],
         },
         new()
         {
@@ -4839,6 +5429,37 @@ public static class NmKitchenSink
                 Label = "size = lg",
                 Props = new NMSliderProps { AriaLabel = "Playback volume", Disabled = false, IsBiValue = false, LabelMode = "none", Size = "lg", Value = 25, Value2 = 75, TestId = "slider-size-lg" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "isBiValue",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "labelMode",
+                    Control = "select",
+                    Values = ["none", "bottom", "tooltip"],
+                    Default = "none",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -5156,6 +5777,30 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "fullWidth",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md"],
+                    Default = "sm",
+                },
+            ],
         },
         new()
         {
@@ -5176,6 +5821,9 @@ public static class NmKitchenSink
                 Label = "default",
                 Props = new NMFileUploadProps { FileMeta = "1.2 MB · PNG", FileName = "design-brief.png", UploadPct = 40, TestId = "file-upload-default" },
             },
+            ],
+            Options =
+            [
             ],
         },
         new()
@@ -5239,6 +5887,23 @@ public static class NmKitchenSink
                 Label = "size = lg",
                 Props = new NMDatePickerProps { Mode = "single", Size = "lg", TestId = "date-picker-size-lg" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "mode",
+                    Control = "select",
+                    Values = ["single", "range", "year-month", "dual"],
+                    Default = "single",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -5326,6 +5991,30 @@ public static class NmKitchenSink
                     "Cherry",
                 ], Size = "lg", TestId = "combobox-size-lg" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "isLoading",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "multiple",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -5449,6 +6138,16 @@ public static class NmKitchenSink
                 },
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -5627,6 +6326,51 @@ public static class NmKitchenSink
                 Props = new NMRatingProps { Count = 128, Disabled = false, Max = "5", Mode = "interactive", ShowLabel = true, Size = "md", Value = "5", TestId = "rating-value-5" },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "max",
+                    Control = "select",
+                    Values = ["3", "4", "5", "6", "7", "10"],
+                    Default = "5",
+                },
+                new()
+                {
+                    Name = "mode",
+                    Control = "select",
+                    Values = ["readonly", "interactive"],
+                    Default = "interactive",
+                },
+                new()
+                {
+                    Name = "showLabel",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "value",
+                    Control = "select",
+                    Values = ["0", "0.5", "1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5"],
+                    Default = "3.5",
+                },
+            ],
         },
         new()
         {
@@ -5792,6 +6536,51 @@ public static class NmKitchenSink
                 Props = new NMImageProps { Alt = "A still from the film", AspectRatio = "auto", Border = false, Clickable = false, Fit = "cover", Rounded = "lg", Shadow = "xl", Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%22200%22%20cy%3D%22130%22%20r%3D%2260%22%20fill%3D%22%2314b8a6%22%2F%3E%3Crect%20x%3D%2260%22%20y%3D%22220%22%20width%3D%22280%22%20height%3D%2216%22%20rx%3D%228%22%20fill%3D%22%234b5563%22%2F%3E%3C%2Fsvg%3E", TestId = "image-shadow-xl" },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "aspectRatio",
+                    Control = "select",
+                    Values = ["auto", "square", "video", "portrait", "landscape"],
+                    Default = "auto",
+                },
+                new()
+                {
+                    Name = "border",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "clickable",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "fit",
+                    Control = "select",
+                    Values = ["cover", "contain", "fill", "none"],
+                    Default = "cover",
+                },
+                new()
+                {
+                    Name = "rounded",
+                    Control = "select",
+                    Values = ["none", "sm", "md", "lg", "xl", "full"],
+                    Default = "lg",
+                },
+                new()
+                {
+                    Name = "shadow",
+                    Control = "select",
+                    Values = ["none", "sm", "md", "lg", "xl"],
+                    Default = "none",
+                },
+            ],
         },
         new()
         {
@@ -5908,6 +6697,37 @@ public static class NmKitchenSink
                 Label = "type = image",
                 Props = new NMAvatarProps { Alt = "Alex Chen", AriaLabel = "User avatar", Size = "md", Square = false, Src = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20fill%3D%22%230f766e%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2224%22%20r%3D%2211%22%20fill%3D%22%23ccfbf1%22%2F%3E%3Cpath%20d%3D%22M12%2064c0-12%209-20%2020-20s20%208%2020%2020z%22%20fill%3D%22%23ccfbf1%22%2F%3E%3C%2Fsvg%3E", Status = "none", Type = "image", TestId = "avatar-type-image" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["xs", "sm", "md", "lg", "xl"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "square",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "status",
+                    Control = "select",
+                    Values = ["none", "online", "offline", "away", "busy"],
+                    Default = "none",
+                },
+                new()
+                {
+                    Name = "type",
+                    Control = "select",
+                    Values = ["icon", "initial", "initials", "image"],
+                    Default = "initials",
+                },
             ],
         },
         new()
@@ -7444,6 +8264,44 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "bullet",
+                    Control = "select",
+                    Values = ["disc", "circle", "square", "dash"],
+                    Default = "disc",
+                },
+                new()
+                {
+                    Name = "horizontal",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "order",
+                    Control = "select",
+                    Values = ["decimal", "decimal-leading-zero", "lower-alpha", "upper-alpha", "lower-roman", "upper-roman"],
+                    Default = "decimal",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "type",
+                    Control = "select",
+                    Values = ["unordered", "ordered", "icon"],
+                    Default = "unordered",
+                },
+            ],
         },
         new()
         {
@@ -8031,6 +8889,44 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "navOutside",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "showDots",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "showNav",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg", "full"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "snap",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+            ],
         },
         new()
         {
@@ -8376,6 +9272,37 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "dot",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "mode",
+                    Control = "select",
+                    Values = ["text", "icon-only"],
+                    Default = "text",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["ghost", "solid", "outline"],
+                    Default = "ghost",
+                },
+            ],
         },
         new()
         {
@@ -8654,6 +9581,30 @@ public static class NmKitchenSink
                 ],
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "badgePos",
+                    Control = "select",
+                    Values = ["left", "right"],
+                    Default = "left",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["ghost", "solid", "outline"],
+                    Default = "ghost",
+                },
             ],
         },
         new()
@@ -9131,6 +10082,51 @@ public static class NmKitchenSink
                 },
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "avatar",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "checkbox",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "count",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "icon",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "sm",
+                },
+                new()
+                {
+                    Name = "xclose",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
             ],
         },
         new()
@@ -9678,6 +10674,30 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "footerVariant",
+                    Control = "select",
+                    Values = ["actions", "helper"],
+                    Default = "actions",
+                },
+                new()
+                {
+                    Name = "padding",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["default", "elevated", "ghost"],
+                    Default = "default",
+                },
+            ],
         },
         new()
         {
@@ -10064,6 +11084,23 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "line",
+                    Control = "select",
+                    Values = ["solid", "dashed", "dotted"],
+                    Default = "solid",
+                },
+                new()
+                {
+                    Name = "placement",
+                    Control = "select",
+                    Values = ["left", "center", "right"],
+                    Default = "center",
+                },
+            ],
         },
         new()
         {
@@ -10319,6 +11356,16 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "position",
+                    Control = "select",
+                    Values = ["top", "right", "bottom", "left"],
+                    Default = "top",
+                },
+            ],
         },
         new()
         {
@@ -10357,6 +11404,16 @@ public static class NmKitchenSink
                 Label = "variant = rectangle",
                 Props = new NMSkeletonProps { Variant = "rectangle", TestId = "skeleton-variant-rectangle" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["text", "circle", "rectangle"],
+                    Default = "text",
+                },
             ],
         },
         new()
@@ -10684,6 +11741,16 @@ public static class NmKitchenSink
                 },
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["default", "compact", "card"],
+                    Default = "default",
+                },
             ],
         },
         new()
@@ -11580,6 +12647,37 @@ public static class NmKitchenSink
                 ], Size = "md", Striped = true, Variant = "minimal", TestId = "table-variant-minimal" },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "hover",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "striped",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["default", "bordered", "minimal"],
+                    Default = "default",
+                },
+            ],
         },
         new()
         {
@@ -11864,6 +12962,30 @@ public static class NmKitchenSink
                 },
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "showIcon",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "trend",
+                    Control = "select",
+                    Values = ["up", "down", "neutral"],
+                    Default = "up",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["default", "card", "compact"],
+                    Default = "default",
+                },
             ],
         },
         new()
@@ -12495,6 +13617,37 @@ public static class NmKitchenSink
                 ],
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "allowMultiple",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "showChevron",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["default", "bordered", "ghost"],
+                    Default = "default",
+                },
             ],
         },
         new()
@@ -13271,6 +14424,51 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "closable",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "position",
+                    Control = "select",
+                    Values = ["top-left", "top-center", "top-right", "bottom-left", "bottom-center", "bottom-right"],
+                    Default = "bottom-right",
+                },
+                new()
+                {
+                    Name = "showAction",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "showIcon",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "showProgress",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["default", "info", "success", "warning", "error"],
+                    Default = "success",
+                },
+            ],
         },
         new()
         {
@@ -13957,6 +15155,44 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "closable",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "glow",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "severity",
+                    Control = "select",
+                    Values = ["info", "error"],
+                    Default = "info",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["full", "compact"],
+                    Default = "full",
+                },
+                new()
+                {
+                    Name = "style",
+                    Control = "select",
+                    Values = ["default", "accent"],
+                    Default = "default",
+                },
+            ],
         },
         new()
         {
@@ -14038,6 +15274,23 @@ public static class NmKitchenSink
                 Props = new NMProgressProps { AriaLabel = "Progress", LabelPos = "none", Size = "lg", Value = 50, TestId = "progress-size-lg" },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "labelPos",
+                    Control = "select",
+                    Values = ["none", "label-left", "label-right", "label-above-left", "label-above-right", "tooltip-above", "tooltip-below"],
+                    Default = "none",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -14082,6 +15335,16 @@ public static class NmKitchenSink
                 Label = "size = xl",
                 Props = new NMSpinnerProps { AriaLabel = "Loading", Size = "xl", TestId = "spinner-size-xl" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg", "xl"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -14446,6 +15709,23 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "footerVariant",
+                    Control = "select",
+                    Values = ["actions", "helper"],
+                    Default = "actions",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -14574,6 +15854,16 @@ public static class NmKitchenSink
                 },
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "canClose",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
             ],
         },
         new()
@@ -14749,6 +16039,16 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["actions", "helper"],
+                    Default = "actions",
+                },
+            ],
         },
         new()
         {
@@ -14788,6 +16088,9 @@ public static class NmKitchenSink
                     },
                 ], TestId = "chat-default" },
             },
+            ],
+            Options =
+            [
             ],
         },
         new()
@@ -15448,6 +16751,44 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "isOpen",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "position",
+                    Control = "select",
+                    Values = ["top", "right", "bottom", "left"],
+                    Default = "bottom",
+                },
+                new()
+                {
+                    Name = "showArrow",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "showClose",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -16048,6 +17389,37 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "hasOverlay",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "isOpen",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "position",
+                    Control = "select",
+                    Values = ["left", "right", "top", "bottom"],
+                    Default = "right",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg", "full"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -16607,6 +17979,51 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "external",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "icon",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "iconPosition",
+                    Control = "select",
+                    Values = ["left", "right"],
+                    Default = "right",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg", "inherit"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["default", "subtle", "muted", "animated"],
+                    Default = "default",
+                },
+            ],
         },
         new()
         {
@@ -17112,6 +18529,30 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "activeIndex",
+                    Control = "select",
+                    Values = ["0", "1", "2"],
+                    Default = "0",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["line", "pill", "enclosed"],
+                    Default = "line",
+                },
+            ],
         },
         new()
         {
@@ -17167,6 +18608,16 @@ public static class NmKitchenSink
                 ], Separator = "dot", TestId = "breadcrumb-separator-dot" },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "separator",
+                    Control = "select",
+                    Values = ["slash", "chevron", "dot"],
+                    Default = "chevron",
+                },
+            ],
         },
         new()
         {
@@ -17205,6 +18656,16 @@ public static class NmKitchenSink
                 Label = "size = lg",
                 Props = new NMPaginationProps { CurrentPage = 3, Size = "lg", TotalPages = 10, TestId = "pagination-size-lg" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -17676,6 +19137,16 @@ public static class NmKitchenSink
                 },
             },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
         new()
@@ -18385,6 +19856,23 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "activeIndex",
+                    Control = "select",
+                    Values = ["0", "1", "2", "3", "4"],
+                    Default = "0",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["horizontal", "vertical", "pills"],
+                    Default = "horizontal",
+                },
+            ],
         },
         new()
         {
@@ -18475,6 +19963,9 @@ public static class NmKitchenSink
                 },
             },
             },
+            ],
+            Options =
+            [
             ],
         },
         new()
@@ -18711,6 +20202,30 @@ public static class NmKitchenSink
                 ], TestId = "stepper-size-lg" },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "activeIndex",
+                    Control = "select",
+                    Values = ["0", "1", "2", "3"],
+                    Default = "1",
+                },
+                new()
+                {
+                    Name = "orientation",
+                    Control = "select",
+                    Values = ["horizontal", "vertical"],
+                    Default = "horizontal",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -18839,6 +20354,37 @@ public static class NmKitchenSink
                 Label = "variant = numbers",
                 Props = new NMStepIndicatorProps { ActiveIndex = "1", Size = "md", Steps = "4", Variant = "numbers", TestId = "step-indicator-variant-numbers" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "activeIndex",
+                    Control = "select",
+                    Values = ["0", "1", "2", "3", "4", "5", "6"],
+                    Default = "1",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+                new()
+                {
+                    Name = "steps",
+                    Control = "select",
+                    Values = ["3", "4", "5", "6", "7"],
+                    Default = "4",
+                },
+                new()
+                {
+                    Name = "variant",
+                    Control = "select",
+                    Values = ["dots", "bars", "numbers"],
+                    Default = "dots",
+                },
             ],
         },
         new()
@@ -19671,6 +21217,23 @@ public static class NmKitchenSink
             },
             },
             ],
+            Options =
+            [
+                new()
+                {
+                    Name = "showLines",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
+            ],
         },
         new()
         {
@@ -19745,6 +21308,37 @@ public static class NmKitchenSink
                 Label = "size = lg",
                 Props = new NMColorPickerProps { Disabled = false, Label = "Brand colour", Selected = "#14B8A6", ShowInput = true, ShowPanel = true, Size = "lg", TestId = "color-picker-size-lg" },
             },
+            ],
+            Options =
+            [
+                new()
+                {
+                    Name = "disabled",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "false",
+                },
+                new()
+                {
+                    Name = "showInput",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "showPanel",
+                    Control = "toggle",
+                    Values = ["true", "false"],
+                    Default = "true",
+                },
+                new()
+                {
+                    Name = "size",
+                    Control = "select",
+                    Values = ["sm", "md", "lg"],
+                    Default = "md",
+                },
             ],
         },
     ];

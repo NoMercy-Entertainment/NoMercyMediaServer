@@ -43,6 +43,7 @@ public class StuckReservationReaperHostedServiceTests
     private const string ImportQueue = "import";
     private const string EncoderQueue = "encoder";
     private const string EncoderGpuQueue = "encoder-gpu";
+    private const string EncoderCpuQueue = "encoder-cpu";
 
     private static readonly TimeSpan TestCutoff = TimeSpan.FromMinutes(20);
 
@@ -169,6 +170,36 @@ public class StuckReservationReaperHostedServiceTests
         await service.ReapOnceAsync(CancellationToken.None);
 
         Assert.Single(context.Jobs);
+        Assert.Empty(context.FailedJobs);
+    }
+
+    [Fact]
+    public async Task ReapOnceAsync_MusicEncodeJobOnEncoderCpuQueue_IsReclaimed()
+    {
+        (StuckReservationReaperHostedService service, TestQueueContextAdapter context) =
+            BuildService();
+
+        // MusicEncodeJob runs on encoder-cpu, the same lane EncodeTaskJob's
+        // real ffmpeg work uses, but a single track is bounded like
+        // Image/File — not hours-long like a real video encode — and has no
+        // OutputDirectory for the checkpoint-resume path either. A wedged
+        // reservation here must not inherit the video jobs' exclusion.
+        QueueJobModel wedgedTrack = new()
+        {
+            Queue = EncoderCpuQueue,
+            Payload =
+                "{\"$type\":\"NoMercy.MediaProcessing.Jobs.MediaJobs.MusicEncodeJob, NoMercy.MediaProcessing\",\"id\":\"release-1\"}",
+            Priority = 5,
+            Attempts = 1,
+            ReservedAt = DateTime.UtcNow - TestCutoff - TimeSpan.FromMinutes(1),
+            AvailableAt = DateTime.UtcNow.AddHours(-1),
+        };
+        context.AddJob(wedgedTrack);
+
+        await service.ReapOnceAsync(CancellationToken.None);
+
+        QueueJobModel reclaimed = Assert.Single(context.Jobs);
+        Assert.Null(reclaimed.ReservedAt);
         Assert.Empty(context.FailedJobs);
     }
 

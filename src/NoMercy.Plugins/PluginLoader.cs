@@ -458,11 +458,29 @@ internal sealed class PluginLoader(
                         await _storage.CreateDirectoryAsync(dataFolder, ct);
                     }
 
+                    // What the manifest said, if this plugin is already known.
+                    // A reload reaches here with only the assembly — there is no
+                    // plugin.json beside it to read — so everything the manifest
+                    // carried would otherwise be dropped. Capabilities matter
+                    // most: consent is decided by them, and an entry that lost
+                    // them reads as needing none. Enabling a plugin that was
+                    // waiting for approval therefore made it look approved,
+                    // permanently, and the owner was left with a plugin the
+                    // server would not run and no way to consent to it.
+                    //
+                    // Read before the context is built, not after: the context
+                    // carries the network allowlist, so a context built with no
+                    // capabilities denies every outbound host the manifest
+                    // declared. Internet Radio relayed nothing and every station
+                    // failed with PluginNetworkDeniedException, on a plugin whose
+                    // manifest names the hosts it needs.
+                    _registry.TryGetValue(instance.Id, out LoadedPlugin? known);
+
                     IPluginContext context = _contextFactory.Create(
                         instance.Id,
                         dataFolder,
                         _logger,
-                        capabilities: null,
+                        known?.Info.Capabilities,
                         instance.Name,
                         instance.Version
                     );
@@ -477,6 +495,10 @@ internal sealed class PluginLoader(
                         Version = instance.Version,
                         Status = PluginStatus.Active,
                         AssemblyPath = assemblyPath,
+                        Capabilities = known?.Info.Capabilities,
+                        Author = known?.Info.Author,
+                        ProjectUrl = known?.Info.ProjectUrl,
+                        TargetAbi = known?.Info.TargetAbi,
                     };
 
                     LoadedPlugin loaded = new(info, instance, loadContext);
