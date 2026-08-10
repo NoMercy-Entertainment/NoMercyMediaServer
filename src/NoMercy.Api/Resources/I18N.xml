@@ -840,4 +840,20 @@
     <Key>Incomplete encode record not found</Key>
     <Value lang="nl">Onvolledige encode-registratie niet gevonden</Value>
   </Entry>
+  <Entry>
+    <Key>Unprocessable Entity.</Key>
+    <Value lang="nl">Unprocessable Entity.</Value>
+  </Entry>
+  <Entry>
+    <Key>Plugin disabled successfully</Key>
+    <Value lang="nl">Plugin disabled successfully</Value>
+  </Entry>
+  <Entry>
+    <Key>Plugin enabled successfully</Key>
+    <Value lang="nl">Plugin enabled successfully</Value>
+  </Entry>
+  <Entry>
+    <Key>Plugin consent revoked</Key>
+    <Value lang="nl">Plugin consent revoked</Value>
+  </Entry>
 </I18N>

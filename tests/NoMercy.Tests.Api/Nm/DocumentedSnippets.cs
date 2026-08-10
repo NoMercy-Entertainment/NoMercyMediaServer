@@ -202,8 +202,8 @@ internal static class DocumentedSnippets
         NMButtonProps props = new()
         {
             Id = "button-1",
+            Layout = "full",
             Size = "2xl",
-            Variant = "ghost-destructive",
             Box = new() { Margin = new() { Y = NmSpace.X4 }, Padding = new() { All = NmSpace.X3 } },
         };
         
