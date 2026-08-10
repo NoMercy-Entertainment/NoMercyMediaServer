@@ -675,27 +675,20 @@ public class TasksController(
 
         List<Guid> releaseIds = musicRows.Select(row => row.Job.ReleaseId).Distinct().ToList();
 
-        // AlbumTrack looked like the right source for "encoded so far" — the link
-        // between a track and its release — but RecordingManager.Store() writes
-        // every track's link at IMPORT time, for the whole album at once, before
-        // any of them are handed to the encoder. That made this count equal
-        // Album.Tracks from the moment the scan finished and it never moved
-        // again: a card could sit at "44 of 44" while genuinely nothing had been
-        // encoded, or — worse — while every track was still queued, because the
-        // number this dictionary fed had already reached its ceiling before the
-        // first ffmpeg process ran.
-        //
-        // Album.Tracks (the metadata-declared count) is the one number here that
-        // both is stable and does not carry that false-completion baggage — it
-        // is not touched by import identification, only read. Turning it into
-        // "completed" instead needs the remaining-in-queue count below: as each
-        // track's row leaves the queue (encoded or dead-lettered), remaining
-        // drops by one and declared minus remaining rises by one, so this now
-        // tracks the queue draining rather than the scan having already run.
-        Dictionary<Guid, int> declaredTracksByRelease = await mediaContext
-            .Albums.AsNoTracking()
-            .Where(album => releaseIds.Contains(album.Id))
-            .ToDictionaryAsync(album => album.Id, album => album.Tracks);
+        // Encoded-so-far is the AlbumTrack link count, not Album.Tracks: the
+        // metadata-declared total is set once at import from what the provider
+        // says the release holds, and never moves — a card built on it could sit
+        // at "44 of 44" while genuinely nothing had been encoded, or worse, look
+        // complete while tracks were still queued, because the ceiling itself
+        // was wrong. AlbumTrack is written per track as its recording is stored,
+        // so its count is the real numerator, and total is that plus whatever is
+        // still queued for the release — the pair still reaches 100% exactly
+        // when the queue for it runs dry.
+        Dictionary<Guid, int> encodedTracksByRelease = await mediaContext
+            .AlbumTrack.AsNoTracking()
+            .Where(link => releaseIds.Contains(link.AlbumId))
+            .GroupBy(link => link.AlbumId)
+            .ToDictionaryAsync(group => group.Key, group => group.Count());
 
         Dictionary<Guid, string?> covers = await mediaContext
             .Albums.AsNoTracking()
@@ -733,16 +726,12 @@ public class TasksController(
                 MusicQueueRow current =
                     group.FirstOrDefault(row => row.Row.ReservedAt is not null) ?? first;
 
-                // Total is the metadata-declared track count — stable, and set
-                // once at import, well before this card exists. Completed is
-                // derived from it rather than read directly, because the queue
-                // draining is the only signal here that moves in step with the
-                // encoder actually running: as each track's row leaves the
-                // queue, remaining falls and completed rises to match. The pair
-                // still reaches 100% exactly when the queue runs dry.
+                // Completed is what AlbumTrack already links (real encoded
+                // work); total adds back what is still queued for the release,
+                // so the pair reaches 100% exactly when the queue runs dry.
                 int remaining = remainingByRelease.GetValueOrDefault(group.Key, group.Count());
-                int total = declaredTracksByRelease.GetValueOrDefault(group.Key, remaining);
-                int completed = Math.Max(0, total - remaining);
+                int completed = encodedTracksByRelease.GetValueOrDefault(group.Key, 0);
+                int total = completed + remaining;
 
                 string title = string.Join(
                     " - ",
