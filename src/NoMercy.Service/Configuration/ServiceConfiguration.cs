@@ -54,26 +54,31 @@ public static partial class ServiceConfiguration
                 "AllowNoMercyOrigins",
                 builder =>
                 {
-                    List<string> origins =
-                    [
-                        "https://nomercy.tv",
-                        "https://*.nomercy.tv",
-                        "https://cast.nomercy.tv",
-                        "https://hlsjs.video-dev.org",
-                        "http://localhost:7625",
-                    ];
-
+                    // Dev boxes hit this from whatever host/port a dev server picks
+                    // that day — Vite alone has cycled through 5501/5502/5503 across
+                    // sessions, plus any LAN device on the network during real device
+                    // testing. A fixed origin list means every new port/host silently
+                    // 403s (reads as "the app has no data", not "CORS blocked it") and
+                    // needs a hand-edit here to fix. Dev is never internet-facing, so
+                    // there's no origin to actually restrict — accept all of them.
                     if (Config.IsDev)
                     {
-                        origins.Add("http://192.168.2.201:5501");
-                        origins.Add("http://192.168.2.201:5502");
-                        origins.Add("http://192.168.2.201:5503");
-                        origins.Add("http://localhost");
-                        origins.Add("https://localhost");
+                        builder
+                            .SetIsOriginAllowed(_ => true)
+                            .AllowAnyMethod()
+                            .AllowCredentials()
+                            .AllowAnyHeader();
+                        return;
                     }
 
                     builder
-                        .WithOrigins(origins.ToArray())
+                        .WithOrigins(
+                            "https://nomercy.tv",
+                            "https://*.nomercy.tv",
+                            "https://cast.nomercy.tv",
+                            "https://hlsjs.video-dev.org",
+                            "http://localhost:7625"
+                        )
                         .AllowAnyMethod()
                         .AllowCredentials()
                         .SetIsOriginAllowedToAllowWildcardSubdomains()
