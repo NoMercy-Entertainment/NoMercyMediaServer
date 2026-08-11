@@ -649,6 +649,11 @@ public static partial class ServiceConfiguration
         // disabled, so neither takes a restart.
         services.AddHostedService<PluginRouteSubscriber>();
 
+        // The same for a plugin's scheduled work. Start-up's one registration pass
+        // runs before a slow server has finished loading its plugins, and a plugin
+        // that misses it serves its pages perfectly and never ticks.
+        services.AddHostedService<PluginCronSubscriber>();
+
         services.AddVideoHubServices();
         services.AddMusicHubServices();
         services.AddLiveTranscodeHubServices();

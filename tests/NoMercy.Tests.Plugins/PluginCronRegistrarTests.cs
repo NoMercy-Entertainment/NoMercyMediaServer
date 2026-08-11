@@ -150,12 +150,105 @@ public class PluginCronRegistrarTests
         public Task ExecuteAsync(CancellationToken ct = default) => Task.CompletedTask;
     }
 
+    /// <summary>
+    /// The bug this exists for: start-up's one registration pass runs before a slow
+    /// server has finished loading its plugins, so a plugin that turns up afterwards
+    /// had no cron executors at all - pages rendering, endpoints answering, nothing
+    /// ever ticking.
+    /// </summary>
+    [Fact]
+    public async Task RegisterPlugin_APluginThatMissedStartupsPass_StillGetsItsJobs()
+    {
+        FakeScheduledTaskPlugin plugin = new("*/5 * * * *");
+        FakePluginManager manager = FakePluginManager.Empty();
+        CronWorker cronWorker = BuildCronWorker();
+        PluginCronRegistrar registrar = new(manager, cronWorker);
+
+        // The pass start-up makes, against a manager that knows of nothing yet.
+        registrar.RegisterAll();
+        GetCodeDefinedJobs(cronWorker).Should().BeEmpty();
+
+        manager.Add(plugin, declaresHook: true);
+        registrar.RegisterPlugin(plugin.Id);
+
+        GetCodeDefinedJobs(cronWorker)
+            .Should()
+            .ContainSingle(job => job.JobType == $"plugin:{plugin.Id}");
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
+    }
+
+    /// <summary>
+    /// Both registration paths still run, so a plugin present at start-up is registered
+    /// once by the pass and again by the event. Two entries would be one schedule running
+    /// its work twice, forever.
+    /// </summary>
+    [Fact]
+    public async Task RegisterPlugin_AlreadyRegistered_ReplacesRatherThanAddsASecondSet()
+    {
+        FakeScheduledTaskPlugin plugin = new("*/5 * * * *");
+        FakePluginManager manager = FakePluginManager.WithScheduledTask(plugin, declaresHook: true);
+        CronWorker cronWorker = BuildCronWorker();
+        PluginCronRegistrar registrar = new(manager, cronWorker);
+
+        registrar.RegisterAll();
+        registrar.RegisterPlugin(plugin.Id);
+        registrar.RegisterPlugin(plugin.Id);
+
+        GetCodeDefinedJobs(cronWorker)
+            .Should()
+            .ContainSingle(job => job.JobType == $"plugin:{plugin.Id}");
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
+    }
+
+    [Fact]
+    public async Task RegisterPlugin_APluginNotDeclaringTheHook_IsStillLeftAlone()
+    {
+        FakeScheduledTaskPlugin plugin = new("*/5 * * * *");
+        FakePluginManager manager = FakePluginManager.WithScheduledTask(plugin, declaresHook: false);
+        CronWorker cronWorker = BuildCronWorker();
+
+        new PluginCronRegistrar(manager, cronWorker).RegisterPlugin(plugin.Id);
+
+        GetCodeDefinedJobs(cronWorker).Should().BeEmpty();
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
+    }
+
+    [Fact]
+    public async Task RegisterPlugin_AnIdNoPluginHas_DoesNothing()
+    {
+        FakeScheduledTaskPlugin plugin = new("*/5 * * * *");
+        FakePluginManager manager = FakePluginManager.WithScheduledTask(plugin, declaresHook: true);
+        CronWorker cronWorker = BuildCronWorker();
+
+        new PluginCronRegistrar(manager, cronWorker).RegisterPlugin(Ulid.NewUlid());
+
+        GetCodeDefinedJobs(cronWorker).Should().BeEmpty();
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
+        await cronWorker.StopAsync(cts.Token);
+    }
+
     private sealed class FakePluginManager : IPluginManager
     {
         private readonly List<IScheduledTaskPlugin> _plugins = [];
         private readonly Dictionary<Ulid, PluginCapabilities?> _capabilities = [];
 
         public static FakePluginManager Empty() => new();
+
+        /// <summary>A plugin the manager only learns about after start-up has been and gone.</summary>
+        public void Add(IScheduledTaskPlugin plugin, bool declaresHook)
+        {
+            _plugins.Add(plugin);
+            _capabilities[plugin.Id] = declaresHook
+                ? new() { Hooks = [PluginHookCapability.ScheduledTask] }
+                : new() { Hooks = [] };
+        }
 
         public static FakePluginManager WithScheduledTask(
             IScheduledTaskPlugin plugin,

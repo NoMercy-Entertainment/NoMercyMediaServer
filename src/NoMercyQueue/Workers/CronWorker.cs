@@ -360,6 +360,13 @@ public class CronWorker : BackgroundService
     // ExecuteJob and the dedup check in StartJobWorker key off the same value.
     public void RegisterExecutor(ICronJobExecutor executor)
     {
+        // Registering one name twice used to leave two entries in _codeDefinedJobs
+        // and, once the first worker's token was replaced, a second worker on the
+        // same schedule. Removing first makes re-registration mean "replace",
+        // which is what every caller already assumed it meant. A no-op when the
+        // name is not registered.
+        RemoveExecutor(executor.JobName);
+
         _instanceExecutors[executor.JobName] = executor;
 
         DateTime now = DateTime.UtcNow;
