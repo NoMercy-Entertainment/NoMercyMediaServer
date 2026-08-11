@@ -78,7 +78,69 @@ public record PluginLibraryShow(
     string? Folder,
     int EpisodeCount,
     int HaveEpisodeCount
-);
+)
+{
+    /// <summary>
+    /// Whether the show is still going out.
+    /// <para>
+    /// Not a positional parameter, deliberately. Everything above was in the contract
+    /// before this was, and adding a parameter to a record's primary constructor changes
+    /// that constructor's signature — which a host built against the new contract and a
+    /// plugin compiled against the old one would then disagree about. An init property
+    /// with a default is additive: old callers keep compiling, old readers keep working,
+    /// and a host that cannot answer leaves it
+    /// <see cref="PluginShowStatus.Unknown"/>.
+    /// </para>
+    /// <para>
+    /// The library knows this and a plugin cannot work it out. Deriving it from air dates
+    /// — "something aired lately, so it must still be running" — reads a series cancelled
+    /// last month as current and a show on a nine-month hiatus as finished. Both are
+    /// wrong in the direction that costs somebody bandwidth.
+    /// </para>
+    /// </summary>
+    public PluginShowStatus Status { get; init; } = PluginShowStatus.Unknown;
+}
+
+/// <summary>
+/// Where a show is in its life, as the library understands it.
+/// <para>
+/// A closed set owned by this assembly rather than the metadata provider's own wording,
+/// for the same reason every other type here is: the provider is free to rename
+/// "Returning Series" tomorrow, and when it does that is a change in the host's mapping
+/// and not a silent behaviour change in every installed plugin.
+/// </para>
+/// </summary>
+public enum PluginShowStatus
+{
+    /// <summary>
+    /// The library has no status for it, or one this contract does not recognise.
+    /// <para>
+    /// Distinct from <see cref="Ended"/> on purpose. A plugin deciding what to do about a
+    /// show should treat "I do not know" as "carry on": leaving a running series alone
+    /// because its metadata is thin is a failure nobody can see, and the opposite mistake
+    /// costs one wasted search.
+    /// </para>
+    /// </summary>
+    Unknown = 0,
+
+    /// <summary>Announced, nothing shot yet.</summary>
+    Planned = 1,
+
+    /// <summary>Being made, and has not started going out.</summary>
+    InProduction = 2,
+
+    /// <summary>One episode exists and nothing has been ordered beyond it.</summary>
+    Pilot = 3,
+
+    /// <summary>Going out, or between seasons with more to come.</summary>
+    Returning = 4,
+
+    /// <summary>Finished. Everything that will ever exist of it exists.</summary>
+    Ended = 5,
+
+    /// <summary>Stopped before it finished. Same consequence as <see cref="Ended"/>, different reason, and an owner wants to be told which.</summary>
+    Canceled = 6,
+}
 
 public record PluginLibraryMovie(
     int Id,

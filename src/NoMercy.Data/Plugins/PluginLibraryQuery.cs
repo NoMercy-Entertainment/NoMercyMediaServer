@@ -61,18 +61,59 @@ public class PluginLibraryQuery(IDbContextFactory<MediaContext> contextFactory)
         if (!string.IsNullOrWhiteSpace(libraryId) && Ulid.TryParse(libraryId, out Ulid parsed))
             shows = shows.Where(show => show.LibraryId == parsed);
 
-        return await shows
-            .Select(show => new PluginLibraryShow(
+        // Flat projection then shape in memory, because the status has to be mapped out of
+        // the provider's own wording and a switch over strings inside the projection turns
+        // into a CASE expression in SQL for no gain.
+        var rows = await shows
+            .Select(show => new
+            {
                 show.Id,
                 show.Title,
-                show.FirstAirDate == null ? null : show.FirstAirDate!.Value.Year,
-                show.LibraryId.ToString(),
+                Year = show.FirstAirDate == null ? (int?)null : show.FirstAirDate!.Value.Year,
+                show.LibraryId,
                 show.Folder,
                 show.NumberOfEpisodes,
-                show.HaveEpisodes ?? 0
-            ))
+                show.HaveEpisodes,
+                show.Status,
+            })
             .ToListAsync(ct);
+
+        return rows.Select(row => new PluginLibraryShow(
+                row.Id,
+                row.Title,
+                row.Year,
+                row.LibraryId.ToString(),
+                row.Folder,
+                row.NumberOfEpisodes,
+                row.HaveEpisodes ?? 0
+            )
+            {
+                Status = ShowStatus(row.Status),
+            })
+            .ToList();
     }
+
+    /// <summary>
+    /// The metadata provider's word for where a show stands, as this contract's own.
+    /// <para>
+    /// Anything unrecognised becomes <see cref="PluginShowStatus.Unknown"/> rather than a
+    /// guess. A provider that adds a status this mapping has not heard of should leave a
+    /// plugin saying "I do not know", which every plugin has to handle anyway, rather than
+    /// quietly reading as "finished" — that is the reading that stops a plugin working on
+    /// a series nobody cancelled.
+    /// </para>
+    /// </summary>
+    private static PluginShowStatus ShowStatus(string? status) =>
+        status?.Trim().ToLowerInvariant() switch
+        {
+            "returning series" => PluginShowStatus.Returning,
+            "planned" => PluginShowStatus.Planned,
+            "in production" => PluginShowStatus.InProduction,
+            "pilot" => PluginShowStatus.Pilot,
+            "ended" => PluginShowStatus.Ended,
+            "canceled" or "cancelled" => PluginShowStatus.Canceled,
+            _ => PluginShowStatus.Unknown,
+        };
 
     public async Task<IReadOnlyList<PluginLibraryMovie>> GetMoviesAsync(
         string? libraryId = null,
