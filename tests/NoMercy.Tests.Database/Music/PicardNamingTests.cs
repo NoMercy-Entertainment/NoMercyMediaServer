@@ -243,6 +243,37 @@ public class PicardNamingTests
     }
 
     /// <summary>
+    /// Curly quotes fold to straight ASCII quotes for the same reason the curly
+    /// apostrophe does — but a straight <c>"</c> is itself one of Windows' reserved path
+    /// characters, so the fold alone would trade one CreateDirectory failure for another.
+    /// Sanitize has to strip what its own unicode fold produces, not just what the source
+    /// title carried.
+    /// </summary>
+    [Fact]
+    public void A_curly_quote_fold_does_not_leave_a_reserved_straight_quote_behind()
+    {
+        MusicNamingContext context = JoshuaTree() with { AlbumName = "“Famous Last Words”" };
+
+        string sanitized = PicardNaming.Sanitize(PicardNaming.BuildPath(context));
+
+        Assert.DoesNotContain('"', sanitized);
+    }
+
+    /// <summary>
+    /// A pipe is reserved on Windows but was never in the original Picard script's
+    /// collapse set — "Dusty House | Room 1" reached CreateDirectory unfolded and failed.
+    /// </summary>
+    [Fact]
+    public void A_pipe_in_the_title_is_stripped_like_the_other_reserved_characters()
+    {
+        MusicNamingContext context = JoshuaTree() with { AlbumName = "Dusty House | Room 1" };
+
+        string sanitized = PicardNaming.Sanitize(PicardNaming.BuildPath(context));
+
+        Assert.DoesNotContain('|', sanitized);
+    }
+
+    /// <summary>
     /// Every accented Latin letter reproducibly fails the same way as the curly
     /// apostrophe — confirmed live for é ñ ü à ö ç í ó ø å. NFD-decompose-and-strip
     /// folds any base+diacritic letter without a per-character entry; ø is Unicode's

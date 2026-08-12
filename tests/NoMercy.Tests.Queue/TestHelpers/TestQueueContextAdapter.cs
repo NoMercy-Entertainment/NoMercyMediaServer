@@ -50,6 +50,17 @@ public class TestQueueContextAdapter : IQueueContext
             .FirstOrDefault();
     }
 
+    public QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now)
+    {
+        return Jobs.Where(j =>
+                j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
+            )
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
+            .ThenBy(j => j.Id)
+            .FirstOrDefault();
+    }
+
     public QueueJobModel? FindJob(int id)
     {
         return Jobs.FirstOrDefault(j => j.Id == id);

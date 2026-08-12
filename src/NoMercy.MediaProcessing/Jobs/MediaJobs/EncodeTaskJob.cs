@@ -16,6 +16,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Database;
 using NoMercy.Database.Models.Encoder;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.Database.Models.TvShows;
 using NoMercy.Encoder.Decomposition;
@@ -302,6 +303,8 @@ public class EncodeTaskJob
                 stopwatch.Elapsed.TotalSeconds
             );
 
+            await RecordHistoryAsync(context, request.InputPath, encodingProfile, result);
+
             List<string> artifactPaths = result
                 .Artifacts.Select(artifact => artifact.Path)
                 .ToList();
@@ -313,6 +316,55 @@ public class EncodeTaskJob
             Log.LogError("[EncodeTaskJob] Task '{Label}' threw: {Message}", Task.Label, ex.Message);
             await PublishCompletedAsync(success: false, error: ex.Message, artifacts: []);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Appends the dashboard-facing <see cref="EncodingHistory"/> row for this task.
+    /// This is the only place that call — every other leaf that runs ffmpeg
+    /// (<see cref="MusicEncodeJob"/>) writes its own, but nothing outside these two
+    /// ever did, so "Encoding history" on the dashboard read zero rows regardless of
+    /// how much real encoding had happened. Best-effort: a failure here must not
+    /// turn a completed encode into a failed task.
+    /// </summary>
+    private async Task RecordHistoryAsync(
+        MediaContext context,
+        string inputPath,
+        EncodingProfile profile,
+        EncodingResult result
+    )
+    {
+        try
+        {
+            long inputBytes = result.Stats?.SourceBytes ?? 0;
+            long outputBytes = result.Stats?.OutputBytes ?? 0;
+
+            context.EncodingHistory.Add(
+                new()
+                {
+                    InputPath = inputPath,
+                    OutputPath = result.OutputPath,
+                    ProfileId = profile.Id,
+                    ProfileName = profile.Name,
+                    EncoderUsed = result.Metrics?.EncoderUsed ?? string.Empty,
+                    GpuUsed = result.Metrics?.GpuUsed,
+                    DurationSeconds = result.Stats?.DurationSeconds ?? 0,
+                    InputSizeBytes = inputBytes,
+                    OutputSizeBytes = outputBytes,
+                    CompressionRatio = inputBytes > 0 ? (double)outputBytes / inputBytes : 0,
+                    AverageSpeed = result.Metrics?.AverageSpeed ?? 0,
+                    AverageFps = result.Stats?.AvgFps ?? result.Metrics?.AverageFps ?? 0,
+                }
+            );
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(
+                ex,
+                "[EncodeTaskJob] Could not record encoding history for task '{Label}'",
+                Task.Label
+            );
         }
     }
 

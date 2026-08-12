@@ -29,6 +29,18 @@ public interface IQueueContext : IDisposable
     /// available earlier in the same second.
     /// </summary>
     QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId, DateTime now);
+
+    /// <summary>
+    /// Same eligibility rule as <see cref="GetNextJob"/> — not reserved, under
+    /// <paramref name="maxAttempts"/>, <c>AvailableAt</c> at or before
+    /// <paramref name="now"/> — but across every queue name, and read-only: it
+    /// never reserves the row it returns. Used to check "is anything actually
+    /// reservable ranked ahead of me right now" without the empty-queueName
+    /// branch of <see cref="GetNextJob"/>, which ignores reservation state and
+    /// availability entirely and so answers a different question.
+    /// </summary>
+    QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now);
+
     QueueJobModel? FindJob(int id);
     bool JobExists(string payload);
     void UpdateJob(QueueJobModel job);

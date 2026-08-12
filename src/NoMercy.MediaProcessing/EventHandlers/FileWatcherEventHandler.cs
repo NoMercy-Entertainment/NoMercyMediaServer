@@ -127,6 +127,22 @@ public class FileWatcherEventHandler : IDisposable
             await using MediaContext mediaContext = new();
             FileRepository fileRepository = new(mediaContext, _storageDriver);
 
+            List<int> affectedMovieIds = await mediaContext
+                .VideoFiles.Where(vf => vf.HostFolder == hostFolder && vf.MovieId != null)
+                .Select(vf => vf.MovieId!.Value)
+                .Distinct()
+                .ToListAsync(ct);
+            List<int> affectedTvIds = await mediaContext
+                .VideoFiles.Where(vf => vf.HostFolder == hostFolder && vf.EpisodeId != null)
+                .Join(
+                    mediaContext.Episodes,
+                    vf => vf.EpisodeId,
+                    episode => episode.Id,
+                    (vf, episode) => episode.TvId
+                )
+                .Distinct()
+                .ToListAsync(ct);
+
             int videoFilesDeleted = await fileRepository.DeleteVideoFilesByHostFolderAsync(
                 hostFolder
             );
@@ -141,6 +157,23 @@ public class FileWatcherEventHandler : IDisposable
                 await EventBusProvider.Current.PublishAsync(
                     new LibraryRefreshedEvent { QueryKey = ["base", "libraries"] }
                 );
+
+                // A library-list invalidation doesn't reach an already-open movie/show
+                // page — its query key is scoped to that item's id, so it needs its own
+                // invalidation or the client shows stale (deleted) episodes until a
+                // manual refresh, same as FileManager.FindFiles does for full rescans.
+                foreach (int movieId in affectedMovieIds)
+                {
+                    await EventBusProvider.Current.PublishAsync(
+                        new LibraryRefreshedEvent { QueryKey = ["movie", movieId.ToString()] }
+                    );
+                }
+                foreach (int tvId in affectedTvIds)
+                {
+                    await EventBusProvider.Current.PublishAsync(
+                        new LibraryRefreshedEvent { QueryKey = ["tv", tvId.ToString()] }
+                    );
+                }
             }
         }
         catch (Exception ex)

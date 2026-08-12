@@ -184,6 +184,23 @@ public class EfQueueContextAdapter : IQueueContext
         });
     }
 
+    public QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now)
+    {
+        return Execute<QueueJobModel?>(context =>
+        {
+            QueueJob? job = context
+                .QueueJobs.Where(j =>
+                    j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
+                )
+                .OrderByDescending(j => j.Priority)
+                .ThenBy(j => j.CreatedAt)
+                .ThenBy(j => j.Id)
+                .FirstOrDefault();
+
+            return job == null ? null : ToModel(job);
+        });
+    }
+
     public QueueJobModel? FindJob(int id)
     {
         return Execute<QueueJobModel?>(context =>

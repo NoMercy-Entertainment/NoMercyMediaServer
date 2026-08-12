@@ -308,7 +308,10 @@ public static partial class ServiceConfiguration
             sp.GetServices<IConnectivityStrategy>(),
             sp.GetRequiredService<IBootStatus>(),
             sp.GetRequiredService<IConnectivityStatus>(),
-            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
+            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability(),
+            delayOverride: null,
+            readinessDeferralWindow: null,
+            lifetime: sp.GetRequiredService<IHostApplicationLifetime>()
         ));
         services.AddHostedService(sp =>
             (ConnectivityManager)sp.GetRequiredService<IConnectivityManager>()

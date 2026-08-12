@@ -120,6 +120,33 @@ public class QueueWorker(
                 // again after a short delay.
                 ResourceLease? lease = null;
 
+                // Global dispatch-order gate, applied to every encode-family
+                // queue including the plain coordinator queue. Excludes
+                // non-encode work sharing "encoder" (OCR, previews).
+                bool isEncodeWork =
+                    job.Payload.Contains("VideoEncodeJob") || job.Payload.Contains("EncodeTaskJob");
+
+                if (isEncodeWork)
+                {
+                    QueueJobModel? higherRanked = queue.PeekHighestRankedEligibleJob();
+                    if (
+                        higherRanked is not null
+                        && higherRanked.Id != job.Id
+                        && (
+                            higherRanked.Payload.Contains("VideoEncodeJob")
+                            || higherRanked.Payload.Contains("EncodeTaskJob")
+                        )
+                    )
+                    {
+                        queue.ReleaseReservation(job, BudgetRetryDelay);
+
+                        if (stopToken.WaitHandle.WaitOne(BudgetRetryDelay))
+                            break;
+
+                        continue;
+                    }
+                }
+
                 if (resourceBudget is not null && resourceAwareQueues?.Contains(name) == true)
                 {
                     BudgetAcquireOutcome outcome = TryAcquireBudget(job, out lease);

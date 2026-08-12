@@ -77,4 +77,31 @@ public class MusicEncodeOutputDirectoryTests
         MusicEncodeJob.AlbumOutputDirectory(string.Empty).Should().BeEmpty();
         MusicEncodeJob.AlbumOutputDirectory("/").Should().BeEmpty();
     }
+
+    /// <summary>
+    /// Reproduces FailedJobs row 15797 on the dev server: the curly quotes in the stored
+    /// title folded to straight ASCII quotes, and a straight <c>"</c> is itself a
+    /// Windows-reserved path character — CreateDirectory rejected the result outright.
+    /// </summary>
+    [Fact]
+    public void CurlyQuotesInTheStoredTitleDoNotFoldIntoAReservedStraightQuote()
+    {
+        MusicEncodeJob
+            .AlbumOutputDirectory("S/Supertramp/[1982] “…Famous Last Words…”")
+            .Should()
+            .NotContain("\"");
+    }
+
+    /// <summary>
+    /// Reproduces FailedJobs row 15788: "Dusty House | Room 1" reached CreateDirectory
+    /// with its pipe intact, since only <c>? * : \</c> were ever folded.
+    /// </summary>
+    [Fact]
+    public void APipeInTheStoredTitleIsStripped()
+    {
+        MusicEncodeJob
+            .AlbumOutputDirectory("V/Voorn, Joris/[2009] Dusty House | Room 1")
+            .Should()
+            .NotContain("|");
+    }
 }

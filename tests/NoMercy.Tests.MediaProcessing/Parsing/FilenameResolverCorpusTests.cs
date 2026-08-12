@@ -198,6 +198,46 @@ public class FilenameResolverCorpusTests
         Resolve("Opening 06.mkv", string.Empty).Title.Should().BeNull();
     }
 
+    // ---------------------------------------------------------------------------
+    // A BD batch names every season it packs with '+' rather than a space/dash
+    // ("...Ah! My Goddess! (Aa! Megami-Sama) S1+S2+Movie+OVAs [BD]..."), so "S1"
+    // was never bounded on its right and "S1+S2+Movie+OVAs" leaked into the show
+    // title handed to the providers.
+    // ---------------------------------------------------------------------------
+    [Fact]
+    public void A_plus_joined_batch_season_tag_is_dropped_from_the_folder_title()
+    {
+        MovieFile result = Resolve(
+            "NCOP.mkv",
+            @"M:\Download\done\[Tenrai-Sensei] Ah! My Goddess! (Aa! Megami-Sama) S1+S2+Movie+OVAs [BD][1080p][HEVC 10bit x265][Dual Audio]\Season 2"
+        );
+
+        result.Title.Should().Be("Ah! My Goddess!");
+    }
+
+    // ---------------------------------------------------------------------------
+    // A fansub BD batch covers several seasons plus a movie and OVAs in one
+    // folder, and splits the actual season into a "Season N" subfolder — the
+    // release name above it still carries the plus-joined "S1+S2+Movie+OVAs"
+    // tag. A flat-numbered episode file ("01.mkv") has no title of its own, so
+    // both the title and the season are read from folder context: the nearest
+    // "Season 2" folder supplies the season, and the release folder above it
+    // — with the batch tag already stripped by the "+"-boundary fix — supplies
+    // the title.
+    // ---------------------------------------------------------------------------
+    [Fact]
+    public void A_flat_numbered_episode_in_a_batch_release_takes_season_and_title_from_its_folders()
+    {
+        MovieFile result = Resolve(
+            "01.mkv",
+            @"M:\Download\done\[Tenrai-Sensei] Ah! My Goddess! (Aa! Megami-Sama) S1+S2+Movie+OVAs [BD][1080p][HEVC 10bit x265][Dual Audio]\Season 2"
+        );
+
+        result.Title.Should().Be("Ah! My Goddess!");
+        result.Season.Should().Be(2);
+        result.Episode.Should().Be(1);
+    }
+
     [Theory]
     // The guard. These are real shows whose names ARE those words, and a file
     // that names its show keeps it. The rule only fires when the role word is

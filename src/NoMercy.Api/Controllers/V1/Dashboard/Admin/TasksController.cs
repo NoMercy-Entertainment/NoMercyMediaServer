@@ -480,7 +480,6 @@ public class TasksController(
             .ToList();
 
         HashSet<string> activeMediaIds = [];
-        Dictionary<string, int> executionOrder = [];
 
         foreach (QueueJob child in childRows)
         {
@@ -488,12 +487,22 @@ public class TasksController(
             if (string.IsNullOrEmpty(mediaId))
                 continue;
 
-            // First child wins: a run dispatches its bundles in order, so the
-            // earliest one still queued is when this encode gets its turn.
-            executionOrder.TryAdd(mediaId, child.Id);
-
             if (child.ReservedAt is not null)
                 activeMediaIds.Add(mediaId);
+        }
+
+        // Rank every still-waiting row by its coordinator's own id — the
+        // true original dispatch position, stable across the coordinator's
+        // whole lifetime. A decomposed child's id says only when THAT
+        // decomposition happened, which can be long after dispatch and long
+        // before its actual turn (it sits on the budget gate same as
+        // anything else), so it must never be used to rank ahead of a
+        // coordinator dispatched earlier that just hasn't decomposed yet.
+        Dictionary<string, int> coordinatorRowId = [];
+        foreach (QueueJobEntry entry in encoderJobs)
+        {
+            string mediaId = entry.Job!.Id.ToString();
+            coordinatorRowId.TryAdd(mediaId, entry.Row.Id);
         }
 
         Dictionary<Ulid, string> presetNameById = folders
@@ -545,7 +554,19 @@ public class TasksController(
             // that is what the runner honours; within a priority the child id is
             // the order the runner will actually pick them up in.
             .OrderByDescending(dto => dto.Priority)
-            .ThenBy(dto => executionOrder.GetValueOrDefault(dto.PayloadId, int.MaxValue))
+            // Only a row ACTUALLY holding a reservation right now is really
+            // ahead of everything still waiting — "has decomposed into a
+            // child" is not "is running" (a child sits on the budget gate
+            // same as anything else), so that can never be the ranking key.
+            .ThenByDescending(dto => dto.Status == "running")
+            // The coordinator row's own id is the true original dispatch
+            // position and never changes across its whole lifetime — a
+            // decomposed child's id says only when THAT decomposition
+            // happened, which can be long after dispatch and long before its
+            // actual turn. Rank every still-waiting row by where its
+            // coordinator was dispatched, not by whichever id its most
+            // recent child row happened to get.
+            .ThenBy(dto => coordinatorRowId.GetValueOrDefault(dto.PayloadId, int.MaxValue))
             .ThenBy(dto => dto.Id)
             .ToArray();
 

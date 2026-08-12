@@ -30,6 +30,14 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
     private Process? _tunnelProcess;
     private bool _disposed;
 
+    /// <summary>
+    /// Set the moment a graceful shutdown is requested. cloudflared keeps forwarding
+    /// in-flight requests to an origin we are in the process of tearing down, so it logs
+    /// "connection refused" and "process exited" for a few hundred milliseconds after every
+    /// stop — expected noise, not a failure to surface at warning level.
+    /// </summary>
+    private volatile bool _stoppingIntentionally;
+
     private static readonly TimeSpan RegistrationTimeout = TimeSpan.FromSeconds(30);
 
     /// <summary>
@@ -65,6 +73,27 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
     internal static bool IsClientCancellation(string line)
     {
         return ClientCancellationPattern().IsMatch(line);
+    }
+
+    /// <summary>
+    /// Decides the log level for one raw cloudflared output line. Split out from the process
+    /// event handler so the stopping-intentionally gate — the actual fix for the shutdown log
+    /// spam — is exercisable without spawning a real cloudflared process in tests.
+    /// </summary>
+    internal void LogProcessLine(string line)
+    {
+        // cloudflared reports why it failed — bad token, clock skew, no egress — on
+        // these streams. At LogTrace none of it was ever written, so every tunnel
+        // failure looked identical and unexplained from the logs.
+        if (FailurePattern().IsMatch(line) && !IsClientCancellation(line))
+        {
+            if (_stoppingIntentionally)
+                _logger.LogDebug("cloudflared: {Line}", line);
+            else
+                _logger.LogWarning("cloudflared: {Line}", line);
+        }
+        else
+            _logger.LogDebug("cloudflared: {Line}", line);
     }
 
     /// <summary>
@@ -200,13 +229,7 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
                 if (string.IsNullOrEmpty(line))
                     return;
 
-                // cloudflared reports why it failed — bad token, clock skew, no egress — on
-                // these streams. At LogTrace none of it was ever written, so every tunnel
-                // failure looked identical and unexplained from the logs.
-                if (FailurePattern().IsMatch(line) && !IsClientCancellation(line))
-                    _logger.LogWarning("cloudflared: {Line}", line);
-                else
-                    _logger.LogDebug("cloudflared: {Line}", line);
+                LogProcessLine(line);
 
                 if (ConnectionRegisteredPattern().IsMatch(line))
                     registered.TrySetResult(true);
@@ -216,7 +239,10 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
             _tunnelProcess.ErrorDataReceived += (_, args) => Watch(args.Data);
             _tunnelProcess.Exited += (_, _) =>
             {
-                _logger.LogWarning("Cloudflare tunnel process exited");
+                if (_stoppingIntentionally)
+                    _logger.LogInformation("Cloudflare tunnel process exited");
+                else
+                    _logger.LogWarning("Cloudflare tunnel process exited");
                 registered.TrySetResult(false);
             };
 
@@ -320,8 +346,14 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
         return Task.CompletedTask;
     }
 
+    public void BeginShutdown()
+    {
+        _stoppingIntentionally = true;
+    }
+
     private void StopTunnel()
     {
+        _stoppingIntentionally = true;
         try
         {
             if (_tunnelProcess is { HasExited: false })

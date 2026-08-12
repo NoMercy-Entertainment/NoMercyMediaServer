@@ -121,6 +121,20 @@ public class SqliteQueueContext : IQueueContext
         return ToModel(job);
     }
 
+    public QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now)
+    {
+        QueueJobEntity? job = _context
+            .QueueJobs.Where(j =>
+                j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
+            )
+            .OrderByDescending(j => j.Priority)
+            .ThenBy(j => j.CreatedAt)
+            .ThenBy(j => j.Id)
+            .FirstOrDefault();
+
+        return job == null ? null : ToModel(job);
+    }
+
     public QueueJobModel? FindJob(int id)
     {
         QueueJobEntity? job = _context.QueueJobs.Find(id);
