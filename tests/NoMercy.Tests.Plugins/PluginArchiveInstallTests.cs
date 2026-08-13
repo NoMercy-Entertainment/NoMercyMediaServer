@@ -63,12 +63,20 @@ public class PluginArchiveInstallTests : IDisposable
     {
         _manager.Dispose();
 
+        // These archives now carry a real assembly, because the install checks
+        // that the one its manifest names is one. A real assembly gets loaded,
+        // and the load context goes when the GC collects it - until then the
+        // file is held, and Windows reports that as UnauthorizedAccessException
+        // for a directory delete rather than IOException.
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+
         try
         {
             if (Directory.Exists(_tempDir))
                 Directory.Delete(_tempDir, recursive: true);
         }
-        catch (IOException)
+        catch (Exception)
         {
             // Best-effort cleanup.
         }
@@ -88,6 +96,23 @@ public class PluginArchiveInstallTests : IDisposable
         }
         """;
 
+    /// <summary>
+    /// A real managed assembly, under whatever name the archive gives it.
+    ///
+    /// The install checks that the assembly a manifest names is one before it
+    /// unpacks anything, so a stub of a few bytes is now refused at that check
+    /// rather than at load. These tests are about where files land and what is
+    /// refused for other reasons, so they carry something that passes it. Which
+    /// assembly does not matter: it is never loaded here.
+    /// </summary>
+    private static void WriteAssembly(ZipArchive archive, string entryName)
+    {
+        archive.CreateEntryFromFile(
+            typeof(PluginArchiveInstallTests).Assembly.Location,
+            entryName
+        );
+    }
+
     private static void Write(ZipArchive archive, string entryName, string content)
     {
         using StreamWriter writer = new(archive.CreateEntry(entryName).Open(), Encoding.UTF8);
@@ -102,7 +127,7 @@ public class PluginArchiveInstallTests : IDisposable
         using ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create);
         Write(archive, "NoMercy.Plugin.InternetRadio/README.md", "# Internet Radio");
         Write(archive, "NoMercy.Plugin.InternetRadio/plugin.json", Manifest);
-        Write(archive, "NoMercy.Plugin.InternetRadio/NoMercy.Plugin.InternetRadio.dll", "MZ");
+        WriteAssembly(archive, "NoMercy.Plugin.InternetRadio/NoMercy.Plugin.InternetRadio.dll");
 
         return path;
     }
@@ -200,7 +225,7 @@ public class PluginArchiveInstallTests : IDisposable
         using (ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create))
         {
             Write(archive, "Example/plugin.json", Manifest);
-            Write(archive, "Example/NoMercy.Plugin.InternetRadio.dll", "MZ");
+            WriteAssembly(archive, "Example/NoMercy.Plugin.InternetRadio.dll");
             Write(archive, "Example/../../escaped.dll", "MZ");
         }
 

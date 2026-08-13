@@ -10,31 +10,30 @@
 // -----------------------------------------------------------------------------
 
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Plugins;
+using NoMercy.Plugins.Verification;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
 
 /// <summary>
-/// Installing over a plugin that is already there.
+/// Updating a plugin that is installed, and in most of these also running.
 /// <para>
-/// The catalogue's Update button lands here, and it used to unpack straight over
-/// the installed folder. Extraction writes one entry at a time, so a failure part
-/// way through left the folder holding the new manifest beside the old assembly —
-/// and replacing a loaded plugin's own assembly is not a failure that might
-/// happen, it is what always happens on Windows, where the file stays locked for
-/// as long as the process lives. The owner saw a 500 with a stack trace, and the
-/// server was then reporting a version it was not running.
+/// The catalogue's Update button lands here. It used to unpack straight over the
+/// installed folder, which cannot work: a plugin's own assembly is held for as
+/// long as it is loaded, so the copy failed on the assembly every time — after
+/// having already written the new manifest beside the old one. The owner got a
+/// 500, and the server was left reporting a version it was not running.
 /// </para>
 /// <para>
-/// What these assert is where the files land and what the installed copy looks
-/// like afterwards. The assemblies written here are not real ones; loading is
-/// expected to fail and everything under test is decided before the loader is
-/// reached.
+/// These use the Echo sample rather than a stub, because what is under test is
+/// the unload, replace and reload sequence. A fake assembly never loads, so it
+/// could only ever exercise the rollback.
 /// </para>
 /// </summary>
 public class PluginArchiveUpdateTests : IDisposable
@@ -46,15 +45,19 @@ public class PluginArchiveUpdateTests : IDisposable
     private readonly string _pluginsDir;
     private readonly PluginManager _manager;
 
-    private const string FolderName = "NoMercy.Plugin.InternetRadio";
-    private const string AssemblyName = "NoMercy.Plugin.InternetRadio.dll";
+    private const string FolderName = "NoMercy.Plugin.Samples.Echo";
+    private const string AssemblyName = "NoMercy.Plugin.Samples.Echo.dll";
+    private const string EchoId = "01ECH000000000000000000000";
 
     /// <summary>
-    /// Spelled out rather than read off PluginManager: this is where an update
-    /// waits on disk, so a rename that the boot scan was not told about should
-    /// fail here rather than pass by following the constant.
+    /// Spelled out rather than read off PluginManager: these name where an
+    /// update is checked and where the copy it replaces waits, so a rename the
+    /// boot scan was not told about fails here rather than passing by following
+    /// the same constant the code does.
     /// </summary>
-    private const string PendingUpdates = ".pending-updates";
+    private const string Staging = ".staging";
+
+    private const string Rollback = ".rollback";
 
     public PluginArchiveUpdateTests()
     {
@@ -75,12 +78,18 @@ public class PluginArchiveUpdateTests : IDisposable
     {
         _manager.Dispose();
 
+        // The load context goes when the GC collects it, and until it does the
+        // file stays held. Without this the directory below cannot be removed
+        // and every run leaves one behind.
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+
         try
         {
             if (Directory.Exists(_tempDir))
                 Directory.Delete(_tempDir, recursive: true);
         }
-        catch (IOException)
+        catch (Exception)
         {
             // Best-effort cleanup.
         }
@@ -93,137 +102,295 @@ public class PluginArchiveUpdateTests : IDisposable
         public object? GetService(Type serviceType) => null;
     }
 
+    /// <summary>Echo's own build output, which is a real, loadable plugin.</summary>
+    private static string EchoBinDir()
+    {
+        string testBinDir = Path.GetDirectoryName(
+            typeof(PluginArchiveUpdateTests).Assembly.Location
+        )!;
+        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
+        string tfm = Path.GetFileName(testBinDir);
+        string configuration = Path.GetFileName(Path.GetDirectoryName(testBinDir)!);
+
+        return Path.Combine(repoRoot, "tests", FolderName, "bin", configuration, tfm);
+    }
+
     private static string Manifest(string version) =>
         $$"""
         {
-          "id": "5KTKRT4Z2Y9P59Y40W5CX4TQKF",
-          "name": "Internet Radio",
-          "description": "Browse and play internet radio stations in the built-in player.",
+          "id": "{{EchoId}}",
+          "name": "Echo",
           "version": "{{version}}",
-          "targetAbi": "10.0",
-          "author": "NoMercy Community",
-          "assembly": "{{AssemblyName}}"
+          "description": "Sample plugin for the test suite",
+          "assembly": "{{AssemblyName}}",
+          "autoEnabled": true
         }
         """;
 
-    private static void Write(ZipArchive archive, string entryName, string content)
+    /// <summary>
+    /// A published archive of Echo at a named version: its folder, every
+    /// assembly it needs, its deps manifest and a plugin.json.
+    /// </summary>
+    private string Archive(string version, bool assemblyIsGarbage = false)
     {
-        using StreamWriter writer = new(archive.CreateEntry(entryName).Open(), Encoding.UTF8);
-        writer.Write(content);
-    }
+        string binDir = EchoBinDir();
+        string dll = Path.Combine(binDir, AssemblyName);
 
-    /// <summary>An archive of the published shape, at a named version.</summary>
-    private string Archive(string version)
-    {
-        string path = Path.Combine(_tempDir, $"radio-{version}.zip");
+        if (!File.Exists(dll))
+            throw new FileNotFoundException(
+                $"Echo plugin DLL not found at '{dll}'. Build {FolderName} first."
+            );
+
+        string path = Path.Combine(
+            _tempDir,
+            $"echo-{version}{(assemblyIsGarbage ? "-broken" : "")}.zip"
+        );
 
         using ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create);
-        Write(archive, $"{FolderName}/plugin.json", Manifest(version));
-        Write(archive, $"{FolderName}/{AssemblyName}", $"MZ {version}");
-        Write(archive, $"{FolderName}/lang/en.json", $$"""{"version":"{{version}}"}""");
+
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.dll"))
+        {
+            string name = Path.GetFileName(file);
+
+            if (assemblyIsGarbage && name == AssemblyName)
+            {
+                using StreamWriter broken = new(
+                    archive.CreateEntry($"{FolderName}/{name}").Open(),
+                    Encoding.UTF8
+                );
+                broken.Write("MZ but not an assembly");
+                continue;
+            }
+
+            archive.CreateEntryFromFile(file, $"{FolderName}/{name}");
+        }
+
+        foreach (string file in Directory.EnumerateFiles(binDir, "*.deps.json"))
+            archive.CreateEntryFromFile(file, $"{FolderName}/{Path.GetFileName(file)}");
+
+        using (
+            StreamWriter writer = new(
+                archive.CreateEntry($"{FolderName}/plugin.json").Open(),
+                Encoding.UTF8
+            )
+        )
+        {
+            writer.Write(Manifest(version));
+        }
 
         return path;
     }
 
-    private async Task InstallIgnoringLoad(string archivePath)
-    {
-        try
-        {
-            await _manager.InstallPluginArchiveAsync(archivePath, null, CancellationToken.None);
-        }
-        catch (BadImageFormatException)
-        {
-            // Everything under test happened before the loader saw the file.
-        }
-    }
+    private Task Install(string archivePath) =>
+        _manager.InstallPluginArchiveAsync(archivePath, null, CancellationToken.None);
 
     private string Installed(params string[] parts) =>
         Path.Combine([_pluginsDir, FolderName, .. parts]);
 
-    [Fact]
-    public async Task InstallingOverAnEarlierVersion_ReplacesEveryFile()
-    {
-        await InstallIgnoringLoad(Archive("1.0.0"));
-        await InstallIgnoringLoad(Archive("1.2.0"));
+    private string InstalledManifest() => File.ReadAllText(Installed("plugin.json"));
 
-        File.ReadAllText(Installed(AssemblyName)).Should().Be("MZ 1.2.0");
-        File.ReadAllText(Installed("plugin.json")).Should().Contain("\"version\": \"1.2.0\"");
-        File.ReadAllText(Installed("lang", "en.json"))
+    [Fact]
+    public async Task UpdatingALoadedPlugin_UnloadsItSwapsTheFilesAndLoadsTheNewCopy()
+    {
+        await Install(Archive("0.1.0"));
+
+        _manager
+            .GetInstalledPlugins()
             .Should()
-            .Contain("1.2.0", "a plugin's other files are part of the version, not decoration");
+            .ContainSingle(
+                plugin => plugin.Name == "Echo",
+                "the first install has to be running for the second to be an update at all"
+            );
+
+        await Install(Archive("0.2.0"));
+
+        InstalledManifest().Should().Contain("0.2.0");
+        _manager
+            .GetInstalledPlugins()
+            .Should()
+            .ContainSingle(
+                plugin => plugin.Name == "Echo",
+                "an update ends with the plugin loaded, not gone"
+            );
     }
 
     /// <summary>
-    /// The defect this exists for. An archive is unpacked beside the installed
-    /// copy and only moved in once all of it is there, so a failure cannot leave
-    /// the manifest and the assembly disagreeing about which version is running.
+    /// An update is checked while it is still staged, so a broken one never
+    /// reaches the installed copy: the owner keeps the plugin they had, running,
+    /// rather than finding out after the swap.
     /// </summary>
     [Fact]
-    public async Task UnpackingIsNotDoneOverTheInstalledCopy()
+    public async Task AnUpdateWhoseAssemblyIsNotOne_IsRefusedAndTheWorkingCopyKeepsRunning()
     {
-        await InstallIgnoringLoad(Archive("1.0.0"));
+        await Install(Archive("0.1.0"));
 
-        string manifestBefore = File.ReadAllText(Installed("plugin.json"));
+        long workingSize = new FileInfo(Installed(AssemblyName)).Length;
+
+        Func<Task> act = () => Install(Archive("0.2.0", assemblyIsGarbage: true));
+
+        // Refused while it is still staged. The check is a metadata read rather
+        // than a load, so a truncated download or an error page saved under a
+        // .dll name is caught before the working copy is touched at all.
+        await act.Should().ThrowAsync<PluginVerificationException>();
+
+        InstalledManifest()
+            .Should()
+            .Contain("0.1.0", "the version that worked is the one that has to be on disk");
+        new FileInfo(Installed(AssemblyName))
+            .Length.Should()
+            .Be(workingSize, "the real assembly is untouched, not replaced by the broken one");
+        _manager
+            .GetInstalledPlugins()
+            .Should()
+            .ContainSingle(
+                plugin => plugin.Name == "Echo",
+                "the plugin that was running is still running"
+            );
+    }
+
+    /// <summary>
+    /// Nothing is written over the installed copy until the new one is complete
+    /// and checked, so a failure before that point cannot reach it.
+    /// </summary>
+    [Fact]
+    public async Task AnArchiveThatCannotBeUnpacked_LeavesTheInstalledCopyUntouched()
+    {
+        await Install(Archive("0.1.0"));
+
         string corrupt = Path.Combine(_tempDir, "corrupt.zip");
         await File.WriteAllTextAsync(corrupt, "this is not a zip");
 
-        Func<Task> act = () =>
-            _manager.InstallPluginArchiveAsync(corrupt, null, CancellationToken.None);
+        Func<Task> act = () => Install(corrupt);
 
         await act.Should().ThrowAsync<InvalidDataException>();
 
-        File.ReadAllText(Installed("plugin.json"))
-            .Should()
-            .Be(manifestBefore, "a failed install must leave the working one exactly as it was");
-        File.ReadAllText(Installed(AssemblyName)).Should().Be("MZ 1.0.0");
-    }
-
-    [Fact]
-    public async Task ASuccessfulInstall_LeavesNothingStagedBehind()
-    {
-        await InstallIgnoringLoad(Archive("1.0.0"));
-
-        Directory
-            .Exists(Path.Combine(_pluginsDir, PendingUpdates))
-            .Should()
-            .BeFalse("staging is where an update waits, not where it accumulates");
+        InstalledManifest().Should().Contain("0.1.0");
+        _manager.GetInstalledPlugins().Should().ContainSingle(plugin => plugin.Name == "Echo");
     }
 
     /// <summary>
-    /// The boot scan must not treat the staging folder as a plugin: it holds
-    /// versions that are not installed yet, and loading one would run something
-    /// the rest of the server does not know about.
+    /// An archive whose manifest names an assembly it does not carry is refused
+    /// while it is still staged, so the installed copy is never disturbed.
     /// </summary>
     [Fact]
-    public async Task AStagedUpdate_IsAppliedOnTheNextStartAndNotLoadedFromStaging()
+    public async Task AnArchiveMissingItsAssembly_IsRefusedBeforeAnythingIsReplaced()
     {
-        await InstallIgnoringLoad(Archive("1.0.0"));
+        await Install(Archive("0.1.0"));
 
-        // What a locked assembly leaves behind, written directly because the
-        // lock itself cannot be reproduced without loading a real plugin.
-        string staged = Path.Combine(
-            _pluginsDir,
-            PendingUpdates,
-            FolderName
-        );
-        Directory.CreateDirectory(Path.Combine(staged, "lang"));
-        await File.WriteAllTextAsync(Path.Combine(staged, "plugin.json"), Manifest("1.2.0"));
-        await File.WriteAllTextAsync(Path.Combine(staged, AssemblyName), "MZ 1.2.0");
+        string path = Path.Combine(_tempDir, "no-assembly.zip");
+
+        using (ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create))
+        using (
+            StreamWriter writer = new(
+                archive.CreateEntry($"{FolderName}/plugin.json").Open(),
+                Encoding.UTF8
+            )
+        )
+        {
+            writer.Write(Manifest("0.2.0"));
+        }
+
+        Func<Task> act = () => Install(path);
+
+        await act.Should().ThrowAsync<PluginVerificationException>();
+
+        InstalledManifest().Should().Contain("0.1.0");
+    }
+
+    [Fact]
+    public async Task ASuccessfulUpdate_LeavesNothingStagedBehind()
+    {
+        await Install(Archive("0.1.0"));
+        await Install(Archive("0.2.0"));
+
+        Directory
+            .Exists(Path.Combine(_pluginsDir, Staging))
+            .Should()
+            .BeFalse("staging is where an update is checked, not where it accumulates");
+    }
+
+    /// <summary>
+    /// A backup left over from an update that finished must never be put back.
+    /// <para>
+    /// The backup often cannot be deleted the moment the update succeeds:
+    /// Windows lets a just-unloaded assembly be renamed but not yet removed, and
+    /// the context goes when the GC collects it. So one can still be sitting
+    /// there at the next start, and the recovery pass has to tell it apart from
+    /// a backup whose update never finished - by whether the plugin folder is
+    /// there. Getting that wrong would silently downgrade a plugin on every boot.
+    /// </para>
+    /// <para>
+    /// Whether the folder is actually gone afterwards is not asserted. In a real
+    /// restart nothing holds the old assembly and it is; inside one test process
+    /// the previous load context may still be alive, and that is the runtime's
+    /// timing rather than this behaviour.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task ABackupFromAFinishedUpdate_IsNeverRestoredOverIt()
+    {
+        await Install(Archive("0.1.0"));
+        await Install(Archive("0.2.0"));
+
+        await _manager.LoadPluginsFromDirectoryAsync(CancellationToken.None);
+
+        InstalledManifest()
+            .Should()
+            .Contain("0.2.0", "the update finished, so its backup is stale and must be ignored");
+        _manager
+            .GetInstalledPlugins()
+            .Should()
+            .ContainSingle(plugin => plugin.Name == "Echo");
+    }
+
+    /// <summary>
+    /// A backup whose update never finished is the only copy of that plugin, so
+    /// the same pass puts it back rather than removing it.
+    /// </summary>
+    [Fact]
+    public async Task ABackupWhoseUpdateNeverFinished_IsRestoredOnTheNextStart()
+    {
+        await Install(Archive("0.1.0"));
+
+        // What a process that died between "moved the installed copy aside" and
+        // "put the new one in place" leaves behind.
+        string backup = Path.Combine(_pluginsDir, Rollback, FolderName);
+        Directory.CreateDirectory(Path.Combine(_pluginsDir, Rollback));
+        Directory.Move(Path.Combine(_pluginsDir, FolderName), backup);
+
+        Directory.Exists(Path.Combine(_pluginsDir, FolderName)).Should().BeFalse();
+
+        await _manager.LoadPluginsFromDirectoryAsync(CancellationToken.None);
+
+        File.ReadAllText(Installed("plugin.json"))
+            .Should()
+            .Contain("0.1.0", "the copy in the backup is the only one that plugin has left");
+    }
+
+    /// <summary>
+    /// The working folders sit inside the plugins directory, so the boot scan
+    /// has to know they are not plugins — loading one would run a version the
+    /// rest of the server does not know about.
+    /// </summary>
+    [Fact]
+    public async Task TheBootScan_IgnoresTheWorkingFolders()
+    {
+        await Install(Archive("0.1.0"));
+
+        Directory.CreateDirectory(Path.Combine(_pluginsDir, Staging, FolderName));
         await File.WriteAllTextAsync(
-            Path.Combine(staged, "lang", "en.json"),
-            """{"version":"1.2.0"}"""
+            Path.Combine(_pluginsDir, Staging, FolderName, "plugin.json"),
+            Manifest("9.9.9")
         );
 
         await _manager.LoadPluginsFromDirectoryAsync(CancellationToken.None);
 
-        File.ReadAllText(Installed(AssemblyName))
+        _manager
+            .GetInstalledPlugins()
             .Should()
-            .Be("MZ 1.2.0", "the restart is when the files are free to be replaced");
-        File.ReadAllText(Installed("plugin.json")).Should().Contain("1.2.0");
-        File.ReadAllText(Installed("lang", "en.json")).Should().Contain("1.2.0");
-        Directory
-            .Exists(staged)
-            .Should()
-            .BeFalse("an update that has landed is no longer pending");
+            .ContainSingle(
+                plugin => plugin.Name == "Echo",
+                "the staged copy is not a second installed plugin"
+            );
     }
 }

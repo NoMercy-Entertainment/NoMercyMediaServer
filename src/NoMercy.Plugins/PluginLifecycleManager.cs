@@ -170,6 +170,48 @@ internal sealed class PluginLifecycleManager(
         );
     }
 
+    /// <summary>
+    /// Takes a plugin out of the process so its files can be replaced, and
+    /// leaves everything on disk exactly where it is.
+    /// <para>
+    /// Uninstall does this too, but it also deletes the directory and announces
+    /// that the plugin is gone. An update is neither: the files are about to be
+    /// replaced by a newer copy of the same plugin, and it comes back a moment
+    /// later. Returns whether anything was actually resident, so a caller can
+    /// tell "unloaded it" from "there was nothing to unload".
+    /// </para>
+    /// <para>
+    /// No event is published. The plugin is momentarily absent, but every
+    /// subscriber that would hear a disable would hear a load again within the
+    /// same call, and a pair of those describes a disruption that did not
+    /// happen. The load at the end of the update is what gets announced.
+    /// </para>
+    /// <para>
+    /// Note that <c>Unload()</c> only asks. The context goes when the GC
+    /// collects it, so the files stay held for a moment after this returns and
+    /// the caller has to wait for them rather than assume.
+    /// </para>
+    /// </summary>
+    public Task<bool> UnloadForUpdateAsync(Ulid pluginId, CancellationToken ct = default)
+    {
+        if (!_registry.TryRemove(pluginId, out LoadedPlugin? loaded))
+        {
+            return Task.FromResult(false);
+        }
+
+        _releaseScheduledWork?.Invoke(pluginId);
+
+        loaded.Instance?.Dispose();
+
+        if (loaded.LoadContext is not null)
+        {
+            _assemblyTracker?.TrackUnload(pluginId, loaded.Info.AssemblyPath);
+            loaded.LoadContext.Unload();
+        }
+
+        return Task.FromResult(true);
+    }
+
     public async Task UninstallPluginAsync(Ulid pluginId, CancellationToken ct = default)
     {
         if (!_registry.TryRemove(pluginId, out LoadedPlugin? loaded))
