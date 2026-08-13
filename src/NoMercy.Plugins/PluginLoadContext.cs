@@ -17,31 +17,42 @@ namespace NoMercy.Plugins;
 public class PluginLoadContext : AssemblyLoadContext
 {
     private readonly AssemblyDependencyResolver _resolver;
-
-    // Assemblies whose type identity must be preserved across the host/plugin
-    // boundary. Defaults come from PluginHostOptions; callers may pass a custom
-    // set (e.g. resolved from IOptions<PluginHostOptions>).
+    private readonly string _pluginDir;
     private readonly IReadOnlySet<string> _sharedAssemblies;
 
     public PluginLoadContext(string pluginPath, IReadOnlySet<string>? sharedAssemblies = null)
         : base(isCollectible: true)
     {
         _resolver = new(pluginPath);
+        _pluginDir = Path.GetDirectoryName(pluginPath)
+                     ?? throw new InvalidOperationException("Plugin directory could not be determined.");
+
         _sharedAssemblies = sharedAssemblies ?? PluginHostOptions.DefaultSharedAssemblies;
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        // Return null for shared assemblies so the runtime falls back to the default
-        // AssemblyLoadContext. This preserves type identity across the host/plugin boundary.
+        // Shared assemblies → host resolves
         if (assemblyName.Name is not null && _sharedAssemblies.Contains(assemblyName.Name))
             return null;
 
-        string? assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
-        if (assemblyPath is not null)
+        // Framework assemblies → host resolves
+        if (assemblyName.Name is not null &&
+            (assemblyName.Name.StartsWith("System.", StringComparison.Ordinal) ||
+             assemblyName.Name == "System.Private.CoreLib"))
         {
-            return LoadFromAssemblyPath(assemblyPath);
+            return null;
         }
+
+        // Resolver first
+        string? resolved = _resolver.ResolveAssemblyToPath(assemblyName);
+        if (resolved is not null)
+            return LoadFromAssemblyPath(resolved);
+
+        // Fallback: plugin directory
+        string candidate = Path.Combine(_pluginDir, assemblyName.Name + ".dll");
+        if (File.Exists(candidate))
+            return LoadFromAssemblyPath(candidate);
 
         return null;
     }

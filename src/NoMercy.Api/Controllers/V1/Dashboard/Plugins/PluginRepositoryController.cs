@@ -164,7 +164,7 @@ public class PluginRepositoryController(
         if (target is null)
             return NotFoundResponse("The catalogue does not carry that version");
 
-        string stagingDirectory = Path.Combine(
+        string stagingDirectory = storageDriver.CombinePath(
             AppFiles.TempPath,
             $"plugin-fetch-{Ulid.NewUlid():N}"
         );
@@ -172,7 +172,7 @@ public class PluginRepositoryController(
         // single assembly publishes an archive. Staging it under the wrong
         // extension would hand a zip to the assembly loader.
         bool isArchive = target.DownloadUrl.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
-        string stagedPath = Path.Combine(
+        string stagedPath = storageDriver.CombinePath(
             stagingDirectory,
             $"{entry.Name}{(isArchive ? ".zip" : ".dll")}"
         );

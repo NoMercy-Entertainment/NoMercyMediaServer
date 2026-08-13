@@ -104,9 +104,9 @@ internal sealed class PluginLoader(
 
             await ReportTranslationProblemsAsync(manifest, pluginDir, manifestPath, ct);
 
-            string assemblyPath = Path.Combine(pluginDir, manifest.Assembly);
+            string assemblyPath = _storage.CombinePath(pluginDir, manifest.Assembly);
 
-            if (!_storage.Exists(assemblyPath))
+            if (!await _storage.ExistsAsync(assemblyPath, ct))
             {
                 _logger.LogWarning(
                     "Plugin manifest {ManifestPath} references assembly '{Assembly}' which was not found.",
@@ -176,6 +176,7 @@ internal sealed class PluginLoader(
             try
             {
                 Assembly assembly = loadContext.LoadFromAssemblyPath(absoluteAssemblyPath);
+                Type[] x = assembly.GetTypes();
                 List<Type> pluginTypes = assembly
                     .GetTypes()
                     .Where(t =>

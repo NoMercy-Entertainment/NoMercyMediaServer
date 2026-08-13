@@ -70,7 +70,7 @@ public class PluginManager : IPluginManager, IDisposable
             ?? new PluginConsentService(
                 new ConfigPluginConsentStore(
                     new PluginConfiguration(
-                        Path.Combine(_pluginsPath, "data", "platform"),
+                        _storage.CombinePath(_pluginsPath, "data", "platform"),
                         _storage
                     )
                 )
@@ -124,7 +124,7 @@ public class PluginManager : IPluginManager, IDisposable
     }
 
     private PluginConfiguration PlatformConfiguration() =>
-        new(Path.Combine(_pluginsPath, "data", "platform"), _storage);
+        new(_storage.CombinePath(_pluginsPath, "data", "platform"), _storage);
 
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
     {
@@ -184,14 +184,14 @@ public class PluginManager : IPluginManager, IDisposable
         }
 
         string pluginName = Path.GetFileNameWithoutExtension(fullPath);
-        string pluginDir = Path.Combine(_pluginsPath, pluginName);
+        string pluginDir = _storage.CombinePath(_pluginsPath, pluginName);
 
-        if (!_storage.Exists(pluginDir))
+        if (!await _storage.ExistsAsync(pluginDir, ct))
         {
-            _storage.CreateDirectory(pluginDir);
+            await _storage.CreateDirectoryAsync(pluginDir, ct);
         }
 
-        string destPath = Path.Combine(pluginDir, Path.GetFileName(fullPath));
+        string destPath = _storage.CombinePath(pluginDir, Path.GetFileName(fullPath));
         _driver.CopyFile(fullPath, destPath, overwrite: true);
 
         await LoadPluginAssemblyAsync(destPath, ct);
@@ -226,11 +226,11 @@ public class PluginManager : IPluginManager, IDisposable
             }
         }
 
-        using ZipArchive archive = ZipFile.OpenRead(fullPath);
+        await using ZipArchive archive = await ZipFile.OpenReadAsync(fullPath, ct);
 
         PluginManifestEntry manifest = FindManifest(archive, fullPath);
-        string pluginDir = Path.Combine(_pluginsPath, manifest.FolderName);
-        string staging = Path.Combine(_pluginsPath, PendingUpdatesFolder, manifest.FolderName);
+        string pluginDir = _storage.CombinePath(_pluginsPath, manifest.FolderName);
+        string staging = _storage.CombinePath(_pluginsPath, PendingUpdatesFolder, manifest.FolderName);
 
         // Unpacked beside the installed copy, never over it. Extraction writes
         // one entry at a time, so anything that fails part way through used to
@@ -265,7 +265,7 @@ public class PluginManager : IPluginManager, IDisposable
 
         ApplyStaged(staging, pluginDir);
 
-        await LoadPluginAssemblyAsync(Path.Combine(pluginDir, manifest.AssemblyFileName), ct);
+        await LoadPluginAssemblyAsync(_storage.CombinePath(pluginDir, manifest.AssemblyFileName), ct);
     }
 
     /// <summary>
@@ -323,7 +323,7 @@ public class PluginManager : IPluginManager, IDisposable
             }
 
             string relative = Path.GetRelativePath(staging, info.Path);
-            string destination = Path.Combine(pluginDir, relative);
+            string destination = _storage.CombinePath(pluginDir, relative);
             string? parent = Path.GetDirectoryName(destination);
 
             if (parent is not null && !_driver.DirectoryExists(parent))
@@ -331,11 +331,9 @@ public class PluginManager : IPluginManager, IDisposable
                 _driver.CreateDirectory(parent);
             }
 
-            using (Stream source = _driver.OpenRead(info.Path))
-            using (Stream target = _driver.OpenWrite(destination, overwrite: true))
-            {
-                source.CopyTo(target);
-            }
+            using Stream source = _driver.OpenRead(info.Path);
+            using Stream target = _driver.OpenWrite(destination, overwrite: true);
+            source.CopyTo(target);
         }
 
         _driver.DeleteDirectory(staging, recursive: true);
@@ -343,7 +341,7 @@ public class PluginManager : IPluginManager, IDisposable
         // And the folder they wait in, once the last one has gone. An empty
         // .pending-updates sitting in the plugins directory reads like something
         // is still queued when nothing is.
-        string pending = Path.Combine(_pluginsPath, PendingUpdatesFolder);
+        string pending = _storage.CombinePath(_pluginsPath, PendingUpdatesFolder);
 
         if (
             _driver.DirectoryExists(pending)
@@ -365,7 +363,7 @@ public class PluginManager : IPluginManager, IDisposable
     /// </summary>
     private void ApplyPendingUpdates()
     {
-        string pending = Path.Combine(_pluginsPath, PendingUpdatesFolder);
+        string pending = _storage.CombinePath(_pluginsPath, PendingUpdatesFolder);
 
         if (!_driver.DirectoryExists(pending))
         {
@@ -387,7 +385,7 @@ public class PluginManager : IPluginManager, IDisposable
 
             try
             {
-                ApplyStaged(entry.Path, Path.Combine(_pluginsPath, folderName));
+                ApplyStaged(entry.Path, _storage.CombinePath(_pluginsPath, folderName));
 
                 _logger.LogInformation(
                     "Applied the staged update for {Folder}.",
@@ -479,7 +477,7 @@ public class PluginManager : IPluginManager, IDisposable
             }
 
             string relative = entry.FullName[manifest.Prefix.Length..];
-            string destination = Path.GetFullPath(Path.Combine(root, relative));
+            string destination = Path.GetFullPath(_storage.CombinePath(root, relative));
 
             // The archive names its own entries, so an entry may name a path.
             // Resolve first and refuse anything that lands outside the plugin's
@@ -585,7 +583,7 @@ public class PluginManager : IPluginManager, IDisposable
 
             try
             {
-                string manifestPath = Path.Combine(pluginDir, "plugin.json");
+                string manifestPath = _storage.CombinePath(pluginDir, "plugin.json");
                 if (_storage.Exists(manifestPath))
                 {
                     await LoadPluginFromManifestAsync(manifestPath, ct);
@@ -714,7 +712,7 @@ public class PluginManager : IPluginManager, IDisposable
         // written in, never in empty labels.
         string wanted = declared.Locales.Contains(locale) ? locale : declared.Source;
 
-        return await ReadLocaleFileAsync(Path.Combine(root, declared.Path), wanted, ct);
+        return await ReadLocaleFileAsync(_storage.CombinePath(root, declared.Path), wanted, ct);
     }
 
     private static readonly JsonSerializerOptions TranslationJson = new()
@@ -728,7 +726,7 @@ public class PluginManager : IPluginManager, IDisposable
         CancellationToken ct
     )
     {
-        string path = Path.Combine(directory, $"{locale}.json");
+        string path = _storage.CombinePath(directory, $"{locale}.json");
 
         if (!_storage.Exists(path))
             return null;
