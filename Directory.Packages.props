@@ -14,6 +14,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.7" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Extensions" Version="2.3.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc" Version="2.3.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.3.12" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.7" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
@@ -160,5 +161,9 @@
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
+    <!-- SSH.NET transitive via Testcontainers: 2025.1.0 carries NU1903 / GHSA-q939-rpr3-3284
+         (ScpClient recursive download allows arbitrary file write via server-controlled SCP
+         filenames). 2026.0.0 is the patched release. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
 </Project>
