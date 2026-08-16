@@ -22,6 +22,7 @@ using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Pipeline.Optimizer;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
+using NoMercyQueue.Core.Resources;
 
 namespace NoMercy.Encoder.Pipeline.Stages;
 
@@ -1286,22 +1287,38 @@ public class PlanStage(
             Layout: layout,
             GenerateChapterThumbs: generateChapterThumbs,
             EmitSubtitleWebVttChunks: emitSubtitleChunks,
-            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments),
+            GlobalExtraFlags: BuildGlobalExtraFlags(profile.CustomArguments, context.Resources),
             NormalizeToConstantFrameRate: media.VideoStreams.Count > 0
                 && media.VideoStreams[0].IsVariableFrameRate
         );
     }
 
-    // Cap ffmpeg's global thread count so a single encode leaves the host usable
-    // instead of auto-threading across every core. Reserve ~a quarter of the cores
-    // (at least one) for the OS and whoever is using the machine. The user's own
-    // -threads in CustomArguments overrides this (user override is non-negotiable).
+    // Cap ffmpeg's global thread count so concurrent encodes never collectively
+    // ask the OS for more threads than IResourceBudget actually reserved for
+    // them. When this run is a coordinator's decomposed task, resources carries
+    // the exact CpuThreads TaskResourceHelper sized for it at decompose time —
+    // the same number the budget semaphore gated concurrency on — so this must
+    // match it exactly, not compute an independent "quarter of the host" share:
+    // that mismatch let N budget-compliant concurrent tasks each spawn a
+    // full-width ffmpeg process and peg the host regardless of N. No task
+    // context (preview, live-transcode) falls back to the flat host-fraction
+    // default. The user's own -threads in CustomArguments overrides either
+    // (user override is non-negotiable).
     private static Dictionary<string, string> BuildGlobalExtraFlags(
-        Dictionary<string, string>? customArguments
+        Dictionary<string, string>? customArguments,
+        ResourceRequirement? resources
     )
     {
-        int reserved = Math.Max(1, Environment.ProcessorCount / 4);
-        int encodeThreads = Math.Max(1, Environment.ProcessorCount - reserved);
+        int encodeThreads;
+        if (resources is { CpuThreads: > 0 })
+        {
+            encodeThreads = resources.CpuThreads;
+        }
+        else
+        {
+            int reserved = Math.Max(1, Environment.ProcessorCount / 4);
+            encodeThreads = Math.Max(1, Environment.ProcessorCount - reserved);
+        }
 
         Dictionary<string, string> flags = new() { ["-threads"] = encodeThreads.ToString() };
 

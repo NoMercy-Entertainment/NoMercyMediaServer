@@ -15,9 +15,11 @@ using NoMercy.Encoder.Profiles;
 using NoMercy.Events;
 using NoMercy.Events.Encoding;
 using NoMercy.MediaProcessing.Files;
+using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 using Logger = NoMercy.NmSystem.SystemCalls.Logger;
 
@@ -36,13 +38,20 @@ namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 /// is already there, so re-queuing across scans until it lands is harmless.</para>
 /// </summary>
 [Serializable]
-public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector
+public class SpriteSheetUpgradeJob : IShouldQueue, IJobStorageInjector, IHasResourceRequirement
 {
     // The encoder queue, because this is an ffmpeg run and must not compete with
     // encodes for the same hardware. Below a real encode's priority (4) so live
     // work always drains first — nobody is waiting on a preview.
     public string QueueName => "encoder";
     public int Priority => 1;
+
+    // "Must not compete with encodes for the same hardware" was only ever true
+    // once this shipped: the sample rate/scale/pad chain never carried a
+    // ResourceRequirement, so the budget gate had nothing to throttle it by and
+    // several of these ran fully concurrently.
+    public ResourceRequirement? ResourceRequirement =>
+        new(GpuDeviceKey: null, GpuSlots: 0, CpuThreads: EncodeThreadBudget.ThumbnailSpriteRefresh);
 
     public string FolderId { get; set; } = string.Empty;
     public string DriverId { get; set; } = string.Empty;

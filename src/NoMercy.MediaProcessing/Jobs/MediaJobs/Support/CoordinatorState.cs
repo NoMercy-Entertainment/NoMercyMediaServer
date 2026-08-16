@@ -88,7 +88,19 @@ public sealed record CoordinatorState(
     /// FinalizeOnly pass writes one master playlist listing every preset's
     /// video rendition instead of re-deriving a plan from a single preset.
     /// </summary>
-    Ulid[]? PresetIds = null
+    Ulid[]? PresetIds = null,
+    /// <summary>
+    /// Two-pass runs only: the Pass2 + auxiliary (audio/subtitle/thumbnail)
+    /// bundles, held here while <see cref="Bundles"/> is occupied running the
+    /// Pass1 bundles under <see cref="CoordinatorPhase.WaitPass1"/>. Once every
+    /// Pass1 bundle succeeds, the coordinator resolves the shared stats path,
+    /// patches it onto the Pass2 entries here, and promotes this array to
+    /// <see cref="Bundles"/> (index reset to 0) for
+    /// <see cref="CoordinatorPhase.WaitChildren"/> — the same sequential
+    /// one-bundle-per-wake-up mechanism runs both waves. Null for every
+    /// single-pass run.
+    /// </summary>
+    DecomposedTask[]? PendingBundles = null
 );
 
 /// <summary>

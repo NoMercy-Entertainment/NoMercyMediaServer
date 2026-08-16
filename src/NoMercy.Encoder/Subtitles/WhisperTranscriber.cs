@@ -14,6 +14,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Subtitles;
@@ -92,6 +93,8 @@ public class WhisperTranscriber(
             "-vn",
             "-af",
             whisperFilter,
+            "-threads",
+            EncodeThreadBudget.AuxiliaryPass.ToString(),
             "-f",
             "null",
             "-",

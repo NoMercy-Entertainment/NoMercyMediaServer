@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using System.Text;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.BuildingBlocks;
@@ -16,6 +17,7 @@ using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.Progress;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.PostProcess;
@@ -78,10 +80,19 @@ public class SpriteSheetRefresher(
                             tonemapChain: null,
                             padToCells: grid.CellCount
                         ),
-                        ["-frames:v"] = grid.CellCount.ToString(),
+                        ["-frames:v"] = grid.CellCount.ToString(CultureInfo.InvariantCulture),
                         ["-f"] = "spritevtt",
-                        ["-sprite_columns"] = grid.Columns.ToString(),
+                        ["-sprite_columns"] = grid.Columns.ToString(CultureInfo.InvariantCulture),
                         ["-vtt_filename"] = vttName,
+                        ["-threads"] = EncodeThreadBudget.AuxiliaryPass.ToString(
+                            CultureInfo.InvariantCulture
+                        ),
+                        // -threads bounds the decoder; the fps/scale/tpad chain
+                        // runs on ffmpeg's separate filter thread pool, uncapped
+                        // by -threads alone.
+                        ["-filter_threads"] = EncodeThreadBudget.AuxiliaryPass.ToString(
+                            CultureInfo.InvariantCulture
+                        ),
                     }
                 )
             )

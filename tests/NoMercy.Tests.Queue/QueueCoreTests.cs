@@ -582,13 +582,6 @@ public class QueueCoreTests
                 && currentJobId == null
             );
 
-        public QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now) =>
-            _jobs.Where(j => j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now)
-                .OrderByDescending(j => j.Priority)
-                .ThenBy(j => j.CreatedAt)
-                .ThenBy(j => j.Id)
-                .FirstOrDefault();
-
         public QueueJobModel? FindJob(int id) => _jobs.FirstOrDefault(j => j.Id == id);
 
         public bool JobExists(string payload) => _jobs.Any(j => j.Payload == payload);
@@ -612,18 +605,18 @@ public class QueueCoreTests
         }
 
         public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
-            _jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
+            [.. _jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)];
 
         public IReadOnlyList<QueueJobModel> GetStrandedJobs(
             byte maxAttempts,
             byte maxInterruptions
         ) =>
-            _jobs
-                .Where(j =>
+            [
+                .. _jobs.Where(j =>
                     j.ReservedAt == null
                     && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
-                )
-                .ToList();
+                ),
+            ];
 
         public void AddFailedJob(FailedJobModel failedJob)
         {

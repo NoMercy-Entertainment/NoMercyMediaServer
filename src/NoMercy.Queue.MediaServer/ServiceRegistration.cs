@@ -76,8 +76,13 @@ public static class ServiceRegistration
                     [rs.PaletteWorkers.Key] = rs.PaletteWorkers.Value,
                 },
             };
+            // "encoder" carries its own resource requirement now — the SAME row
+            // that decomposes also runs each bundle's ffmpeg inline, so the one
+            // queue that used to be pure (cheap, ungated) dispatch work is also
+            // where the actual encode executes. See VideoEncodeJob.ResourceRequirement.
             IReadOnlySet<string> resourceAwareQueues = new HashSet<string>
             {
+                rs.EncoderWorkers.Key,
                 rs.GpuEncoderWorkers.Key,
                 rs.CpuEncoderWorkers.Key,
             };

@@ -17,6 +17,7 @@ using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.Subtitles;
@@ -104,15 +105,28 @@ public partial class SubtitleOcrEngine(
                 "-filter_complex",
                 $"[0:s:{streamIndex}]ocr=language={language},metadata=print:key=lavfi.ocr.text:file={ocrFileName}",
                 "-an",
+                "-threads",
+                EncodeThreadBudget.AuxiliaryPass.ToString(CultureInfo.InvariantCulture),
+                "-filter_complex_threads",
+                EncodeThreadBudget.AuxiliaryPass.ToString(CultureInfo.InvariantCulture),
                 "-f",
                 "null",
                 "-",
             ];
 
+            string auxThreads = EncodeThreadBudget.AuxiliaryPass.ToString(
+                CultureInfo.InvariantCulture
+            );
             ProcessResult result = await processRunner.RunAsync(
                 options.FfmpegPath,
                 args,
-                new Dictionary<string, string> { ["TESSDATA_PREFIX"] = modelDirectory },
+                new Dictionary<string, string>
+                {
+                    ["TESSDATA_PREFIX"] = modelDirectory,
+                    // libtesseract's own OpenMP pool ignores ffmpeg's -threads flag.
+                    ["OMP_THREAD_LIMIT"] = auxThreads,
+                    ["OMP_NUM_THREADS"] = auxThreads,
+                },
                 workingDirectory: tempDirectory,
                 cancellationToken: ct
             );

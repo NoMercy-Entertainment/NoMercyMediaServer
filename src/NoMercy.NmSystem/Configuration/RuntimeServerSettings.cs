@@ -37,9 +37,6 @@ public class RuntimeServerSettings
 
     public KeyValuePair<string, int> EncoderWorkers { get; set; } = new(QueueNames.Encoder, 1);
 
-    public KeyValuePair<string, int> EncoderTaskWorkers { get; set; } =
-        new(QueueNames.EncoderTask, 0);
-
     public KeyValuePair<string, int> GpuEncoderWorkers { get; set; } =
         new(QueueNames.EncoderGpu, 1);
 

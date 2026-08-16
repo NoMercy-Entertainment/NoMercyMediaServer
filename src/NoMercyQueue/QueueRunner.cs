@@ -44,13 +44,14 @@ public class QueueRunner
     // several boot paths (bootstrapper, deferred init, HTTPS/port rebuild) that can
     // overlap; without this a plain check-then-set let two callers both pass the
     // guard and spawn duplicate worker sets.
-    private readonly object _initializationLock = new();
+    private readonly Lock _initializationLock = new();
 
     private readonly ConcurrentDictionary<string, Thread> _activeWorkerThreads = new();
 
     private readonly JobQueue _jobQueue;
     public readonly JobDispatcher Dispatcher;
     private readonly IConfigurationStore? _configurationStore;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<QueueRunner> _logger;
     private readonly IServiceScopeFactory? _scopeFactory;
     private readonly NoMercy.NmSystem.Lifecycle.IServerPhaseTracker? _phaseTracker;
@@ -88,6 +89,7 @@ public class QueueRunner
         IReadOnlyDictionary<string, NoMercy.NmSystem.Lifecycle.BootStage>? queueReadyStages = null
     )
     {
+        _loggerFactory = loggerFactory;
         _configurationStore = configurationStore;
         _scopeFactory = scopeFactory;
         _phaseTracker = phaseTracker;
@@ -147,7 +149,11 @@ public class QueueRunner
         }
 
         _logger.LogInformation(
-            "Queue workers spawned per queue: {Counts} (total {Total})", [string.Join(", ", spawnedPerQueue.Select(kvp => $"{kvp.Key}={kvp.Value}")), workerCount]
+            "Queue workers spawned per queue: {Counts} (total {Total})",
+            [
+                string.Join(", ", spawnedPerQueue.Select(kvp => $"{kvp.Key}={kvp.Value}")),
+                workerCount,
+            ]
         );
 
         // Restore any queues that were persisted as paused before the last shutdown.
@@ -215,17 +221,16 @@ public class QueueRunner
             _jobQueue,
             name: name,
             runner: this,
+            logger: _loggerFactory.CreateLogger<QueueWorker>(),
             scopeFactory: _scopeFactory,
             phaseTracker: _phaseTracker,
             resourceBudget: budget,
             resourceAwareQueues: _resourceAwareQueues,
             activityGate: _activityGate,
-            readyStage: _queueReadyStages.TryGetValue(
+            readyStage: _queueReadyStages.GetValueOrDefault(
                 name,
-                out NoMercy.NmSystem.Lifecycle.BootStage stage
+                NoMercy.NmSystem.Lifecycle.BootStage.All
             )
-                ? stage
-                : NoMercy.NmSystem.Lifecycle.BootStage.All
         );
 
         queueWorkerInstance.WorkCompleted += QueueWorkerCompleted(name, queueWorkerInstance);
@@ -250,6 +255,11 @@ public class QueueRunner
 
         foreach (QueueWorker workerInstance in snapshot)
             workerInstance.Start();
+
+        // Self-heal: if this queue somehow has fewer live instances than its
+        // configured target (for example after a crash/dispose path), spawn the
+        // missing workers here instead of leaving Resume/Start as a no-op.
+        UpdateRunningWorkerCounts(name);
 
         return Task.CompletedTask;
     }
@@ -344,6 +354,10 @@ public class QueueRunner
     /// </summary>
     public async Task Resume(string name)
     {
+        // Resume should recover from a stale/stuck poll loop, not only from an
+        // explicit pause. Restart existing instances and then let Start() heal
+        // any missing worker instances for this queue.
+        await Restart(name);
         await Start(name);
 
         if (_configurationStore is not null)
@@ -454,7 +468,8 @@ public class QueueRunner
         workerTask.ContinueWith(
             t =>
                 _logger.LogError(
-                    "UpdateRunningWorkerCounts for {Name} failed: {Message}", [name, t.Exception?.GetBaseException().Message]
+                    "UpdateRunningWorkerCounts for {Name} failed: {Message}",
+                    [name, t.Exception?.GetBaseException().Message]
                 ),
             TaskContinuationOptions.OnlyOnFaulted
         );

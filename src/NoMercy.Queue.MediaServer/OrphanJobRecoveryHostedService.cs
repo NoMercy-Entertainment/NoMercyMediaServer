@@ -52,6 +52,7 @@ public class OrphanJobRecoveryHostedService(
     internal static readonly string[] EncoderQueues =
     [
         QueueNames.Encoder,
+        QueueNames.EncoderTask,
         QueueNames.EncoderGpu,
         QueueNames.EncoderCpu,
     ];

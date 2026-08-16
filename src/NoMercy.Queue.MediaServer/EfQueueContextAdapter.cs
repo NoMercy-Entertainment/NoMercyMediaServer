@@ -42,7 +42,6 @@ public class EfQueueContextAdapter : IQueueContext
                 .Where(j => currentJobId == null)
                 .Where(j => j.Queue == name)
                 .OrderByDescending(j => j.Priority)
-                .ThenBy(j => j.CreatedAt)
                 .ThenBy(j => j.Id)
                 .FirstOrDefault()
     );
@@ -67,6 +66,55 @@ public class EfQueueContextAdapter : IQueueContext
     {
         _contextFactory = static () => new();
         _ownsContext = true;
+        DropLegacyEncoderTaskRows();
+    }
+
+    /// <summary>
+    /// One-time post-collapse migration: video encoding used to split a
+    /// coordinator (<c>encoder</c>) from a separate child job type dispatched
+    /// onto the <c>encoder-task</c> queue. That child job type no longer
+    /// exists in this build — every bundle now runs inline on the
+    /// coordinator's own row — so any row still sitting on <c>encoder-task</c>
+    /// belongs to a class this process can no longer deserialize.
+    /// <para>
+    /// Runs here, in the constructor, rather than as a hosted service: this
+    /// adapter is resolved (and this constructor runs) while
+    /// <c>QueueRunner</c> is being built, strictly before
+    /// <c>QueueRunner.Initialize()</c> spawns a single worker thread. A
+    /// worker that reserved one of these rows would fail to deserialize it,
+    /// and <c>JobQueue.FailJob</c> would walk that failure up the
+    /// <c>ParentJobId</c> chain and dead-letter the still-healthy coordinator
+    /// that dispatched it — exactly the in-flight-encode data loss this
+    /// upgrade must not cause. Deleting the row instead is safe: whatever it
+    /// already finished is durably recorded in <c>EncodeTaskOutcome</c>
+    /// (a separate table in <c>media.db</c>, untouched by this), and the
+    /// coordinator's own <c>Bundles</c>/<c>CurrentBundleIndex</c> state
+    /// already has everything it needs to redo that one bundle inline on its
+    /// next wake-up if it wasn't finished yet.
+    /// </para>
+    /// </summary>
+    private void DropLegacyEncoderTaskRows()
+    {
+        try
+        {
+            using QueueContext context = _contextFactory();
+            int removed = context
+                .QueueJobs.Where(job => job.Queue == QueueNames.EncoderTask)
+                .ExecuteDelete();
+
+            if (removed > 0)
+            {
+                Console.WriteLine(
+                    $"[EfQueueContextAdapter] Dropped {removed} legacy 'encoder-task' row(s) left over from the pre-collapse two-job-type encoder architecture."
+                );
+            }
+        }
+        catch
+        {
+            // Best-effort: a fresh/pre-migration database has no QueueJobs
+            // table yet (schema migrations run later in boot). Nothing to
+            // drop in that case, and nothing here may block construction.
+        }
     }
 
     /// <summary>
@@ -173,30 +221,12 @@ public class EfQueueContextAdapter : IQueueContext
             {
                 QueueJob? anyJob = context
                     .QueueJobs.OrderByDescending(j => j.Priority)
-                    .ThenBy(j => j.CreatedAt)
                     .ThenBy(j => j.Id)
                     .FirstOrDefault();
                 return anyJob == null ? null : ToModel(anyJob);
             }
 
             QueueJob? job = ReserveJobQuery(context, maxAttempts, queueName, currentJobId, now);
-            return job == null ? null : ToModel(job);
-        });
-    }
-
-    public QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now)
-    {
-        return Execute<QueueJobModel?>(context =>
-        {
-            QueueJob? job = context
-                .QueueJobs.Where(j =>
-                    j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
-                )
-                .OrderByDescending(j => j.Priority)
-                .ThenBy(j => j.CreatedAt)
-                .ThenBy(j => j.Id)
-                .FirstOrDefault();
-
             return job == null ? null : ToModel(job);
         });
     }
@@ -272,10 +302,12 @@ public class EfQueueContextAdapter : IQueueContext
     {
         return Execute(context =>
         {
-            List<QueueJob> rows = context
-                .QueueJobs.AsNoTracking()
-                .Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)
-                .ToList();
+            List<QueueJob> rows =
+            [
+                .. context
+                    .QueueJobs.AsNoTracking()
+                    .Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc),
+            ];
             return rows.Select(ToModel).ToList();
         });
     }
@@ -284,13 +316,15 @@ public class EfQueueContextAdapter : IQueueContext
     {
         return Execute(context =>
         {
-            List<QueueJob> rows = context
-                .QueueJobs.AsNoTracking()
-                .Where(j =>
-                    j.ReservedAt == null
-                    && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
-                )
-                .ToList();
+            List<QueueJob> rows =
+            [
+                .. context
+                    .QueueJobs.AsNoTracking()
+                    .Where(j =>
+                        j.ReservedAt == null
+                        && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
+                    ),
+            ];
             return rows.Select(ToModel).ToList();
         });
     }
@@ -382,8 +416,8 @@ public class EfQueueContextAdapter : IQueueContext
                 query = query.Where(j => j.Id == failedJobId.Value);
 
             return (IReadOnlyList<FailedJobModel>)
-                query
-                    .Select(j => new FailedJobModel
+                [
+                    .. query.Select(j => new FailedJobModel
                     {
                         Id = j.Id,
                         Uuid = j.Uuid,
@@ -393,8 +427,8 @@ public class EfQueueContextAdapter : IQueueContext
                         Exception = j.Exception,
                         FailedAt = j.FailedAt,
                         ParentJobId = j.ParentJobId,
-                    })
-                    .ToList();
+                    }),
+                ];
         });
     }
 
@@ -402,20 +436,21 @@ public class EfQueueContextAdapter : IQueueContext
     {
         return Execute(context =>
             (IReadOnlyList<CronJobModel>)
-                context
-                    .CronJobs.Where(c => c.IsEnabled)
-                    .Select(c => new CronJobModel
-                    {
-                        Id = c.Id,
-                        Name = c.Name,
-                        CronExpression = c.CronExpression,
-                        JobType = c.JobType,
-                        Parameters = c.Parameters,
-                        IsEnabled = c.IsEnabled,
-                        LastRun = c.LastRun,
-                        NextRun = c.NextRun,
-                    })
-                    .ToList()
+                [
+                    .. context
+                        .CronJobs.Where(c => c.IsEnabled)
+                        .Select(c => new CronJobModel
+                        {
+                            Id = c.Id,
+                            Name = c.Name,
+                            CronExpression = c.CronExpression,
+                            JobType = c.JobType,
+                            Parameters = c.Parameters,
+                            IsEnabled = c.IsEnabled,
+                            LastRun = c.LastRun,
+                            NextRun = c.NextRun,
+                        }),
+                ]
         );
     }
 

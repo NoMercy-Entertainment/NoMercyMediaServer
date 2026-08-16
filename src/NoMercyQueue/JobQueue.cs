@@ -71,23 +71,6 @@ public class JobQueue(
         }
     }
 
-    /// <summary>
-    /// Read-only look at whichever eligible job ranks first GLOBALLY (every
-    /// queue name, same Priority/CreatedAt/Id order the reserve query uses) —
-    /// does not reserve or remove it. Resource-aware workers use this to defer
-    /// to a higher-ranked job waiting on a DIFFERENT queue name before taking a
-    /// shared hardware budget slot for themselves; see its call site in
-    /// <see cref="Workers.QueueWorker"/> for why a per-queue lane's own FIFO
-    /// order is not enough once several lanes share one physical encoder.
-    /// </summary>
-    public QueueJobModel? PeekHighestRankedEligibleJob()
-    {
-        lock (_writeLock)
-        {
-            return context.PeekHighestRankedEligibleJob(255, DateTime.UtcNow);
-        }
-    }
-
     public QueueJobModel? ReserveJob(string name, long? currentJobId, int attempt = 0)
     {
         try

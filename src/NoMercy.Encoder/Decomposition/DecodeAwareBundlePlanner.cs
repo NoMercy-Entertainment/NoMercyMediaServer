@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Encoder.Output;
+using NoMercy.Resources;
 
 namespace NoMercy.Encoder.Decomposition;
 
@@ -379,7 +380,7 @@ public static class DecodeAwareBundlePlanner
             GroupTag: groupTag,
             Kind: EncodeTaskKind.Whole,
             OutputIndex: 0,
-            Resources: ResolveBundleResources(bundleTasks),
+            Resources: ResolveBundleResources(bundleTasks, includesThumbnails: thumbsForBundle),
             EstimatedCostUnits: bundleTasks.Sum(task => task.EstimatedCostUnits),
             Label: $"bundle {bundleIndex} ({videoCount} video / {totalCount} total)",
             BundledTaskIds: bundledIds,
@@ -409,7 +410,10 @@ public static class DecodeAwareBundlePlanner
     /// <c>cores - 1</c> so a real-world bundle still leaves headroom for
     /// SignalR / HTTP / other queue work to make progress.</para>
     /// </summary>
-    private static ResourceRequirement? ResolveBundleResources(DecomposedTask[] tasks)
+    private static ResourceRequirement? ResolveBundleResources(
+        DecomposedTask[] tasks,
+        bool includesThumbnails
+    )
     {
         string? gpuKey = tasks
             .Select(task => task.Resources?.GpuDeviceKey)
@@ -417,6 +421,14 @@ public static class DecodeAwareBundlePlanner
 
         int gpuSlots = tasks.Sum(task => task.Resources?.GpuSlots ?? 0);
         int summedCpuThreads = tasks.Sum(task => task.Resources?.CpuThreads ?? 0);
+
+        // A thumbnail strip is a flag on the bundle, not a per-stream task with
+        // its own Resources — so a thumbs-only bundle sums to zero here despite
+        // spawning a real ffmpeg decode+scale+pad pass (measured 6-7 real cores,
+        // see EncodeThreadBudget.ThumbnailSpriteRefresh). Summing it in is what
+        // makes the budget gate see it at all instead of granting it for free.
+        if (includesThumbnails)
+            summedCpuThreads += EncodeThreadBudget.ThumbnailSpriteRefresh;
 
         int cores = Math.Max(1, Environment.ProcessorCount);
         int cpuCap = Math.Max(1, cores - 1);

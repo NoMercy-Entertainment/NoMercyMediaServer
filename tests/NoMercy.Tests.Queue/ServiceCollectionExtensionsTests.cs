@@ -206,8 +206,6 @@ public class ServiceCollectionExtensionsTests
             DateTime now
         ) => null;
 
-        public QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now) => null;
-
         public QueueJobModel? FindJob(int id) => null;
 
         public bool JobExists(string payload) => false;

@@ -71,12 +71,13 @@ public class TasksController(
         // only shows the highest-priority pending tasks.
         List<QueueJob> jobs = await queueContext
             .QueueJobs.OrderByDescending(j => j.Priority)
-            .ThenBy(j => j.CreatedAt)
             .ThenBy(j => j.Id)
             .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
 
-        List<TaskDto> list = jobs.Select(job => new TaskDto
+        List<TaskDto> list =
+        [
+            .. jobs.Select(job => new TaskDto
             {
                 Id = job.Id.ToString(),
                 Title = ResolveJobTitle(job),
@@ -84,8 +85,8 @@ public class TasksController(
                 Type = job.Queue,
                 CreatedAt = job.CreatedAt,
                 UpdatedAt = job.ReservedAt ?? job.CreatedAt,
-            })
-            .ToList();
+            }),
+        ];
 
         return Ok(list);
     }
@@ -149,13 +150,11 @@ public class TasksController(
         QueueJobPlanDto? plan;
         try
         {
-            plan = QueueJobPlanMapper.Merge(
-                presetIds
-                    .Select(id =>
-                        QueueJobPlanMapper.FromProfile(PresetResolver.Resolve(id, lookup))
-                    )
-                    .ToArray()
-            );
+            plan = QueueJobPlanMapper.Merge([
+                .. presetIds.Select(id =>
+                    QueueJobPlanMapper.FromProfile(PresetResolver.Resolve(id, lookup))
+                ),
+            ]);
         }
         catch (Exception exception)
         {
@@ -258,12 +257,10 @@ public class TasksController(
         // sit at 4 and 0, so 13,779 music rows took every slot and the operator's
         // video encodes were missing from a panel that claimed to list the queue.
         // A share per band costs one small indexed query each and cannot starve.
-        // MusicEncodeJob runs on encoder-cpu (the same lane EncodeTaskJob's real
-        // ffmpeg work uses), not the plain 'encoder' coordinator queue, so every
-        // query below that used to read one queue now reads both — scoped to
-        // MusicEncodeJob payloads only, so encoder-cpu's own EncodeTaskJob rows
-        // (video's actual ffmpeg subtasks) never leak into this coordinator-level
-        // panel.
+        // MusicEncodeJob runs on encoder-cpu, not the plain 'encoder' queue video
+        // uses, so every query below that used to read one queue now reads both —
+        // scoped to MusicEncodeJob payloads only, so nothing else on encoder-cpu
+        // leaks into this panel.
         List<int> priorities = await queueContext
             .QueueJobs.AsNoTracking()
             .Where(j =>
@@ -290,8 +287,7 @@ public class TasksController(
                         )
                         && j.Priority == priority
                     )
-                    .OrderBy(j => j.CreatedAt)
-                    .ThenBy(j => j.Id)
+                    .OrderBy(j => j.Id)
                     .Take(perBand)
                     .ToListAsync()
             );
@@ -313,44 +309,15 @@ public class TasksController(
             .Take(UiLimits.MaximumTasksInList)
             .ToListAsync();
 
-        // A decomposed video encode's coordinator row is never reserved itself —
-        // it hands its work to child EncodeTaskJob rows on encoder-gpu/encoder-cpu
-        // and sits with ReservedAt == null while ffmpeg actually runs. The
-        // "running" query above only catches jobs reserved on THIS queue, so
-        // every in-flight video encode was invisible unless its coordinator also
-        // happened to land in the banded sample — on a deep queue it usually
-        // didn't, and the panel showed no video progress at all despite ffmpeg
-        // actively encoding.
-        List<string> activeChildMediaIds = (
-            await queueContext
-                .QueueJobs.AsNoTracking()
-                .Where(j => j.Queue.StartsWith("encoder-") && j.ReservedAt != null)
-                .Select(j => j.Payload)
-                .ToListAsync()
-        )
-            .Select(payload => payload.FromJson<EncodeTaskJob>()?.Id?.ToString())
-            .Where(id => !string.IsNullOrEmpty(id))
-            .Select(id => id!)
-            .Distinct()
-            .ToList();
-
-        List<QueueJob> activeCoordinators = [];
-        foreach (string mediaId in activeChildMediaIds)
-        {
-            activeCoordinators.AddRange(
-                await queueContext
-                    .QueueJobs.AsNoTracking()
-                    .Where(j => j.Queue == "encoder" && j.Payload.Contains($"\"id\":\"{mediaId}\""))
-                    .ToListAsync()
-            );
-        }
-
-        ImmutableList<QueueJob> jobs = banded
-            .Concat(running)
-            .Concat(activeCoordinators)
-            .GroupBy(row => row.Id)
-            .Select(group => group.First())
-            .ToImmutableList();
+        // A video encode is one job/one row end to end now — the SAME row that
+        // decomposed also runs every bundle's ffmpeg inline, so a runner
+        // actually working an encode holds this row's own reservation for as
+        // long as it runs. The "running" query above already catches every
+        // in-flight encode; there is no separate child row to cross-reference.
+        ImmutableList<QueueJob> jobs =
+        [
+            .. banded.Concat(running).GroupBy(row => row.Id).Select(group => group.First()),
+        ];
 
         // Each parsed payload stays paired with the row it came from: a payload
         // that fails to deserialize is dropped here, so indexing the unfiltered
@@ -360,40 +327,43 @@ public class TasksController(
         // Parsed once and then split. Deserializing again to find the rows that
         // are not encodes cost a second pass over every payload on the queue,
         // and this endpoint is polled.
-        List<QueueJobEntry> parsedJobs = jobs.Select(row => new QueueJobEntry(
-                row,
-                ReadEncodeJob(row.Payload)
-            ))
-            .ToList();
+        List<QueueJobEntry> parsedJobs =
+        [
+            .. jobs.Select(row => new QueueJobEntry(row, ReadEncodeJob(row.Payload))),
+        ];
 
-        List<QueueJobEntry> encoderJobs = parsedJobs.Where(entry => entry.Job is not null).ToList();
+        List<QueueJobEntry> encoderJobs = [.. parsedJobs.Where(entry => entry.Job is not null)];
 
         // A music encode is an encode, but it is not a VideoEncodeJob, so it read
         // as neither one thing nor the other and was dropped from both lists.
         // Video rows further down the queue hid that until an album import put
         // thousands of music encodes above every one of them and the panel went
         // blank while the server encoded an album.
-        List<MusicQueueRow> musicRows = parsedJobs
-            .Where(entry => entry.Job is null)
-            .Select(entry => ReadMusicEncodeJob(entry.Row))
-            .Where(entry => entry is not null)
-            .Select(entry => entry!)
-            .ToList();
+        List<MusicQueueRow> musicRows =
+        [
+            .. parsedJobs
+                .Where(entry => entry.Job is null)
+                .Select(entry => ReadMusicEncodeJob(entry.Row))
+                .Where(entry => entry is not null)
+                .Select(entry => entry!),
+        ];
 
         List<QueueJobDto> musicJobs = await BuildAlbumCards(musicRows, queueContext);
 
-        HashSet<int> musicRowIds = musicRows.Select(row => row.Row.Id).ToHashSet();
+        HashSet<int> musicRowIds = [.. musicRows.Select(row => row.Row.Id)];
 
         // Maintenance work sharing the encoder queue — preview rebuilds and
         // subtitle OCR — reported as itself rather than dressed up as an encode.
         // Hours of this can be queued at once, and a panel that shows none of it
         // is telling the operator the server is idle while it works.
-        List<MaintenanceJob> maintenanceJobs = parsedJobs
-            .Where(entry => entry.Job is null && !musicRowIds.Contains(entry.Row.Id))
-            .Select(entry => ReadMaintenanceJob(entry.Row))
-            .Where(entry => entry is not null)
-            .Select(entry => entry!)
-            .ToList();
+        List<MaintenanceJob> maintenanceJobs =
+        [
+            .. parsedJobs
+                .Where(entry => entry.Job is null && !musicRowIds.Contains(entry.Row.Id))
+                .Select(entry => ReadMaintenanceJob(entry.Row))
+                .Where(entry => entry is not null)
+                .Select(entry => entry!),
+        ];
 
         await EnrichMaintenanceJobsAsync(maintenanceJobs);
 
@@ -416,7 +386,7 @@ public class TasksController(
             }
         }
 
-        List<Ulid> folderIds = encoderJobs.Select(entry => entry.Job!.FolderId).Distinct().ToList();
+        List<Ulid> folderIds = [.. encoderJobs.Select(entry => entry.Job!.FolderId).Distinct()];
 
         // Folders — only the profile include needed for the Profile field; no library graph.
         List<Folder> folders = await mediaContext
@@ -468,43 +438,6 @@ public class TasksController(
                 trackById[track.Id] = track;
         }
 
-        // The child task is where the real work — and the real ordering — lives.
-        // A coordinator row is deleted and re-inserted on every poll, so neither
-        // its id nor its CreatedAt says anything about when its encode was
-        // dispatched or when it will run. Its child is enqueued once and never
-        // re-created, so the child's autoincrement id IS the execution order the
-        // runner will pick them up in.
-        List<QueueJob> childRows = queueContext
-            .QueueJobs.Where(j => j.Queue.StartsWith("encoder-"))
-            .OrderBy(j => j.Id)
-            .ToList();
-
-        HashSet<string> activeMediaIds = [];
-
-        foreach (QueueJob child in childRows)
-        {
-            string? mediaId = child.Payload.FromJson<EncodeTaskJob>()?.Id?.ToString();
-            if (string.IsNullOrEmpty(mediaId))
-                continue;
-
-            if (child.ReservedAt is not null)
-                activeMediaIds.Add(mediaId);
-        }
-
-        // Rank every still-waiting row by its coordinator's own id — the
-        // true original dispatch position, stable across the coordinator's
-        // whole lifetime. A decomposed child's id says only when THAT
-        // decomposition happened, which can be long after dispatch and long
-        // before its actual turn (it sits on the budget gate same as
-        // anything else), so it must never be used to rank ahead of a
-        // coordinator dispatched earlier that just hasn't decomposed yet.
-        Dictionary<string, int> coordinatorRowId = [];
-        foreach (QueueJobEntry entry in encoderJobs)
-        {
-            string mediaId = entry.Job!.Id.ToString();
-            coordinatorRowId.TryAdd(mediaId, entry.Row.Id);
-        }
-
         Dictionary<Ulid, string> presetNameById = folders
             .SelectMany(folder => folder.EncodingPresetFolders)
             .Where(link => link.Preset is not null)
@@ -514,71 +447,64 @@ public class TasksController(
         DbPresetLookup presetLookup = new(mediaContext);
         Dictionary<string, QueueJobPlanDto?> planByPresetSet = [];
 
-        QueueJobDto[] queueJobs = encoderJobs
-            .Select(entry =>
-            {
-                VideoEncodeJob j = entry.Job!;
-                Ulid[] presetIds = PresetsFor(j, folderById);
-
-                return new QueueJobDto
+        QueueJobDto[] queueJobs =
+        [
+            .. encoderJobs
+                .Select(entry =>
                 {
-                    Id = entry.Row.Id,
-                    Priority = entry.Row.Priority,
-                    PayloadId = j.Id,
-                    Title = ResolveTitle(j, movieById, episodeById, trackById),
-                    Backdrop = ResolveArtwork(j, movieById, episodeById),
-                    Type = j.GetType().Name,
-                    Status = IsEncodeInFlight(
-                        entry.Row.ReservedAt,
-                        activeMediaIds.Contains(j.Id.ToString())
-                    )
-                        ? "running"
-                        : "pending",
-                    InputFile = j.InputFile,
-                    Profile =
-                        presetIds.Length == 0
-                            ? null
-                            : string.Join(
-                                ", ",
-                                presetIds.Select(id =>
-                                    presetNameById.GetValueOrDefault(id, id.ToString())
-                                )
-                            ),
-                    Plan = ResolvePlan(presetIds, presetLookup, planByPresetSet),
-                };
-            })
-            .Concat(musicJobs)
-            .Concat(maintenanceJobs.Select(entry => entry.Dto))
-            // Ordered here, not in SQL: both row columns SQL could sort on are
-            // rewritten on every coordinator poll. Priority still leads, because
-            // that is what the runner honours; within a priority the child id is
-            // the order the runner will actually pick them up in.
-            .OrderByDescending(dto => dto.Priority)
-            // Only a row ACTUALLY holding a reservation right now is really
-            // ahead of everything still waiting — "has decomposed into a
-            // child" is not "is running" (a child sits on the budget gate
-            // same as anything else), so that can never be the ranking key.
-            .ThenByDescending(dto => dto.Status == "running")
-            // The coordinator row's own id is the true original dispatch
-            // position and never changes across its whole lifetime — a
-            // decomposed child's id says only when THAT decomposition
-            // happened, which can be long after dispatch and long before its
-            // actual turn. Rank every still-waiting row by where its
-            // coordinator was dispatched, not by whichever id its most
-            // recent child row happened to get.
-            .ThenBy(dto => coordinatorRowId.GetValueOrDefault(dto.PayloadId, int.MaxValue))
-            .ThenBy(dto => dto.Id)
-            .ToArray();
+                    VideoEncodeJob j = entry.Job!;
+                    Ulid[] presetIds = PresetsFor(j, folderById);
+
+                    return new QueueJobDto
+                    {
+                        Id = entry.Row.Id,
+                        Priority = entry.Row.Priority,
+                        PayloadId = j.Id,
+                        Title = ResolveTitle(j, movieById, episodeById, trackById),
+                        Backdrop = ResolveArtwork(j, movieById, episodeById),
+                        Type = j.GetType().Name,
+                        Status = IsEncodeInFlight(entry.Row.ReservedAt) ? "running" : "pending",
+                        InputFile = j.InputFile,
+                        Profile =
+                            presetIds.Length == 0
+                                ? null
+                                : string.Join(
+                                    ", ",
+                                    presetIds.Select(id =>
+                                        presetNameById.GetValueOrDefault(id, id.ToString())
+                                    )
+                                ),
+                        Plan = ResolvePlan(presetIds, presetLookup, planByPresetSet),
+                    };
+                })
+                .Concat(musicJobs)
+                .Concat(maintenanceJobs.Select(entry => entry.Dto))
+                // Ordered here, not in SQL: the row is rewritten in place on every
+                // coordinator wake-up, so SQL can't stably sort on it mid-query.
+                // Priority leads, because that is what the runner honours.
+                .OrderByDescending(dto => dto.Priority)
+                // Only a row ACTUALLY holding a reservation right now is really
+                // ahead of everything still waiting — a row that has merely
+                // decomposed is not "is running", so that can never be the
+                // ranking key.
+                .ThenByDescending(dto => dto.Status == "running")
+                // The row's own id is the true original dispatch position and
+                // never changes across the encode's whole lifetime — one job,
+                // one row, from decompose through the last bundle.
+                .ThenBy(dto => dto.Id),
+        ];
 
         // Catch-up broadcast so a reloaded dashboard gets a card back for work
         // already in flight. Keyed off the reservation rather than the reported
         // status: a coordinator sleeping between poll wake-ups reports running
         // but has no live encoder behind it, and a card for it would only flap
         // in and out as the idle sweep collected it.
-        HashSet<int> reservedRowIds = encoderJobs
-            .Where(entry => entry.Row.ReservedAt is not null)
-            .Select(entry => entry.Row.Id)
-            .ToHashSet();
+        HashSet<int> reservedRowIds =
+        [
+            .. encoderJobs
+                .Where(entry => entry.Row.ReservedAt is not null)
+                .Select(entry => entry.Row.Id),
+        ];
 
         if (EventBusProvider.IsConfigured)
         {
@@ -610,18 +536,6 @@ public class TasksController(
         return Ok(new DataResponseDto<QueueJobDto[]> { Data = queueJobs });
     }
 
-    /// <summary>
-    /// Whether an encode is actually being worked on, which is the line the
-    /// dashboard splits "encoding now" from "waiting" on.
-    ///
-    /// <para>Carrying coordinator state is not that line. A coordinator stamps
-    /// itself the moment it has decomposed and handed a bundle to the queue, and
-    /// with one encoder runner two dozen of those sit behind each other having
-    /// done nothing — calling them all in-flight said the whole season was
-    /// encoding at once. What does mean work is a runner holding a reservation:
-    /// either on the coordinator row itself, or on the child task that carries
-    /// the ffmpeg process (<paramref name="hasReservedChild"/>).</para>
-    /// </summary>
     /// <summary>
     /// The encode behind a queue row, or null when that row is not an encode.
     ///
@@ -694,7 +608,7 @@ public class TasksController(
         // reporting "3 of 20" from a sample would count down as the panel scrolled.
         Dictionary<Guid, int> remainingByRelease = await CountQueuedTracksByRelease(queueContext);
 
-        List<Guid> releaseIds = musicRows.Select(row => row.Job.ReleaseId).Distinct().ToList();
+        List<Guid> releaseIds = [.. musicRows.Select(row => row.Job.ReleaseId).Distinct()];
 
         // Encoded-so-far is the AlbumTrack link count, not Album.Tracks: the
         // metadata-declared total is set once at import from what the provider
@@ -723,9 +637,7 @@ public class TasksController(
         // that job fills it in — so 106 of the 885 queued albums have a blank
         // column while their own tracks carry the artwork. Still the release's
         // cover: an artist's picture would be a different album's image.
-        List<Guid> uncovered = releaseIds
-            .Where(id => covers.GetValueOrDefault(id) is null)
-            .ToList();
+        List<Guid> uncovered = [.. releaseIds.Where(id => covers.GetValueOrDefault(id) is null)];
 
         if (uncovered.Count > 0)
         {
@@ -739,57 +651,59 @@ public class TasksController(
                 covers[group.Key] = group.First().Cover;
         }
 
-        return musicRows
-            .GroupBy(row => row.Job.ReleaseId)
-            .Select(group =>
-            {
-                MusicQueueRow first = group.OrderBy(row => row.Row.Id).First();
-                MusicQueueRow current =
-                    group.FirstOrDefault(row => row.Row.ReservedAt is not null) ?? first;
-
-                // Completed is what AlbumTrack already links (real encoded
-                // work); total adds back what is still queued for the release,
-                // so the pair reaches 100% exactly when the queue runs dry.
-                int remaining = remainingByRelease.GetValueOrDefault(group.Key, group.Count());
-                int completed = encodedTracksByRelease.GetValueOrDefault(group.Key, 0);
-                int total = completed + remaining;
-
-                string title = string.Join(
-                    " - ",
-                    new[] { first.Job.ArtistName, first.Job.ReleaseName }.Where(part =>
-                        !string.IsNullOrWhiteSpace(part)
-                    )
-                );
-
-                return new QueueJobDto
+        return
+        [
+            .. musicRows
+                .GroupBy(row => row.Job.ReleaseId)
+                .Select(group =>
                 {
-                    // The card acts on a real row — the one being encoded, or the
-                    // next in line — so removing it removes work that exists.
-                    Id = current.Row.Id,
-                    Priority = current.Row.Priority,
-                    // The release, so an album is one card. Progress events key on
-                    // the track, so a live overlay finds nothing here and the
-                    // track count is what moves — which is the point.
-                    PayloadId = group.Key.ToString(),
-                    Title = title.Length > 0 ? title : Path.GetFileName(first.Job.InputFile),
-                    // Rooted here, because a release's cover is not served from
-                    // where a backdrop is. Every client roots this field at
-                    // /images/original, so an album with perfectly good artwork
-                    // drew an empty box.
-                    Backdrop = covers.GetValueOrDefault(group.Key) is { } cover
-                        ? $"/images/music{cover}"
-                        : null,
-                    Type = nameof(MusicEncodeJob),
-                    Status = group.Any(row => row.Row.ReservedAt is not null)
-                        ? "running"
-                        : "pending",
-                    InputFile = current.Job.InputFile,
-                    CompletedItems = completed,
-                    TotalItems = total,
-                    Progress = total > 0 ? Math.Round(completed * 100d / total, 1) : null,
-                };
-            })
-            .ToList();
+                    MusicQueueRow first = group.OrderBy(row => row.Row.Id).First();
+                    MusicQueueRow current =
+                        group.FirstOrDefault(row => row.Row.ReservedAt is not null) ?? first;
+
+                    // Completed is what AlbumTrack already links (real encoded
+                    // work); total adds back what is still queued for the release,
+                    // so the pair reaches 100% exactly when the queue runs dry.
+                    int remaining = remainingByRelease.GetValueOrDefault(group.Key, group.Count());
+                    int completed = encodedTracksByRelease.GetValueOrDefault(group.Key, 0);
+                    int total = completed + remaining;
+
+                    string title = string.Join(
+                        " - ",
+                        new[] { first.Job.ArtistName, first.Job.ReleaseName }.Where(part =>
+                            !string.IsNullOrWhiteSpace(part)
+                        )
+                    );
+
+                    return new QueueJobDto
+                    {
+                        // The card acts on a real row — the one being encoded, or the
+                        // next in line — so removing it removes work that exists.
+                        Id = current.Row.Id,
+                        Priority = current.Row.Priority,
+                        // The release, so an album is one card. Progress events key on
+                        // the track, so a live overlay finds nothing here and the
+                        // track count is what moves — which is the point.
+                        PayloadId = group.Key.ToString(),
+                        Title = title.Length > 0 ? title : Path.GetFileName(first.Job.InputFile),
+                        // Rooted here, because a release's cover is not served from
+                        // where a backdrop is. Every client roots this field at
+                        // /images/original, so an album with perfectly good artwork
+                        // drew an empty box.
+                        Backdrop = covers.GetValueOrDefault(group.Key) is { } cover
+                            ? $"/images/music{cover}"
+                            : null,
+                        Type = nameof(MusicEncodeJob),
+                        Status = group.Any(row => row.Row.ReservedAt is not null)
+                            ? "running"
+                            : "pending",
+                        InputFile = current.Job.InputFile,
+                        CompletedItems = completed,
+                        TotalItems = total,
+                        Progress = total > 0 ? Math.Round(completed * 100d / total, 1) : null,
+                    };
+                }),
+        ];
     }
 
     /// <summary>
@@ -890,11 +804,13 @@ public class TasksController(
     /// </summary>
     private async Task EnrichMaintenanceJobsAsync(List<MaintenanceJob> maintenanceJobs)
     {
-        List<string> hostFolders = maintenanceJobs
-            .Select(entry => entry.HostFolder)
-            .Where(folder => folder.Length > 0)
-            .Distinct()
-            .ToList();
+        List<string> hostFolders =
+        [
+            .. maintenanceJobs
+                .Select(entry => entry.HostFolder)
+                .Where(folder => folder.Length > 0)
+                .Distinct(),
+        ];
 
         if (hostFolders.Count == 0)
             return;
@@ -939,8 +855,18 @@ public class TasksController(
         }
     }
 
-    internal static bool IsEncodeInFlight(DateTime? reservedAt, bool hasReservedChild) =>
-        reservedAt is not null || hasReservedChild;
+    /// <summary>
+    /// Whether an encode is actually being worked on, which is the line the
+    /// dashboard splits "encoding now" from "waiting" on.
+    ///
+    /// <para>Carrying coordinator state is not that line — a coordinator
+    /// stamps itself the moment it has decomposed, and with one encoder
+    /// runner a dozen of those can sit behind each other having done
+    /// nothing. One job runs every bundle inline on its own row now, so a
+    /// runner actually working an encode holds THIS row's reservation for as
+    /// long as it runs — there is no separate child row to check.</para>
+    /// </summary>
+    internal static bool IsEncodeInFlight(DateTime? reservedAt) => reservedAt is not null;
 
     /// <summary>
     /// The artwork for a queued encode — a movie's backdrop or an episode's still,
@@ -1099,11 +1025,14 @@ public class TasksController(
     /// <summary>
     /// Every queue an encode occupies, because pausing is a promise about the
     /// machine and not about one table.
-    /// <para>Pausing only <c>encoder</c> stopped the coordinators and left the
-    /// queues their children run on untouched — and the children are what spawn
-    /// ffmpeg. The dashboard reported the queue paused while two ffmpeg
-    /// processes carried on at a third of the CPU, which is the opposite of what
-    /// the button says.</para>
+    /// <para>Video is one job/one row now — <c>encoder</c> both decomposes and
+    /// runs every bundle's ffmpeg inline, so pausing it already reaches the
+    /// process. <c>encoder-gpu</c>/<c>encoder-cpu</c> stay listed for the music
+    /// encoder, which still runs on its own lane. <c>encoder-task</c> is NOT
+    /// listed: it has no worker pool anymore (nothing is ever dispatched to
+    /// it), and <see cref="QueueRunner"/> indexes its worker dictionary
+    /// directly — passing an unregistered queue name throws
+    /// <see cref="KeyNotFoundException"/> rather than no-op'ing.</para>
     /// </summary>
     private static readonly string[] EncoderQueueFamily =
     [
@@ -1277,11 +1206,11 @@ public class TasksController(
             .ToListAsync();
 
         // Split into running (reserved) and pending.
-        List<QueueJob> runningJobs = allJobs.Where(j => j.ReservedAt != null).ToList();
-        List<QueueJob> pendingJobs = allJobs.Where(j => j.ReservedAt == null).ToList();
+        List<QueueJob> runningJobs = [.. allJobs.Where(j => j.ReservedAt != null)];
+        List<QueueJob> pendingJobs = [.. allJobs.Where(j => j.ReservedAt == null)];
 
         // Build ordered list: requested IDs first (in request order), then the rest.
-        HashSet<int> requestedSet = request.OrderedJobIds.ToHashSet();
+        HashSet<int> requestedSet = [.. request.OrderedJobIds];
 
         List<QueueJob> reordered =
         [
@@ -1303,15 +1232,16 @@ public class TasksController(
         // Return the new ordering of ALL jobs for the queue.
         List<QueueJob> resultJobs = [.. runningJobs, .. reordered];
 
-        QueueJobDto[] result = resultJobs
-            .Select(j => new QueueJobDto
+        QueueJobDto[] result =
+        [
+            .. resultJobs.Select(j => new QueueJobDto
             {
                 Id = j.Id,
                 Priority = j.Priority,
                 PayloadId = string.Empty,
                 Status = j.ReservedAt != null ? "running" : "pending",
-            })
-            .ToArray();
+            }),
+        ];
 
         return Ok(new DataResponseDto<QueueJobDto[]> { Data = result });
     }

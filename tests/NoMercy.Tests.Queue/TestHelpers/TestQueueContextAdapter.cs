@@ -50,17 +50,6 @@ public class TestQueueContextAdapter : IQueueContext
             .FirstOrDefault();
     }
 
-    public QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now)
-    {
-        return Jobs.Where(j =>
-                j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
-            )
-            .OrderByDescending(j => j.Priority)
-            .ThenBy(j => j.CreatedAt)
-            .ThenBy(j => j.Id)
-            .FirstOrDefault();
-    }
-
     public QueueJobModel? FindJob(int id)
     {
         return Jobs.FirstOrDefault(j => j.Id == id);
@@ -101,16 +90,18 @@ public class TestQueueContextAdapter : IQueueContext
 
     public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc)
     {
-        return Jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
+        return [.. Jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)];
     }
 
     public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts, byte maxInterruptions)
     {
-        return Jobs.Where(j =>
+        return
+        [
+            .. Jobs.Where(j =>
                 j.ReservedAt == null
                 && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
-            )
-            .ToList();
+            ),
+        ];
     }
 
     public void AddFailedJob(FailedJobModel failedJob)
@@ -138,13 +129,13 @@ public class TestQueueContextAdapter : IQueueContext
     public IReadOnlyList<FailedJobModel> GetFailedJobs(long? failedJobId = null)
     {
         if (failedJobId.HasValue)
-            return FailedJobs.Where(j => j.Id == failedJobId.Value).ToList();
+            return [.. FailedJobs.Where(j => j.Id == failedJobId.Value)];
         return FailedJobs;
     }
 
     public IReadOnlyList<CronJobModel> GetEnabledCronJobs()
     {
-        return CronJobs.Where(c => c.IsEnabled).ToList();
+        return [.. CronJobs.Where(c => c.IsEnabled)];
     }
 
     public CronJobModel? FindCronJobByName(string name)

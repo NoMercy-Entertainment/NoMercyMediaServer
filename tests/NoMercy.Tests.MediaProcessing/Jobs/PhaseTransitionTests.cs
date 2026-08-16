@@ -97,7 +97,11 @@ public partial class PhaseTransitionTests
 
         methodStart.Should().BeGreaterThan(0, "HandleWaitPass1Async must exist");
 
-        string window = ExtractMethodWindow(source, methodStart);
+        // 6000, not the default 2000: the method resolves the shared Pass1
+        // stats path and patches the pending Pass2 bundles before its own
+        // ReEnqueueSelf call, which formatted collection-expression syntax
+        // pushes past the default window.
+        string window = ExtractMethodWindow(source, methodStart, maxChars: 6000);
 
         window
             .Should()
@@ -190,7 +194,7 @@ public partial class PhaseTransitionTests
     }
 
     [Fact]
-    public void HandleWaitPass1Async_DispatchesPass2AndOtherTasks()
+    public void HandleWaitPass1Async_PromotesPendingBundlesWhenPass1Completes()
     {
         string source = LoadVideoEncodeJobSource();
 
@@ -206,15 +210,15 @@ public partial class PhaseTransitionTests
         window
             .Should()
             .Contain(
-                "pass2TaskIds",
-                "HandleWaitPass1Async must dispatch Pass2 tasks when Pass1 is complete"
+                "PendingBundles",
+                "HandleWaitPass1Async must promote the pending Pass2/other bundles when Pass1 is complete"
             );
 
         window
             .Should()
             .Contain(
                 "CoordinatorPhase.WaitChildren",
-                "HandleWaitPass1Async must transition to WaitChildren after dispatching Pass2"
+                "HandleWaitPass1Async must transition to WaitChildren after Pass1 completes"
             );
     }
 

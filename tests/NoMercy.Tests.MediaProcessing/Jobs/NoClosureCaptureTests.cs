@@ -14,16 +14,16 @@ using System.Text.RegularExpressions;
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
 /// <summary>
-/// B1 regression guard: verifies that <c>VideoEncodeJob</c> and
-/// <c>EncodeTaskJob</c> do not capture <c>MediaContext</c>, <c>FileRepository</c>,
-/// or <c>FileManager</c> via closures that outlive the method that created them.
+/// B1 regression guard: verifies that <c>VideoEncodeJob</c> does not capture
+/// <c>MediaContext</c>, <c>FileRepository</c>, or <c>FileManager</c> via
+/// closures that outlive the method that created them.
 ///
 /// The bug pattern: a variable was captured in a lambda / local function passed
 /// to EventBusProvider.EventBus.Subscribe(), causing the context to stay alive
 /// after the enclosing <c>Handle()</c> invocation disposed it.
 ///
 /// Rules enforced:
-///   1. <c>EventBusProvider.EventBus.Subscribe</c> must not appear in either file.
+///   1. <c>EventBusProvider.EventBus.Subscribe</c> must not appear in the file.
 ///   2. <c>VideoEncodeJob</c> must not declare class-level fields of the
 ///      disqualified types (MediaContext, FileRepository, FileManager).
 /// </summary>
@@ -48,18 +48,8 @@ public partial class NoClosureCaptureTests
             .Should()
             .BeFalse(
                 "VideoEncodeJob must not register EventBus subscriptions — "
-                         + "subscriptions would capture MediaContext across Handle() invocations (B1 regression)"
+                    + "subscriptions would capture MediaContext across Handle() invocations (B1 regression)"
             );
-    }
-
-    [Fact]
-    public void EncodeTaskJob_DoesNotSubscribeToEventBus()
-    {
-        string source = ReadEncodeTaskJobSource();
-
-        bool hasSubscribe = source.Contains(".Subscribe(", StringComparison.OrdinalIgnoreCase);
-
-        hasSubscribe.Should().BeFalse("EncodeTaskJob must not register EventBus subscriptions");
     }
 
     [Fact]
@@ -79,8 +69,8 @@ public partial class NoClosureCaptureTests
             .Should()
             .BeEmpty(
                 "MediaContext, FileRepository, and FileManager must be opened locally "
-                         + "inside each phase method and disposed before the method returns. "
-                         + "Class-level fields of these types would survive across Handle() calls."
+                    + "inside each phase method and disposed before the method returns. "
+                    + "Class-level fields of these types would survive across Handle() calls."
             );
     }
 
@@ -128,19 +118,13 @@ public partial class NoClosureCaptureTests
             .Should()
             .BeEmpty(
                 "every coordinator phase method must open its own MediaContext locally "
-                         + "so it is disposed before Handle() returns"
+                    + "so it is disposed before Handle() returns"
             );
     }
 
     private static string ReadVideoEncodeJobSource()
     {
         string path = FindSourceFile("VideoEncodeJob.cs");
-        return File.ReadAllText(path);
-    }
-
-    private static string ReadEncodeTaskJobSource()
-    {
-        string path = FindSourceFile("EncodeTaskJob.cs");
         return File.ReadAllText(path);
     }
 

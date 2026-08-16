@@ -37,7 +37,6 @@ public class SqliteQueueContext : IQueueContext
                 .Where(j => currentJobId == null)
                 .Where(j => j.Queue == name)
                 .OrderByDescending(j => j.Priority)
-                .ThenBy(j => j.CreatedAt)
                 .ThenBy(j => j.Id)
                 .FirstOrDefault()
     );
@@ -108,7 +107,6 @@ public class SqliteQueueContext : IQueueContext
         {
             QueueJobEntity? anyJob = _context
                 .QueueJobs.OrderByDescending(j => j.Priority)
-                .ThenBy(j => j.CreatedAt)
                 .ThenBy(j => j.Id)
                 .FirstOrDefault();
             return anyJob == null ? null : ToModel(anyJob);
@@ -119,20 +117,6 @@ public class SqliteQueueContext : IQueueContext
             return null;
 
         return ToModel(job);
-    }
-
-    public QueueJobModel? PeekHighestRankedEligibleJob(byte maxAttempts, DateTime now)
-    {
-        QueueJobEntity? job = _context
-            .QueueJobs.Where(j =>
-                j.ReservedAt == null && j.Attempts < maxAttempts && j.AvailableAt <= now
-            )
-            .OrderByDescending(j => j.Priority)
-            .ThenBy(j => j.CreatedAt)
-            .ThenBy(j => j.Id)
-            .FirstOrDefault();
-
-        return job == null ? null : ToModel(job);
     }
 
     public QueueJobModel? FindJob(int id)
