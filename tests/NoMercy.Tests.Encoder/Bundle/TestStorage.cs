@@ -78,8 +78,18 @@ internal sealed class TestStorage : IStorage
 
     // Overrides IStorage's default (Driver.CombinePath) — Driver throws on this
     // double, so path-joining callers need a working stand-in.
-    public string CombinePath(string parent, string child) =>
-        string.IsNullOrEmpty(parent) ? child : $"{parent.TrimEnd('/')}/{child.TrimStart('/')}";
+    public string CombinePath(string parent, params string[] child)
+    {
+        string result = string.IsNullOrEmpty(parent) ? string.Empty : parent.TrimEnd('/');
+        foreach (string segment in child)
+        {
+            if (string.IsNullOrEmpty(segment))
+                continue;
+            string trimmed = segment.TrimStart('/');
+            result = string.IsNullOrEmpty(result) ? trimmed : $"{result}/{trimmed}";
+        }
+        return result;
+    }
 
     public IReadOnlyList<StorageEntry> List(string path, string? pattern, bool recursive)
     {

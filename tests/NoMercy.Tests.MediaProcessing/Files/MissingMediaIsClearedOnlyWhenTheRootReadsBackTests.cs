@@ -117,9 +117,15 @@ public sealed class MissingMediaIsClearedOnlyWhenTheRootReadsBackTests : IDispos
         if (readableRecordedPath is not null)
             storageMock.Setup(storage => storage.Exists(readableRecordedPath)).Returns(true);
         storageMock
-            .Setup(storage => storage.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(storage => storage.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
             .Returns(
-                (string first, string second) => $"{first.TrimEnd('/')}/{second.TrimStart('/')}"
+                (string first, string[] rest) =>
+                {
+                    string result = first.TrimEnd('/');
+                    foreach (string segment in rest)
+                        result = $"{result}/{segment.TrimStart('/')}";
+                    return result;
+                }
             );
         storageMock.Setup(storage => storage.Driver).Returns(Mock.Of<IStorageDriver>());
 

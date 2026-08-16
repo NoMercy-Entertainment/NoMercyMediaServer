@@ -244,8 +244,10 @@ public class InboxClassifierEventHandlerTests : IDisposable
             .Setup(s => s.List("", null, false))
             .Returns([new("somefile.mkv", false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>((parent, child) => $"{parent}/{child}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
+            .Returns<string, string[]>(
+                (parent, segments) => $"{parent}/{string.Join('/', segments)}"
+            );
         _storageFactoryMock
             .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
             .Returns(storageMock.Object);
@@ -495,8 +497,10 @@ public class InboxClassifierEventHandlerTests : IDisposable
             .Setup(s => s.List("", null, false))
             .Returns([new("The Matrix (1999).mkv", false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>((parent, child) => $"{parent}/{child}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
+            .Returns<string, string[]>(
+                (parent, segments) => $"{parent}/{string.Join('/', segments)}"
+            );
         _storageFactoryMock
             .Setup(f => f.For(It.IsAny<Ulid>(), It.IsAny<Ulid>(), It.IsAny<string>()))
             .Returns(storageMock.Object);

@@ -32,17 +32,19 @@ public class IStorageFacadeTests
         driver.Setup(d => d.DirectorySeparator).Returns('/');
         // CombinePath has a default implementation in the interface, so Moq will call it
         driver
-            .Setup(d => d.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>(
-                (parent, child) =>
+            .Setup(d => d.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
+            .Returns<string, string[]>(
+                (parent, segments) =>
                 {
-                    if (string.IsNullOrEmpty(child))
-                        return parent;
-                    if (string.IsNullOrEmpty(parent))
-                        return child;
-                    string trimmedParent = parent.TrimEnd('/', '\\');
-                    string trimmedChild = child.TrimStart('/', '\\');
-                    return $"{trimmedParent}/{trimmedChild}";
+                    string result = string.IsNullOrEmpty(parent) ? "" : parent.TrimEnd('/', '\\');
+                    foreach (string segment in segments)
+                    {
+                        if (string.IsNullOrEmpty(segment))
+                            continue;
+                        string trimmed = segment.Trim('/', '\\');
+                        result = string.IsNullOrEmpty(result) ? trimmed : $"{result}/{trimmed}";
+                    }
+                    return result;
                 }
             );
         return driver;

@@ -256,6 +256,12 @@ public class PluginManagerTests : IDisposable
         // fault for it is the correct way to prove this isolation for real rather
         // than merely by reading the comment.
         Mock<IStorage> storage = new(MockBehavior.Strict);
+        storage
+            .Setup(s => s.CombinePath(_tempPluginsDir, "data", "platform"))
+            .Returns(Path.Combine(_tempPluginsDir, "data", "platform"));
+        storage
+            .Setup(s => s.CombinePath(_tempPluginsDir, PluginManager.PendingUpdatesFolder))
+            .Returns(Path.Combine(_tempPluginsDir, PluginManager.PendingUpdatesFolder));
         storage.Setup(s => s.Exists(_tempPluginsDir)).Returns(true);
         storage
             .Setup(s => s.List(_tempPluginsDir, null, false))
@@ -263,10 +269,16 @@ public class PluginManagerTests : IDisposable
                 new StorageEntry("FaultyPlugin", true, 0, DateTimeOffset.UtcNow),
                 new StorageEntry("GoodPlugin", true, 0, DateTimeOffset.UtcNow),
             ]);
+        storage
+            .Setup(s => s.CombinePath("FaultyPlugin", "plugin.json"))
+            .Returns(Path.Combine("FaultyPlugin", "plugin.json"));
         storage.Setup(s => s.Exists(Path.Combine("FaultyPlugin", "plugin.json"))).Returns(false);
         storage
             .Setup(s => s.List("FaultyPlugin", "*.dll", false))
             .Throws(new IOException("simulated storage fault enumerating FaultyPlugin"));
+        storage
+            .Setup(s => s.CombinePath("GoodPlugin", "plugin.json"))
+            .Returns(Path.Combine("GoodPlugin", "plugin.json"));
         storage.Setup(s => s.Exists(Path.Combine("GoodPlugin", "plugin.json"))).Returns(false);
         storage.Setup(s => s.List("GoodPlugin", "*.dll", false)).Returns([]);
 

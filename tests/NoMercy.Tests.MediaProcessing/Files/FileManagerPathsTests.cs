@@ -521,8 +521,8 @@ public sealed class FileManagerPathsTests : IDisposable
         Mock<IStorage> remoteStorage = new();
         remoteStorage.Setup(s => s.Driver).Returns(remoteDriver);
         remoteStorage
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((string p, string c) => $"{p.TrimEnd('/')}/{c}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
+            .Returns((string p, string[] c) => $"{p.TrimEnd('/')}/{string.Join('/', c)}");
         remoteStorage
             .Setup(s => s.Exists(It.IsAny<string>()))
             .Throws(new IOException("simulated remote transport failure"));
@@ -604,8 +604,8 @@ public sealed class FileManagerPathsTests : IDisposable
         Mock<IStorage> remoteStorage = new();
         remoteStorage.Setup(s => s.Driver).Returns(remoteDriver);
         remoteStorage
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((string p, string c) => $"{p.TrimEnd('/')}/{c}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
+            .Returns((string p, string[] c) => $"{p.TrimEnd('/')}/{string.Join('/', c)}");
         remoteStorage.Setup(s => s.Exists("export/root/My.Movie.2020")).Returns(false);
         remoteStorage.Setup(s => s.Exists("export/root/My Movie (2020)")).Returns(true);
         remoteStorage
