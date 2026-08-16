@@ -47,9 +47,6 @@ public class VideoPlaybackService
         _eventBus = eventBus;
     }
 
-    private readonly ConcurrentDictionary<Guid, Timer> _timers = new();
-    private readonly ConcurrentDictionary<Guid, int> _lastTimes = new();
-
     /// <summary>
     /// When each user last had the continue-watching carousel invalidated, and on which item.
     /// </summary>
@@ -66,76 +63,35 @@ public class VideoPlaybackService
     /// to be correct to the second on a device nobody is watching.
     /// </summary>
     private static readonly TimeSpan ContinueWatchingRefreshInterval = TimeSpan.FromSeconds(30);
-    private const int TimerInterval = 100;
 
-    internal void StartPlaybackTimer(User user)
+    /// <summary>
+    /// How close to the end counts as finished. Players report every few seconds, so
+    /// the last report always lands short of the exact duration.
+    /// </summary>
+    private const int CompletionToleranceMs = 5_000;
+
+    /// <summary>
+    /// Takes the position a player reported and moves the session to match it.
+    /// Whatever is rendering the video owns the clock: the server used to run its
+    /// own 100ms counter here, which kept advancing (and writing watch progress)
+    /// while paused and long after every client had closed.
+    /// </summary>
+    internal async Task ApplyClientProgress(User user, VideoPlayerState state, int timeMs)
     {
-        if (_timers.TryGetValue(user.Id, out Timer? existingTimer))
-            existingTimer.Dispose();
+        state.Time = timeMs;
 
-        if (!_stateManager.TryGetValue(user.Id, out VideoPlayerState? _))
-            return;
+        await PublishProgressEventAsync(user.Id, state);
+        await PublishContinueWatchingRefreshAsync(user.Id, state);
 
-        Timer timer = new(
-            async _ =>
-            {
-                // A throw from this async-void timer callback is rethrown on the thread
-                // pool and terminates the whole server, so nothing may escape here.
-                try
-                {
-                    if (!_stateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
-                        return;
-                    if (!playerState.PlayState || playerState.CurrentItem is null)
-                        return;
-
-                    playerState.Time += TimerInterval;
-
-                    if (_lastTimes.TryGetValue(user.Id, out int lastTimer) && lastTimer >= 1000)
-                    {
-                        _lastTimes[user.Id] = 0;
-                        await StoreWatchProgression(playerState, user);
-                        await PublishProgressEventAsync(user.Id, playerState);
-                    }
-                    else
-                    {
-                        _lastTimes.AddOrUpdate(user.Id, 0, (_, value) => value + TimerInterval);
-                    }
-
-                    int duration = playerState.CurrentItem.Duration.ToMilliSeconds();
-
-                    if (playerState.Time < duration - TimerInterval)
-                        return;
-
-                    RemoveTimer(user.Id);
-                    await HandleTrackCompletion(user, playerState);
-                }
-                catch (Exception ex)
-                {
-                    Logger.App(
-                        $"Playback timer tick failed for user {user.Id}: {ex.Message}",
-                        LogEventLevel.Error
-                    );
-                }
-            },
-            null,
-            100,
-            TimerInterval
-        );
-
-        _timers[user.Id] = timer;
-    }
-
-    public void RemoveTimer(Guid userId)
-    {
-        if (_timers.TryRemove(userId, out Timer? timer))
-            timer.Dispose();
+        int duration = state.CurrentItem?.Duration.ToMilliSeconds() ?? 0;
+        if (duration > 0 && state.Time >= duration - CompletionToleranceMs)
+            await HandleTrackCompletion(user, state);
     }
 
     private async Task HandleTrackCompletion(User user, VideoPlayerState state)
     {
         if (state.CurrentItem == null)
             return;
-        RemoveTimer(user.Id);
 
         int currentIndex = state.Playlist.IndexOf(state.CurrentItem);
 
@@ -155,8 +111,6 @@ public class VideoPlaybackService
         UpdateState(state, currentIndex + 1);
 
         await UpdatePlaybackState(user, state);
-
-        StartPlaybackTimer(user);
     }
 
     public async Task UpdatePlaybackState(User user, VideoPlayerState? state)

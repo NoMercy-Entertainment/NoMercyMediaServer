@@ -108,13 +108,11 @@ public class VideoPlaybackCommandHandler(
     private void HandlePlay(User user, VideoPlayerState state)
     {
         state.PlayState = true;
-        videoPlaybackService.StartPlaybackTimer(user);
     }
 
     private void HandlePause(User user, VideoPlayerState state)
     {
         state.PlayState = false;
-        videoPlaybackService.RemoveTimer(user.Id);
     }
 
     private async Task HandleSeek(User user, VideoPlayerState state, object? data)

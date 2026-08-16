@@ -38,6 +38,11 @@ public partial class VideoHub
         if (user is null)
             return;
 
+        // The player that is rendering the video owns the clock; this report is the
+        // only thing that moves the session forward.
+        if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? playerState))
+            await _videoPlaybackService.ApplyClientProgress(user, playerState, request.Time * 1000);
+
         await using MediaContext mediaContext = await _contextFactory.CreateDbContextAsync();
 
         bool videoFileExists = await mediaContext.VideoFiles.AnyAsync(v => v.Id == request.VideoId);
@@ -311,7 +316,6 @@ public partial class VideoHub
         );
 
         _videoPlayerStateManager.UpdateState(user.Id, videoPlayerState);
-        _videoPlaybackService.StartPlaybackTimer(user);
         await _videoPlaybackService.UpdatePlaybackState(user, videoPlayerState);
         await _videoPlaybackService.PublishStartedEventAsync(user.Id, videoPlayerState);
 
@@ -370,8 +374,6 @@ public partial class VideoHub
         state.Actions.Disallows.Next =
             state.CurrentItem is null
             || state.Playlist.IndexOf(state.CurrentItem) == state.Playlist.Count - 1;
-
-        _videoPlaybackService.StartPlaybackTimer(user);
         UpdateDeviceInfo(state);
         await _videoPlaybackService.UpdatePlaybackState(user, state);
         await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
@@ -388,8 +390,6 @@ public partial class VideoHub
     {
         UpdateDeviceInfo(state);
         UpdatePlaylistInfo(state, type, listId, item, playlist);
-
-        _videoPlaybackService.StartPlaybackTimer(user);
         await _videoPlaybackService.UpdatePlaybackState(user, state);
         await _videoPlaybackService.PublishStartedEventAsync(user.Id, state);
 

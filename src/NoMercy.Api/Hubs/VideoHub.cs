@@ -145,8 +145,6 @@ public partial class VideoHub : ConnectionHub
             if (_videoPlayerStateManager.TryGetValue(user.Id, out VideoPlayerState? state))
                 if (state.DeviceId == client.DeviceId)
                 {
-                    _videoPlaybackService.RemoveTimer(user.Id);
-
                     _videoDeviceManager.RemoveUserDevice(user.Id);
 
                     stopPlayback = true;

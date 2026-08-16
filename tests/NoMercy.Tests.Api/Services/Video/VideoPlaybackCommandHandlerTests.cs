@@ -95,7 +95,6 @@ public class VideoPlaybackCommandHandlerTests : IClassFixture<NoMercyApiFactory>
 
     private void Cleanup(Guid userId)
     {
-        _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId);
         _factory.Services.GetRequiredService<VideoPlayerStateManager>().RemoveState(userId);
     }
 
