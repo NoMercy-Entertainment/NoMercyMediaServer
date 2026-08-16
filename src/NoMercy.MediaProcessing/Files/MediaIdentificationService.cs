@@ -39,8 +39,10 @@ namespace NoMercy.MediaProcessing.Files;
 /// Extracted from FileRepository so file enumeration no longer depends on TMDB.
 /// A null return means "unidentified" — callers must NOT treat that as "drop".
 /// </summary>
-public partial class MediaIdentificationService(MediaContext context, IServiceScopeFactory scopeFactory)
-    : IMediaIdentificationService
+public partial class MediaIdentificationService(
+    MediaContext context,
+    IServiceScopeFactory scopeFactory
+) : IMediaIdentificationService
 {
     /// <summary>
     /// Runs an import job SYNCHRONOUSLY in a fresh DI scope so constructor-injected
@@ -121,7 +123,10 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         if (show == null)
             return null;
 
-        if ((!parsed.Season.HasValue || !parsed.Episode.HasValue) && !airDate.HasValue)
+        // A file may have an episode but no season (the season defaults to 1 by FilenameResolver).
+        // Episode is required; season will default to 1 if missing. Failure only if episode is null
+        // AND there's no air date to fall back on.
+        if (parsed.Episode == null && !airDate.HasValue)
             return null;
 
         Ulid libraryId = await ctx
@@ -136,7 +141,8 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         if (airDate.HasValue && (!parsed.Season.HasValue || !parsed.Episode.HasValue))
         {
             Episode? datedEpisode = await ctx
-                .Episodes.Where(item =>
+                .Episodes.AsNoTracking()
+                .Where(item =>
                     item.TvId == show.Id
                     && item.AirDate.HasValue
                     && item.AirDate.Value.Year == airDate.Value.Year
@@ -154,11 +160,9 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
             parsed.Episode = datedEpisode.EpisodeNumber;
         }
 
-        // Both are guaranteed present from here on: the guard above returns null
-        // unless Season and Episode both have values, and the dated-episode branch
-        // fills them when only an air date was parsed. The compiler can't prove it
-        // across those branches, so pin the values once.
-        int seasonNumber = parsed.Season!.Value;
+        // Both Season and Episode may have values, or Episode may exist without Season.
+        // Season defaults to 1 if Episode is present but Season is not.
+        int seasonNumber = parsed.Season ?? 1;
         int episodeNumber = parsed.Episode!.Value;
 
         // The file's own embedded title (if the name carries one after the season/episode
@@ -172,9 +176,13 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         // physical files to the same DB row because their numbers coincided.
         string? embeddedEpisodeTitle = ExtractEmbeddedEpisodeTitle(parsed.Path);
 
+        // Apply default season if needed for the lookup
+        int seasonForLookup = parsed.Season ?? 1;
+
         Episode? episode = ctx
-            .Episodes.Where(item => item.TvId == show.Id)
-            .Where(item => item.SeasonNumber == parsed.Season)
+            .Episodes.AsNoTracking()
+            .Where(item => item.TvId == show.Id)
+            .Where(item => item.SeasonNumber == seasonForLookup)
             .FirstOrDefault(item => item.EpisodeNumber == parsed.Episode);
 
         if (episode != null && EmbeddedTitleContradicts(embeddedEpisodeTitle, episode.Title))
@@ -203,7 +211,10 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
                     seasonNumber,
                     episodeNumber
                 );
-                if (episode != null && EmbeddedTitleContradicts(embeddedEpisodeTitle, episode.Title))
+                if (
+                    episode != null
+                    && EmbeddedTitleContradicts(embeddedEpisodeTitle, episode.Title)
+                )
                     episode = null;
             }
 
@@ -217,15 +228,20 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
                     seasonNumber,
                     episodeNumber
                 );
-                if (episode != null && EmbeddedTitleContradicts(embeddedEpisodeTitle, episode.Title))
+                if (
+                    episode != null
+                    && EmbeddedTitleContradicts(embeddedEpisodeTitle, episode.Title)
+                )
                     episode = null;
             }
 
             if (details != null && episode == null)
             {
-                Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
-                    s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber
-                );
+                Season? season = await ctx
+                    .Seasons.AsNoTracking()
+                    .FirstOrDefaultAsync(s =>
+                        s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber
+                    );
 
                 episode = new()
                 {
@@ -267,12 +283,14 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         // for Chuunibyou demo Koi ga Shitai! Ren, every s02e14+ file wrapping onto S02E02-E12.
         if (episode == null && !seasonExplicit)
         {
-            List<Episode> episodes = ctx
-                .Episodes.Where(item => item.TvId == show.Id)
-                .Where(item => item.SeasonNumber > 0)
-                .OrderBy(item => item.SeasonNumber)
-                .ThenBy(item => item.EpisodeNumber)
-                .ToList();
+            List<Episode> episodes =
+            [
+                .. ctx
+                    .Episodes.Where(item => item.TvId == show.Id)
+                    .Where(item => item.SeasonNumber > 0)
+                    .OrderBy(item => item.SeasonNumber)
+                    .ThenBy(item => item.EpisodeNumber),
+            ];
 
             episode = episodes.ElementAtOrDefault(episodeNumber - 1);
         }
@@ -320,9 +338,11 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
             if (EmbeddedTitleContradicts(embeddedEpisodeTitle, details.Name))
                 return null;
 
-            Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
-                s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber
-            );
+            Season? season = await ctx
+                .Seasons.AsNoTracking()
+                .FirstOrDefaultAsync(s =>
+                    s.TvId == show.Id && s.SeasonNumber == details.SeasonNumber
+                );
 
             episode = new()
             {
@@ -348,7 +368,11 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         // a freshly added show may have been written by EnsureShowInLibraryAsync
         // above.
         string? showName =
-            await ctx.Tvs.Where(t => t.Id == show.Id).Select(t => t.Title).FirstOrDefaultAsync()
+            await ctx
+                .Tvs.AsNoTracking()
+                .Where(t => t.Id == show.Id)
+                .Select(t => t.Title)
+                .FirstOrDefaultAsync()
             ?? show.Name;
 
         MovieOrEpisode match = new()
@@ -423,7 +447,7 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         if (movie == null)
             return null;
 
-        Movie? movieItem = ctx.Movies.FirstOrDefault(item => item.Id == movie.Id);
+        Movie? movieItem = ctx.Movies.AsNoTracking().FirstOrDefault(item => item.Id == movie.Id);
 
         if (movieItem == null)
         {
@@ -432,10 +456,11 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
             if (details == null)
                 return null;
 
-            bool hasMovie = ctx.Movies.Any(item => item.Id == movie.Id);
+            bool hasMovie = ctx.Movies.AsNoTracking().Any(item => item.Id == movie.Id);
 
             Ulid libraryId = await ctx
-                .Libraries.Where(item => item.Type == libraryType)
+                .Libraries.AsNoTracking()
+                .Where(item => item.Type == libraryType)
                 .Select(item => item.Id)
                 .FirstOrDefaultAsync();
 
@@ -488,7 +513,7 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         Ulid libraryId
     )
     {
-        bool hasShow = ctx.Tvs.Any(item => item.Id == showId);
+        bool hasShow = ctx.Tvs.AsNoTracking().Any(item => item.Id == showId);
         if (hasShow)
             return;
 
@@ -527,9 +552,10 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         }
 
         // Try all "Absolute" type groups (type 2) — some shows have multiple
-        TmdbEpisodeGroupsResult[] absoluteGroups = episodeGroups
-            .Results.Where(g => g.Type == 2)
-            .ToArray();
+        TmdbEpisodeGroupsResult[] absoluteGroups =
+        [
+            .. episodeGroups.Results.Where(g => g.Type == 2),
+        ];
 
         if (absoluteGroups.Length == 0)
         {
@@ -560,11 +586,13 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
             // groups routinely lead with a Specials sub-group, and counting those first
             // shifts every real episode by however many specials exist: with 25 of them in
             // front, absolute 35 resolved to season 1 episode 10.
-            List<TmdbEpisodeGroupEpisode> allEpisodes = groupDetails
-                .Groups.OrderBy(g => g.Order)
-                .SelectMany(g => g.Episodes.OrderBy(episodeInGroup => episodeInGroup.Order))
-                .Where(episodeInGroup => episodeInGroup.SeasonNumber > 0)
-                .ToList();
+            List<TmdbEpisodeGroupEpisode> allEpisodes =
+            [
+                .. groupDetails
+                    .Groups.OrderBy(g => g.Order)
+                    .SelectMany(g => g.Episodes.OrderBy(episodeInGroup => episodeInGroup.Order))
+                    .Where(episodeInGroup => episodeInGroup.SeasonNumber > 0),
+            ];
 
             if (absoluteEpisodeNumber < 1 || absoluteEpisodeNumber > allEpisodes.Count)
             {
@@ -583,11 +611,13 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
             );
 
             // Look up the resolved episode in the DB
-            Episode? episode = await ctx.Episodes.FirstOrDefaultAsync(e =>
-                e.TvId == showId
-                && e.SeasonNumber == target.SeasonNumber
-                && e.EpisodeNumber == target.EpisodeNumber
-            );
+            Episode? episode = await ctx
+                .Episodes.AsNoTracking()
+                .FirstOrDefaultAsync(e =>
+                    e.TvId == showId
+                    && e.SeasonNumber == target.SeasonNumber
+                    && e.EpisodeNumber == target.EpisodeNumber
+                );
 
             if (episode != null)
                 return episode;
@@ -602,9 +632,11 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
             if (details == null)
                 continue;
 
-            Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
-                s.TvId == showId && s.SeasonNumber == details.SeasonNumber
-            );
+            Season? season = await ctx
+                .Seasons.AsNoTracking()
+                .FirstOrDefaultAsync(s =>
+                    s.TvId == showId && s.SeasonNumber == details.SeasonNumber
+                );
 
             episode = new()
             {
@@ -716,18 +748,20 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
             // 13 is genuinely "Who Does Onee-Sama Belong To", not the recap — this release
             // does not even include the recap as a separate file), so "trailing" must mean
             // AFTER the season's last real episode, not merely "some other season".
-            List<TmdbEpisodeGroupEpisode> orderedGroupEpisodes = targetGroup
-                .Episodes.OrderBy(e => e.Order)
-                .ToList();
-            List<TmdbEpisodeGroupEpisode> sameSeasonEpisodes = orderedGroupEpisodes
-                .Where(e => e.SeasonNumber == seasonNumber)
-                .ToList();
+            List<TmdbEpisodeGroupEpisode> orderedGroupEpisodes =
+            [
+                .. targetGroup.Episodes.OrderBy(e => e.Order),
+            ];
+            List<TmdbEpisodeGroupEpisode> sameSeasonEpisodes =
+            [
+                .. orderedGroupEpisodes.Where(e => e.SeasonNumber == seasonNumber),
+            ];
             int lastSameSeasonIndex = orderedGroupEpisodes.FindLastIndex(e =>
                 e.SeasonNumber == seasonNumber
             );
             List<TmdbEpisodeGroupEpisode> trailingExtras =
                 lastSameSeasonIndex >= 0
-                    ? orderedGroupEpisodes.Skip(lastSameSeasonIndex + 1).ToList()
+                    ? [.. orderedGroupEpisodes.Skip(lastSameSeasonIndex + 1)]
                     : [];
 
             // episodeNumber is 1-based and can be 0 or negative for a file the filename
@@ -814,14 +848,16 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         // season with no mid-season interleaving to correct for — sorting by season then
         // number keeps every season-0 entry (interleaved specials included) together as
         // one block, so a plain "not this season" filter is the trailing block here.
-        List<TvdbEpisode> orderedTvdbEpisodes = tvdbEpisodes
-            .OrderBy(e => e.SeasonNumber)
-            .ThenBy(e => e.Number)
-            .ToList();
-        List<TvdbEpisode> sameSeasonTvdbEpisodes = orderedTvdbEpisodes
-            .Where(e => e.SeasonNumber == seasonNumber)
-            .OrderBy(e => e.Number)
-            .ToList();
+        List<TvdbEpisode> orderedTvdbEpisodes =
+        [
+            .. tvdbEpisodes.OrderBy(e => e.SeasonNumber).ThenBy(e => e.Number),
+        ];
+        List<TvdbEpisode> sameSeasonTvdbEpisodes =
+        [
+            .. orderedTvdbEpisodes
+                .Where(e => e.SeasonNumber == seasonNumber)
+                .OrderBy(e => e.Number),
+        ];
 
         // Same episodeNumber <= 0 guard as the TMDB-group path: the list indexer
         // throws for a negative index, ElementAtOrDefault does not.
@@ -872,9 +908,13 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         int episodeNumber
     )
     {
-        Episode? episode = await ctx.Episodes.FirstOrDefaultAsync(e =>
-            e.TvId == showId && e.SeasonNumber == seasonNumber && e.EpisodeNumber == episodeNumber
-        );
+        Episode? episode = await ctx
+            .Episodes.AsNoTracking()
+            .FirstOrDefaultAsync(e =>
+                e.TvId == showId
+                && e.SeasonNumber == seasonNumber
+                && e.EpisodeNumber == episodeNumber
+            );
         if (episode != null)
             return episode;
 
@@ -883,9 +923,9 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
         if (details == null)
             return null;
 
-        Season? season = await ctx.Seasons.FirstOrDefaultAsync(s =>
-            s.TvId == showId && s.SeasonNumber == details.SeasonNumber
-        );
+        Season? season = await ctx
+            .Seasons.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.TvId == showId && s.SeasonNumber == details.SeasonNumber);
 
         episode = new()
         {
@@ -959,10 +999,5 @@ public partial class MediaIdentificationService(MediaContext context, IServiceSc
     private static partial Regex TitleTokenSeparator();
 
     private static HashSet<string> TokenizeTitle(string title) =>
-        TitleTokenSeparator()
-            .Split(title.ToLowerInvariant())
-            .Where(token => token.Length > 0)
-            .ToHashSet();
-
-    private static readonly List<string> PrevSearchQueries = [];
+        [.. TitleTokenSeparator().Split(title.ToLowerInvariant()).Where(token => token.Length > 0)];
 }
