@@ -114,7 +114,7 @@ public class PlanStageAutoLadderTests
 
         OutputPlan plan = await RunPlan(BuildMedia(1920, 1080, bitrateKbps: 6000), profile);
 
-        int[] heights = plan.VideoOutputs.Select(v => v.Height).ToArray();
+        int[] heights = [.. plan.VideoOutputs.Select(v => v.Height)];
         Assert.Contains(360, heights);
         Assert.Contains(480, heights);
         Assert.Contains(720, heights);
@@ -218,11 +218,7 @@ public class PlanStageAutoLadderTests
             Video: null,
             Audio: [],
             Subtitles: [],
-            Ladder: new()
-            {
-                Mode = autoLadder ? LadderMode.Auto : LadderMode.Manual,
-                Rungs = rungs,
-            }
+            Ladder: new() { Mode = autoLadder ? LadderMode.Auto : LadderMode.Manual, Rungs = rungs }
         );
 
     private static LadderRung BuildVideo(int width, int height) =>
@@ -424,7 +420,7 @@ public class PlanStageAutoLadderRoutingTests
         );
 
         // Resulting rungs must match the mocked array (by height).
-        int[] heights = outputPlan.VideoOutputs.Select(v => v.Height).ToArray();
+        int[] heights = [.. outputPlan.VideoOutputs.Select(v => v.Height)];
         Assert.Contains(360, heights);
         Assert.Contains(720, heights);
         Assert.Contains(1080, heights);

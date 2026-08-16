@@ -85,7 +85,7 @@ public class DashChapterEventStreamTests : IDisposable
 
         XDocument doc = XDocument.Load(mpdPath);
         XNamespace ns = "urn:mpeg:dash:schema:mpd:2011";
-        List<XElement> events = doc.Descendants(ns + "Event").ToList();
+        List<XElement> events = [.. doc.Descendants(ns + "Event")];
 
         events.Should().HaveCount(ThreeChapters.Count);
     }
@@ -97,7 +97,7 @@ public class DashChapterEventStreamTests : IDisposable
 
         XDocument doc = XDocument.Load(mpdPath);
         XNamespace ns = "urn:mpeg:dash:schema:mpd:2011";
-        List<XElement> events = doc.Descendants(ns + "Event").ToList();
+        List<XElement> events = [.. doc.Descendants(ns + "Event")];
 
         // Chapter 1: 0 ms, Chapter 2: 10 min = 600000 ms, Chapter 3: 50 min = 3000000 ms
         events[0].Attribute("presentationTime")!.Value.Should().Be("0");
@@ -112,7 +112,7 @@ public class DashChapterEventStreamTests : IDisposable
 
         XDocument doc = XDocument.Load(mpdPath);
         XNamespace ns = "urn:mpeg:dash:schema:mpd:2011";
-        List<XElement> events = doc.Descendants(ns + "Event").ToList();
+        List<XElement> events = [.. doc.Descendants(ns + "Event")];
 
         events[0].Attribute("id")!.Value.Should().Be("0");
         events[1].Attribute("id")!.Value.Should().Be("1");

@@ -151,7 +151,7 @@ public class WorkerAssignerTests
             [new("a", 2.0, 4), new("b", 1.0, 2), new("c", 0.5, 1)]
         );
 
-        HashSet<string> placed = result.Values.SelectMany(v => v).Select(t => t.TaskId).ToHashSet();
+        HashSet<string> placed = [.. result.Values.SelectMany(v => v).Select(t => t.TaskId)];
         placed.Should().BeEquivalentTo("t0", "t1", "t2", "t3", "t4");
     }
 

@@ -588,9 +588,7 @@ public static partial class StringExtensions
             return 0;
 
         string[] rawParts = hms.Split('.')[0].Split(':');
-        int[] parts = rawParts
-            .Select(part => int.TryParse(part, out int value) ? value : 0)
-            .ToArray();
+        int[] parts = [.. rawParts.Select(part => int.TryParse(part, out int value) ? value : 0)];
 
         return parts.Length switch
         {

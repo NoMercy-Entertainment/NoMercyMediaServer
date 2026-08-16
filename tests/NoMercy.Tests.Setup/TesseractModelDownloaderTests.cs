@@ -326,7 +326,7 @@ public class TesseractModelDownloaderTests
         {
             TagName = "v1.0.1",
             PublishedAt = DateTimeOffset.UtcNow.AddDays(-1),
-            Assets = assets.ToArray(),
+            Assets = [.. assets],
         };
     }
 

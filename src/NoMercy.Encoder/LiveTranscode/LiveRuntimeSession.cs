@@ -111,7 +111,7 @@ public sealed class LiveRuntimeSession : IAsyncDisposable
     /// </summary>
     public IReadOnlyList<Segment> SnapshotSegments()
     {
-        return _segments.Values.OrderBy(s => s.Index).ToList();
+        return [.. _segments.Values.OrderBy(s => s.Index)];
     }
 
     internal CancellationToken DrainerCancellation => _drainerCts.Token;

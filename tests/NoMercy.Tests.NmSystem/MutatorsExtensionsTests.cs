@@ -26,7 +26,7 @@ public class MutatorsExtensionsTests
     public void Randomize_WithMultipleItems_ReturnsAllItems()
     {
         int[] input = [1, 2, 3, 4, 5];
-        IEnumerable<int> result = input.Randomize().OrderBy(x => x).ToList();
+        IEnumerable<int> result = [.. input.Randomize().OrderBy(x => x)];
         result.Should().Equal([1, 2, 3, 4, 5]);
     }
 

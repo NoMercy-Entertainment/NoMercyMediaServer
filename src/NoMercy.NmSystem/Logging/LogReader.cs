@@ -59,16 +59,17 @@ public static class LogReader
         foreach (IEnumerable<LogEntry> chunk in results)
             logEntries.AddRange(chunk);
 
-        return logEntries
-            .DistinctBy(entry =>
+        return
+        [
+            .. logEntries.DistinctBy(entry =>
                 (
                     entry.Type,
                     entry.Level,
                     entry.Message,
                     Second: entry.Time.Ticks / TimeSpan.TicksPerSecond
                 )
-            )
-            .ToList();
+            ),
+        ];
     }
 
     public static async Task<List<LogEntry>> GetLatestRunLogsAsync(
@@ -90,7 +91,7 @@ public static class LogReader
             return [];
 
         IEnumerable<LogEntry> logs = await ProcessFileAsync(storage, latest.Path, filter);
-        return logs.ToList();
+        return [.. logs];
     }
 
     private static async Task<IEnumerable<LogEntry>> ProcessFileAsync(
@@ -99,7 +100,7 @@ public static class LogReader
         Func<LogEntry, bool>? filter
     )
     {
-        List<LogEntry> logEntries = new();
+        List<LogEntry> logEntries = [];
 
         if (!storage.Exists(filePath))
         {

@@ -86,12 +86,14 @@ public partial class FileManager
         // in an NFS library would also probe every S3 / WebDAV folder for
         // unrelated libraries — one flaky remote backend then threw on
         // Exists() and killed the whole job (retried up to maxAttempts).
-        Folder[] rootFolders = mediaContext
-            .FolderLibrary.Where(fl => fl.LibraryId == library.Id)
-            .Include(fl => fl.Folder)
-                .ThenInclude(fl => fl.Driver)
-            .Select(f => f.Folder)
-            .ToArray();
+        Folder[] rootFolders =
+        [
+            .. mediaContext
+                .FolderLibrary.Where(fl => fl.LibraryId == library.Id)
+                .Include(fl => fl.Folder)
+                    .ThenInclude(fl => fl.Driver)
+                .Select(f => f.Folder),
+        ];
 
         LibraryRootFolders = rootFolders;
 

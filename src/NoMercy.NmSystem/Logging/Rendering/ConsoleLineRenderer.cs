@@ -59,7 +59,7 @@ public static class ConsoleLineRenderer
         int wrapWidth = width > GutterColumn + 4 ? width - GutterColumn - 2 : 0;
         List<string> messageLines = SplitAndWrap(message ?? string.Empty, wrapWidth);
 
-        List<string> output = new();
+        List<string> output = [];
         for (int i = 0; i < messageLines.Count; i++)
         {
             string rendered = RenderMessage(messageLines[i], theme, color);
@@ -80,7 +80,7 @@ public static class ConsoleLineRenderer
 
     private static List<string> SplitAndWrap(string message, int wrapWidth)
     {
-        List<string> lines = new();
+        List<string> lines = [];
         foreach (string raw in message.Split('\n'))
         {
             string line = raw.TrimEnd('\r');
@@ -153,6 +153,5 @@ public static class ConsoleLineRenderer
     /// something harmless. It looks identical and pastes as whitespace. With colour
     /// off, which is every redirected stream, it is simply a space.
     /// </summary>
-    private static string Rule(string hex, bool color) =>
-        color ? " ".PastelBg(hex) : " ";
+    private static string Rule(string hex, bool color) => color ? " ".PastelBg(hex) : " ";
 }

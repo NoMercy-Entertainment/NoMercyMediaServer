@@ -116,7 +116,7 @@ public static class ProfileFingerprint
 
         if (token is JArray array)
         {
-            JArray sortedArray = new();
+            JArray sortedArray = [];
             foreach (JToken item in array)
                 sortedArray.Add(Canonicalize(item));
             return sortedArray;

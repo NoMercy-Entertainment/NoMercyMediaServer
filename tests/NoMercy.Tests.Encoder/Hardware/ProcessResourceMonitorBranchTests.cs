@@ -92,16 +92,18 @@ public class ProcessResourceMonitorBranchTests
         // torn reads under concurrent calls. Hammer it from multiple threads.
         ProcessResourceMonitor sut = new(NullLogger<ProcessResourceMonitor>.Instance);
 
-        Task[] tasks = Enumerable
-            .Range(0, 16)
-            .Select(_ =>
-                Task.Run(() =>
-                {
-                    for (int i = 0; i < 100; i++)
-                        sut.GetCpuUsagePercent();
-                })
-            )
-            .ToArray();
+        Task[] tasks =
+        [
+            .. Enumerable
+                .Range(0, 16)
+                .Select(_ =>
+                    Task.Run(() =>
+                    {
+                        for (int i = 0; i < 100; i++)
+                            sut.GetCpuUsagePercent();
+                    })
+                ),
+        ];
 
         Func<Task> act = () => Task.WhenAll(tasks);
         await act.Should().NotThrowAsync();

@@ -187,7 +187,7 @@ public sealed class WebDavStorageContractTests(StorageBackendsFixture fixture)
         IStorage storage = CreateStorage();
         try
         {
-            byte[] data = new byte[] { 0x01, 0x02 };
+            byte[] data = [0x01, 0x02];
             await SeedFile("foo/bar.bin", data);
 
             bool withSingle = await storage.ExistsAsync("foo/bar.bin", CancellationToken.None);

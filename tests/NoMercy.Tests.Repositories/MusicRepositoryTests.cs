@@ -178,24 +178,39 @@ public class MusicRepositoryTests : IDisposable
         context.SaveChanges();
 
         // Phase 3: Join tables and play history
-        context.AlbumTrack.AddRange([new AlbumTrack(AlbumId1, TrackId1), new AlbumTrack(AlbumId1, TrackId2), new AlbumTrack(AlbumId2, TrackId3)]
-        );
+        context.AlbumTrack.AddRange([
+            new AlbumTrack(AlbumId1, TrackId1),
+            new AlbumTrack(AlbumId1, TrackId2),
+            new AlbumTrack(AlbumId2, TrackId3),
+        ]);
 
-        context.ArtistTrack.AddRange([new ArtistTrack(ArtistId1, TrackId1), new ArtistTrack(ArtistId1, TrackId2), new ArtistTrack(ArtistId2, TrackId3)]
-        );
+        context.ArtistTrack.AddRange([
+            new ArtistTrack(ArtistId1, TrackId1),
+            new ArtistTrack(ArtistId1, TrackId2),
+            new ArtistTrack(ArtistId2, TrackId3),
+        ]);
 
-        context.AlbumArtist.AddRange([new AlbumArtist(AlbumId1, ArtistId1), new AlbumArtist(AlbumId2, ArtistId2)]
-        );
+        context.AlbumArtist.AddRange([
+            new AlbumArtist(AlbumId1, ArtistId1),
+            new AlbumArtist(AlbumId2, ArtistId2),
+        ]);
 
         context.ArtistUser.Add(new(ArtistId1, SeedConstants.UserId));
         context.AlbumUser.Add(new(AlbumId1, SeedConstants.UserId));
         context.TrackUser.Add(new(TrackId1, SeedConstants.UserId));
 
-        context.MusicPlays.AddRange([new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId1), new MusicPlay(SeedConstants.UserId, TrackId3)]
-        );
+        context.MusicPlays.AddRange([
+            new MusicPlay(SeedConstants.UserId, TrackId1),
+            new MusicPlay(SeedConstants.UserId, TrackId1),
+            new MusicPlay(SeedConstants.UserId, TrackId1),
+            new MusicPlay(SeedConstants.UserId, TrackId3),
+        ]);
 
-        context.MusicGenreTrack.AddRange([new MusicGenreTrack(genre.Id, TrackId1), new MusicGenreTrack(genre.Id, TrackId2), new MusicGenreTrack(genre.Id, TrackId3)]
-        );
+        context.MusicGenreTrack.AddRange([
+            new MusicGenreTrack(genre.Id, TrackId1),
+            new MusicGenreTrack(genre.Id, TrackId2),
+            new MusicGenreTrack(genre.Id, TrackId3),
+        ]);
 
         context.SaveChanges();
     }
@@ -205,9 +220,10 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<Artist> result = (await _repository.GetArtists(SeedConstants.UserId, "A"))
-            .Take(1)
-            .ToList();
+        List<Artist> result =
+        [
+            .. (await _repository.GetArtists(SeedConstants.UserId, "A")).Take(1),
+        ];
 
         Assert.Single(result);
         Assert.Equal("Arctic Monkeys", result[0].Name);
@@ -225,9 +241,7 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<Album> result = (await _repository.GetAlbums(SeedConstants.UserId, "A"))
-            .Take(1)
-            .ToList();
+        List<Album> result = [.. (await _repository.GetAlbums(SeedConstants.UserId, "A")).Take(1)];
 
         Assert.Single(result);
         Assert.Equal("AM", result[0].Name);
@@ -245,7 +259,7 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetLatestAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<Album> result = (await _repository.GetLatestAlbums()).Take(1).ToList();
+        List<Album> result = [.. (await _repository.GetLatestAlbums()).Take(1)];
 
         Assert.Single(result);
     }
@@ -253,7 +267,7 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetLatestArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<Artist> result = (await _repository.GetLatestArtists()).Take(1).ToList();
+        List<Artist> result = [.. (await _repository.GetLatestArtists()).Take(1)];
 
         Assert.Single(result);
     }
@@ -261,7 +275,7 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetLatestGenres_ReturnsList_OrderedByTrackCount()
     {
-        List<MusicGenre> result = (await _repository.GetLatestGenres()).Take(10).ToList();
+        List<MusicGenre> result = [.. (await _repository.GetLatestGenres()).Take(10)];
 
         Assert.Single(result);
         Assert.Equal("Rock", result[0].Name);
@@ -270,9 +284,10 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetFavoriteArtists_ReturnsList_ThatCanBePaginated()
     {
-        List<ArtistUser> result = (await _repository.GetFavoriteArtists(SeedConstants.UserId))
-            .Take(36)
-            .ToList();
+        List<ArtistUser> result =
+        [
+            .. (await _repository.GetFavoriteArtists(SeedConstants.UserId)).Take(36),
+        ];
 
         Assert.Single(result);
         Assert.Equal(ArtistId1, result[0].ArtistId);
@@ -281,9 +296,10 @@ public class MusicRepositoryTests : IDisposable
     [Fact]
     public async Task GetFavoriteAlbums_ReturnsList_ThatCanBePaginated()
     {
-        List<AlbumUser> result = (await _repository.GetFavoriteAlbums(SeedConstants.UserId))
-            .Take(36)
-            .ToList();
+        List<AlbumUser> result =
+        [
+            .. (await _repository.GetFavoriteAlbums(SeedConstants.UserId)).Take(36),
+        ];
 
         Assert.Single(result);
         Assert.Equal(AlbumId1, result[0].AlbumId);

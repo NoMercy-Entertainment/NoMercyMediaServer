@@ -119,7 +119,7 @@ public static class DisplayWidth
     /// <summary>Greedy word-wrap to lines of at most <paramref name="width"/> cells.</summary>
     public static IReadOnlyList<string> Wrap(string? text, int width)
     {
-        List<string> lines = new();
+        List<string> lines = [];
         if (string.IsNullOrEmpty(text) || width <= 0)
         {
             lines.Add(text ?? string.Empty);
@@ -186,7 +186,7 @@ public static class DisplayWidth
 
     private static IEnumerable<string> HardSplit(string word, int width)
     {
-        List<string> pieces = new();
+        List<string> pieces = [];
         ReadOnlySpan<char> span = word.AsSpan();
         StringBuilder builder = new();
         int builderWidth = 0;

@@ -69,9 +69,11 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
 
         int discDurationSec = disc.MainTitleDurationSec;
 
-        List<DiscCandidate> all = [];
-        all.AddRange(await SearchAsync(fullQuery, MediaType.Movie, ct, discDurationSec));
-        all.AddRange(await SearchAsync(fullQuery, MediaType.TvShow, ct, discDurationSec));
+        List<DiscCandidate> all =
+        [
+            .. await SearchAsync(fullQuery, MediaType.Movie, ct, discDurationSec),
+            .. await SearchAsync(fullQuery, MediaType.TvShow, ct, discDurationSec),
+        ];
 
         if (all.Count == 0)
         {
@@ -123,7 +125,7 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
             }
         }
 
-        DiscCandidate[] ranked = resolved.OrderByDescending(c => c.Confidence).ToArray();
+        DiscCandidate[] ranked = [.. resolved.OrderByDescending(c => c.Confidence)];
 
         double topConfidence = ranked.Length > 0 ? ranked[0].Confidence : 0;
         bool autoApply = topConfidence >= AutoApplyThreshold;
@@ -192,8 +194,8 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
         {
             return type switch
             {
-                MediaType.Movie => (await SearchMoviesAsync(query, discDurationSec: 0)).ToArray(),
-                MediaType.TvShow => (await SearchTvShowsAsync(query, discDurationSec: 0)).ToArray(),
+                MediaType.Movie => [.. await SearchMoviesAsync(query, discDurationSec: 0)],
+                MediaType.TvShow => [.. await SearchTvShowsAsync(query, discDurationSec: 0)],
                 _ => [],
             };
         }
@@ -462,12 +464,14 @@ public sealed partial class VideoDiscIdentifier(ILogger<VideoDiscIdentifier> log
 
     private static double NormalizedSimilarity(string a, string b)
     {
-        HashSet<string> aTokens = new(
-            a.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries)
-        );
-        HashSet<string> bTokens = new(
-            b.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries)
-        );
+        HashSet<string> aTokens =
+        [
+            .. a.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries),
+        ];
+        HashSet<string> bTokens =
+        [
+            .. b.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries),
+        ];
         if (aTokens.Count == 0 || bTokens.Count == 0)
             return 0;
 

@@ -501,9 +501,12 @@ public partial class RecordingManager(
             };
             await musicGenreRepository.Store(musicGenre);
         }
-        List<MusicGenreTrack> genres = (trackAppends.Genres ?? trackAppends.Recording.Genres)
-            .Select(genre => new MusicGenreTrack { TrackId = insert.Id, GenreId = genre.Id })
-            .ToList();
+        List<MusicGenreTrack> genres =
+        [
+            .. (trackAppends.Genres ?? trackAppends.Recording.Genres).Select(
+                genre => new MusicGenreTrack { TrackId = insert.Id, GenreId = genre.Id }
+            ),
+        ];
 
         if (genres.Count > 0)
             await musicGenreRepository.LinkToRecording(genres);

@@ -55,7 +55,7 @@ public sealed class SummarizeFailuresTests
         ];
 
         // SummarizeFailures only receives the already-filtered failed outcomes.
-        List<EncodeTaskOutcome> failedOnly = failed.Where(o => !o.Success).ToList();
+        List<EncodeTaskOutcome> failedOnly = [.. failed.Where(o => !o.Success)];
 
         (IReadOnlyList<string> descriptors, string? lastError) = VideoEncodeJob.SummarizeFailures(
             failedOnly

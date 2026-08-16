@@ -209,7 +209,7 @@ public class WorkerSelfRegistrationServiceTests
             get
             {
                 lock (_log)
-                    return _log.ToArray();
+                    return [.. _log];
             }
         }
 

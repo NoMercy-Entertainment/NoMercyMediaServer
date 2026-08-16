@@ -247,10 +247,7 @@ public class TmdbMovieClientIntegrationTests : TmdbTestBase
         using TmdbMovieClient client = CreateRealMovieClient();
 
         // Act - Make multiple quick calls to test rate limiting
-        Task<TmdbMovieDetails?>[] tasks = Enumerable
-            .Range(0, 5)
-            .Select(_ => client.Details())
-            .ToArray();
+        Task<TmdbMovieDetails?>[] tasks = [.. Enumerable.Range(0, 5).Select(_ => client.Details())];
         TmdbMovieDetails?[] results = await Task.WhenAll(tasks);
 
         // Assert

@@ -81,16 +81,14 @@ public partial class RecommendationRepository
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.MovieMediaType,
                                     SourceCount = g.Select(r => r.MovieFromId).Distinct().Count(),
-                                    SourceIds = g.Select(r => r.MovieFromId!.Value)
-                                        .Distinct()
-                                        .ToList(),
+                                    SourceIds = [.. g.Select(r => r.MovieFromId!.Value).Distinct()],
                                 };
                             }
                         ),
                 ct
             );
 
-        return metadataMap.Values.ToList();
+        return [.. metadataMap.Values];
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedTvRecommendationsAsync(
@@ -153,16 +151,14 @@ public partial class RecommendationRepository
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.TvMediaType,
                                     SourceCount = g.Select(r => r.TvFromId).Distinct().Count(),
-                                    SourceIds = g.Select(r => r.TvFromId!.Value)
-                                        .Distinct()
-                                        .ToList(),
+                                    SourceIds = [.. g.Select(r => r.TvFromId!.Value).Distinct()],
                                 };
                             }
                         ),
                 ct
             );
 
-        return metadataMap.Values.ToList();
+        return [.. metadataMap.Values];
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedAnimeRecommendationsAsync(
@@ -225,16 +221,14 @@ public partial class RecommendationRepository
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.AnimeMediaType,
                                     SourceCount = g.Select(r => r.TvFromId).Distinct().Count(),
-                                    SourceIds = g.Select(r => r.TvFromId!.Value)
-                                        .Distinct()
-                                        .ToList(),
+                                    SourceIds = [.. g.Select(r => r.TvFromId!.Value).Distinct()],
                                 };
                             }
                         ),
                 ct
             );
 
-        return metadataMap.Values.ToList();
+        return [.. metadataMap.Values];
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedMovieSimilarAsync(
@@ -295,16 +289,14 @@ public partial class RecommendationRepository
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.MovieMediaType,
                                     SourceCount = g.Select(s => s.MovieFromId).Distinct().Count(),
-                                    SourceIds = g.Select(s => s.MovieFromId!.Value)
-                                        .Distinct()
-                                        .ToList(),
+                                    SourceIds = [.. g.Select(s => s.MovieFromId!.Value).Distinct()],
                                 };
                             }
                         ),
                 ct
             );
 
-        return metadataMap.Values.ToList();
+        return [.. metadataMap.Values];
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedTvSimilarAsync(
@@ -367,16 +359,14 @@ public partial class RecommendationRepository
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.TvMediaType,
                                     SourceCount = g.Select(s => s.TvFromId).Distinct().Count(),
-                                    SourceIds = g.Select(s => s.TvFromId!.Value)
-                                        .Distinct()
-                                        .ToList(),
+                                    SourceIds = [.. g.Select(s => s.TvFromId!.Value).Distinct()],
                                 };
                             }
                         ),
                 ct
             );
 
-        return metadataMap.Values.ToList();
+        return [.. metadataMap.Values];
     }
 
     public async Task<List<RecommendationCandidateDto>> GetUnownedAnimeSimilarAsync(
@@ -439,15 +429,13 @@ public partial class RecommendationRepository
                                     ColorPalette = first._colorPalette.OrEmpty(),
                                     MediaType = MediaTypes.AnimeMediaType,
                                     SourceCount = g.Select(s => s.TvFromId).Distinct().Count(),
-                                    SourceIds = g.Select(s => s.TvFromId!.Value)
-                                        .Distinct()
-                                        .ToList(),
+                                    SourceIds = [.. g.Select(s => s.TvFromId!.Value).Distinct()],
                                 };
                             }
                         ),
                 ct
             );
 
-        return metadataMap.Values.ToList();
+        return [.. metadataMap.Values];
     }
 }

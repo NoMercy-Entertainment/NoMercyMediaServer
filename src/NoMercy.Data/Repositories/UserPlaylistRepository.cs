@@ -168,8 +168,8 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         // The caller must supply exactly the current item set — a partial or
         // stale list is rejected outright rather than silently reordering (and
         // implicitly dropping) a subset.
-        HashSet<Ulid> currentIds = items.Select(i => i.Id).ToHashSet();
-        HashSet<Ulid> requestedIds = orderedItemIds.ToHashSet();
+        HashSet<Ulid> currentIds = [.. items.Select(i => i.Id)];
+        HashSet<Ulid> requestedIds = [.. orderedItemIds];
         if (currentIds.Count != requestedIds.Count || !currentIds.SetEquals(requestedIds))
             return false;
 
@@ -200,7 +200,7 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
         // Second, flat query — UserPlaylist deliberately carries no PlaylistItems
         // collection navigation, so the per-playlist count is fetched separately
         // and merged in memory rather than through a correlated subquery.
-        List<Guid> playlistIds = playlists.Select(p => p.Id).ToList();
+        List<Guid> playlistIds = [.. playlists.Select(p => p.Id)];
         Dictionary<Guid, int> itemCounts = await context
             .PlaylistItems.AsNoTracking()
             .Where(pi => playlistIds.Contains(pi.UserPlaylistId))
@@ -208,14 +208,15 @@ public class UserPlaylistRepository(IDbContextFactory<MediaContext> contextFacto
             .Select(g => new { UserPlaylistId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.UserPlaylistId, x => x.Count, ct);
 
-        return playlists
-            .Select(p => new UserPlaylistSummary(
+        return
+        [
+            .. playlists.Select(p => new UserPlaylistSummary(
                 p.Id,
                 p.Name,
                 p.Cover,
                 itemCounts.GetValueOrDefault(p.Id, 0)
-            ))
-            .ToList();
+            )),
+        ];
     }
 
     public async Task<List<PlaylistItem>?> GetPlaylistItemsAsync(

@@ -100,7 +100,7 @@ public static class FfprobeRunner
             JArray? frameArr = frames["frames"] as JArray;
             JObject? firstFrame = frameArr?.OfType<JObject>().FirstOrDefault();
             if (firstFrame?["side_data_list"] is JArray sd)
-                sideData = sd.OfType<JObject>().ToList();
+                sideData = [.. sd.OfType<JObject>()];
         }
         catch
         {

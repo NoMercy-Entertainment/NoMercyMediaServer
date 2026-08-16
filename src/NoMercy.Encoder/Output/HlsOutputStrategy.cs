@@ -298,10 +298,13 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
         if (measuredVariantPaths.Count > 0 && !anyVariantMeasured)
         {
-            List<string> missing = measuredVariantPaths.Where(p => !storage.Exists(p)).ToList();
-            List<string> empty = measuredVariantPaths
-                .Where(p => storage.Exists(p) && analyzer.Measure(p).PeakBandwidth == 0)
-                .ToList();
+            List<string> missing = [.. measuredVariantPaths.Where(p => !storage.Exists(p))];
+            List<string> empty =
+            [
+                .. measuredVariantPaths.Where(p =>
+                    storage.Exists(p) && analyzer.Measure(p).PeakBandwidth == 0
+                ),
+            ];
 
             throw new InvalidOperationException(
                 "Master playlist would list zero variants — no variant playlist produced "
@@ -330,15 +333,17 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
 
     private OutputPlan BuildMasterPlaylistPlan(string outputDirectory, OutputPlan plan)
     {
-        SubtitleOutputPlan[] existingSubtitleOutputs = plan
-            .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
-            .Where(s =>
-            {
-                string relativeUri = PlaylistGenerator.GetSubtitlePlaylistUri(s);
-                string absolutePath = storage.CombinePath(outputDirectory, relativeUri);
-                return storage.Exists(absolutePath);
-            })
-            .ToArray();
+        SubtitleOutputPlan[] existingSubtitleOutputs =
+        [
+            .. plan
+                .SubtitleOutputs.Where(s => s.Action is StreamAction.Extract or StreamAction.Copy)
+                .Where(s =>
+                {
+                    string relativeUri = PlaylistGenerator.GetSubtitlePlaylistUri(s);
+                    string absolutePath = storage.CombinePath(outputDirectory, relativeUri);
+                    return storage.Exists(absolutePath);
+                }),
+        ];
 
         return plan with
         {
@@ -363,12 +368,13 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         if (!plan.EmitSubtitleWebVttChunks)
             return;
 
-        SubtitleOutputPlan[] webVttSubs = plan
-            .SubtitleOutputs.Where(s =>
+        SubtitleOutputPlan[] webVttSubs =
+        [
+            .. plan.SubtitleOutputs.Where(s =>
                 s.Action is StreamAction.Extract or StreamAction.Copy
                 && s.OutputCodec is SubtitleCodecType.WebVtt
-            )
-            .ToArray();
+            ),
+        ];
         if (webVttSubs.Length == 0)
             return;
 
@@ -376,11 +382,13 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
         if (!storage.Exists(subtitlesDir))
             return;
 
-        string[] vttFiles = storage
-            .List(subtitlesDir, "*.vtt", recursive: false)
-            .Where(e => !e.IsDirectory)
-            .Select(e => e.Path)
-            .ToArray();
+        string[] vttFiles =
+        [
+            .. storage
+                .List(subtitlesDir, "*.vtt", recursive: false)
+                .Where(e => !e.IsDirectory)
+                .Select(e => e.Path),
+        ];
         if (vttFiles.Length == 0)
             return;
 
@@ -533,6 +541,6 @@ public class HlsOutputStrategy(IStorage storage) : IOutputStrategy
             }
         }
 
-        return dirs.ToArray();
+        return [.. dirs];
     }
 }

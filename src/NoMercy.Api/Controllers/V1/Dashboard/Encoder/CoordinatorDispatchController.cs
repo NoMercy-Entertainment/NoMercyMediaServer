@@ -52,12 +52,12 @@ public class CoordinatorDispatchController(
         CancellationToken ct
     )
     {
-
         if (request.Tasks is not { Count: > 0 })
             return BadRequestResponse("tasks must be a non-empty array");
 
-        EncodeTask[] tasks = request
-            .Tasks.Select(t => new EncodeTask(
+        EncodeTask[] tasks =
+        [
+            .. request.Tasks.Select(t => new EncodeTask(
                 TaskId: t.TaskId ?? Guid.NewGuid().ToString("N"),
                 Command: new(
                     Executable: "ffmpeg",
@@ -66,8 +66,8 @@ public class CoordinatorDispatchController(
                 ),
                 OutputPath: t.OutputPath,
                 Type: t.TaskType
-            ))
-            .ToArray();
+            )),
+        ];
 
         DispatchResult[] results = await dispatcher.DispatchAsync(tasks, ct).ConfigureAwait(false);
 
@@ -98,7 +98,6 @@ public class CoordinatorDispatchController(
     [HttpGet("{taskId}/status")]
     public IActionResult GetTaskStatus(string taskId)
     {
-
         TaskProgressSnapshot? snapshot = progressStore
             .GetAll()
             .FirstOrDefault(s => s.TaskId == taskId);

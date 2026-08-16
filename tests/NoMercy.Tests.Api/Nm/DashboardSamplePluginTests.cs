@@ -17,7 +17,10 @@ public class DashboardSamplePluginTests
 
     private static async Task<PluginView> ViewFor(string surface)
     {
-        return await Plugin.GetViewAsync(new() { Route = "/", Surface = surface }, CancellationToken.None);
+        return await Plugin.GetViewAsync(
+            new() { Route = "/", Surface = surface },
+            CancellationToken.None
+        );
     }
 
     private static List<PluginComponent> Flatten(PluginComponent component)
@@ -31,7 +34,7 @@ public class DashboardSamplePluginTests
     private static async Task<List<PluginComponent>> AllComponents(string surface)
     {
         PluginView view = await ViewFor(surface);
-        return (view.Components ?? []).SelectMany(Flatten).ToList();
+        return [.. (view.Components ?? []).SelectMany(Flatten)];
     }
 
     [Fact]
@@ -56,7 +59,9 @@ public class DashboardSamplePluginTests
 
     private static async Task<int> ColumnsOn(string surface)
     {
-        PluginComponent card = (await AllComponents(surface)).First(component => component.Id == "recent");
+        PluginComponent card = (await AllComponents(surface)).First(component =>
+            component.Id == "recent"
+        );
         Dictionary<string, object?> box = (Dictionary<string, object?>)card.Props["box"]!;
         return (int)box["columns"]!;
     }
@@ -64,8 +69,14 @@ public class DashboardSamplePluginTests
     [Fact]
     public async Task DropsTheDetailTableWhereThereIsNoRoomForIt()
     {
-        Assert.Contains(await AllComponents(PluginSurface.Web), component => component.Id == "details");
-        Assert.DoesNotContain(await AllComponents(PluginSurface.Mobile), component => component.Id == "details");
+        Assert.Contains(
+            await AllComponents(PluginSurface.Web),
+            component => component.Id == "details"
+        );
+        Assert.DoesNotContain(
+            await AllComponents(PluginSurface.Mobile),
+            component => component.Id == "details"
+        );
     }
 
     [Fact]
@@ -90,7 +101,11 @@ public class DashboardSamplePluginTests
         {
             foreach (string field in new[] { "titleText", "ariaLabel", "text" })
             {
-                if (!component.Props.TryGetValue(field, out object? value) || value is not string text) continue;
+                if (
+                    !component.Props.TryGetValue(field, out object? value)
+                    || value is not string text
+                )
+                    continue;
                 Assert.Contains(text, keys);
             }
         }

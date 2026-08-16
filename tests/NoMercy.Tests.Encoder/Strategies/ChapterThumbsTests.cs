@@ -109,23 +109,25 @@ public class ChapterThumbsTests : IDisposable
         int videoCount = 1
     )
     {
-        VideoOutputPlan[] videos = Enumerable
-            .Range(0, videoCount)
-            .Select(i => new VideoOutputPlan(
-                Width: 1920,
-                Height: 1080,
-                EncoderName: "libx264",
-                Crf: 23,
-                BitrateKbps: 0,
-                Preset: "medium",
-                Profile: "main",
-                Level: "4.0",
-                TenBit: false,
-                PixelFormat: "yuv420p",
-                MapLabel: $"[v{i}]",
-                ExtraFlags: []
-            ))
-            .ToArray();
+        VideoOutputPlan[] videos =
+        [
+            .. Enumerable
+                .Range(0, videoCount)
+                .Select(i => new VideoOutputPlan(
+                    Width: 1920,
+                    Height: 1080,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "main",
+                    Level: "4.0",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: $"[v{i}]",
+                    ExtraFlags: []
+                )),
+        ];
 
         return new(
             Format: OutputFormat.Hls,
@@ -178,9 +180,10 @@ public class ChapterThumbsTests : IDisposable
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        DecomposedTask[] chapterTasks = tasks
-            .Where(task => task.Kind == EncodeTaskKind.Chapters)
-            .ToArray();
+        DecomposedTask[] chapterTasks =
+        [
+            .. tasks.Where(task => task.Kind == EncodeTaskKind.Chapters),
+        ];
 
         chapterTasks.Should().HaveCount(5);
         chapterTasks.Should().AllSatisfy(task => task.GroupTag.Should().Be(GroupTag));

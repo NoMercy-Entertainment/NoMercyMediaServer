@@ -40,7 +40,7 @@ public class EncodingPresetsSeedTests
     public void AllBuiltInPresets_HaveUniqueIds()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        Ulid[] ids = presets.Select(p => p.Id).ToArray();
+        Ulid[] ids = [.. presets.Select(p => p.Id)];
         Assert.Equal(ids.Length, ids.Distinct().Count());
     }
 
@@ -48,7 +48,7 @@ public class EncodingPresetsSeedTests
     public void AllBuiltInPresets_HaveUniqueNames()
     {
         EncodingProfile[] presets = BuiltinPresets.All();
-        string[] names = presets.Select(p => p.Name).ToArray();
+        string[] names = [.. presets.Select(p => p.Name)];
         Assert.Equal(names.Length, names.Distinct().Count());
     }
 

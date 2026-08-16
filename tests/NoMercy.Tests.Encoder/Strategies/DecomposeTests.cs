@@ -61,23 +61,25 @@ public class DecomposeTests
         bool hasThumbnails = false
     )
     {
-        VideoOutputPlan[] videos = Enumerable
-            .Range(0, videoCount)
-            .Select(index => new VideoOutputPlan(
-                Width: index == 0 ? 1920 : 1280,
-                Height: index == 0 ? 1080 : 720,
-                EncoderName: "libx264",
-                Crf: 23,
-                BitrateKbps: 0,
-                Preset: "medium",
-                Profile: "main",
-                Level: "4.0",
-                TenBit: false,
-                PixelFormat: "yuv420p",
-                MapLabel: $"[v{index}]",
-                ExtraFlags: []
-            ))
-            .ToArray();
+        VideoOutputPlan[] videos =
+        [
+            .. Enumerable
+                .Range(0, videoCount)
+                .Select(index => new VideoOutputPlan(
+                    Width: index == 0 ? 1920 : 1280,
+                    Height: index == 0 ? 1080 : 720,
+                    EncoderName: "libx264",
+                    Crf: 23,
+                    BitrateKbps: 0,
+                    Preset: "medium",
+                    Profile: "main",
+                    Level: "4.0",
+                    TenBit: false,
+                    PixelFormat: "yuv420p",
+                    MapLabel: $"[v{index}]",
+                    ExtraFlags: []
+                )),
+        ];
         return BuildPlan(videos, audioCount, subtitleCount, hasThumbnails);
     }
 
@@ -119,29 +121,33 @@ public class DecomposeTests
         bool hasThumbnails
     )
     {
-        AudioOutputPlan[] audios = Enumerable
-            .Range(0, audioCount)
-            .Select(index => new AudioOutputPlan(
-                EncoderName: "aac",
-                BitrateKbps: 128,
-                Channels: 2,
-                SampleRate: 48000,
-                Action: StreamAction.Transcode,
-                Language: index == 0 ? "eng" : "fra",
-                MapLabel: $"[a{index}]"
-            ))
-            .ToArray();
+        AudioOutputPlan[] audios =
+        [
+            .. Enumerable
+                .Range(0, audioCount)
+                .Select(index => new AudioOutputPlan(
+                    EncoderName: "aac",
+                    BitrateKbps: 128,
+                    Channels: 2,
+                    SampleRate: 48000,
+                    Action: StreamAction.Transcode,
+                    Language: index == 0 ? "eng" : "fra",
+                    MapLabel: $"[a{index}]"
+                )),
+        ];
 
-        SubtitleOutputPlan[] subtitles = Enumerable
-            .Range(0, subtitleCount)
-            .Select(index => new SubtitleOutputPlan(
-                OutputCodec: SubtitleCodecType.WebVtt,
-                Action: StreamAction.Transcode,
-                Language: "eng",
-                SourceIndex: index,
-                MapLabel: null
-            ))
-            .ToArray();
+        SubtitleOutputPlan[] subtitles =
+        [
+            .. Enumerable
+                .Range(0, subtitleCount)
+                .Select(index => new SubtitleOutputPlan(
+                    OutputCodec: SubtitleCodecType.WebVtt,
+                    Action: StreamAction.Transcode,
+                    Language: "eng",
+                    SourceIndex: index,
+                    MapLabel: null
+                )),
+        ];
 
         ThumbnailOutputPlan? thumbnails = hasThumbnails
             ? new ThumbnailOutputPlan(160, 68, 10, SpriteGrid.For(TimeSpan.FromMinutes(24), 10))
@@ -191,9 +197,7 @@ public class DecomposeTests
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        DecomposedTask[] videoTasks = tasks
-            .Where(task => task.Kind == EncodeTaskKind.Video)
-            .ToArray();
+        DecomposedTask[] videoTasks = [.. tasks.Where(task => task.Kind == EncodeTaskKind.Video)];
 
         videoTasks.Should().HaveCount(2);
         videoTasks[0].OutputIndex.Should().Be(0);
@@ -217,15 +221,10 @@ public class DecomposeTests
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        DecomposedTask[] videoTasks = tasks
-            .Where(task => task.Kind == EncodeTaskKind.Video)
-            .ToArray();
+        DecomposedTask[] videoTasks = [.. tasks.Where(task => task.Kind == EncodeTaskKind.Video)];
 
         videoTasks.Should().HaveCount(5);
-        videoTasks
-            .Select(task => task.OutputIndex)
-            .Should()
-            .BeEquivalentTo(new[] { 0, 1, 2, 3, 4 });
+        videoTasks.Select(task => task.OutputIndex).Should().BeEquivalentTo([0, 1, 2, 3, 4]);
     }
 
     [Fact]
@@ -240,12 +239,10 @@ public class DecomposeTests
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        DecomposedTask[] audioTasks = tasks
-            .Where(task => task.Kind == EncodeTaskKind.Audio)
-            .ToArray();
+        DecomposedTask[] audioTasks = [.. tasks.Where(task => task.Kind == EncodeTaskKind.Audio)];
 
         audioTasks.Should().HaveCount(3);
-        audioTasks.Select(task => task.OutputIndex).Should().BeEquivalentTo(new[] { 0, 1, 2 });
+        audioTasks.Select(task => task.OutputIndex).Should().BeEquivalentTo([0, 1, 2]);
     }
 
     [Fact]
@@ -280,9 +277,7 @@ public class DecomposeTests
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        DecomposedTask[] subTasks = tasks
-            .Where(task => task.Kind == EncodeTaskKind.Subtitle)
-            .ToArray();
+        DecomposedTask[] subTasks = [.. tasks.Where(task => task.Kind == EncodeTaskKind.Subtitle)];
         subTasks.Should().HaveCount(2);
         subTasks[0].OutputIndex.Should().Be(0);
         subTasks[1].OutputIndex.Should().Be(1);
@@ -395,7 +390,7 @@ public class DecomposeTests
 
         DecomposedTask[] tasks = strategy.Decompose(plan, GroupTag);
 
-        string[] taskIds = tasks.Select(task => task.TaskId).ToArray();
+        string[] taskIds = [.. tasks.Select(task => task.TaskId)];
         taskIds.Should().OnlyHaveUniqueItems("task IDs must be unique within a decomposition run");
     }
 

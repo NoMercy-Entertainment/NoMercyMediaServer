@@ -42,7 +42,7 @@ public class DiscFingerprintTests
         new(
             Type: OpticalDiscType.Dvd,
             DiscLabel: "TEST",
-            Titles: titles.Select(t => MakeTitle(t.Index, t.Duration)).ToArray(),
+            Titles: [.. titles.Select(t => MakeTitle(t.Index, t.Duration))],
             AudioTracks: null,
             TotalDuration: TimeSpan.FromSeconds(titles.Sum(t => t.Duration.TotalSeconds))
         );

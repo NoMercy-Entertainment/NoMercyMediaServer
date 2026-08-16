@@ -150,7 +150,7 @@ public sealed class StuckReservationReaperHostedService : BackgroundService
             DateTime cutoffUtc = DateTime.UtcNow.Subtract(_cutoff);
             IReadOnlyList<QueueJobModel> reserved = context.GetReservedJobsOlderThan(cutoffUtc);
 
-            List<QueueJobModel> candidates = reserved.Where(IsReclaimable).ToList();
+            List<QueueJobModel> candidates = [.. reserved.Where(IsReclaimable)];
 
             if (candidates.Count == 0)
                 return;

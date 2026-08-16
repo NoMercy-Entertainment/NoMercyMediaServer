@@ -107,7 +107,8 @@ public class SeasonManager(
     {
         await seasonRepository.RemoveSeasonAsync(season.Id);
         logger.LogDebug(
-            "Show {ShowName}: Season {SeasonNumber}: Removed", [showName, season.SeasonNumber]
+            "Show {ShowName}: Season {SeasonNumber}: Removed",
+            [showName, season.SeasonNumber]
         );
     }
 
@@ -131,14 +132,16 @@ public class SeasonManager(
 
         await seasonRepository.StoreTranslationsAsync(translations);
         logger.LogDebug(
-            "Show {ShowName}: Season {SeasonNumber}: Translations stored", [showName, season.SeasonNumber]
+            "Show {ShowName}: Season {SeasonNumber}: Translations stored",
+            [showName, season.SeasonNumber]
         );
     }
 
     internal async Task StoreImages(string showName, TmdbSeasonAppends season)
     {
-        IEnumerable<Image> posters = season
-            .TmdbSeasonImages.Posters.Select(image => new Image
+        IEnumerable<Image> posters =
+        [
+            .. season.TmdbSeasonImages.Posters.Select(image => new Image
             {
                 AspectRatio = image.AspectRatio,
                 Height = image.Height,
@@ -150,12 +153,13 @@ public class SeasonManager(
                 SeasonId = season.Id,
                 Type = "poster",
                 Site = "https://image.tmdb.org/t/p/",
-            })
-            .ToList();
+            }),
+        ];
 
         await seasonRepository.StoreImagesAsync(posters);
         logger.LogDebug(
-            "Show {ShowName}: Season {SeasonNumber}: Images stored", [showName, season.SeasonNumber]
+            "Show {ShowName}: Season {SeasonNumber}: Images stored",
+            [showName, season.SeasonNumber]
         );
 
         await using MediaContext db = new();

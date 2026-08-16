@@ -98,7 +98,7 @@ public class DiscRipJobEncodeDispatchTests
         {
             Id = KnownFolderId,
             Path = "/media/movies",
-            EncodingPresetFolders = (presetLinks ?? []).ToList(),
+            EncodingPresetFolders = [.. presetLinks ?? []],
         };
 
     private static Library MakeLibrary() =>
@@ -163,10 +163,7 @@ public class DiscRipJobEncodeDispatchTests
             TargetLibraryId = library.Id,
             TargetLibraryType = library.Type,
             DiscRipper = ripper,
-            IdentificationService = new(
-                [],
-                NullLogger<DiscIdentificationService>.Instance
-            ),
+            IdentificationService = new([], NullLogger<DiscIdentificationService>.Instance),
             StorageFactory = factoryMock.Object,
             StorageDriver = Mock.Of<IStorageDriver>(),
             DriveLockRegistry = new(),

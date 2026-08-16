@@ -115,7 +115,7 @@ public sealed class DiscRipJobCdTaggingTests : ProviderHttpHarness
                 )
             );
         }
-        return results.ToArray();
+        return [.. results];
     }
 
     private static Mock<IStorage> MakeStorageMock(string hostPath)

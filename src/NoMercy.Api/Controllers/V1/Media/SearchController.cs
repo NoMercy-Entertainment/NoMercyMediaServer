@@ -65,85 +65,83 @@ public class SearchController : BaseController
             : topAlbum != null ? new TopResultCardData(topAlbum)
             : null;
 
-        List<TrackRowData> songResults = songs
-            .Take(6)
-            .Select(track => new TrackRowData(track, country))
-            .ToList();
+        List<TrackRowData> songResults =
+        [
+            .. songs.Take(6).Select(track => new TrackRowData(track, country)),
+        ];
 
         return Ok(
             ComponentResponse.From([
-                    Component
-                        .Container()
-                        .WithId("search-results")
-                        .WithItems([
-                                Component
-                                    .TopResultCard(topResultData!)
-                                    .WithId("top-result")
-                                    .WithTitle("Top Result".Localize())
-                                    .Build(),
-                                Component
-                                    .List()
-                                    .WithId("tracks")
-                                    .WithProperties(
-                                        new()
-                                        {
-                                            { "paddingTop", 0 },
-                                            { "paddingBottom", 0 },
-                                            { "paddingStart", 0 },
-                                            { "paddingEnd", 0 },
-                                        }
-                                    )
-                                    .WithTitle("Tracks".Localize())
-                                    .WithItems(
-                                        songResults.Select(track =>
-                                            Component
-                                                .TrackRow(track)
-                                                .WithProperties(
-                                                    new()
-                                                    {
-                                                        { "paddingTop", 0 },
-                                                        { "paddingBottom", 0 },
-                                                        { "paddingStart", 0 },
-                                                        { "paddingEnd", 0 },
-                                                    }
-                                                )
-                                                .WithDisplayList(songResults)
+                Component
+                    .Container()
+                    .WithId("search-results")
+                    .WithItems([
+                        Component
+                            .TopResultCard(topResultData!)
+                            .WithId("top-result")
+                            .WithTitle("Top Result".Localize())
+                            .Build(),
+                        Component
+                            .List()
+                            .WithId("tracks")
+                            .WithProperties(
+                                new()
+                                {
+                                    { "paddingTop", 0 },
+                                    { "paddingBottom", 0 },
+                                    { "paddingStart", 0 },
+                                    { "paddingEnd", 0 },
+                                }
+                            )
+                            .WithTitle("Tracks".Localize())
+                            .WithItems(
+                                songResults.Select(track =>
+                                    Component
+                                        .TrackRow(track)
+                                        .WithProperties(
+                                            new()
+                                            {
+                                                { "paddingTop", 0 },
+                                                { "paddingBottom", 0 },
+                                                { "paddingStart", 0 },
+                                                { "paddingEnd", 0 },
+                                            }
                                         )
-                                    )
-                            ]
-                        ),
-                    Component
-                        .Carousel()
-                        .WithId("artists")
-                        .WithTitle("Artist".Localize())
-                        .WithItems(
-                            artists
-                                .GroupBy(artist => artist.Id)
-                                .Select(group => group.First())
-                                .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
-                        ),
-                    Component
-                        .Carousel()
-                        .WithId("albums")
-                        .WithTitle("Albums".Localize())
-                        .WithItems(
-                            albums
-                                .GroupBy(album => album.Id)
-                                .Select(group => group.First())
-                                .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
-                        ),
-                    Component
-                        .Carousel()
-                        .WithId("playlists")
-                        .WithTitle("Playlists".Localize())
-                        .WithItems(
-                            playlists
-                                .GroupBy(playlist => playlist.Id)
-                                .Select(group => group.First())
-                                .Select(item => Component.MusicCard(new PlaylistResponseItemDto(item)))
-                        )
-                ]
-            )
+                                        .WithDisplayList(songResults)
+                                )
+                            ),
+                    ]),
+                Component
+                    .Carousel()
+                    .WithId("artists")
+                    .WithTitle("Artist".Localize())
+                    .WithItems(
+                        artists
+                            .GroupBy(artist => artist.Id)
+                            .Select(group => group.First())
+                            .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
+                    ),
+                Component
+                    .Carousel()
+                    .WithId("albums")
+                    .WithTitle("Albums".Localize())
+                    .WithItems(
+                        albums
+                            .GroupBy(album => album.Id)
+                            .Select(group => group.First())
+                            .Select(item => Component.MusicCard(new ArtistsResponseItemDto(item)))
+                    ),
+                Component
+                    .Carousel()
+                    .WithId("playlists")
+                    .WithTitle("Playlists".Localize())
+                    .WithItems(
+                        playlists
+                            .GroupBy(playlist => playlist.Id)
+                            .Select(group => group.First())
+                            .Select(item => Component.MusicCard(new PlaylistResponseItemDto(item)))
+                    ),
+            ])
         );
     }
 
@@ -224,20 +222,22 @@ public class SearchController : BaseController
         // Cap each category: a broad query otherwise fans thousands of full entity graphs through
         // SearchMusicFullDataAsync. Only the top result, six tracks, and the carousels render.
         const int resultCap = UiLimits.SearchResultsPerCategory;
-        List<Guid> artistIds = (await _musicRepository.SearchArtistIdsAsync(normalizedQuery, ct))
-            .Take(resultCap)
-            .ToList();
-        List<Guid> albumIds = (await _musicRepository.SearchAlbumIdsAsync(normalizedQuery, ct))
-            .Take(resultCap)
-            .ToList();
-        List<Guid> playlistIds = (
-            await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery, ct)
-        )
-            .Take(resultCap)
-            .ToList();
-        List<Guid> trackIds = (await _musicRepository.SearchTrackIdsAsync(normalizedQuery, ct))
-            .Take(resultCap)
-            .ToList();
+        List<Guid> artistIds =
+        [
+            .. (await _musicRepository.SearchArtistIdsAsync(normalizedQuery, ct)).Take(resultCap),
+        ];
+        List<Guid> albumIds =
+        [
+            .. (await _musicRepository.SearchAlbumIdsAsync(normalizedQuery, ct)).Take(resultCap),
+        ];
+        List<Guid> playlistIds =
+        [
+            .. (await _musicRepository.SearchPlaylistIdsAsync(normalizedQuery, ct)).Take(resultCap),
+        ];
+        List<Guid> trackIds =
+        [
+            .. (await _musicRepository.SearchTrackIdsAsync(normalizedQuery, ct)).Take(resultCap),
+        ];
 
         // Step 2: Query full data using the IDs in parallel (repository owns the fan-out)
         MusicSearchFullData fullData = await _musicRepository.SearchMusicFullDataAsync(
@@ -304,11 +304,13 @@ public class SearchController : BaseController
             ct
         );
 
-        List<CardData> cardItems = videoResults
-            .Tvs.Concat<dynamic>(videoResults.Movies)
-            .OrderBy(item => item is Tv tv ? tv.Title : ((Movie)item).Title)
-            .Select(item => new CardData(item, country))
-            .ToList();
+        List<CardData> cardItems =
+        [
+            .. videoResults
+                .Tvs.Concat<dynamic>(videoResults.Movies)
+                .OrderBy(item => item is Tv tv ? tv.Title : ((Movie)item).Title)
+                .Select(item => new CardData(item, country)),
+        ];
 
         return Component
             .Grid()

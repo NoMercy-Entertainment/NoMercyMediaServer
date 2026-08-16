@@ -134,22 +134,26 @@ public class TvShowsController(
         if (tv is null)
             return NotFoundResponse("Tv show not found");
 
-        VideoPlaylistResponseDto[] episodes = tv
-            .Seasons.Where(season => season.SeasonNumber > 0)
-            .SelectMany(season => season.Episodes)
-            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country))
-            .ToArray();
+        VideoPlaylistResponseDto[] episodes =
+        [
+            .. tv
+                .Seasons.Where(season => season.SeasonNumber > 0)
+                .SelectMany(season => season.Episodes)
+                .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country)),
+        ];
 
-        VideoPlaylistResponseDto[] extras = tv
-            .Seasons.Where(season => season.SeasonNumber == 0)
-            .SelectMany(season => season.Episodes)
-            .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country))
-            .ToArray();
+        VideoPlaylistResponseDto[] extras =
+        [
+            .. tv
+                .Seasons.Where(season => season.SeasonNumber == 0)
+                .SelectMany(season => season.Episodes)
+                .Select(episode => new VideoPlaylistResponseDto(episode, "tv", id, country)),
+        ];
 
-        VideoPlaylistResponseDto[] result = episodes
-            .Concat(extras)
-            .Where(episode => episode.Id != 0)
-            .ToArray();
+        VideoPlaylistResponseDto[] result =
+        [
+            .. episodes.Concat(extras).Where(episode => episode.Id != 0),
+        ];
 
         return Ok(result);
     }
@@ -385,12 +389,14 @@ public class TvShowsController(
             ct
         );
 
-        List<IGrouping<long, MissingEpisodeDto>> concat = episodes
-            .Select(episode => new MissingEpisodeDto(episode))
-            .OrderBy(episode => episode.SeasonNumber)
-            .ThenBy(episode => episode.EpisodeNumber)
-            .GroupBy(episode => episode.SeasonNumber)
-            .ToList();
+        List<IGrouping<long, MissingEpisodeDto>> concat =
+        [
+            .. episodes
+                .Select(episode => new MissingEpisodeDto(episode))
+                .OrderBy(episode => episode.SeasonNumber)
+                .ThenBy(episode => episode.EpisodeNumber)
+                .GroupBy(episode => episode.SeasonNumber),
+        ];
 
         if (concat.Count == 0)
         {

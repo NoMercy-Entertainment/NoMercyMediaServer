@@ -27,17 +27,21 @@ namespace NoMercy.Tests.Encoder.Errors;
 /// </summary>
 public class RuntimeErrorCatalogTests
 {
-    private static readonly string[] RuntimeErrorIds = typeof(EncoderRuntimeErrorId)
-        .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(f => f is { IsLiteral: true, IsInitOnly: false })
-        .Select(f => (string)f.GetValue(null)!)
-        .ToArray();
+    private static readonly string[] RuntimeErrorIds =
+    [
+        .. typeof(EncoderRuntimeErrorId)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false })
+            .Select(f => (string)f.GetValue(null)!),
+    ];
 
-    private static readonly string[] AllRuleIds = typeof(EncoderRuleId)
-        .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(f => f is { IsLiteral: true, IsInitOnly: false })
-        .Select(f => (string)f.GetValue(null)!)
-        .ToArray();
+    private static readonly string[] AllRuleIds =
+    [
+        .. typeof(EncoderRuleId)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(f => f is { IsLiteral: true, IsInitOnly: false })
+            .Select(f => (string)f.GetValue(null)!),
+    ];
 
     // ---- helper: locate docs/encoder-errors.md relative to the solution root ----
 
@@ -58,7 +62,7 @@ public class RuntimeErrorCatalogTests
 
         throw new FileNotFoundException(
             "Could not locate docs/encoder-errors.md. "
-                     + "Expected it at the repository root next to apps/, docs/, infra/ etc."
+                + "Expected it at the repository root next to apps/, docs/, infra/ etc."
         );
     }
 
@@ -120,13 +124,13 @@ public class RuntimeErrorCatalogTests
         string docsFile = FindDocsFile();
         string docsContent = File.ReadAllText(docsFile);
 
-        List<string> missing = AllRuleIds.Where(id => !docsContent.Contains($"`{id}`")).ToList();
+        List<string> missing = [.. AllRuleIds.Where(id => !docsContent.Contains($"`{id}`"))];
 
         missing
             .Should()
             .BeEmpty(
                 "The following EncoderRuleId constants are missing from docs/encoder-errors.md: "
-                         + string.Join(", ", missing)
+                    + string.Join(", ", missing)
             );
     }
 
@@ -138,15 +142,13 @@ public class RuntimeErrorCatalogTests
         string docsFile = FindDocsFile();
         string docsContent = File.ReadAllText(docsFile);
 
-        List<string> missing = RuntimeErrorIds
-            .Where(id => !docsContent.Contains($"`{id}`"))
-            .ToList();
+        List<string> missing = [.. RuntimeErrorIds.Where(id => !docsContent.Contains($"`{id}`"))];
 
         missing
             .Should()
             .BeEmpty(
                 "The following EncoderRuntimeErrorId constants are missing from docs/encoder-errors.md: "
-                         + string.Join(", ", missing)
+                    + string.Join(", ", missing)
             );
     }
 

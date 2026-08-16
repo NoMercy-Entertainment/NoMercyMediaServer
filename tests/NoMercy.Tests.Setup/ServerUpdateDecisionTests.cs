@@ -144,7 +144,7 @@ public sealed class ServerUpdateDecisionTests : IDisposable
         // The happy path: a genuinely newer release on a standalone deployment is fetched,
         // integrity-checked against the GitHub asset digest, and staged for the next restart.
         Software.Version = new(1, 0, 0);
-        byte[] payload = "newer server binary"u8.ToArray();
+        byte[] payload = [.. "newer server binary"u8];
         string digest =
             "sha256:" + Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
 

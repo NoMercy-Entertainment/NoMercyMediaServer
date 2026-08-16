@@ -106,7 +106,7 @@ public class TasksControllerMusicQueueTests : IClassFixture<NoMercyApiFactory>, 
         JsonElement array =
             root.ValueKind == JsonValueKind.Object ? root.GetProperty("data") : root;
 
-        return array.EnumerateArray().ToArray();
+        return [.. array.EnumerateArray()];
     }
 
     [Fact]

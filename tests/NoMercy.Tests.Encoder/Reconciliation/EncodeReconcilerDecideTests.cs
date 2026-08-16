@@ -99,9 +99,11 @@ public class EncodeReconcilerDecideTests
         // Counterpart to the test above: same preset, sprite absent. A preset that
         // never sets Thumbnails still wants one, so the gap must be topped up.
         EncodingProfile profile = MakeHlsProfile();
-        List<ExistingOutputEntry> withoutSprite = AllPresentFiles()
-            .Where(f => !f.RelativePath.StartsWith("thumbs_", StringComparison.Ordinal))
-            .ToList();
+        List<ExistingOutputEntry> withoutSprite =
+        [
+            .. AllPresentFiles()
+                .Where(f => !f.RelativePath.StartsWith("thumbs_", StringComparison.Ordinal)),
+        ];
 
         ReconciliationDecision decision = _reconciler.Decide(
             new(
@@ -125,11 +127,13 @@ public class EncodeReconcilerDecideTests
         // blown up several times over on a television. The sheet is a sidecar:
         // the answer is one sprite pass, never a re-encode.
         EncodingProfile profile = MakeHlsProfile();
-        List<ExistingOutputEntry> withOldSprite = AllPresentFiles()
-            .Where(f => !f.RelativePath.StartsWith("thumbs_", StringComparison.Ordinal))
-            .Append(new("thumbs_160x90.webp", 298_000))
-            .Append(new("thumbs_160x90.vtt", 4_000))
-            .ToList();
+        List<ExistingOutputEntry> withOldSprite =
+        [
+            .. AllPresentFiles()
+                .Where(f => !f.RelativePath.StartsWith("thumbs_", StringComparison.Ordinal)),
+            new("thumbs_160x90.webp", 298_000),
+            new("thumbs_160x90.vtt", 4_000),
+        ];
 
         ReconciliationDecision decision = _reconciler.Decide(
             new(
@@ -178,9 +182,11 @@ public class EncodeReconcilerDecideTests
     {
         EncodingProfile profile = MakeHlsProfile();
         string fingerprint = ProfileFingerprint.Compute(profile);
-        List<ExistingOutputEntry> files = AllPresentFiles()
-            .Where(f => !f.RelativePath.StartsWith("subtitles/", StringComparison.Ordinal))
-            .ToList();
+        List<ExistingOutputEntry> files =
+        [
+            .. AllPresentFiles()
+                .Where(f => !f.RelativePath.StartsWith("subtitles/", StringComparison.Ordinal)),
+        ];
         ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
@@ -202,9 +208,11 @@ public class EncodeReconcilerDecideTests
         // here so that decomposed-bundle path cannot regress unseen.
         EncodingProfile profile = MakeHlsProfile();
         string fingerprint = ProfileFingerprint.Compute(profile);
-        List<ExistingOutputEntry> files = AllPresentFiles()
-            .Where(f => !f.RelativePath.StartsWith("audio_", StringComparison.Ordinal))
-            .ToList();
+        List<ExistingOutputEntry> files =
+        [
+            .. AllPresentFiles()
+                .Where(f => !f.RelativePath.StartsWith("audio_", StringComparison.Ordinal)),
+        ];
         ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
@@ -276,16 +284,18 @@ public class EncodeReconcilerDecideTests
     {
         EncodingProfile profile = MakeHlsProfile();
         string fingerprint = ProfileFingerprint.Compute(profile);
-        List<ExistingOutputEntry> files = AllPresentFiles()
-            .Select(f =>
-                f.RelativePath.StartsWith("audio_", StringComparison.Ordinal)
-                    ? f with
-                    {
-                        SizeBytes = 0,
-                    }
-                    : f
-            )
-            .ToList();
+        List<ExistingOutputEntry> files =
+        [
+            .. AllPresentFiles()
+                .Select(f =>
+                    f.RelativePath.StartsWith("audio_", StringComparison.Ordinal)
+                        ? f with
+                        {
+                            SizeBytes = 0,
+                        }
+                        : f
+                ),
+        ];
         ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
@@ -325,12 +335,14 @@ public class EncodeReconcilerDecideTests
     {
         EncodingProfile profile = MakeHlsProfile();
         string fingerprint = ProfileFingerprint.Compute(profile);
-        List<ExistingOutputEntry> files = AllPresentFiles()
-            .Where(f =>
-                f.RelativePath.Contains('/')
-                || !f.RelativePath.EndsWith(".m3u8", StringComparison.Ordinal)
-            )
-            .ToList();
+        List<ExistingOutputEntry> files =
+        [
+            .. AllPresentFiles()
+                .Where(f =>
+                    f.RelativePath.Contains('/')
+                    || !f.RelativePath.EndsWith(".m3u8", StringComparison.Ordinal)
+                ),
+        ];
         ExistingOutputSnapshot existing = new(fingerprint, files, ValidOcrSidecarCount: 0);
 
         ReconciliationDecision decision = _reconciler.Decide(
@@ -446,7 +458,7 @@ public class EncodeReconcilerDecideTests
     // ------------------------------------------------------------------
 
     private static List<ExistingOutputEntry> FilesWithoutChapters() =>
-        AllPresentFiles().Where(f => f.RelativePath != "chapters.vtt").ToList();
+        [.. AllPresentFiles().Where(f => f.RelativePath != "chapters.vtt")];
 
     // Names here mirror what the encoder actually writes. The sprite pair in
     // particular carries the `thumbs_{W}x{H}` shape at the current default tile

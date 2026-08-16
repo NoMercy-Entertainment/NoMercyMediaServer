@@ -44,18 +44,18 @@ public sealed record DolbyVisionDecision(
 /// </summary>
 public static class DolbyVisionGate
 {
-    private static readonly HashSet<VideoCodecType> DvCompatibleCodecs = new()
-    {
+    private static readonly HashSet<VideoCodecType> DvCompatibleCodecs =
+    [
         VideoCodecType.H265,
         VideoCodecType.Av1,
-    };
+    ];
 
-    private static readonly HashSet<OutputFormat> DvCompatibleContainers = new()
-    {
+    private static readonly HashSet<OutputFormat> DvCompatibleContainers =
+    [
         OutputFormat.Hls,
         OutputFormat.Mp4,
         OutputFormat.Mkv,
-    };
+    ];
 
     /// <summary>
     /// Evaluate the four DV preservation conditions and return a decision.

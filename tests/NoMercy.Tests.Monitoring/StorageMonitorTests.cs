@@ -54,7 +54,7 @@ public class StorageMonitorTests
     {
         List<ResourceMonitorDto> result = StorageMonitor.Main();
 
-        List<ResourceMonitorDto> readyDrives = result.Where(d => d.Total > 0).ToList();
+        List<ResourceMonitorDto> readyDrives = [.. result.Where(d => d.Total > 0)];
 
         readyDrives
             .Should()
@@ -73,7 +73,7 @@ public class StorageMonitorTests
     {
         List<ResourceMonitorDto> result = StorageMonitor.Main();
 
-        List<ResourceMonitorDto> readyDrives = result.Where(d => d.Total > 0).ToList();
+        List<ResourceMonitorDto> readyDrives = [.. result.Where(d => d.Total > 0)];
 
         foreach (ResourceMonitorDto dto in readyDrives)
         {

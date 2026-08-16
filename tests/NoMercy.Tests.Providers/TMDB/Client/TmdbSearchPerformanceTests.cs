@@ -152,14 +152,12 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = new();
-        string[] queries = Enumerable.Range(1, 20).Select(i => $"test{i}").ToArray();
+        string[] queries = [.. Enumerable.Range(1, 20).Select(i => $"test{i}")];
         Stopwatch stopwatch = new();
 
         // Act
         stopwatch.Start();
-        Task<TmdbPaginatedResponse<TmdbMovie>?>[] tasks = queries
-            .Select(q => client.Movie(q))
-            .ToArray();
+        Task<TmdbPaginatedResponse<TmdbMovie>?>[] tasks = [.. queries.Select(q => client.Movie(q))];
         await Task.WhenAll(tasks);
         stopwatch.Stop();
 

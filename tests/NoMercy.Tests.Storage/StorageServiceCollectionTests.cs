@@ -46,10 +46,12 @@ public class StorageServiceCollectionTests
     {
         using ServiceProvider provider = BuildProvider();
 
-        List<string> keys = provider
-            .GetServices<IStorageDriverBuilder>()
-            .SelectMany(builder => builder.SupportedTypes)
-            .ToList();
+        List<string> keys =
+        [
+            .. provider
+                .GetServices<IStorageDriverBuilder>()
+                .SelectMany(builder => builder.SupportedTypes),
+        ];
 
         keys.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav"]);
         keys.Should().OnlyHaveUniqueItems();

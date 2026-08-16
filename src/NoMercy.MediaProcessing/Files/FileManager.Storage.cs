@@ -34,10 +34,12 @@ public partial class FileManager
 {
     private async Task StoreMusic()
     {
-        List<MediaFile> items = Files
-            .SelectMany(file => file.Files ?? [])
-            .Where(mediaFolder => mediaFolder.Parsed is not null)
-            .ToList();
+        List<MediaFile> items =
+        [
+            .. Files
+                .SelectMany(file => file.Files ?? [])
+                .Where(mediaFolder => mediaFolder.Parsed is not null),
+        ];
 
         if (items.Count == 0)
             return;
@@ -64,10 +66,12 @@ public partial class FileManager
 
     private async Task StoreTvShow()
     {
-        List<MediaFile> items = Files
-            .SelectMany(file => file.Files ?? [])
-            .Where(mediaFolder => mediaFolder.Parsed is not null)
-            .ToList();
+        List<MediaFile> items =
+        [
+            .. Files
+                .SelectMany(file => file.Files ?? [])
+                .Where(mediaFolder => mediaFolder.Parsed is not null),
+        ];
 
         Logger.App(
             $"[StoreTvShow] {Show?.Title} ({Show?.Id}): {items.Count} candidate files across {Folders.Count} folder(s)",
@@ -216,7 +220,7 @@ public partial class FileManager
             ),
             Quality = (item.FFprobe?.VideoStreams.FirstOrDefault()?.Width.ToString()).OrEmpty(),
             Subtitles = JsonConvert.SerializeObject(subtitles),
-            Tracks = tracks.ToArray(),
+            Tracks = [.. tracks],
             MetadataId = metadataId,
         };
 
@@ -361,9 +365,10 @@ public partial class FileManager
                 textKeys.Add($"{language}|{variant}");
         }
 
-        return bitmaps
-            .Where(bitmap => !textKeys.Contains($"{bitmap.Language}|{bitmap.Variant}"))
-            .ToList();
+        return
+        [
+            .. bitmaps.Where(bitmap => !textKeys.Contains($"{bitmap.Language}|{bitmap.Variant}")),
+        ];
     }
 
     private async Task<Metadata> MakeMetadata(

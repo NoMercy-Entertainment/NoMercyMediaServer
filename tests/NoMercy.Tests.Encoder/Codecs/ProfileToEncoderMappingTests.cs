@@ -51,8 +51,18 @@ public class ProfileToEncoderMappingTests
 
         sw.Presets.Should().HaveCount(10);
         sw.Presets.Should()
-            .Equal(["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"]
-            );
+            .Equal([
+                "ultrafast",
+                "superfast",
+                "veryfast",
+                "faster",
+                "fast",
+                "medium",
+                "slow",
+                "slower",
+                "veryslow",
+                "placebo",
+            ]);
     }
 
     [Fact]
@@ -417,7 +427,7 @@ public class ProfileToEncoderMappingTests
     [Fact]
     public void EnumerateVideoEncoders_Does_Not_Include_Copy()
     {
-        List<(VideoCodecType, EncoderInfo)> encoders = _registry.EnumerateVideoEncoders().ToList();
+        List<(VideoCodecType, EncoderInfo)> encoders = [.. _registry.EnumerateVideoEncoders()];
 
         encoders.Should().NotContain(x => x.Item2.FfmpegName == "copy");
     }
@@ -425,7 +435,7 @@ public class ProfileToEncoderMappingTests
     [Fact]
     public void EnumerateVideoEncoders_Includes_All_Real_Codecs()
     {
-        List<(VideoCodecType, EncoderInfo)> encoders = _registry.EnumerateVideoEncoders().ToList();
+        List<(VideoCodecType, EncoderInfo)> encoders = [.. _registry.EnumerateVideoEncoders()];
 
         var codecs = encoders.Select(x => x.Item1).Distinct().ToList();
 

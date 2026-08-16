@@ -40,8 +40,9 @@ public class DevicesController(
     {
         List<Device> devices = await deviceRepository.GetDevices();
 
-        DevicesDto[] devicesDtos = devices
-            .Select(x => new DevicesDto
+        DevicesDto[] devicesDtos =
+        [
+            .. devices.Select(x => new DevicesDto
             {
                 Id = x.Id.ToString(),
                 DeviceId = x.DeviceId,
@@ -66,8 +67,8 @@ public class DevicesController(
                     UserId = activityLog.UserId ?? Guid.Empty,
                     DeviceId = (activityLog.DeviceId ?? Ulid.Empty).ToString(),
                 }),
-            })
-            .ToArray();
+            }),
+        ];
 
         return Ok(new StatusResponseDto<DevicesDto[]> { Status = "ok", Data = devicesDtos });
     }
@@ -91,11 +92,13 @@ public class DevicesController(
     {
         List<Device> all = await deviceRepository.GetAllAsync();
 
-        List<Device> offline = all.Where(d =>
+        List<Device> offline =
+        [
+            .. all.Where(d =>
                 !busRegistry.IsOnline(d.Id)
                 && !connectedClients.Clients.Values.Any(c => c.Id == d.Id)
-            )
-            .ToList();
+            ),
+        ];
 
         foreach (Device device in offline)
         {
@@ -148,10 +151,12 @@ public class DevicesController(
 
     private void RemoveConnectedClientEntries(Ulid deviceId)
     {
-        List<string> staleKeys = connectedClients
-            .Clients.Where(pair => pair.Value.Id == deviceId)
-            .Select(pair => pair.Key)
-            .ToList();
+        List<string> staleKeys =
+        [
+            .. connectedClients
+                .Clients.Where(pair => pair.Value.Id == deviceId)
+                .Select(pair => pair.Key),
+        ];
 
         foreach (string key in staleKeys)
             connectedClients.Clients.TryRemove(key, out Client? _);

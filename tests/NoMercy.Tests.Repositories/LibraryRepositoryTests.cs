@@ -312,9 +312,10 @@ public class LibraryRepositoryTests : IDisposable
         List<Library> libraries = await _repository.GetLibraries(SeedConstants.UserId);
 
         // This is exactly what the controller does - it should not throw
-        List<LibrariesResponseItemDto> response = libraries
-            .Select(library => new LibrariesResponseItemDto(library))
-            .ToList();
+        List<LibrariesResponseItemDto> response =
+        [
+            .. libraries.Select(library => new LibrariesResponseItemDto(library)),
+        ];
 
         Assert.Equal(2, response.Count);
 

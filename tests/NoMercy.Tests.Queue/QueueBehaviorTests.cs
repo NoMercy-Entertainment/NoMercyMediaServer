@@ -810,7 +810,7 @@ public class QueueBehaviorTests : IDisposable
         Assert.Equal(0, _context.FailedJobs.Count());
         Assert.Equal(5, _context.QueueJobs.Count());
 
-        List<QueueJob> requeued = _context.QueueJobs.ToList();
+        List<QueueJob> requeued = [.. _context.QueueJobs];
         for (int i = 0; i < 5; i++)
         {
             Assert.Contains(requeued, j => j.Queue == $"queue-{i}" && j.Payload == $"payload-{i}");

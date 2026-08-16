@@ -77,14 +77,13 @@ public sealed class FfmpegCapabilityProbe(
         // the canonical capability check.
         bool dvdRead = ffmpegCapabilities.HasDemuxer("dvdvideo");
 
-        List<string> missingFilters = RequiredFilters
-            .Where(f => !ffmpegCapabilities.HasFilter(f))
-            .ToList();
+        List<string> missingFilters =
+        [
+            .. RequiredFilters.Where(f => !ffmpegCapabilities.HasFilter(f)),
+        ];
 
         HashSet<string> availableMuxers = await ProbeMuxersAsync(ct).ConfigureAwait(false);
-        List<string> missingMuxers = RequiredMuxers
-            .Where(m => !availableMuxers.Contains(m))
-            .ToList();
+        List<string> missingMuxers = [.. RequiredMuxers.Where(m => !availableMuxers.Contains(m))];
 
         // Chromaprint fingerprinting is compiled into the NoMercy ffmpeg fork
         // as the chromaprint muxer (-c:a chromaprint) — no separate fpcalc
@@ -104,7 +103,7 @@ public sealed class FfmpegCapabilityProbe(
         _cached = new(
             BluRayProtocol: bluRay,
             DvdReadProtocol: dvdRead,
-            AvailableEncoders: ffmpegCapabilities.AvailableEncoders.ToList(),
+            AvailableEncoders: [.. ffmpegCapabilities.AvailableEncoders],
             MissingFilters: missingFilters,
             MissingMuxers: missingMuxers,
             FpcalcPresent: fpcalcPresent,

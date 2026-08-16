@@ -318,7 +318,7 @@ public sealed class DeviceBusEndpoint(
         Func<Ulid, bool> isOnline
     )
     {
-        return candidates.Where(candidate => !isOnline(candidate.Id)).ToList();
+        return [.. candidates.Where(candidate => !isOnline(candidate.Id))];
     }
 
     /// <summary>

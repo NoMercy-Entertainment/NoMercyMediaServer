@@ -44,9 +44,10 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
     public void EnumerateRoot_returns_entries_or_empty_listing()
     {
         using S3StorageDriver driver = Driver();
-        List<string> entries = driver
-            .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-            .ToList();
+        List<string> entries =
+        [
+            .. driver.EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly),
+        ];
         Console.WriteLine($"[S3] root entry count: {entries.Count}");
     }
 
@@ -60,9 +61,10 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
 
         try
         {
-            List<string> entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-                .ToList();
+            List<string> entries =
+            [
+                .. driver.EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly),
+            ];
 
             // Entries are driver-relative — never prefixed with a leading slash
             // or the bucket name.
@@ -350,16 +352,18 @@ public sealed class S3LiveTests(StorageBackendsFixture fix)
             await using (Stream w = driver.OpenWrite(fileC, overwrite: true))
                 await w.WriteAsync(bytes);
 
-            List<string> txtEntries = driver
-                .EnumerateFileSystemEntries(dir, "*.txt", SearchOption.TopDirectoryOnly)
-                .ToList();
+            List<string> txtEntries =
+            [
+                .. driver.EnumerateFileSystemEntries(dir, "*.txt", SearchOption.TopDirectoryOnly),
+            ];
             txtEntries.Should().HaveCount(2);
             txtEntries.Should().Contain(e => e.EndsWith("a.txt", StringComparison.Ordinal));
             txtEntries.Should().Contain(e => e.EndsWith("b.txt", StringComparison.Ordinal));
 
-            List<string> recursive = driver
-                .EnumerateFileSystemEntries(dir, "*.txt", SearchOption.AllDirectories)
-                .ToList();
+            List<string> recursive =
+            [
+                .. driver.EnumerateFileSystemEntries(dir, "*.txt", SearchOption.AllDirectories),
+            ];
             recursive.Should().HaveCount(2);
         }
         finally

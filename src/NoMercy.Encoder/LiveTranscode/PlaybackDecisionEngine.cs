@@ -17,7 +17,7 @@ namespace NoMercy.Encoder.LiveTranscode;
 public class PlaybackDecisionEngine : IPlaybackDecisionEngine
 {
     public PlaybackDecision[] DecideBatch(MediaInfo[] library, ClientCapabilities client) =>
-        library.Select(m => Decide(m, client)).ToArray();
+        [.. library.Select(m => Decide(m, client))];
 
     public PlaybackDecision Decide(MediaInfo media, ClientCapabilities client)
     {

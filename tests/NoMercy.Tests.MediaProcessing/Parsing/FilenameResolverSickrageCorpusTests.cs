@@ -43,22 +43,19 @@ public class FilenameResolverSickrageCorpusTests
 {
     private static FilenameResolver Resolver() =>
         new(
-            new FilenameParserPipeline(
-                new IFilenameParseAdapter[]
-                {
-                    new EpisodePrefixAdapter(),
-                    new EpisodeWordAdapter(),
-                    new CrossFormatAdapter(),
-                    new SeasonEpisodeAdapter(),
-                    new SeasonSpecialAdapter(),
-                    new AnimeAbsoluteAdapter(),
-                    new EpisodeShortFormAdapter(),
-                    new SpecialsAdapter(),
-                    new SeasonPackAdapter(),
-                    new PartAdapter(),
-                    new MovieDetectorAdapter(),
-                }
-            )
+            new FilenameParserPipeline([
+                new EpisodePrefixAdapter(),
+                new EpisodeWordAdapter(),
+                new CrossFormatAdapter(),
+                new SeasonEpisodeAdapter(),
+                new SeasonSpecialAdapter(),
+                new AnimeAbsoluteAdapter(),
+                new EpisodeShortFormAdapter(),
+                new SpecialsAdapter(),
+                new SeasonPackAdapter(),
+                new PartAdapter(),
+                new MovieDetectorAdapter(),
+            ])
         );
 
     /// <summary>

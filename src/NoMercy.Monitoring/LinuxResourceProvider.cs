@@ -268,11 +268,13 @@ internal sealed class LinuxResourceProvider : IResourceProvider
         try
         {
             // AMD exposes gpu_busy_percent per card under /sys/class/drm
-            string[] cardPaths = Directory
-                .GetDirectories("/sys/class/drm", "card*")
-                .Where(p => !p.Contains('-')) // skip card0-eDP-1 etc.
-                .OrderBy(p => p)
-                .ToArray();
+            string[] cardPaths =
+            [
+                .. Directory
+                    .GetDirectories("/sys/class/drm", "card*")
+                    .Where(p => !p.Contains('-')) // skip card0-eDP-1 etc.
+                    .OrderBy(p => p),
+            ];
 
             int index = 0;
             foreach (string cardPath in cardPaths)

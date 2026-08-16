@@ -43,7 +43,9 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync(BaseUrl);
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -135,7 +137,9 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/levels");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -158,7 +162,7 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
         JsonElement data = doc.RootElement.GetProperty("data");
         data.ValueKind.Should().Be(JsonValueKind.Array);
 
-        string[] levels = data.EnumerateArray().Select(e => e.GetString()!).ToArray();
+        string[] levels = [.. data.EnumerateArray().Select(e => e.GetString()!)];
 
         levels.Should().Equal(["Verbose", "Debug", "Information", "Warning", "Error", "Fatal"]);
     }
@@ -168,7 +172,9 @@ public class LogControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/types");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

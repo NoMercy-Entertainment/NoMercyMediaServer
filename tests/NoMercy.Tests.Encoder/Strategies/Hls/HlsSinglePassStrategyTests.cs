@@ -280,10 +280,10 @@ public class HlsSinglePassStrategyTests
             Thumbnails: new(160, 90, 10, SpriteGrid.For(TimeSpan.FromHours(2), 10))
         );
 
-        DecomposedTask[] thumbs = strategy
-            .Decompose(plan, "g")
-            .Where(t => t.Kind == EncodeTaskKind.Thumbnails)
-            .ToArray();
+        DecomposedTask[] thumbs =
+        [
+            .. strategy.Decompose(plan, "g").Where(t => t.Kind == EncodeTaskKind.Thumbnails),
+        ];
 
         thumbs.Should().ContainSingle();
         thumbs[0].Label.Should().Contain("160x90");

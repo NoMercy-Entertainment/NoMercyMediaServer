@@ -230,7 +230,11 @@ public class PluginManager : IPluginManager, IDisposable
 
         PluginManifestEntry manifest = FindManifest(archive, fullPath);
         string pluginDir = _storage.CombinePath(_pluginsPath, manifest.FolderName);
-        string staging = _storage.CombinePath(_pluginsPath, PendingUpdatesFolder, manifest.FolderName);
+        string staging = _storage.CombinePath(
+            _pluginsPath,
+            PendingUpdatesFolder,
+            manifest.FolderName
+        );
 
         // Unpacked beside the installed copy, never over it. Extraction writes
         // one entry at a time, so anything that fails part way through used to
@@ -265,7 +269,10 @@ public class PluginManager : IPluginManager, IDisposable
 
         ApplyStaged(staging, pluginDir);
 
-        await LoadPluginAssemblyAsync(_storage.CombinePath(pluginDir, manifest.AssemblyFileName), ct);
+        await LoadPluginAssemblyAsync(
+            _storage.CombinePath(pluginDir, manifest.AssemblyFileName),
+            ct
+        );
     }
 
     /// <summary>
@@ -289,7 +296,8 @@ public class PluginManager : IPluginManager, IDisposable
     /// which is the case a best-effort unload leaves behind.
     /// </summary>
     private bool IsResident(Ulid pluginId) =>
-        _registry.TryGetValue(pluginId, out _) || (_assemblyTracker?.IsStillLoaded(pluginId) ?? false);
+        _registry.TryGetValue(pluginId, out _)
+        || (_assemblyTracker?.IsStillLoaded(pluginId) ?? false);
 
     /// <summary>
     /// Moves a staged plugin into place, replacing what is there.
@@ -387,10 +395,7 @@ public class PluginManager : IPluginManager, IDisposable
             {
                 ApplyStaged(entry.Path, _storage.CombinePath(_pluginsPath, folderName));
 
-                _logger.LogInformation(
-                    "Applied the staged update for {Folder}.",
-                    folderName
-                );
+                _logger.LogInformation("Applied the staged update for {Folder}.", folderName);
             }
             catch (Exception ex)
             {
@@ -746,20 +751,24 @@ public class PluginManager : IPluginManager, IDisposable
     public IEnumerable<T> GetPluginsOfType<T>()
         where T : IPlugin
     {
-        return _registry
-            .Values.Where(lp => lp is { Instance: T, Info.Status: PluginStatus.Active })
-            .Select(lp => (T)lp.Instance!)
-            .ToList();
+        return
+        [
+            .. _registry
+                .Values.Where(lp => lp is { Instance: T, Info.Status: PluginStatus.Active })
+                .Select(lp => (T)lp.Instance!),
+        ];
     }
 
     public IEnumerable<IPluginServiceRegistrator> GetServiceRegistrators()
     {
-        return _registry
-            .Values.Where(lp =>
-                lp is { Instance: IPluginServiceRegistrator, Info.Status: PluginStatus.Active }
-            )
-            .Select(lp => (IPluginServiceRegistrator)lp.Instance!)
-            .ToList();
+        return
+        [
+            .. _registry
+                .Values.Where(lp =>
+                    lp is { Instance: IPluginServiceRegistrator, Info.Status: PluginStatus.Active }
+                )
+                .Select(lp => (IPluginServiceRegistrator)lp.Instance!),
+        ];
     }
 
     public void Dispose()

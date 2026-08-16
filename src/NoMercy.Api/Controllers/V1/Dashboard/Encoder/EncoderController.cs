@@ -170,8 +170,9 @@ public class EncoderController(
             VideoCodecType.Vp9,
         ];
 
-        VideoCodecDto[] videoCodecs = videoTypes
-            .Select(vt =>
+        VideoCodecDto[] videoCodecs =
+        [
+            .. videoTypes.Select(vt =>
             {
                 ICodecDefinition def = registry.GetVideoDefinition(vt);
                 EncoderInfo sw = def.Encoders.First(e => e.RequiredVendor is null);
@@ -183,13 +184,11 @@ public class EncoderController(
                     SimpleValue = vt.ToString().ToLowerInvariant(),
                     RequiresGpu = false,
                     IsDefault = vt == VideoCodecType.H264,
-                    AvailablePresets = sw.Presets.Select(p => new LabelValueDto(p)).ToArray(),
-                    AvailableVideoProfiles = sw
-                        .Profiles.Select(p => new LabelValueDto(p))
-                        .ToArray(),
+                    AvailablePresets = [.. sw.Presets.Select(p => new LabelValueDto(p))],
+                    AvailableVideoProfiles = [.. sw.Profiles.Select(p => new LabelValueDto(p))],
                 };
-            })
-            .ToArray();
+            }),
+        ];
 
         AudioCodecType[] audioTypes =
         [
@@ -201,8 +200,9 @@ public class EncoderController(
             AudioCodecType.Mp3,
         ];
 
-        AudioCodecDto[] audioCodecs = audioTypes
-            .Select(at =>
+        AudioCodecDto[] audioCodecs =
+        [
+            .. audioTypes.Select(at =>
             {
                 AudioEncoderInfo enc = AudioCodecDefinitions.GetEncoder(at);
                 return new AudioCodecDto
@@ -212,8 +212,8 @@ public class EncoderController(
                     SimpleValue = at.ToString().ToLowerInvariant(),
                     IsDefault = at == AudioCodecType.Aac,
                 };
-            })
-            .ToArray();
+            }),
+        ];
 
         SubtitleCodecDto[] subtitleCodecs =
         [

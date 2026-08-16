@@ -95,12 +95,14 @@ public class TesseractModelManager(
         if (!storage.Exists(ModelDirectory))
             return [];
 
-        return storage
-            .List(ModelDirectory, "*.traineddata", recursive: false)
-            .Where(e => !e.IsDirectory)
-            .Select(e => Path.GetFileNameWithoutExtension(e.Path))
-            .Where(name => !string.IsNullOrEmpty(name))
-            .Select(name => name!)
-            .ToArray();
+        return
+        [
+            .. storage
+                .List(ModelDirectory, "*.traineddata", recursive: false)
+                .Where(e => !e.IsDirectory)
+                .Select(e => Path.GetFileNameWithoutExtension(e.Path))
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Select(name => name!),
+        ];
     }
 }

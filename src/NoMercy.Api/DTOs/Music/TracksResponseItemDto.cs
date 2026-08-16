@@ -80,14 +80,13 @@ public record TracksResponseItemDto
         Favorite = track.TrackUser.Count != 0;
         Type = "favorites";
 
-        Artists = track
-            .ArtistTrack.Select(trackArtist => new ArtistDto(trackArtist, country))
-            .ToList();
+        Artists = [.. track.ArtistTrack.Select(trackArtist => new ArtistDto(trackArtist, country))];
 
-        Albums = track.AlbumTrack.Select(albumTrack => new AlbumDto(albumTrack, country)).ToList();
+        Albums = [.. track.AlbumTrack.Select(albumTrack => new AlbumDto(albumTrack, country))];
 
-        Tracks = track
-            .ArtistTrack.Select(albumTrack => new ArtistTrackDto(albumTrack, country))
-            .ToList();
+        Tracks =
+        [
+            .. track.ArtistTrack.Select(albumTrack => new ArtistTrackDto(albumTrack, country)),
+        ];
     }
 }

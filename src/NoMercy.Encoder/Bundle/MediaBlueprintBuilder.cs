@@ -115,9 +115,10 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         List<BlueprintTrack> tracks = [];
         foreach (VideoStreamInfo stream in streams)
         {
-            List<VideoOutputPlan> matched = outputs
-                .Where(o => o.SourceStreamIndex == stream.Index)
-                .ToList();
+            List<VideoOutputPlan> matched =
+            [
+                .. outputs.Where(o => o.SourceStreamIndex == stream.Index),
+            ];
             tracks.Add(BuildVideoTrack(stream, matched, layout, outputFiles));
         }
         return tracks;
@@ -216,9 +217,10 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         List<BlueprintTrack> tracks = [];
         foreach (AudioStreamInfo stream in streams)
         {
-            List<AudioOutputPlan> matched = outputs
-                .Where(o => o.SourceStreamIndex == stream.Index)
-                .ToList();
+            List<AudioOutputPlan> matched =
+            [
+                .. outputs.Where(o => o.SourceStreamIndex == stream.Index),
+            ];
             tracks.Add(BuildAudioTrack(stream, matched, layout, outputFiles));
         }
         return tracks;
@@ -423,14 +425,16 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
         string infix = $".{language}.{variant}.";
         HashSet<string> extensions = new(candidateExtensions, StringComparer.OrdinalIgnoreCase);
 
-        return outputFiles
-            .Where(f =>
-                f.StartsWith("subtitles/", StringComparison.OrdinalIgnoreCase)
-                && f.Contains(infix, StringComparison.OrdinalIgnoreCase)
-                && extensions.Contains(Path.GetExtension(f).TrimStart('.'))
-            )
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return
+        [
+            .. outputFiles
+                .Where(f =>
+                    f.StartsWith("subtitles/", StringComparison.OrdinalIgnoreCase)
+                    && f.Contains(infix, StringComparison.OrdinalIgnoreCase)
+                    && extensions.Contains(Path.GetExtension(f).TrimStart('.'))
+                )
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase),
+        ];
     }
 
     private readonly record struct SubtitleArtifact(IReadOnlyList<string> Files, string? Container)
@@ -474,10 +478,12 @@ public class MediaBlueprintBuilder : IMediaBlueprintBuilder
     )
     {
         string prefix = folder + "/";
-        return outputFiles
-            .Where(f => f.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        return
+        [
+            .. outputFiles
+                .Where(f => f.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(f => f, StringComparer.OrdinalIgnoreCase),
+        ];
     }
 
     // -----------------------------------------------------------------------

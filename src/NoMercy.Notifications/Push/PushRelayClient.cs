@@ -93,13 +93,14 @@ public class PushRelayClient : IPushRelayClient
         RequestBody requestBody = new()
         {
             Channel = channel,
-            Entries = entries
-                .Select(entry => new RequestEntry
+            Entries =
+            [
+                .. entries.Select(entry => new RequestEntry
                 {
                     SubscriptionId = entry.SubscriptionId,
                     Ciphertext = entry.Ciphertext,
-                })
-                .ToList(),
+                }),
+            ],
             // Normalising "" to null here, not just at the call site, is what
             // makes the fail-closed relay behaviour unreachable from this
             // client no matter which layer a future caller forgets to check.

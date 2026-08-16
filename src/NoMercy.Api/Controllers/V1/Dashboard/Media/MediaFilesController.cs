@@ -40,7 +40,6 @@ public class MediaFilesController(IFileRepository fileRepository) : BaseControll
         CancellationToken ct = default
     )
     {
-
         // Hard ceiling on `limit` — clients shouldn't be able to pull the whole
         // catalogue through this picker endpoint.
         int safeLimit = Math.Clamp(limit, 1, 200);
@@ -56,7 +55,7 @@ public class MediaFilesController(IFileRepository fileRepository) : BaseControll
             ct
         );
 
-        VideoFileSearchDto[] results = rows.Select(BuildDto).ToArray();
+        VideoFileSearchDto[] results = [.. rows.Select(BuildDto)];
 
         return Ok(new { data = results });
     }

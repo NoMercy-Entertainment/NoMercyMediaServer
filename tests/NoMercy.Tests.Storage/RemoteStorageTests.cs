@@ -277,7 +277,7 @@ public sealed class RemoteStorageTests
     public async Task HashAsync_sha256_matches_known_digest()
     {
         RemoteStorage storage = NewStorage(out InMemoryStorageDriver driver);
-        driver.SeedFile("hello.txt", "hello"u8.ToArray());
+        driver.SeedFile("hello.txt", [.. "hello"u8]);
 
         string hash = await storage.HashAsync("hello.txt", "SHA256", CancellationToken.None);
 

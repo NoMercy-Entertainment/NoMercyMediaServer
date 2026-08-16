@@ -46,7 +46,7 @@ public class DriversController(
     public async Task<IActionResult> Index()
     {
         List<Driver> drivers = await driverRepository.GetAllDriversAsync();
-        List<DriverDto> result = drivers.Select(MapToDto).ToList();
+        List<DriverDto> result = [.. drivers.Select(MapToDto)];
 
         return Ok(result);
     }
@@ -285,7 +285,7 @@ public class DriversController(
         await driverRepository.UpdateDriverAsync(driver);
 
         // Invalidate StorageFactory cache for all folders using this driver.
-        List<Ulid> folderIds = driver.Folders.Select(f => f.Id).ToList();
+        List<Ulid> folderIds = [.. driver.Folders.Select(f => f.Id)];
         foreach (Ulid folderId in folderIds)
             storageFactory.Invalidate(folderId);
 
@@ -332,7 +332,7 @@ public class DriversController(
         await driverRepository.UpdateDriverAsync(driver);
 
         // Invalidate any cached IStorage instances built without credentials.
-        List<Ulid> folderIds = driver.Folders.Select(f => f.Id).ToList();
+        List<Ulid> folderIds = [.. driver.Folders.Select(f => f.Id)];
         foreach (Ulid folderId in folderIds)
             storageFactory.Invalidate(folderId);
 

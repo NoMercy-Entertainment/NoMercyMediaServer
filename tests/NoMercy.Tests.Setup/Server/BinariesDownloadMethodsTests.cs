@@ -124,7 +124,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task DownloadApp_NoWindowsAssetInRelease_SkipsWithoutThrowing()
     {
-        byte[] payload = "irrelevant"u8.ToArray();
+        byte[] payload = [.. "irrelevant"u8];
         FakeHttpHandler handler = new();
         handler.Register("https://example.com/linux-only", payload);
         Binaries binaries = BuildBinaries(handler);
@@ -137,7 +137,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task DownloadApp_WindowsAssetPresent_DownloadsAndVerifies()
     {
-        byte[] payload = "nomercy-app-binary"u8.ToArray();
+        byte[] payload = [.. "nomercy-app-binary"u8];
         string assetUrl = "https://example.com/NoMercyApp-windows-x64.exe";
         FakeHttpHandler handler = new();
         handler.Register(assetUrl, payload);
@@ -221,7 +221,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task DownloadLauncher_WindowsAssetPresent_DownloadsAndVerifies()
     {
-        byte[] payload = "nomercy-launcher-binary"u8.ToArray();
+        byte[] payload = [.. "nomercy-launcher-binary"u8];
         string assetUrl = "https://example.com/NoMercyLauncher-windows-x64.exe";
         FakeHttpHandler handler = new();
         handler.Register(assetUrl, payload);
@@ -255,7 +255,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task DownloadCli_WindowsAssetPresent_DownloadsAndVerifies()
     {
-        byte[] payload = "nomercy-cli-binary"u8.ToArray();
+        byte[] payload = [.. "nomercy-cli-binary"u8];
         string assetUrl = "https://example.com/nomercy-windows-x64.exe";
         FakeHttpHandler handler = new();
         handler.Register(assetUrl, payload);
@@ -301,7 +301,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task DownloadYtdlp_ReleaseOldEnough_DownloadsAndVerifiesAgainstUpstreamSums()
     {
-        byte[] payload = "yt-dlp-binary"u8.ToArray();
+        byte[] payload = [.. "yt-dlp-binary"u8];
         string sha256 = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
         string assetUrl = "https://example.com/yt-dlp_x86.exe";
         string sumsUrl = "https://example.com/SHA2-256SUMS";
@@ -522,7 +522,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task DownloadShakaPackager_ReleaseOldEnough_DownloadsAndVerifiesAgainstDigest()
     {
-        byte[] payload = "packager-binary"u8.ToArray();
+        byte[] payload = [.. "packager-binary"u8];
         string assetUrl = "https://example.com/packager-win-x64.exe";
 
         FakeHttpHandler handler = new();
@@ -611,7 +611,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         // checks — that mismatch meant CheckLocalVersion never saw the file on the NEXT
         // boot and re-downloaded the ~2GB model every single boot forever. The fix moves
         // and stamps it exactly like the multi-part branch (ConcatenateModelParts) does.
-        byte[] payload = "whisper-model-single-part"u8.ToArray();
+        byte[] payload = [.. "whisper-model-single-part"u8];
         string assetUrl = "https://example.com/ggml-large-v3.bin";
         DateTimeOffset publishedAt = DateTimeOffset.UtcNow.AddDays(-3);
 
@@ -655,8 +655,8 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task DownloadWhisperModels_MultiPart_ConcatenatesInOrderAndCleansUpParts()
     {
-        byte[] part1 = "PART-ONE-"u8.ToArray();
-        byte[] part2 = "PART-TWO"u8.ToArray();
+        byte[] part1 = [.. "PART-ONE-"u8];
+        byte[] part2 = [.. "PART-TWO"u8];
         string url1 = "https://example.com/ggml-large-v3.bin.part1";
         string url2 = "https://example.com/ggml-large-v3.bin.part2";
 
@@ -711,7 +711,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task DownloadTesseractData_MultipleLanguages_DownloadsEachAndSkipsMissing()
     {
-        byte[] engPayload = "eng-model"u8.ToArray();
+        byte[] engPayload = [.. "eng-model"u8];
         string engUrl = "https://example.com/eng.traineddata";
 
         FakeHttpHandler handler = new();
@@ -865,7 +865,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task VerifyAssetDigestOrThrow_MatchingDigest_DoesNotThrowOrDeleteFile()
     {
-        byte[] payload = "verified content"u8.ToArray();
+        byte[] payload = [.. "verified content"u8];
         string path = Path.Combine(_tempAppPath, "matching.bin");
         await File.WriteAllBytesAsync(path, payload);
         FakeHttpHandler handler = new();
@@ -883,7 +883,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     [Fact]
     public async Task VerifyAssetDigestOrThrow_MismatchedDigest_DeletesFileAndThrows()
     {
-        byte[] payload = "tampered content"u8.ToArray();
+        byte[] payload = [.. "tampered content"u8];
         string path = Path.Combine(_tempAppPath, "mismatched.bin");
         await File.WriteAllBytesAsync(path, payload);
         FakeHttpHandler handler = new();
@@ -895,7 +895,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
                 MakeAsset(
                     "mismatched.bin",
                     "https://example.com/x",
-                    "different content entirely"u8.ToArray()
+                    [.. "different content entirely"u8]
                 ),
                 "test-asset"
             )

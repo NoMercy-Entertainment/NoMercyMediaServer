@@ -91,7 +91,7 @@ public sealed class InstallerUpdaterTests
 
         try
         {
-            byte[] content = "fake installer bytes for hash verification"u8.ToArray();
+            byte[] content = [.. "fake installer bytes for hash verification"u8];
             await File.WriteAllBytesAsync(exePath, content);
             string hash = Convert.ToHexString(SHA256.HashData(content));
             await File.WriteAllTextAsync(sha256Path, hash);
@@ -119,7 +119,7 @@ public sealed class InstallerUpdaterTests
 
         try
         {
-            byte[] content = "fake installer bytes, sha256sum-style sidecar"u8.ToArray();
+            byte[] content = [.. "fake installer bytes, sha256sum-style sidecar"u8];
             await File.WriteAllBytesAsync(exePath, content);
             string hash = Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
             // sha256sum's own output format is "HASH  filename" (lowercase hex).
@@ -148,7 +148,7 @@ public sealed class InstallerUpdaterTests
 
         try
         {
-            await File.WriteAllBytesAsync(exePath, "real content"u8.ToArray());
+            await File.WriteAllBytesAsync(exePath, [.. "real content"u8]);
             // Sidecar records the hash of totally different bytes.
             string wrongHash = Convert.ToHexString(
                 SHA256.HashData("different content"u8.ToArray())

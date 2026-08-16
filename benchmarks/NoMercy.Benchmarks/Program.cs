@@ -48,7 +48,7 @@ file sealed class LoggingMediaContextFactory : IDbContextFactory<MediaContext>
         );
         builder.LogTo(
             Console.WriteLine,
-            new[] { Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.CommandExecuted }
+            [Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.CommandExecuted]
         );
         return new(builder.Options);
     }
@@ -366,7 +366,7 @@ internal static class Program
                 async () =>
                 {
                     MusicRepository repo = new(factory);
-                    List<Guid> t = (await repo.SearchTrackIdsAsync(searchTerm)).Take(50).ToList();
+                    List<Guid> t = [.. (await repo.SearchTrackIdsAsync(searchTerm)).Take(50)];
                     return await repo.SearchTrackCardsAsync(t, userId, country);
                 }
             ),
@@ -385,9 +385,10 @@ internal static class Program
         ];
 
         if (filter is not null)
-            cases = cases
-                .Where(c => c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            cases =
+            [
+                .. cases.Where(c => c.Name.Contains(filter, StringComparison.OrdinalIgnoreCase)),
+            ];
 
         List<BenchmarkResult> results = [];
         Console.WriteLine(

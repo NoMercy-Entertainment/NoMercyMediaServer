@@ -79,7 +79,9 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync(BaseUrl);
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -135,7 +137,9 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
             new { name = "Anonymous Playlist" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -267,7 +271,7 @@ public class UserPlaylistsControllerTests : IClassFixture<NoMercyApiFactory>
         JsonElement data = detailDoc.RootElement.GetProperty("data");
         data.GetProperty("id").GetGuid().Should().Be(playlistId);
 
-        JsonElement[] items = data.GetProperty("items").EnumerateArray().ToArray();
+        JsonElement[] items = [.. data.GetProperty("items").EnumerateArray()];
         items.Should().HaveCount(3);
 
         items

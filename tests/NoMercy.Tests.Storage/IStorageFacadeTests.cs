@@ -482,7 +482,7 @@ public class IStorageFacadeTests
 
         await storage.WriteAsync(
             "deep/nested/output/file.mp4",
-            new byte[] { 0xAA, 0xBB },
+            [0xAA, 0xBB],
             CancellationToken.None
         );
 
@@ -491,9 +491,7 @@ public class IStorageFacadeTests
             Times.AtLeastOnce(),
             "parent directories must be created before write"
         );
-        sink.ToArray()
-            .Should()
-            .Equal(new byte[] { 0xAA, 0xBB }, "payload must be written to the stream");
+        sink.ToArray().Should().Equal([0xAA, 0xBB], "payload must be written to the stream");
     }
 
     [Fact]

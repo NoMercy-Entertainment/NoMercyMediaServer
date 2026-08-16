@@ -63,11 +63,15 @@ public class Vp9ArgumentResolverTests
     [Fact]
     public void Vp9_HardwareEncoders_AreIntelOnly()
     {
-        EncoderInfo[] hwEncoders = Registry
-            .EnumerateVideoEncoders()
-            .Where(t => t is { CodecType: VideoCodecType.Vp9, Encoder.RequiredVendor: not null })
-            .Select(t => t.Encoder)
-            .ToArray();
+        EncoderInfo[] hwEncoders =
+        [
+            .. Registry
+                .EnumerateVideoEncoders()
+                .Where(t =>
+                    t is { CodecType: VideoCodecType.Vp9, Encoder.RequiredVendor: not null }
+                )
+                .Select(t => t.Encoder),
+        ];
 
         hwEncoders.Should().OnlyContain(e => e.RequiredVendor == GpuVendor.Intel);
         hwEncoders.Should().NotContain(e => e.RequiredVendor == GpuVendor.Nvidia);

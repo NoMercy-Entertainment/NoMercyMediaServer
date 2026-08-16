@@ -74,7 +74,7 @@ public class EncodingPresetRepository(MediaContext context) : IEncodingPresetRep
                 tags.Add(tag.Trim());
         }
 
-        return tags.OrderBy(t => t).ToList();
+        return [.. tags.OrderBy(t => t)];
     }
 
     public Task<EncodingPreset?> GetByIdAsync(Ulid id) =>

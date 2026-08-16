@@ -69,7 +69,7 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         args.Add("null");
         args.Add("-");
 
-        return new(ffmpegPath, args.ToArray(), fontDir);
+        return new(ffmpegPath, [.. args], fontDir);
     }
 
     public int CountFontAttachments(IReadOnlyList<AttachmentInfo> attachments)
@@ -113,10 +113,10 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         if (!storage.Exists(fontDir))
             return 0;
 
-        IReadOnlyList<StorageEntry> allDumped = storage
-            .List(fontDir, "*", recursive: false)
-            .Where(e => !e.IsDirectory)
-            .ToList();
+        IReadOnlyList<StorageEntry> allDumped =
+        [
+            .. storage.List(fontDir, "*", recursive: false).Where(e => !e.IsDirectory),
+        ];
 
         if (allDumped.Count == 0)
         {
@@ -124,13 +124,15 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             return 0;
         }
 
-        List<StorageEntry> fontFiles = allDumped
-            .Where(f => IsFontExtension(storage.GetName(f.Path)))
-            .ToList();
+        List<StorageEntry> fontFiles =
+        [
+            .. allDumped.Where(f => IsFontExtension(storage.GetName(f.Path))),
+        ];
 
-        List<StorageEntry> lutFiles = allDumped
-            .Where(f => IsLutExtension(storage.GetName(f.Path)))
-            .ToList();
+        List<StorageEntry> lutFiles =
+        [
+            .. allDumped.Where(f => IsLutExtension(storage.GetName(f.Path))),
+        ];
 
         await MoveLutsAndWriteManifestAsync(outputDirectory, lutFiles, ct);
 
@@ -144,12 +146,13 @@ public class FontExtractor(IStorage storage) : IFontExtractor
             return 0;
         }
 
-        List<AssetEntry> entries = fontFiles
-            .Select(f => new AssetEntry(
+        List<AssetEntry> entries =
+        [
+            .. fontFiles.Select(f => new AssetEntry(
                 File: $"fonts/{storage.GetName(f.Path)}",
                 MimeType: GetFontMimeType(storage.GetName(f.Path))
-            ))
-            .ToList();
+            )),
+        ];
 
         string json = JsonConvert.SerializeObject(entries, Formatting.Indented);
         await storage.WriteAsync(

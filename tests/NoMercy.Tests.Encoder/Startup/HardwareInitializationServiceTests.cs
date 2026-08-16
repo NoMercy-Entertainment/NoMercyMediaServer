@@ -128,9 +128,7 @@ public class HardwareInitializationServiceTests
     public async Task StartAsync_DetectsHardware_SetsCapabilities()
     {
         Mock<IHardwareDetector> detector = new();
-        detector
-            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
@@ -162,9 +160,7 @@ public class HardwareInitializationServiceTests
     public async Task StartAsync_IsNotReadyBeforeStart()
     {
         Mock<IHardwareDetector> detector = new();
-        detector
-            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(8);
@@ -226,9 +222,7 @@ public class HardwareInitializationServiceTests
     public async Task StopAsync_CompletesImmediately()
     {
         Mock<IHardwareDetector> detector = new();
-        detector
-            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
@@ -271,9 +265,7 @@ public class HardwareInitializationServiceTests
         ServerPhaseTracker tracker = new();
 
         Mock<IHardwareDetector> detector = new();
-        detector
-            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
@@ -322,9 +314,7 @@ public class HardwareInitializationServiceTests
         tracker.MarkComplete(BootStage.Binaries);
 
         Mock<IHardwareDetector> detector = new();
-        detector
-            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
@@ -388,9 +378,7 @@ public class HardwareInitializationServiceTests
             .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
 
         Mock<IHardwareDetector> detector = new();
-        detector
-            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
@@ -428,9 +416,7 @@ public class HardwareInitializationServiceTests
         FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerSuccess().Object);
 
         Mock<IHardwareDetector> detector = new();
-        detector
-            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(Environment.ProcessorCount);
@@ -536,7 +522,7 @@ public class HardwareInitializationServiceTests
                 p.ProbeAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>())
             )
             .Callback<IEnumerable<string>, CancellationToken>(
-                (candidates, _) => capturedCandidates = candidates.ToList()
+                (candidates, _) => capturedCandidates = [.. candidates]
             )
             .ReturnsAsync((IReadOnlySet<string>)new HashSet<string>());
 
@@ -577,9 +563,7 @@ public class HardwareInitializationServiceTests
         FfmpegCapabilities ffmpegCaps = new(BuildProcessRunnerWithEncoders(encoderOutput).Object);
 
         Mock<IHardwareDetector> detector = new();
-        detector
-            .Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<GpuDevice>());
+        detector.Setup(d => d.DetectGpusAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
         detector
             .Setup(d => d.DetectCpuCoreCountAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);

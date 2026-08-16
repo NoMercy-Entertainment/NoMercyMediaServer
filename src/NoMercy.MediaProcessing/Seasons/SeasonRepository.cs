@@ -21,7 +21,7 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
     public Task StoreAsync(IEnumerable<Season> seasons)
     {
         return context
-            .Seasons.UpsertRange(seasons.ToArray())
+            .Seasons.UpsertRange([.. seasons])
             .On(s => new { s.Id })
             .WhenMatched(
                 (ss, si) =>
@@ -60,7 +60,7 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
     public Task StoreTranslationsAsync(IEnumerable<Translation> translations)
     {
         return context
-            .Translations.UpsertRange(translations.ToArray())
+            .Translations.UpsertRange([.. translations])
             .On(t => new
             {
                 t.Iso31661,
@@ -93,7 +93,7 @@ public class SeasonRepository(MediaContext context) : ISeasonRepository
     public Task StoreImagesAsync(IEnumerable<Image> images)
     {
         return context
-            .Images.UpsertRange(images.ToArray())
+            .Images.UpsertRange([.. images])
             .On(v => new { v.FilePath, v.SeasonId })
             .WhenMatched(
                 (ts, ti) =>

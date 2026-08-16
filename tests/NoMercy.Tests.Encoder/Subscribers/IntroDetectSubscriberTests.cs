@@ -132,7 +132,7 @@ public class IntroDetectSubscriberTests
 
     private static AudioFingerprint FakeFingerprint(int frameCount = 100) =>
         new(
-            Hashes: Enumerable.Range(0, frameCount).Select(i => (uint)(i * 17)).ToArray(),
+            Hashes: [.. Enumerable.Range(0, frameCount).Select(i => (uint)(i * 17))],
             FrameDuration: TimeSpan.FromMilliseconds(125),
             StartTime: TimeSpan.Zero
         );
@@ -366,7 +366,7 @@ public class IntroDetectSubscriberTests
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
-        List<ContentSegment> segments = ctx.ContentSegments.ToList();
+        List<ContentSegment> segments = [.. ctx.ContentSegments];
 
         segments.Should().HaveCount(2, "one intro segment per episode");
         segments
@@ -441,7 +441,7 @@ public class IntroDetectSubscriberTests
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
-        List<ContentSegment> segments = ctx.ContentSegments.ToList();
+        List<ContentSegment> segments = [.. ctx.ContentSegments];
 
         segments.Should().HaveCount(2, "one outro segment per episode");
         segments
@@ -537,7 +537,7 @@ public class IntroDetectSubscriberTests
         );
 
         await using MediaContext ctx = await factory.CreateDbContextAsync();
-        List<ContentSegment> segments = ctx.ContentSegments.ToList();
+        List<ContentSegment> segments = [.. ctx.ContentSegments];
 
         ContentSegment detectorSegment = segments
             .Where(s => s.Source == "detector")

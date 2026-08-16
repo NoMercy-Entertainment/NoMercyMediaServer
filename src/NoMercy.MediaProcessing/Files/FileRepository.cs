@@ -330,7 +330,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             releases.Add(release);
         }
 
-        releases = releases.Where(x => x.Id != Guid.Empty).DistinctBy(x => x.Id).ToList();
+        releases = [.. releases.Where(x => x.Id != Guid.Empty).DistinctBy(x => x.Id)];
         return (releases, year);
     }
 
@@ -356,9 +356,10 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         FolderTags folderTags = default
     )
     {
-        List<IGrouping<Guid, ReleaseCandidate>> grouped = candidates
-            .GroupBy(candidate => candidate.Id)
-            .ToList();
+        List<IGrouping<Guid, ReleaseCandidate>> grouped =
+        [
+            .. candidates.GroupBy(candidate => candidate.Id),
+        ];
 
         int mostVotes = grouped.Count == 0 ? 0 : grouped.Max(group => group.Count());
 
@@ -408,11 +409,13 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     /// </summary>
     private static FolderTags SummariseTags(IEnumerable<AudioTagModel> tagModels)
     {
-        List<TagLib.Tag> tags = tagModels
-            .Select(model => model.Tags)
-            .Where(tag => tag is not null)
-            .Select(tag => tag!)
-            .ToList();
+        List<TagLib.Tag> tags =
+        [
+            .. tagModels
+                .Select(model => model.Tags)
+                .Where(tag => tag is not null)
+                .Select(tag => tag!),
+        ];
 
         return new(
             MostCommon(tags.Select(tag => tag.Album)),
@@ -450,19 +453,21 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
         if (acoustIds == null)
             return [];
 
-        return acoustIds
-            .Results.SelectMany(fingerPrint => fingerPrint.Recordings ?? [])
-            .SelectMany(recording => recording?.Releases ?? [])
-            .Where(release => release.Id != Guid.Empty)
-            .Select(release => new ReleaseCandidate(
-                release.Id,
-                release.TrackCount,
-                release.Title,
-                release.Artists.FirstOrDefault()?.Name,
-                release.Date?.Year
-            ))
-            .DistinctBy(candidate => candidate.Id)
-            .ToList();
+        return
+        [
+            .. acoustIds
+                .Results.SelectMany(fingerPrint => fingerPrint.Recordings ?? [])
+                .SelectMany(recording => recording?.Releases ?? [])
+                .Where(release => release.Id != Guid.Empty)
+                .Select(release => new ReleaseCandidate(
+                    release.Id,
+                    release.TrackCount,
+                    release.Title,
+                    release.Artists.FirstOrDefault()?.Name,
+                    release.Date?.Year
+                ))
+                .DistinctBy(candidate => candidate.Id),
+        ];
     }
 
     private static async Task<(
@@ -629,7 +634,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
     )
     {
         object lockObject = new();
-        lookupReleaseIds = lookupReleaseIds.DistinctBy(x => x).ToList();
+        lookupReleaseIds = [.. lookupReleaseIds.DistinctBy(x => x)];
         await Parallel.ForEachAsync(
             lookupReleaseIds,
             SystemParallelism.Options,
@@ -646,7 +651,7 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             }
         );
 
-        return releases.Where(x => x.Id != Guid.Empty).DistinctBy(x => x.Id).ToList();
+        return [.. releases.Where(x => x.Id != Guid.Empty).DistinctBy(x => x.Id)];
     }
 
     private static async Task<MusicBrainzReleaseAppends?> GetBestMatchedRelease(
@@ -969,11 +974,13 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 DriveInfo[] driveInfo = DriveInfo.GetDrives();
-                return driveInfo
-                    .Where(d => d.IsReady)
-                    .Select(d => new DirectoryTree(d.RootDirectory.ToString(), ""))
-                    .OrderBy(file => file.Path)
-                    .ToList();
+                return
+                [
+                    .. driveInfo
+                        .Where(d => d.IsReady)
+                        .Select(d => new DirectoryTree(d.RootDirectory.ToString(), ""))
+                        .OrderBy(file => file.Path),
+                ];
             }
 
             folder = "/";
@@ -998,10 +1005,10 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             return array;
         }
 
-        array = directories
-            .Select(d => new DirectoryTree(folder, d))
-            .OrderBy(file => file.Path)
-            .ToList();
+        array =
+        [
+            .. directories.Select(d => new DirectoryTree(folder, d)).OrderBy(file => file.Path),
+        ];
 
         return array;
     }

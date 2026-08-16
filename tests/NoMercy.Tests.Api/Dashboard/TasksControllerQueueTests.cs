@@ -126,12 +126,12 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
         JsonElement array =
             root.ValueKind == JsonValueKind.Object ? root.GetProperty("data") : root;
 
-        return array.EnumerateArray().ToArray();
+        return [.. array.EnumerateArray()];
     }
 
     private static JsonElement RowWithId(JsonElement[] rows, int id)
     {
-        JsonElement[] matches = rows.Where(r => r.GetProperty("id").GetInt32() == id).ToArray();
+        JsonElement[] matches = [.. rows.Where(r => r.GetProperty("id").GetInt32() == id)];
         matches.Should().ContainSingle("row {0} must appear exactly once in the queue listing", id);
         return matches[0];
     }
@@ -148,7 +148,7 @@ public class TasksControllerQueueTests : IClassFixture<NoMercyApiFactory>, IAsyn
             .Be(
                 "running",
                 "the row carries ReservedAt, so the job is in flight — the payload's own "
-                         + "\"status\" is a stale enqueue-time snapshot and must not be trusted"
+                    + "\"status\" is a stale enqueue-time snapshot and must not be trusted"
             );
     }
 

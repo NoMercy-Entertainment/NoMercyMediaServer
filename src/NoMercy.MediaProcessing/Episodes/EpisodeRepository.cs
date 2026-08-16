@@ -21,7 +21,7 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
     public Task StoreEpisodes(IEnumerable<Episode> episodes)
     {
         return context
-            .Episodes.UpsertRange(episodes.ToArray())
+            .Episodes.UpsertRange([.. episodes])
             .On(e => new { e.Id })
             .WhenMatched(
                 (es, ei) =>
@@ -44,15 +44,20 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
 
     public Task StoreEpisodeTranslations(List<Translation> translations)
     {
-        int[] episodeIds = context
-            .Episodes.Select(e => e.Id)
-            .ToArray()
-            .Where(e => translations.Any(t => e == t.EpisodeId))
-            .ToArray();
+        int[] episodeIds =
+        [
+            .. context
+                .Episodes.Select(e => e.Id)
+                .ToArray()
+                .Where(e => translations.Any(t => e == t.EpisodeId)),
+        ];
 
-        translations = translations
-            .Where(t => t.EpisodeId is not null && episodeIds.Contains(t.EpisodeId.Value))
-            .ToList();
+        translations =
+        [
+            .. translations.Where(t =>
+                t.EpisodeId is not null && episodeIds.Contains(t.EpisodeId.Value)
+            ),
+        ];
 
         return context
             .Translations.UpsertRange(translations)
@@ -87,21 +92,24 @@ public class EpisodeRepository(MediaContext context) : IEpisodeRepository
 
     public Task StoreEpisodeImages(IEnumerable<Image> images)
     {
-        int[] episodeIds = context
-            .Episodes.Select(e => e.Id)
-            .ToArray()
-            .Where(e => images.Any(i => e == i.EpisodeId))
-            .ToArray();
+        int[] episodeIds =
+        [
+            .. context
+                .Episodes.Select(e => e.Id)
+                .ToArray()
+                .Where(e => images.Any(i => e == i.EpisodeId)),
+        ];
 
-        List<Image> filteredImages = images
-            .Where(i => i.EpisodeId is not null && episodeIds.Contains(i.EpisodeId.Value))
-            .ToList();
+        List<Image> filteredImages =
+        [
+            .. images.Where(i => i.EpisodeId is not null && episodeIds.Contains(i.EpisodeId.Value)),
+        ];
 
         if (filteredImages.Count == 0)
             return Task.CompletedTask;
 
         return context
-            .Images.UpsertRange(filteredImages.ToArray())
+            .Images.UpsertRange([.. filteredImages])
             .On(v => new { v.FilePath, v.EpisodeId })
             .WhenMatched(
                 (ts, ti) =>

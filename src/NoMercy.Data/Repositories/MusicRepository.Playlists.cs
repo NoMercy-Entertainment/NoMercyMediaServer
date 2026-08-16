@@ -141,18 +141,20 @@ public partial class MusicRepository
         if (albumTracks.Count == 0)
             return albumTracks;
 
-        List<Guid> trackIds = albumTracks.Select(at => at.TrackId).Distinct().ToList();
+        List<Guid> trackIds = [.. albumTracks.Select(at => at.TrackId).Distinct()];
         List<Track> tracksWithAlbumLinks = await mediaContext
             .Tracks.AsNoTracking()
             .Where(track => trackIds.Contains(track.Id))
             .Include(track => track.AlbumTrack)
             .ToListAsync(ct);
 
-        List<Guid> distinctAlbumIds = tracksWithAlbumLinks
-            .SelectMany(track => track.AlbumTrack)
-            .Select(at => at.AlbumId)
-            .Distinct()
-            .ToList();
+        List<Guid> distinctAlbumIds =
+        [
+            .. tracksWithAlbumLinks
+                .SelectMany(track => track.AlbumTrack)
+                .Select(at => at.AlbumId)
+                .Distinct(),
+        ];
 
         List<Album> albumsWithDetails = await mediaContext
             .Albums.AsNoTracking()
@@ -227,7 +229,7 @@ public partial class MusicRepository
         if (artistTracks.Count == 0)
             return artistTracks;
 
-        List<Guid> trackIds = artistTracks.Select(at => at.TrackId).Distinct().ToList();
+        List<Guid> trackIds = [.. artistTracks.Select(at => at.TrackId).Distinct()];
         List<Track> tracksWithCredits = await mediaContext
             .Tracks.AsNoTracking()
             .Where(track => trackIds.Contains(track.Id))
@@ -247,11 +249,13 @@ public partial class MusicRepository
             )
                 artistTrack.Track.ArtistTrack = credits;
 
-        List<Guid> distinctAlbumIds = artistTracks
-            .SelectMany(at => at.Track.AlbumTrack)
-            .Select(albumTrack => albumTrack.AlbumId)
-            .Distinct()
-            .ToList();
+        List<Guid> distinctAlbumIds =
+        [
+            .. artistTracks
+                .SelectMany(at => at.Track.AlbumTrack)
+                .Select(albumTrack => albumTrack.AlbumId)
+                .Distinct(),
+        ];
 
         List<Album> albumsWithTranslations = await mediaContext
             .Albums.AsNoTracking()
@@ -320,11 +324,13 @@ public partial class MusicRepository
         if (genreTracks.Count == 0)
             return genreTracks;
 
-        List<Guid> distinctAlbumIds = genreTracks
-            .SelectMany(mgt => mgt.Track.AlbumTrack)
-            .Select(albumTrack => albumTrack.AlbumId)
-            .Distinct()
-            .ToList();
+        List<Guid> distinctAlbumIds =
+        [
+            .. genreTracks
+                .SelectMany(mgt => mgt.Track.AlbumTrack)
+                .Select(albumTrack => albumTrack.AlbumId)
+                .Distinct(),
+        ];
 
         List<Album> albumsWithDetails = await mediaContext
             .Albums.AsNoTracking()

@@ -61,7 +61,7 @@ public class CropDetectorTests
     [Fact]
     public async Task Detect_FullFrameCrop_ShouldCropFalse()
     {
-        string[] stderrLines = Enumerable.Repeat("[cropdetect] crop=1920:1080:0:0", 10).ToArray();
+        string[] stderrLines = [.. Enumerable.Repeat("[cropdetect] crop=1920:1080:0:0", 10)];
 
         SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(
@@ -79,9 +79,10 @@ public class CropDetectorTests
     [Fact]
     public async Task Detect_FewerThanMinObservations_ShouldCropFalse()
     {
-        string[] stderrLines = Enumerable
-            .Repeat("crop=1920:1040:0:20", 3) // below threshold
-            .ToArray();
+        string[] stderrLines =
+        [
+            .. Enumerable.Repeat("crop=1920:1040:0:20", 3), // below threshold
+        ];
 
         SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(
@@ -242,7 +243,7 @@ public class CropDetectorTests
     {
         // 3 observations of one crop → below the MinObservations gate but
         // SampleFramesAnalyzed + Confidence should still be filled in for UI.
-        string[] stderrLines = Enumerable.Repeat("crop=1920:1040:0:20", 3).ToArray();
+        string[] stderrLines = [.. Enumerable.Repeat("crop=1920:1040:0:20", 3)];
 
         SetupStderr(stderrLines, exitCode: 0);
         CropDetector detector = new(

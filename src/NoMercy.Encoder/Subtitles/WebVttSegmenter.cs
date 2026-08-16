@@ -60,12 +60,7 @@ public sealed class WebVttSegmenter
         if (cues.Count == 0)
             return
             [
-                new(
-                    0,
-                    BuildSegment(header, [], segmentDuration),
-                    TimeSpan.Zero,
-                    segmentDuration
-                ),
+                new(0, BuildSegment(header, [], segmentDuration), TimeSpan.Zero, segmentDuration),
             ];
 
         TimeSpan totalDuration = cues.Max(c => c.End);
@@ -80,8 +75,10 @@ public sealed class WebVttSegmenter
             TimeSpan segStart = segmentDuration * i;
             TimeSpan segEnd = segmentDuration * (i + 1);
 
-            List<ParsedCue> overlapping = cues.Where(c => c.Start < segEnd && c.End > segStart)
-                .ToList();
+            List<ParsedCue> overlapping =
+            [
+                .. cues.Where(c => c.Start < segEnd && c.End > segStart),
+            ];
 
             string content = BuildSegment(header, overlapping, segmentDuration);
             result.Add(new(i, content, segStart, segEnd));

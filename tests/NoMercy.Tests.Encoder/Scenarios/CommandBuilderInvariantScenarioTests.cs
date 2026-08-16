@@ -68,16 +68,18 @@ public class CommandBuilderInvariantScenarioTests
             .AddOutput(new(OutputPath, VideoCodec: "copy", MapStreams: ["0:v"]))
             .Build(FfmpegPath);
 
-        int[] copyArgIndices = cmd
-            .Arguments.Select((arg, idx) => (arg, idx))
-            .Where(x => x.arg == "copy")
-            .Select(x => x.idx)
-            .ToArray();
+        int[] copyArgIndices =
+        [
+            .. cmd
+                .Arguments.Select((arg, idx) => (arg, idx))
+                .Where(x => x.arg == "copy")
+                .Select(x => x.idx),
+        ];
 
         copyArgIndices.Should().NotBeEmpty();
 
         int outputStartIdx = Array.IndexOf(cmd.Arguments, OutputPath);
-        string[] argRange = cmd.Arguments.Take(outputStartIdx).ToArray();
+        string[] argRange = [.. cmd.Arguments.Take(outputStartIdx)];
 
         argRange
             .Should()
@@ -135,11 +137,10 @@ public class CommandBuilderInvariantScenarioTests
             @"\[(\w+)\]",
             RegexOptions.IgnoreCase
         );
-        string[] outputPads = padMatches
-            .Cast<Match>()
-            .Select(m => m.Groups[1].Value)
-            .Distinct()
-            .ToArray();
+        string[] outputPads =
+        [
+            .. padMatches.Cast<Match>().Select(m => m.Groups[1].Value).Distinct(),
+        ];
 
         int mapIdx = 0;
         foreach (string pad in outputPads)

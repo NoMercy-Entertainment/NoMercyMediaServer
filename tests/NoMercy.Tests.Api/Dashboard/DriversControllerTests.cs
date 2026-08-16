@@ -48,7 +48,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync(BaseUrl);
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -56,7 +58,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _secondaryUser.GetAsync(BaseUrl);
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -92,7 +96,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/types");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -100,7 +106,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/types");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -115,10 +123,10 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
         doc.RootElement.ValueKind.Should().Be(JsonValueKind.Array);
         doc.RootElement.GetArrayLength().Should().Be(5);
 
-        string[] types = doc
-            .RootElement.EnumerateArray()
-            .Select(e => e.GetProperty("type").GetString()!)
-            .ToArray();
+        string[] types =
+        [
+            .. doc.RootElement.EnumerateArray().Select(e => e.GetProperty("type").GetString()!),
+        ];
 
         types.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav"]);
     }
@@ -128,7 +136,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/{SystemLocalId}");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -136,7 +146,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/{SystemLocalId}");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -168,7 +180,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync($"{BaseUrl}/system-local");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -176,7 +190,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _secondaryUser.GetAsync($"{BaseUrl}/system-local");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -199,7 +215,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
             new { name = "contract-test-driver", type = "local" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -210,7 +228,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
             new { name = "contract-test-driver", type = "local" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -259,7 +279,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
             new { name = "renamed" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -270,7 +292,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
             new { name = "renamed" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -305,7 +329,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
             new { access_key = "ak", secret_key = "sk" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -316,7 +342,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
             new { access_key = "ak", secret_key = "sk" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -350,7 +378,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.DeleteAsync($"{BaseUrl}/{SystemLocalId}");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -360,7 +390,9 @@ public class DriversControllerTests : IClassFixture<NoMercyApiFactory>
             $"{BaseUrl}/{SystemLocalId}"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

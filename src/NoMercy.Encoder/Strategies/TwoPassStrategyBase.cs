@@ -170,7 +170,7 @@ public abstract class TwoPassStrategyBase(
         if (tasks.Count == 0)
             return [IEncodingStrategy.WholeTask(groupTag)];
 
-        return tasks.ToArray();
+        return [.. tasks];
     }
 
     private static int EstimateVideoCost(VideoOutputPlan video)

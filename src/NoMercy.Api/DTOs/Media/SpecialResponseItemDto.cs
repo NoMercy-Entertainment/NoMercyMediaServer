@@ -118,24 +118,24 @@ public record SpecialResponseItemDto
                 specialItems.Add(item);
             }
 
-        IEnumerable<PeopleDto> cast = items
-            .SelectMany(tv => tv.Cast)
-            .DistinctBy(people => people.Id)
-            .ToList();
+        IEnumerable<PeopleDto> cast =
+        [
+            .. items.SelectMany(tv => tv.Cast).DistinctBy(people => people.Id),
+        ];
 
-        IEnumerable<PeopleDto> crew = items
-            .SelectMany(item => item.Crew)
-            .DistinctBy(people => people.Id)
-            .ToList();
+        IEnumerable<PeopleDto> crew =
+        [
+            .. items.SelectMany(item => item.Crew).DistinctBy(people => people.Id),
+        ];
 
-        IEnumerable<ImageDto> posters = items.SelectMany(item => item.Posters).ToList();
+        IEnumerable<ImageDto> posters = [.. items.SelectMany(item => item.Posters)];
 
-        IEnumerable<ImageDto> backdrops = items.SelectMany(item => item.Backdrops).ToList();
+        IEnumerable<ImageDto> backdrops = [.. items.SelectMany(item => item.Backdrops)];
 
-        IEnumerable<GenreDto> genres = items
-            .SelectMany(item => item.Genres)
-            .DistinctBy(genre => genre.Id)
-            .ToList();
+        IEnumerable<GenreDto> genres =
+        [
+            .. items.SelectMany(item => item.Genres).DistinctBy(genre => genre.Id),
+        ];
 
         foreach (SpecialItemsDto item in items)
         {
@@ -265,24 +265,24 @@ public record SpecialResponseItemDto
                 specialItems.Add(item);
             }
 
-        IEnumerable<PeopleDto> cast = items
-            .SelectMany(tv => tv.Cast)
-            .DistinctBy(people => people.Id)
-            .ToList();
+        IEnumerable<PeopleDto> cast =
+        [
+            .. items.SelectMany(tv => tv.Cast).DistinctBy(people => people.Id),
+        ];
 
-        IEnumerable<PeopleDto> crew = items
-            .SelectMany(item => item.Crew)
-            .DistinctBy(people => people.Id)
-            .ToList();
+        IEnumerable<PeopleDto> crew =
+        [
+            .. items.SelectMany(item => item.Crew).DistinctBy(people => people.Id),
+        ];
 
-        IEnumerable<ImageDto> posters = items.SelectMany(item => item.Posters).ToList();
+        IEnumerable<ImageDto> posters = [.. items.SelectMany(item => item.Posters)];
 
-        IEnumerable<ImageDto> backdrops = items.SelectMany(item => item.Backdrops).ToList();
+        IEnumerable<ImageDto> backdrops = [.. items.SelectMany(item => item.Backdrops)];
 
-        IEnumerable<GenreDto> genres = items
-            .SelectMany(item => item.Genres)
-            .DistinctBy(genre => genre.Id)
-            .ToList();
+        IEnumerable<GenreDto> genres =
+        [
+            .. items.SelectMany(item => item.Genres).DistinctBy(genre => genre.Id),
+        ];
 
         foreach (SpecialItemsDto item in items)
         {

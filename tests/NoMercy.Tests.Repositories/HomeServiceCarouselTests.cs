@@ -46,7 +46,7 @@ public class HomeServiceCarouselTests : IDisposable
 
         ComponentResponse response = await service.GetHomeData(SeedConstants.UserId, "en", "US");
 
-        return response.Data.ToList();
+        return [.. response.Data];
     }
 
     [Fact]
@@ -94,12 +94,14 @@ public class HomeServiceCarouselTests : IDisposable
     {
         List<ComponentEnvelope> components = await GetHomeComponentsAsync();
 
-        HashSet<string> existingCarouselIds = components
-            .Where(envelope => envelope.Component == ComponentTypes.Carousel)
-            .Select(GetComponentId)
-            .Where(id => id != null)
-            .Select(id => id!)
-            .ToHashSet();
+        HashSet<string> existingCarouselIds =
+        [
+            .. components
+                .Where(envelope => envelope.Component == ComponentTypes.Carousel)
+                .Select(GetComponentId)
+                .Where(id => id != null)
+                .Select(id => id!),
+        ];
 
         // Sanity: the seed data produces at least the continue + genre rows this
         // test is meant to walk, otherwise the loop below would vacuously pass.

@@ -217,9 +217,9 @@ public record InfoResponseItemDto
 
         Genres = movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie));
 
-        PeopleDto[] cast = movie.Cast.Select(cast => new PeopleDto(cast)).ToArray();
+        PeopleDto[] cast = [.. movie.Cast.Select(cast => new PeopleDto(cast))];
 
-        PeopleDto[] crew = movie.Crew.Select(crew => new PeopleDto(crew)).ToArray();
+        PeopleDto[] crew = [.. movie.Crew.Select(crew => new PeopleDto(crew))];
 
         Cast = cast;
         Crew = crew;
@@ -306,9 +306,9 @@ public record InfoResponseItemDto
 
         Genres = tmdbMovie.Genres.Select(genreMovie => new GenreDto(genreMovie));
 
-        PeopleDto[] cast = tmdbMovie.Credits.Cast.Select(cast => new PeopleDto(cast)).ToArray();
+        PeopleDto[] cast = [.. tmdbMovie.Credits.Cast.Select(cast => new PeopleDto(cast))];
 
-        PeopleDto[] crew = tmdbMovie.Credits.Crew.Select(crew => new PeopleDto(crew)).ToArray();
+        PeopleDto[] crew = [.. tmdbMovie.Credits.Crew.Select(crew => new PeopleDto(crew))];
 
         Cast = cast;
         Crew = crew;
@@ -428,21 +428,25 @@ public record InfoResponseItemDto
 
         ExternalIds = new() { ImdbId = tv.ImdbId, TvdbId = tv.TvdbId };
 
-        PeopleDto[] cast = tv
-            .Episodes.SelectMany(episode => episode.Cast)
-            .Concat(tv.Cast)
-            .Select(cast => new PeopleDto(cast))
-            .GroupBy(people => people.Id)
-            .Select(group => group.First())
-            .ToArray();
+        PeopleDto[] cast =
+        [
+            .. tv
+                .Episodes.SelectMany(episode => episode.Cast)
+                .Concat(tv.Cast)
+                .Select(cast => new PeopleDto(cast))
+                .GroupBy(people => people.Id)
+                .Select(group => group.First()),
+        ];
 
-        PeopleDto[] crew = tv
-            .Episodes.SelectMany(episode => episode.Crew)
-            .Concat(tv.Crew)
-            .Select(crew => new PeopleDto(crew))
-            .GroupBy(people => people.Id)
-            .Select(group => group.First())
-            .ToArray();
+        PeopleDto[] crew =
+        [
+            .. tv
+                .Episodes.SelectMany(episode => episode.Crew)
+                .Concat(tv.Crew)
+                .Select(crew => new PeopleDto(crew))
+                .GroupBy(people => people.Id)
+                .Select(group => group.First()),
+        ];
 
         Cast = cast;
         Crew = crew;
@@ -574,9 +578,9 @@ public record InfoResponseItemDto
 
         Genres = tmdbTv.Genres.Select(genreTv => new GenreDto(genreTv));
 
-        PeopleDto[] cast = tmdbTv.Credits.Cast.Select(cast => new PeopleDto(cast)).ToArray();
+        PeopleDto[] cast = [.. tmdbTv.Credits.Cast.Select(cast => new PeopleDto(cast))];
 
-        PeopleDto[] crew = tmdbTv.Credits.Crew.Select(crew => new PeopleDto(crew)).ToArray();
+        PeopleDto[] crew = [.. tmdbTv.Credits.Crew.Select(crew => new PeopleDto(crew))];
 
         Cast = cast;
         Crew = crew;
@@ -695,17 +699,21 @@ public record InfoResponseItemDto
             )
             .FirstOrDefault();
 
-        PeopleDto[] cast = collection
-            .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.Cast)
-            .Where(cast => cast.Person.Adult == false)
-            .Select(cast => new PeopleDto(cast))
-            .ToArray();
+        PeopleDto[] cast =
+        [
+            .. collection
+                .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.Cast)
+                .Where(cast => cast.Person.Adult == false)
+                .Select(cast => new PeopleDto(cast)),
+        ];
 
-        PeopleDto[] crew = collection
-            .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.Crew)
-            .Where(crew => crew.Person.Adult == false)
-            .Select(crew => new PeopleDto(crew))
-            .ToArray();
+        PeopleDto[] crew =
+        [
+            .. collection
+                .CollectionMovies.SelectMany(collectionMovie => collectionMovie.Movie.Crew)
+                .Where(crew => crew.Person.Adult == false)
+                .Select(crew => new PeopleDto(crew)),
+        ];
 
         Cast = cast;
         Crew = crew;

@@ -359,12 +359,18 @@ public sealed class DynamicStaticFilesMiddlewareTests
             MediaActivityMonitor activityMonitor,
             _
         ) = CreateMiddleware(storage.Object);
-        DefaultHttpContext context = CreateContext($"/{folder.FolderId}/movie.mp4", "bytes=1048576-");
+        DefaultHttpContext context = CreateContext(
+            $"/{folder.FolderId}/movie.mp4",
+            "bytes=1048576-"
+        );
 
         await middleware.InvokeAsync(context, storageFactory.Object, activityMonitor);
 
         context.Response.StatusCode.Should().Be(206);
-        context.Response.Headers.ContentRange.ToString().Should().StartWith("bytes 1048576-2097151/");
+        context
+            .Response.Headers.ContentRange.ToString()
+            .Should()
+            .StartWith("bytes 1048576-2097151/");
     }
 
     [Fact]
@@ -434,7 +440,7 @@ public sealed class DynamicStaticFilesMiddlewareTests
     public async Task InvokeAsync_StreamShorterThanReportedSize_StopsAtActualStreamEnd()
     {
         using RegisteredFolder folder = new();
-        byte[] actualContent = "abc"u8.ToArray();
+        byte[] actualContent = [.. "abc"u8];
         Mock<IStorage> storage = new();
         storage.Setup(s => s.Exists(It.IsAny<string>())).Returns(true);
         // Reports a size larger than the stream actually contains -- a real
@@ -625,7 +631,7 @@ public sealed class DynamicStaticFilesMiddlewareTests
     )
     {
         using RegisteredFolder folder = new();
-        byte[] content = "content"u8.ToArray();
+        byte[] content = [.. "content"u8];
         Mock<IStorage> storage = CreateStorage(size: content.Length, content: content);
         (
             DynamicStaticFilesMiddleware middleware,
@@ -644,7 +650,7 @@ public sealed class DynamicStaticFilesMiddlewareTests
     public async Task InvokeAsync_UnmappedExtension_FallsBackToGenericMimeMapping()
     {
         using RegisteredFolder folder = new();
-        byte[] content = "content"u8.ToArray();
+        byte[] content = [.. "content"u8];
         Mock<IStorage> storage = CreateStorage(size: content.Length, content: content);
         (
             DynamicStaticFilesMiddleware middleware,

@@ -48,7 +48,7 @@ public class ResourceAllocatorTests
         [
             new(
                 GroupId: "group_0",
-                Nodes: allNodes.ToArray(),
+                Nodes: [.. allNodes],
                 DeviceId: requiresGpu ? "RTX 4090" : null,
                 GpuSlotsRequired: requiresGpu ? encodeCount : 0,
                 CpuThreadsRequired: requiresGpu ? 0 : 4,

@@ -116,7 +116,7 @@ public class ChromaprintFingerprinter(
 
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
-            args.ToArray(),
+            [.. args],
             workingDirectory: null,
             cancellationToken: ct
         );
@@ -176,7 +176,7 @@ public class ChromaprintFingerprinter(
         if (token.Length > 0)
             AppendToken(token, hashes);
 
-        return hashes.ToArray();
+        return [.. hashes];
     }
 
     private static void AppendToken(StringBuilder token, List<uint> hashes)

@@ -162,12 +162,14 @@ public class MediaContext : DbContext
                     p.SetMaxLength(maxLengthAttr.Length);
             });
 
-        List<IMutableEntityType> entityTypes = modelBuilder
-            .Model.GetEntityTypes()
-            .Where(t =>
-                t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps)
-            )
-            .ToList();
+        List<IMutableEntityType> entityTypes =
+        [
+            .. modelBuilder
+                .Model.GetEntityTypes()
+                .Where(t =>
+                    t.ClrType.IsSubclassOf(typeof(Timestamps)) || t.ClrType == typeof(Timestamps)
+                ),
+        ];
 
         foreach (IMutableEntityType entityType in entityTypes)
         {

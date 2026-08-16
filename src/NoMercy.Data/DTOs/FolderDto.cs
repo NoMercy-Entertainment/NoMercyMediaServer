@@ -40,18 +40,20 @@ public class FolderDto
         Path = folder.Path;
         DriverId = folder.DriverId;
         DriverName = folder.Driver?.Name ?? string.Empty;
-        EncoderProfiles = folder
-            .EncodingPresetFolders.Where(link => link.Preset is not null)
-            .Select(link => new FolderPresetDto
-            {
-                Id = link.Preset!.Id,
-                Name = link.Preset!.Name,
-                // The preset row carries no Container column (that was a V1-only
-                // concept resolved from ProfileJson at encode time) — resolving it
-                // here would mean deserializing ProfileJson per folder per request,
-                // which isn't cheap enough to justify for a field clients never read.
-                Container = string.Empty,
-            })
-            .ToArray();
+        EncoderProfiles =
+        [
+            .. folder
+                .EncodingPresetFolders.Where(link => link.Preset is not null)
+                .Select(link => new FolderPresetDto
+                {
+                    Id = link.Preset!.Id,
+                    Name = link.Preset!.Name,
+                    // The preset row carries no Container column (that was a V1-only
+                    // concept resolved from ProfileJson at encode time) — resolving it
+                    // here would mean deserializing ProfileJson per folder per request,
+                    // which isn't cheap enough to justify for a field clients never read.
+                    Container = string.Empty,
+                }),
+        ];
     }
 }

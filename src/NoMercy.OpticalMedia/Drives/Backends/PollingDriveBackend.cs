@@ -33,17 +33,18 @@ public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : I
     private CancellationTokenSource? _loopCts;
 
     public IReadOnlyList<DiscDrive> GetDrives() =>
-        Optical
-            .GetOpticalDrives()
-            .Select(kvp =>
-            {
-                bool hasDisc = !string.IsNullOrEmpty(kvp.Value);
-                OpticalDiscType type = hasDisc
-                    ? Optical.GetDiscType(kvp.Key)
-                    : OpticalDiscType.None;
-                return new DiscDrive(kvp.Key, kvp.Value, hasDisc, type);
-            })
-            .ToList();
+        [
+            .. Optical
+                .GetOpticalDrives()
+                .Select(kvp =>
+                {
+                    bool hasDisc = !string.IsNullOrEmpty(kvp.Value);
+                    OpticalDiscType type = hasDisc
+                        ? Optical.GetDiscType(kvp.Key)
+                        : OpticalDiscType.None;
+                    return new DiscDrive(kvp.Key, kvp.Value, hasDisc, type);
+                }),
+        ];
 
     public async IAsyncEnumerable<DriveEvent> ListenAsync(
         [EnumeratorCancellation] CancellationToken ct
@@ -85,10 +86,7 @@ public sealed class PollingDriveBackend(ILogger<PollingDriveBackend> logger) : I
                         {
                             OpticalDiscType type = Optical.GetDiscType(drive);
                             _events.Writer.TryWrite(
-                                new(
-                                    DriveEventType.DiscInserted,
-                                    new(drive, label, true, type)
-                                )
+                                new(DriveEventType.DiscInserted, new(drive, label, true, type))
                             );
                         }
 

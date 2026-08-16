@@ -131,16 +131,18 @@ public class TmdbPerformanceTests : TmdbTestBase
         Stopwatch stopwatch = Stopwatch.StartNew();
 
         // Act
-        Task<TmdbMovieDetails?>[] tasks = Enumerable
-            .Range(0, clientCount)
-            .Select(i =>
-                Task.Run(async () =>
-                {
-                    using TmdbMovieClient client = CreateMockMovieClient(ValidMovieId + i);
-                    return await client.Details();
-                })
-            )
-            .ToArray();
+        Task<TmdbMovieDetails?>[] tasks =
+        [
+            .. Enumerable
+                .Range(0, clientCount)
+                .Select(i =>
+                    Task.Run(async () =>
+                    {
+                        using TmdbMovieClient client = CreateMockMovieClient(ValidMovieId + i);
+                        return await client.Details();
+                    })
+                ),
+        ];
 
         TmdbMovieDetails?[] results = await Task.WhenAll(tasks);
 
@@ -274,10 +276,10 @@ public class TmdbPerformanceTests : TmdbTestBase
         using TmdbMovieClient client = CreateMockMovieClient();
         Stopwatch stopwatch = Stopwatch.StartNew();
 
-        Task<TmdbMovieDetails?>[] tasks = Enumerable
-            .Range(0, count)
-            .Select(_ => client.Details())
-            .ToArray();
+        Task<TmdbMovieDetails?>[] tasks =
+        [
+            .. Enumerable.Range(0, count).Select(_ => client.Details()),
+        ];
 
         TmdbMovieDetails?[] results = await Task.WhenAll(tasks);
 

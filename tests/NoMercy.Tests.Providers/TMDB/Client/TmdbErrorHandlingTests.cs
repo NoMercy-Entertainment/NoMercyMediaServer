@@ -103,7 +103,13 @@ public class TmdbErrorHandlingTests : TmdbTestBase
         Task<TmdbImages?> imagesTask = client.Images();
 
         Func<Task> allTasksCompletion = async () =>
-            await Task.WhenAll([detailsTask, creditsTask, externalIdsTask, keywordsTask, imagesTask]);
+            await Task.WhenAll([
+                detailsTask,
+                creditsTask,
+                externalIdsTask,
+                keywordsTask,
+                imagesTask,
+            ]);
         await allTasksCompletion.Should().NotThrowAsync();
     }
 
@@ -227,8 +233,8 @@ public class TmdbErrorHandlingTests : TmdbTestBase
     {
         // Arrange
         const int clientCount = 10;
-        List<TmdbMovieClient> clients = new();
-        List<Task> tasks = new();
+        List<TmdbMovieClient> clients = [];
+        List<Task> tasks = [];
 
         // Act
         for (int i = 0; i < clientCount; i++)

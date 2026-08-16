@@ -165,7 +165,7 @@ public class AcoustIdBaseClientTests
         // We check that no int-typed generated field corresponds to `iteration`.
 
         // Filter to user-code local variable fields (compiler-generated with 5__ pattern)
-        FieldInfo[] localFields = fields.Where(f => f.Name.Contains("5__")).ToArray();
+        FieldInfo[] localFields = [.. fields.Where(f => f.Name.Contains("5__"))];
 
         // Count int-type locals — removing the while loop should reduce this count.
         // The original code had `int iteration = 0;` as the only int local in the try block.

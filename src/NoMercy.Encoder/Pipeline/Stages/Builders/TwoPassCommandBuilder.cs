@@ -31,8 +31,9 @@ public static class TwoPassCommandBuilder
     /// </summary>
     public static OutputPlan InjectPass2Flags(OutputPlan plan, string statsFilePath)
     {
-        VideoOutputPlan[] updated = plan
-            .VideoOutputs.Select(
+        VideoOutputPlan[] updated =
+        [
+            .. plan.VideoOutputs.Select(
                 (v, index) =>
                 {
                     Dictionary<string, string> flags = new(v.ExtraFlags)
@@ -42,8 +43,8 @@ public static class TwoPassCommandBuilder
                     };
                     return v with { ExtraFlags = flags };
                 }
-            )
-            .ToArray();
+            ),
+        ];
 
         return plan with
         {

@@ -102,10 +102,10 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
 
         plan.AudioOutputs.Should().HaveCount(3);
 
-        string[] languages = plan.AudioOutputs
-            .Select(a => a.Language ?? string.Empty)
-            .OrderBy(l => l)
-            .ToArray();
+        string[] languages =
+        [
+            .. plan.AudioOutputs.Select(a => a.Language ?? string.Empty).OrderBy(l => l),
+        ];
         languages.Should().Equal("eng", "fra", "jpn");
 
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
@@ -132,9 +132,10 @@ public class HlsOnDiskPlanReconstructorAudioTests : IDisposable
             CancellationToken.None
         );
 
-        AudioOutputPlan[] audioByLang = plan.AudioOutputs
-            .OrderBy(a => a.Language ?? string.Empty)
-            .ToArray();
+        AudioOutputPlan[] audioByLang =
+        [
+            .. plan.AudioOutputs.OrderBy(a => a.Language ?? string.Empty),
+        ];
 
         audioByLang.Should().HaveCount(3);
         audioByLang[0].Language.Should().Be("eng");

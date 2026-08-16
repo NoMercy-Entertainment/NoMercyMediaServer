@@ -87,10 +87,10 @@ public partial class HomeController : BaseController
             request
         );
 
-        List<GenreRowDto<GenreRowItemDto>> newData = result.ToList();
+        List<GenreRowDto<GenreRowItemDto>> newData = [.. result];
         bool hasMore = newData.Count >= request.Take;
 
-        newData = newData.Take(request.Take).ToList();
+        newData = [.. newData.Take(request.Take)];
 
         PaginatedResponse<GenreRowDto<GenreRowItemDto>> response = new()
         {
@@ -111,8 +111,9 @@ public partial class HomeController : BaseController
         List<Library> libraries = await libraryRepository.GetLibrariesLite(userId, ct);
 
         // Fetch all library data in parallel - each task needs its own MediaContext for thread safety
-        Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks = libraries
-            .Select(async library =>
+        Task<(Library library, List<Movie> movies, List<Tv> shows)>[] libraryDataTasks =
+        [
+            .. libraries.Select(async library =>
             {
                 await using MediaContext context = await _contextFactory.CreateDbContextAsync(ct);
                 List<Movie> libraryMovies = [];
@@ -154,8 +155,8 @@ public partial class HomeController : BaseController
                 }
 
                 return (library, libraryMovies, libraryShows);
-            })
-            .ToArray();
+            }),
+        ];
 
         (Library library, List<Movie> movies, List<Tv> shows)[] libraryDataResults =
             await Task.WhenAll(libraryDataTasks);
@@ -333,16 +334,18 @@ public partial class HomeController : BaseController
                     File = $"/transcodes/{trailerId}/video.m3u8",
                     Origin = Info.DeviceId,
                     PlaylistId = trailerInfo.Id!,
-                    Tracks = trailerInfo
-                        .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
-                        .Select(t => new VideoTrack
-                        {
-                            Label = t.Value.First(s => s.Ext == "vtt").Name,
-                            File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
-                            Language = t.Key,
-                            Kind = "subtitles",
-                        })
-                        .ToList(),
+                    Tracks =
+                    [
+                        .. trailerInfo
+                            .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
+                            .Select(t => new VideoTrack
+                            {
+                                Label = t.Value.First(s => s.Ext == "vtt").Name,
+                                File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
+                                Language = t.Key,
+                                Kind = "subtitles",
+                            }),
+                    ],
                     Sources =
                     [
                         new()
@@ -421,16 +424,18 @@ public partial class HomeController : BaseController
                 File = $"/transcodes/{trailerId}/video.m3u8",
                 Origin = Info.DeviceId,
                 PlaylistId = trailerInfo.Id!,
-                Tracks = trailerInfo
-                    .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
-                    .Select(t => new VideoTrack
-                    {
-                        Label = t.Value.First(s => s.Ext == "vtt").Name,
-                        File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
-                        Language = t.Key,
-                        Kind = "subtitles",
-                    })
-                    .ToList(),
+                Tracks =
+                [
+                    .. trailerInfo
+                        .Subtitles.Where(t => t.Value.Any(s => s.Ext == "vtt"))
+                        .Select(t => new VideoTrack
+                        {
+                            Label = t.Value.First(s => s.Ext == "vtt").Name,
+                            File = $"/transcodes/{trailerId}/-.{t.Key}.vtt",
+                            Language = t.Key,
+                            Kind = "subtitles",
+                        }),
+                ],
                 Sources =
                 [
                     new()

@@ -188,15 +188,15 @@ public class EncoderContentAnalysisController(
         if (prints.Count < 2)
             return BadRequestResponse("Not enough successful fingerprints to compare");
 
-        List<AudioFingerprint> introFingerprints = prints.Select(t => t.Intro).ToList();
-        List<AudioFingerprint> outroFingerprints = prints.Select(t => t.Outro).ToList();
+        List<AudioFingerprint> introFingerprints = [.. prints.Select(t => t.Intro)];
+        List<AudioFingerprint> outroFingerprints = [.. prints.Select(t => t.Outro)];
 
         IntroMarker? introMarker = introDetector.DetectIntro(introFingerprints);
         IntroMarker? outroMarker = introDetector.DetectOutro(outroFingerprints);
 
         // ── Persist detected segments ────────────────────────────────────────
         // Load existing manual rows once so the per-episode check is O(1).
-        List<int> episodeIds = prints.Select(t => t.Episode.Id).ToList();
+        List<int> episodeIds = [.. prints.Select(t => t.Episode.Id)];
 
         List<ContentSegment> existingManual = await context
             .ContentSegments.Where(cs =>
@@ -206,9 +206,10 @@ public class EncoderContentAnalysisController(
             )
             .ToListAsync(ct);
 
-        HashSet<(int EpisodeId, ContentSegmentType Type)> manualKeys = existingManual
-            .Select(cs => (cs.EpisodeId!.Value, cs.SegmentType))
-            .ToHashSet();
+        HashSet<(int EpisodeId, ContentSegmentType Type)> manualKeys =
+        [
+            .. existingManual.Select(cs => (cs.EpisodeId!.Value, cs.SegmentType)),
+        ];
 
         List<ContentSegment> toUpsert = [];
 
@@ -514,7 +515,7 @@ public class EncoderContentAnalysisController(
     /// </summary>
     private static string FingerprintHash(IReadOnlyList<AudioFingerprint> prints)
     {
-        uint[] combined = prints[0].Hashes.ToArray();
+        uint[] combined = [.. prints[0].Hashes];
         for (int i = 1; i < prints.Count; i++)
         {
             uint[] h = prints[i].Hashes;

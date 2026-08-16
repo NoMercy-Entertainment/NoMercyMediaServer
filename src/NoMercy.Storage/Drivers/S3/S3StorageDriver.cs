@@ -421,7 +421,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             DeleteObjectsRequest deleteRequest = new()
             {
                 BucketName = _bucket,
-                Objects = keys.Select(k => new KeyVersion { Key = k }).ToList(),
+                Objects = [.. keys.Select(k => new KeyVersion { Key = k })],
             };
             _client!.DeleteObjectsAsync(deleteRequest).GetAwaiter().GetResult();
         } while (continuationToken is not null);
@@ -510,7 +510,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 DeleteObjectsRequest deleteRequest = new()
                 {
                     BucketName = _bucket,
-                    Objects = keys.Select(k => new KeyVersion { Key = k }).ToList(),
+                    Objects = [.. keys.Select(k => new KeyVersion { Key = k })],
                 };
                 _client!.DeleteObjectsAsync(deleteRequest).GetAwaiter().GetResult();
             }
@@ -1003,7 +1003,7 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
                 .GetResult();
             nextContinuationToken =
                 response.IsTruncated == true ? response.NextContinuationToken : null;
-            return response.S3Objects.Select(o => o.Key).ToList();
+            return [.. response.S3Objects.Select(o => o.Key)];
         }
 
         (List<string> files, _, string? next) = ListPageRaw(prefix, delimiter, continuationToken);
@@ -1020,15 +1020,19 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
         XDocument doc = XDocument.Parse(xml);
         XNamespace ns = "http://s3.amazonaws.com/doc/2006-03-01/";
 
-        List<string> files = doc.Descendants(ns + "Contents")
-            .Select(e => e.Element(ns + "Key")?.Value ?? string.Empty)
-            .Where(k => !string.IsNullOrEmpty(k) && !k.EndsWith("/", StringComparison.Ordinal))
-            .ToList();
+        List<string> files =
+        [
+            .. doc.Descendants(ns + "Contents")
+                .Select(e => e.Element(ns + "Key")?.Value ?? string.Empty)
+                .Where(k => !string.IsNullOrEmpty(k) && !k.EndsWith("/", StringComparison.Ordinal)),
+        ];
 
-        List<string> dirs = doc.Descendants(ns + "CommonPrefixes")
-            .Select(e => e.Element(ns + "Prefix")?.Value ?? string.Empty)
-            .Where(p => !string.IsNullOrEmpty(p))
-            .ToList();
+        List<string> dirs =
+        [
+            .. doc.Descendants(ns + "CommonPrefixes")
+                .Select(e => e.Element(ns + "Prefix")?.Value ?? string.Empty)
+                .Where(p => !string.IsNullOrEmpty(p)),
+        ];
 
         string? next = doc.Descendants(ns + "NextContinuationToken").FirstOrDefault()?.Value;
 
@@ -1120,10 +1124,12 @@ public sealed class S3StorageDriver : IStorageDriver, IDisposable
             files.Add((key, size, lastModified));
         }
 
-        List<string> dirs = doc.Descendants(ns + "CommonPrefixes")
-            .Select(e => e.Element(ns + "Prefix")?.Value ?? string.Empty)
-            .Where(p => !string.IsNullOrEmpty(p))
-            .ToList();
+        List<string> dirs =
+        [
+            .. doc.Descendants(ns + "CommonPrefixes")
+                .Select(e => e.Element(ns + "Prefix")?.Value ?? string.Empty)
+                .Where(p => !string.IsNullOrEmpty(p)),
+        ];
 
         string? next = doc.Descendants(ns + "NextContinuationToken").FirstOrDefault()?.Value;
 

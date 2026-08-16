@@ -405,7 +405,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
         if (genres.Count == 0)
             return [];
 
-        List<int> ids = genres.Select(genre => genre.Id).ToList();
+        List<int> ids = [.. genres.Select(genre => genre.Id)];
 
         Dictionary<int, int> movieTotals = await context
             .GenreMovie.AsNoTracking()
@@ -451,8 +451,9 @@ public class GenreRepository(MediaContext context) : IGenreRepository
             .Select(group => new { group.Key, Count = group.Count() })
             .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
 
-        return genres
-            .Select(genre => new GenreWithCountsDto
+        return
+        [
+            .. genres.Select(genre => new GenreWithCountsDto
             {
                 Id = genre.Id,
                 Name = genre.TranslatedName ?? genre.Name,
@@ -460,8 +461,8 @@ public class GenreRepository(MediaContext context) : IGenreRepository
                 TotalTvShows = tvTotals.GetValueOrDefault(genre.Id),
                 MoviesWithVideo = movieWithVideo.GetValueOrDefault(genre.Id),
                 TvShowsWithVideo = tvWithVideo.GetValueOrDefault(genre.Id),
-            })
-            .ToList();
+            }),
+        ];
     }
 
     public Task<List<MusicGenre>> GetMusicGenresAsync(Guid userId, CancellationToken ct = default)

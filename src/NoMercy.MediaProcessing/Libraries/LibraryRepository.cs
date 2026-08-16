@@ -25,9 +25,12 @@ public class LibraryRepository(MediaContext context, IStorageDriver storageDrive
     public async Task<IEnumerable<MediaFolderExtend>> GetRootFoldersAsync(string path)
     {
         await using MediaScan mediaScan = new(storageDriver);
-        return (await mediaScan.DisableRegexFilter().Process(path, 2))
-            .SelectMany(r => r.SubFolders ?? [])
-            .ToList();
+        return
+        [
+            .. (await mediaScan.DisableRegexFilter().Process(path, 2)).SelectMany(r =>
+                r.SubFolders ?? []
+            ),
+        ];
     }
 
     public Task<Library?> GetLibraryWithFolders(Ulid id)
@@ -79,10 +82,12 @@ public class LibraryRepository(MediaContext context, IStorageDriver storageDrive
                 .ToListAsync(),
         };
 
-        return folders
-            .Where(f => f is not null)
-            .Select(f => f!.Replace("/", "").NormalizeForComparison())
-            .ToHashSet();
+        return
+        [
+            .. folders
+                .Where(f => f is not null)
+                .Select(f => f!.Replace("/", "").NormalizeForComparison()),
+        ];
     }
 
     public void Dispose()

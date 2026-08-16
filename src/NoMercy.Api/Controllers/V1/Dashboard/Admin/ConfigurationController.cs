@@ -104,11 +104,10 @@ public class ConfigurationController(
                 }
             )
             .On(configuration => configuration.Key)
-            .WhenMatched((_, configuration) => new()
-            {
-                Value = configuration.Value, 
-                ModifiedBy = configuration.ModifiedBy
-            })
+            .WhenMatched(
+                (_, configuration) =>
+                    new() { Value = configuration.Value, ModifiedBy = configuration.ModifiedBy }
+            )
             .RunAsync();
 
         await queueRunner.SetWorkerCount(queueName, count, userId);
@@ -142,11 +141,10 @@ public class ConfigurationController(
                     }
                 )
                 .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) => new()
-                {
-                    Value = configuration.Value, 
-                    ModifiedBy = configuration.ModifiedBy
-                })
+                .WhenMatched(
+                    (o, configuration) =>
+                        new() { Value = configuration.Value, ModifiedBy = configuration.ModifiedBy }
+                )
                 .RunAsync();
             changes.Add(("internalPort", oldPort, request.InternalServerPort));
         }
@@ -165,11 +163,10 @@ public class ConfigurationController(
                     }
                 )
                 .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) => new()
-                {
-                    Value = configuration.Value, 
-                    ModifiedBy = configuration.ModifiedBy
-                })
+                .WhenMatched(
+                    (o, configuration) =>
+                        new() { Value = configuration.Value, ModifiedBy = configuration.ModifiedBy }
+                )
                 .RunAsync();
             changes.Add(("externalPort", oldPort, request.ExternalServerPort));
         }
@@ -314,11 +311,10 @@ public class ConfigurationController(
                     }
                 )
                 .On(configuration => configuration.Key)
-                .WhenMatched((o, configuration) => new()
-                {
-                    Value = configuration.Value, 
-                    ModifiedBy = configuration.ModifiedBy
-                })
+                .WhenMatched(
+                    (o, configuration) =>
+                        new() { Value = configuration.Value, ModifiedBy = configuration.ModifiedBy }
+                )
                 .RunAsync();
             changes.Add(("allowAdultContent", oldAllowAdult, (bool)request.AllowAdultContent));
         }
@@ -337,11 +333,8 @@ public class ConfigurationController(
                 )
                 .On(configuration => configuration.Key)
                 .WhenMatched(
-                    (o, configuration) => new()
-                    {
-                        Value = request.ServerName, 
-                        ModifiedBy = configuration.ModifiedBy
-                    }
+                    (o, configuration) =>
+                        new() { Value = request.ServerName, ModifiedBy = configuration.ModifiedBy }
                 )
                 .RunAsync();
             changes.Add(("serverName", oldName, request.ServerName));

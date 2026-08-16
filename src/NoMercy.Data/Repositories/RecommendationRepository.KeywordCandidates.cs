@@ -34,27 +34,27 @@ public partial class RecommendationRepository
         if (movieKeywordMap.Count == 0)
             return [];
 
-        HashSet<int> ownedMovieKeywordIds = movieKeywordMap
-            .Values.SelectMany(kws => kws)
-            .ToHashSet();
+        HashSet<int> ownedMovieKeywordIds = [.. movieKeywordMap.Values.SelectMany(kws => kws)];
 
         if (ownedMovieKeywordIds.Count == 0)
             return [];
 
         // Filter out overly common keywords — generic tags like "animation" or "cat" match too many items
-        HashSet<int> commonKeywordIds = (
-            await context
+        HashSet<int> commonKeywordIds =
+        [
+            .. await context
                 .KeywordTv.AsNoTracking()
                 .Where(kt => ownedMovieKeywordIds.Contains(kt.KeywordId))
                 .GroupBy(kt => kt.KeywordId)
                 .Where(g => g.Count() > maxKeywordFrequency)
                 .Select(g => g.Key)
-                .ToListAsync(ct)
-        ).ToHashSet();
+                .ToListAsync(ct),
+        ];
 
-        HashSet<int> specificKeywordIds = ownedMovieKeywordIds
-            .Where(id => !commonKeywordIds.Contains(id))
-            .ToHashSet();
+        HashSet<int> specificKeywordIds =
+        [
+            .. ownedMovieKeywordIds.Where(id => !commonKeywordIds.Contains(id)),
+        ];
 
         if (specificKeywordIds.Count == 0)
             return [];
@@ -86,7 +86,7 @@ public partial class RecommendationRepository
             return [];
 
         // Step 3: Fetch TV metadata for qualifying shows
-        List<int> qualifyingTvIds = tvKeywordGroups.Select(g => g.Key).ToList();
+        List<int> qualifyingTvIds = [.. tvKeywordGroups.Select(g => g.Key)];
 
         var tvMetadata = await context
             .Tvs.AsNoTracking()
@@ -119,41 +119,45 @@ public partial class RecommendationRepository
         );
 
         // Step 4: Build candidates with reverse-mapped source IDs
-        return tvKeywordGroups
-            .Where(g => metaMap.ContainsKey(g.Key))
-            .Select(g =>
-            {
-                (
-                    string Title,
-                    string TitleSort,
-                    string? Overview,
-                    string? Poster,
-                    string? Backdrop,
-                    string? Palette
-                ) meta = metaMap[g.Key];
-                HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
-                List<int> sourceMovieIds = movieKeywordMap
-                    .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
-                    .Select(kv => kv.Key)
-                    .Distinct()
-                    .ToList();
-
-                return new RecommendationCandidateDto
+        return
+        [
+            .. tvKeywordGroups
+                .Where(g => metaMap.ContainsKey(g.Key))
+                .Select(g =>
                 {
-                    MediaId = g.Key,
-                    Title = meta.Title,
-                    TitleSort = meta.TitleSort,
-                    Overview = meta.Overview,
-                    Poster = meta.Poster,
-                    Backdrop = meta.Backdrop,
-                    ColorPalette = meta.Palette.OrEmpty(),
-                    MediaType = MediaTypes.TvMediaType,
-                    SourceMediaType = MediaTypes.MovieMediaType,
-                    SourceCount = sourceMovieIds.Count,
-                    SourceIds = sourceMovieIds,
-                };
-            })
-            .ToList();
+                    (
+                        string Title,
+                        string TitleSort,
+                        string? Overview,
+                        string? Poster,
+                        string? Backdrop,
+                        string? Palette
+                    ) meta = metaMap[g.Key];
+                    HashSet<int> sharedKeywordIds = [.. g.Select(r => r.KeywordId)];
+                    List<int> sourceMovieIds =
+                    [
+                        .. movieKeywordMap
+                            .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
+                            .Select(kv => kv.Key)
+                            .Distinct(),
+                    ];
+
+                    return new RecommendationCandidateDto
+                    {
+                        MediaId = g.Key,
+                        Title = meta.Title,
+                        TitleSort = meta.TitleSort,
+                        Overview = meta.Overview,
+                        Poster = meta.Poster,
+                        Backdrop = meta.Backdrop,
+                        ColorPalette = meta.Palette.OrEmpty(),
+                        MediaType = MediaTypes.TvMediaType,
+                        SourceMediaType = MediaTypes.MovieMediaType,
+                        SourceCount = sourceMovieIds.Count,
+                        SourceIds = sourceMovieIds,
+                    };
+                }),
+        ];
     }
 
     public async Task<List<RecommendationCandidateDto>> GetKeywordCrossTypeAnimeCandidatesAsync(
@@ -170,26 +174,26 @@ public partial class RecommendationRepository
         if (movieKeywordMap.Count == 0)
             return [];
 
-        HashSet<int> ownedMovieKeywordIds = movieKeywordMap
-            .Values.SelectMany(kws => kws)
-            .ToHashSet();
+        HashSet<int> ownedMovieKeywordIds = [.. movieKeywordMap.Values.SelectMany(kws => kws)];
 
         if (ownedMovieKeywordIds.Count == 0)
             return [];
 
-        HashSet<int> commonKeywordIds = (
-            await context
+        HashSet<int> commonKeywordIds =
+        [
+            .. await context
                 .KeywordTv.AsNoTracking()
                 .Where(kt => ownedMovieKeywordIds.Contains(kt.KeywordId))
                 .GroupBy(kt => kt.KeywordId)
                 .Where(g => g.Count() > maxKeywordFrequency)
                 .Select(g => g.Key)
-                .ToListAsync(ct)
-        ).ToHashSet();
+                .ToListAsync(ct),
+        ];
 
-        HashSet<int> specificKeywordIds = ownedMovieKeywordIds
-            .Where(id => !commonKeywordIds.Contains(id))
-            .ToHashSet();
+        HashSet<int> specificKeywordIds =
+        [
+            .. ownedMovieKeywordIds.Where(id => !commonKeywordIds.Contains(id)),
+        ];
 
         if (specificKeywordIds.Count == 0)
             return [];
@@ -218,7 +222,7 @@ public partial class RecommendationRepository
         if (tvKeywordGroups.Count == 0)
             return [];
 
-        List<int> qualifyingTvIds = tvKeywordGroups.Select(g => g.Key).ToList();
+        List<int> qualifyingTvIds = [.. tvKeywordGroups.Select(g => g.Key)];
 
         var tvMetadata = await context
             .Tvs.AsNoTracking()
@@ -250,41 +254,45 @@ public partial class RecommendationRepository
             t => (t.Title, t.TitleSort, t.Overview, t.Poster, t.Backdrop, t._colorPalette)
         );
 
-        return tvKeywordGroups
-            .Where(g => metaMap.ContainsKey(g.Key))
-            .Select(g =>
-            {
-                (
-                    string Title,
-                    string TitleSort,
-                    string? Overview,
-                    string? Poster,
-                    string? Backdrop,
-                    string? Palette
-                ) meta = metaMap[g.Key];
-                HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
-                List<int> sourceMovieIds = movieKeywordMap
-                    .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
-                    .Select(kv => kv.Key)
-                    .Distinct()
-                    .ToList();
-
-                return new RecommendationCandidateDto
+        return
+        [
+            .. tvKeywordGroups
+                .Where(g => metaMap.ContainsKey(g.Key))
+                .Select(g =>
                 {
-                    MediaId = g.Key,
-                    Title = meta.Title,
-                    TitleSort = meta.TitleSort,
-                    Overview = meta.Overview,
-                    Poster = meta.Poster,
-                    Backdrop = meta.Backdrop,
-                    ColorPalette = meta.Palette.OrEmpty(),
-                    MediaType = MediaTypes.AnimeMediaType,
-                    SourceMediaType = MediaTypes.MovieMediaType,
-                    SourceCount = sourceMovieIds.Count,
-                    SourceIds = sourceMovieIds,
-                };
-            })
-            .ToList();
+                    (
+                        string Title,
+                        string TitleSort,
+                        string? Overview,
+                        string? Poster,
+                        string? Backdrop,
+                        string? Palette
+                    ) meta = metaMap[g.Key];
+                    HashSet<int> sharedKeywordIds = [.. g.Select(r => r.KeywordId)];
+                    List<int> sourceMovieIds =
+                    [
+                        .. movieKeywordMap
+                            .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
+                            .Select(kv => kv.Key)
+                            .Distinct(),
+                    ];
+
+                    return new RecommendationCandidateDto
+                    {
+                        MediaId = g.Key,
+                        Title = meta.Title,
+                        TitleSort = meta.TitleSort,
+                        Overview = meta.Overview,
+                        Poster = meta.Poster,
+                        Backdrop = meta.Backdrop,
+                        ColorPalette = meta.Palette.OrEmpty(),
+                        MediaType = MediaTypes.AnimeMediaType,
+                        SourceMediaType = MediaTypes.MovieMediaType,
+                        SourceCount = sourceMovieIds.Count,
+                        SourceIds = sourceMovieIds,
+                    };
+                }),
+        ];
     }
 
     public async Task<List<RecommendationCandidateDto>> GetKeywordCrossTypeMovieCandidatesAsync(
@@ -301,25 +309,27 @@ public partial class RecommendationRepository
         if (tvKeywordMap.Count == 0)
             return [];
 
-        HashSet<int> ownedTvKeywordIds = tvKeywordMap.Values.SelectMany(kws => kws).ToHashSet();
+        HashSet<int> ownedTvKeywordIds = [.. tvKeywordMap.Values.SelectMany(kws => kws)];
 
         if (ownedTvKeywordIds.Count == 0)
             return [];
 
         // Filter out overly common keywords — generic tags match too many items
-        HashSet<int> commonKeywordIds = (
-            await context
+        HashSet<int> commonKeywordIds =
+        [
+            .. await context
                 .KeywordMovie.AsNoTracking()
                 .Where(km => ownedTvKeywordIds.Contains(km.KeywordId))
                 .GroupBy(km => km.KeywordId)
                 .Where(g => g.Count() > maxKeywordFrequency)
                 .Select(g => g.Key)
-                .ToListAsync(ct)
-        ).ToHashSet();
+                .ToListAsync(ct),
+        ];
 
-        HashSet<int> specificKeywordIds = ownedTvKeywordIds
-            .Where(id => !commonKeywordIds.Contains(id))
-            .ToHashSet();
+        HashSet<int> specificKeywordIds =
+        [
+            .. ownedTvKeywordIds.Where(id => !commonKeywordIds.Contains(id)),
+        ];
 
         if (specificKeywordIds.Count == 0)
             return [];
@@ -348,7 +358,7 @@ public partial class RecommendationRepository
             return [];
 
         // Step 3: Fetch movie metadata for qualifying movies
-        List<int> qualifyingMovieIds = movieKeywordGroups.Select(g => g.Key).ToList();
+        List<int> qualifyingMovieIds = [.. movieKeywordGroups.Select(g => g.Key)];
 
         var movieMetadata = await context
             .Movies.AsNoTracking()
@@ -381,40 +391,44 @@ public partial class RecommendationRepository
         );
 
         // Step 4: Build candidates with reverse-mapped source IDs
-        return movieKeywordGroups
-            .Where(g => metaMap.ContainsKey(g.Key))
-            .Select(g =>
-            {
-                (
-                    string Title,
-                    string TitleSort,
-                    string? Overview,
-                    string? Poster,
-                    string? Backdrop,
-                    string? Palette
-                ) meta = metaMap[g.Key];
-                HashSet<int> sharedKeywordIds = g.Select(r => r.KeywordId).ToHashSet();
-                List<int> sourceTvIds = tvKeywordMap
-                    .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
-                    .Select(kv => kv.Key)
-                    .Distinct()
-                    .ToList();
-
-                return new RecommendationCandidateDto
+        return
+        [
+            .. movieKeywordGroups
+                .Where(g => metaMap.ContainsKey(g.Key))
+                .Select(g =>
                 {
-                    MediaId = g.Key,
-                    Title = meta.Title,
-                    TitleSort = meta.TitleSort,
-                    Overview = meta.Overview,
-                    Poster = meta.Poster,
-                    Backdrop = meta.Backdrop,
-                    ColorPalette = meta.Palette.OrEmpty(),
-                    MediaType = MediaTypes.MovieMediaType,
-                    SourceMediaType = MediaTypes.TvMediaType,
-                    SourceCount = sourceTvIds.Count,
-                    SourceIds = sourceTvIds,
-                };
-            })
-            .ToList();
+                    (
+                        string Title,
+                        string TitleSort,
+                        string? Overview,
+                        string? Poster,
+                        string? Backdrop,
+                        string? Palette
+                    ) meta = metaMap[g.Key];
+                    HashSet<int> sharedKeywordIds = [.. g.Select(r => r.KeywordId)];
+                    List<int> sourceTvIds =
+                    [
+                        .. tvKeywordMap
+                            .Where(kv => kv.Value.Any(kw => sharedKeywordIds.Contains(kw)))
+                            .Select(kv => kv.Key)
+                            .Distinct(),
+                    ];
+
+                    return new RecommendationCandidateDto
+                    {
+                        MediaId = g.Key,
+                        Title = meta.Title,
+                        TitleSort = meta.TitleSort,
+                        Overview = meta.Overview,
+                        Poster = meta.Poster,
+                        Backdrop = meta.Backdrop,
+                        ColorPalette = meta.Palette.OrEmpty(),
+                        MediaType = MediaTypes.MovieMediaType,
+                        SourceMediaType = MediaTypes.TvMediaType,
+                        SourceCount = sourceTvIds.Count,
+                        SourceIds = sourceTvIds,
+                    };
+                }),
+        ];
     }
 }

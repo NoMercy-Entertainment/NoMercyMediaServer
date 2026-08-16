@@ -159,7 +159,7 @@ public class NoMercyLoggerSinkTests
     [Fact]
     public void OnRecord_ReceivesStructuredRecord()
     {
-        List<NoMercyLogRecord> received = new();
+        List<NoMercyLogRecord> received = [];
         NoMercyLoggerOptions options = new() { Color = false, OnRecord = received.Add };
         using NoMercyLoggerProvider provider = new(options, new StringWriter());
         ILogger logger = provider.CreateLogger("NoMercy.Providers.TVDB.Client.TvdbBaseClient");

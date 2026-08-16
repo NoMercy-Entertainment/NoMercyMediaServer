@@ -55,6 +55,6 @@ public record UserPermissionRequest
         VideoTranscoding = user.VideoTranscoding;
         NoTranscoding = user.NoTranscoding;
 
-        Libraries = user.LibraryUser.Select(libraryUser => libraryUser.LibraryId).ToArray();
+        Libraries = [.. user.LibraryUser.Select(libraryUser => libraryUser.LibraryId)];
     }
 }

@@ -177,8 +177,8 @@ public class PluginMetadataResolverTests
         }
 
         public IReadOnlyList<PluginInfo> GetInstalledPlugins() =>
-            _plugins
-                .Select(plugin => new PluginInfo
+            [
+                .. _plugins.Select(plugin => new PluginInfo
                 {
                     Id = plugin.Id,
                     Name = plugin.Name,
@@ -186,8 +186,8 @@ public class PluginMetadataResolverTests
                     Version = plugin.Version,
                     Status = PluginStatus.Active,
                     Capabilities = _capabilities[plugin.Id],
-                })
-                .ToList();
+                }),
+            ];
 
         public IEnumerable<T> GetPluginsOfType<T>()
             where T : IPlugin => _plugins.OfType<T>();

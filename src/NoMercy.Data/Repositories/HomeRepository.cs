@@ -389,7 +389,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .ThenByDescending(ud => ud.Id)
             .ToListAsync(ct);
 
-        return userData.ToHashSet();
+        return [.. userData];
     }
 
     /// <summary>
@@ -608,16 +608,17 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .ToListAsync(ct);
 
         // Step 2: Project to DTO in memory — safe to call .ToList() on in-memory collections
-        return genres
-            .Select(genre => new GenreHomeDto
+        return
+        [
+            .. genres.Select(genre => new GenreHomeDto
             {
                 Id = genre.Id,
                 Name = genre.Name,
                 TranslatedName = genre.Translations.FirstOrDefault()?.Name,
-                MovieIds = genre.GenreMovies.Select(gm => gm.MovieId).ToList(),
-                TvIds = genre.GenreTvShows.Select(gt => gt.TvId).ToList(),
-            })
-            .ToList();
+                MovieIds = [.. genre.GenreMovies.Select(gm => gm.MovieId)],
+                TvIds = [.. genre.GenreTvShows.Select(gt => gt.TvId)],
+            }),
+        ];
     }
 
     public async Task<HomeParallelData> GetHomeParallelDataAsync(

@@ -163,12 +163,13 @@ public class PlaylistGenerator : IPlaylistGenerator
         // pointing at three distinct files instead of collapsing to one.
         // WebVTT entries are filtered out when chunking is disabled — same
         // reasoning as hasSubsGroup above.
-        SubtitleOutputPlan[] activeSubs = plan
-            .SubtitleOutputs.Where(s =>
+        SubtitleOutputPlan[] activeSubs =
+        [
+            .. plan.SubtitleOutputs.Where(s =>
                 s.Action is StreamAction.Extract or StreamAction.Copy
                 && (s.OutputCodec is not SubtitleCodecType.WebVtt || plan.EmitSubtitleWebVttChunks)
-            )
-            .ToArray();
+            ),
+        ];
 
         if (activeSubs.Length > 0)
         {

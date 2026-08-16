@@ -40,7 +40,6 @@ public class GenresController : BaseController
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] PageRequestDto request)
     {
-
         Guid userId = User.UserId();
 
         List<MusicGenreCardDto> genreCards = await _genreRepository.GetMusicGenreCardsAsync(userId);
@@ -56,10 +55,12 @@ public class GenresController : BaseController
 
         if (isLolomo)
         {
-            List<IGrouping<string, NmGenreCardDto>> groups = allGenres
-                .GroupBy(g => BucketLetter(g.Title))
-                .OrderBy(g => g.Key == "#" ? "zz" : g.Key)
-                .ToList();
+            List<IGrouping<string, NmGenreCardDto>> groups =
+            [
+                .. allGenres
+                    .GroupBy(g => BucketLetter(g.Title))
+                    .OrderBy(g => g.Key == "#" ? "zz" : g.Key),
+            ];
 
             List<ComponentEnvelope> items = [Component.Container()];
 
@@ -99,7 +100,6 @@ public class GenresController : BaseController
         [FromQuery] PageRequestDto request
     )
     {
-
         Guid userId = User.UserId();
 
         List<MusicGenreCardDto> genreCards =

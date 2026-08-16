@@ -93,11 +93,12 @@ public class LibraryLogic(
         string scanRoot = folderStorage.Driver.GetFullPath(folder.Path);
 
         await using MediaScan mediaScan = new(folderStorage.Driver);
-        IEnumerable<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(scanRoot, 2)
-        )
-            .SelectMany(r => r.SubFolders ?? [])
-            .ToList();
+        IEnumerable<MediaFolderExtend> rootFolders =
+        [
+            .. (await mediaScan.DisableRegexFilter().Process(scanRoot, 2)).SelectMany(r =>
+                r.SubFolders ?? []
+            ),
+        ];
 
         foreach (MediaFolderExtend rootFolder in rootFolders)
         {

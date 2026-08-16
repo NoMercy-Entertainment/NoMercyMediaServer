@@ -21,7 +21,7 @@ namespace NoMercy.Encoder.Orchestration;
 /// </summary>
 public class StrategyResolver(IEnumerable<IEncodingStrategy> strategies) : IStrategyResolver
 {
-    private readonly IReadOnlyList<IEncodingStrategy> _strategies = strategies.ToArray();
+    private readonly IReadOnlyList<IEncodingStrategy> _strategies = [.. strategies];
 
     public IEncodingStrategy? Resolve(OutputFormat format, EncodeMode mode)
     {

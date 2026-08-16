@@ -239,7 +239,7 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
         if (_scopes is null)
             return null;
 
-        List<string> parts = new();
+        List<string> parts = [];
         _scopes.ForEachScope(
             static (scope, state) =>
             {
@@ -272,10 +272,12 @@ public sealed class NoMercyLoggerProvider : ILoggerProvider, ISupportExternalSco
 
         try
         {
-            List<string> files = Directory
-                .GetFiles(directory, "run-*.jsonl")
-                .OrderByDescending(path => path, StringComparer.Ordinal)
-                .ToList();
+            List<string> files =
+            [
+                .. Directory
+                    .GetFiles(directory, "run-*.jsonl")
+                    .OrderByDescending(path => path, StringComparer.Ordinal),
+            ];
 
             foreach (string old in files.Skip(keep))
             {

@@ -429,7 +429,7 @@ public sealed partial class InboxClassifier
 
     private static CandidateMatch[] RankCandidates(CandidateMatch[] candidates)
     {
-        return candidates.OrderByDescending(c => c.Score).ToArray();
+        return [.. candidates.OrderByDescending(c => c.Score)];
     }
 
     private static string ExtractTitle(string path, MovieFile info)

@@ -145,7 +145,7 @@ public class PluginRepository : IPluginRepository
         List<PluginRepositoryInfo> repos;
         lock (_lock)
         {
-            repos = _repositories.Where(r => r.Enabled).ToList();
+            repos = [.. _repositories.Where(r => r.Enabled)];
         }
 
         List<PluginRepositoryEntry> allPlugins = [];
@@ -334,7 +334,7 @@ public class PluginRepository : IPluginRepository
             List<PluginRepositoryInfo> snapshot;
             lock (_lock)
             {
-                snapshot = _repositories.ToList();
+                snapshot = [.. _repositories];
             }
 
             string json = JsonSerializer.Serialize(snapshot, JsonOptions);

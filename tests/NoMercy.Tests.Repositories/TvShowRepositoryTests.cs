@@ -191,7 +191,7 @@ public class TvShowRepositoryTests : IDisposable
         Assert.NotNull(tv);
 
         // Episode cast/crew should be populated via the second query
-        Episode[] allEpisodes = tv.Episodes.ToArray();
+        Episode[] allEpisodes = [.. tv.Episodes];
         Assert.NotEmpty(allEpisodes);
         Assert.True(
             allEpisodes.Any(e => e.Cast.Count > 0),
@@ -223,7 +223,7 @@ public class TvShowRepositoryTests : IDisposable
         Assert.NotNull(tv);
 
         // Season episodes should also have cast/crew merged
-        Episode[] seasonEpisodes = tv.Seasons.SelectMany(s => s.Episodes).ToArray();
+        Episode[] seasonEpisodes = [.. tv.Seasons.SelectMany(s => s.Episodes)];
         Assert.NotEmpty(seasonEpisodes);
         Assert.True(
             seasonEpisodes.Any(e => e.Cast.Count > 0),

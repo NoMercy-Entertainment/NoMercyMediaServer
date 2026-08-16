@@ -20,11 +20,11 @@ public record ResourceInfoDto
     public Cpu Cpu { get; set; } = new();
 
     [JsonProperty("gpu")]
-    public List<Gpu> Gpu { get; set; } = new();
+    public List<Gpu> Gpu { get; set; } = [];
 
     [JsonProperty("memory")]
     public Memory Memory { get; set; } = new();
 
     [JsonProperty("storage")]
-    public List<ResourceMonitorDto> Storage { get; set; } = new();
+    public List<ResourceMonitorDto> Storage { get; set; } = [];
 }

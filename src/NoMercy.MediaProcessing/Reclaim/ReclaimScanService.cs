@@ -168,9 +168,10 @@ public sealed class ReclaimScanService : IReclaimScanService
             );
         }
 
-        IReadOnlyList<string> confirmedTargets = fresh
-            .TargetNames.Select(name => StoragePathHelpers.Combine(item.Folder, name))
-            .ToList();
+        IReadOnlyList<string> confirmedTargets =
+        [
+            .. fresh.TargetNames.Select(name => StoragePathHelpers.Combine(item.Folder, name)),
+        ];
 
         long freedBytes = DeleteTargets(storage, freshEntries, confirmedTargets);
 
@@ -187,14 +188,15 @@ public sealed class ReclaimScanService : IReclaimScanService
     {
         bool isProtected = freshRows.Any(row => IsServedPlaylist(row.Filename));
 
-        List<FolderEntry> freshFolderEntries = freshEntries
-            .Select(entry => new FolderEntry(
+        List<FolderEntry> freshFolderEntries =
+        [
+            .. freshEntries.Select(entry => new FolderEntry(
                 storage.GetName(entry.Path),
                 entry.IsDirectory,
                 entry.SizeBytes,
                 entry.LastModified
-            ))
-            .ToList();
+            )),
+        ];
 
         return ReclaimClassifier.Classify(
             freshFolderEntries,
@@ -334,9 +336,10 @@ public sealed class ReclaimScanService : IReclaimScanService
             if (_latest is null)
                 return;
 
-            List<ReclaimableItem> remaining = _latest
-                .Items.Where(candidate => candidate.Id != itemId)
-                .ToList();
+            List<ReclaimableItem> remaining =
+            [
+                .. _latest.Items.Where(candidate => candidate.Id != itemId),
+            ];
             _latest = _latest with
             {
                 Items = remaining,
@@ -384,14 +387,15 @@ public sealed class ReclaimScanService : IReclaimScanService
 
         bool isProtected = dbInfo.Value.Rows.Any(row => IsServedPlaylist(row.Filename));
 
-        List<FolderEntry> freshFolderEntries = freshEntries
-            .Select(entry => new FolderEntry(
+        List<FolderEntry> freshFolderEntries =
+        [
+            .. freshEntries.Select(entry => new FolderEntry(
                 storage.GetName(entry.Path),
                 entry.IsDirectory,
                 entry.SizeBytes,
                 entry.LastModified
-            ))
-            .ToList();
+            )),
+        ];
 
         ReclaimClassification classification = ReclaimClassifier.Classify(
             freshFolderEntries,
@@ -409,9 +413,12 @@ public sealed class ReclaimScanService : IReclaimScanService
             return null;
         }
 
-        IReadOnlyList<string> confirmedTargets = classification
-            .TargetNames.Select(name => StoragePathHelpers.Combine(partial.Folder, name))
-            .ToList();
+        IReadOnlyList<string> confirmedTargets =
+        [
+            .. classification.TargetNames.Select(name =>
+                StoragePathHelpers.Combine(partial.Folder, name)
+            ),
+        ];
 
         return DeleteTargets(storage, freshEntries, confirmedTargets);
     }
@@ -423,9 +430,10 @@ public sealed class ReclaimScanService : IReclaimScanService
             if (_latest is null)
                 return;
 
-            List<PartialJunkItem> remaining = _latest
-                .PartialJunk.Where(partial => !sweptFolders.Contains(partial.Folder))
-                .ToList();
+            List<PartialJunkItem> remaining =
+            [
+                .. _latest.PartialJunk.Where(partial => !sweptFolders.Contains(partial.Folder)),
+            ];
 
             _latest = _latest with
             {
@@ -598,9 +606,12 @@ public sealed class ReclaimScanService : IReclaimScanService
             if (classification.Kind == ReclaimKind.None)
                 continue;
 
-            IReadOnlyList<string> targetPaths = classification
-                .TargetNames.Select(name => StoragePathHelpers.Combine(hostFolder, name))
-                .ToList();
+            IReadOnlyList<string> targetPaths =
+            [
+                .. classification.TargetNames.Select(name =>
+                    StoragePathHelpers.Combine(hostFolder, name)
+                ),
+            ];
 
             if (classification.Kind == ReclaimKind.ReclaimableHls)
             {
@@ -682,14 +693,15 @@ public sealed class ReclaimScanService : IReclaimScanService
         IStorage storage = _storageFactory.For(folderId, driverId, string.Empty);
         IReadOnlyList<StorageEntry> entries = storage.List(hostFolder, null, recursive: false);
 
-        return entries
-            .Select(entry => new FolderEntry(
+        return
+        [
+            .. entries.Select(entry => new FolderEntry(
                 storage.GetName(entry.Path),
                 entry.IsDirectory,
                 entry.SizeBytes,
                 entry.LastModified
-            ))
-            .ToList();
+            )),
+        ];
     }
 
     private static string ResolveTitle(VideoFileScanRow row, string hostFolder)
@@ -732,7 +744,7 @@ public sealed class ReclaimScanService : IReclaimScanService
     private static string DeterministicId(string hostFolder)
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(hostFolder));
-        return new Ulid(hash.AsSpan(0, 16).ToArray()).ToString();
+        return new Ulid([.. hash.AsSpan(0, 16)]).ToString();
     }
 
     private sealed record VideoFileScanRow(

@@ -189,7 +189,7 @@ public class ComponentExtensionsTests
     {
         List<Movie> movies = [BuildMovie(1), BuildMovie(2)];
 
-        List<ComponentEnvelope> envelopes = movies.ToCards("US", watch: true).ToList();
+        List<ComponentEnvelope> envelopes = [.. movies.ToCards("US", watch: true)];
 
         envelopes.Should().HaveCount(2);
         envelopes
@@ -203,7 +203,7 @@ public class ComponentExtensionsTests
     {
         List<Tv> shows = [BuildTv(10), BuildTv(20)];
 
-        List<ComponentEnvelope> envelopes = shows.ToCards("US", watch: true).ToList();
+        List<ComponentEnvelope> envelopes = [.. shows.ToCards("US", watch: true)];
 
         envelopes
             .Select(e => ((LeafProps<CardData>)e.Props).Data!.Link.ToString())
@@ -216,7 +216,7 @@ public class ComponentExtensionsTests
     {
         List<Collection> collections = [BuildCollection(1), BuildCollection(2)];
 
-        List<ComponentEnvelope> envelopes = collections.ToCards("US", watch: true).ToList();
+        List<ComponentEnvelope> envelopes = [.. collections.ToCards("US", watch: true)];
 
         envelopes
             .Select(e => ((LeafProps<CardData>)e.Props).Data!.Link.ToString())
@@ -329,7 +329,7 @@ public class ComponentExtensionsTests
         Track otherTrack = BuildTrack();
         List<Track> tracks = [favoriteTrack, otherTrack];
 
-        List<ComponentEnvelope> envelopes = tracks.ToTrackRows(t => t == favoriteTrack).ToList();
+        List<ComponentEnvelope> envelopes = [.. tracks.ToTrackRows(t => t == favoriteTrack)];
 
         envelopes.Should().HaveCount(2);
     }
@@ -339,7 +339,7 @@ public class ComponentExtensionsTests
     {
         List<Track> tracks = [BuildTrack(), BuildTrack()];
 
-        List<ComponentEnvelope> envelopes = tracks.ToTrackRows().ToList();
+        List<ComponentEnvelope> envelopes = [.. tracks.ToTrackRows()];
 
         envelopes.Should().HaveCount(2);
     }

@@ -45,10 +45,12 @@ public class StorageFactoryTests
     [Fact]
     public void DefaultBuilders_CoverAllBuiltInDriverTypes_WithoutKeyCollisions()
     {
-        List<string> keys = StorageFactory
-            .DefaultBuilders(BackendMock().Object, NullLogger<StorageFactory>.Instance, null)
-            .SelectMany(builder => builder.SupportedTypes)
-            .ToList();
+        List<string> keys =
+        [
+            .. StorageFactory
+                .DefaultBuilders(BackendMock().Object, NullLogger<StorageFactory>.Instance, null)
+                .SelectMany(builder => builder.SupportedTypes),
+        ];
 
         keys.Should().BeEquivalentTo(["local", "nfs", "s3", "r2", "webdav", "smb"]);
         keys.Should().OnlyHaveUniqueItems();

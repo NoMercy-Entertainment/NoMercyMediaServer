@@ -89,73 +89,45 @@ public class CastHubSendToRoutingTests : IClassFixture<NoMercyApiFactory>
 
     public static IEnumerable<object[]> RoutedMethods()
     {
-        yield return new object[] { "Play", (Func<CastHub, Task>)(h => h.Play()) };
-        yield return new object[] { "Pause", (Func<CastHub, Task>)(h => h.Pause()) };
-        yield return new object[]
-        {
-            "Time",
-            (Func<CastHub, Task>)(h => h.Time(new CastHub.TimeData())),
-        };
-        yield return new object[] { "Ended", (Func<CastHub, Task>)(h => h.Ended()) };
-        yield return new object[] { "Volume", (Func<CastHub, Task>)(h => h.Volume(50)) };
-        yield return new object[] { "Muted", (Func<CastHub, Task>)(h => h.Muted(true)) };
-        yield return new object[]
-        {
-            "Item",
-            (Func<CastHub, Task>)(h => h.Item(new CastHub.PlaylistItem())),
-        };
-        yield return new object[] { "Playlist", (Func<CastHub, Task>)(h => h.Playlist([])) };
-        yield return new object[]
-        {
-            "SubtitleTracks",
-            (Func<CastHub, Task>)(h => h.SubtitleTracks([])),
-        };
-        yield return new object[]
-        {
+        yield return ["Play", (Func<CastHub, Task>)(h => h.Play())];
+        yield return ["Pause", (Func<CastHub, Task>)(h => h.Pause())];
+        yield return ["Time", (Func<CastHub, Task>)(h => h.Time(new CastHub.TimeData()))];
+        yield return ["Ended", (Func<CastHub, Task>)(h => h.Ended())];
+        yield return ["Volume", (Func<CastHub, Task>)(h => h.Volume(50))];
+        yield return ["Muted", (Func<CastHub, Task>)(h => h.Muted(true))];
+        yield return ["Item", (Func<CastHub, Task>)(h => h.Item(new CastHub.PlaylistItem()))];
+        yield return ["Playlist", (Func<CastHub, Task>)(h => h.Playlist([]))];
+        yield return ["SubtitleTracks", (Func<CastHub, Task>)(h => h.SubtitleTracks([]))];
+        yield return
+        [
             "CurrentSubtitleTrack",
             (Func<CastHub, Task>)(h => h.CurrentSubtitleTrack(new CastHub.TextTrack())),
-        };
-        yield return new object[] { "AudioTracks", (Func<CastHub, Task>)(h => h.AudioTracks([])) };
-        yield return new object[]
-        {
+        ];
+        yield return ["AudioTracks", (Func<CastHub, Task>)(h => h.AudioTracks([]))];
+        yield return
+        [
             "CurrentAudioTrack",
             (Func<CastHub, Task>)(h => h.CurrentAudioTrack(new CastHub.AudioTrack())),
-        };
-        yield return new object[]
-        {
-            "GetPlayerState",
-            (Func<CastHub, Task>)(h => h.GetPlayerState()),
-        };
-        yield return new object[]
-        {
+        ];
+        yield return ["GetPlayerState", (Func<CastHub, Task>)(h => h.GetPlayerState())];
+        yield return
+        [
             // PlayerState the METHOD forwards a DIFFERENT event name than its own
             // name — this mapping is the entire point of the test.
             "MusicPlayerState",
             (Func<CastHub, Task>)(h => h.PlayerState(new CastHub.CastPlayerState())),
-        };
-        yield return new object[]
-        {
-            "SetAudioTrack",
-            (Func<CastHub, Task>)(h => h.SetAudioTrack(1)),
-        };
-        yield return new object[]
-        {
-            "SetSubtitleTrack",
-            (Func<CastHub, Task>)(h => h.SetSubtitleTrack(1)),
-        };
-        yield return new object[]
-        {
-            "SetPlaylistItem",
-            (Func<CastHub, Task>)(h => h.SetPlaylistItem(1)),
-        };
-        yield return new object[] { "SetVolume", (Func<CastHub, Task>)(h => h.SetVolume(50)) };
-        yield return new object[] { "SetMuted", (Func<CastHub, Task>)(h => h.SetMuted(true)) };
-        yield return new object[] { "SetSeek", (Func<CastHub, Task>)(h => h.SetSeek(10)) };
-        yield return new object[] { "SetNext", (Func<CastHub, Task>)(h => h.SetNext()) };
-        yield return new object[] { "SetPrevious", (Func<CastHub, Task>)(h => h.SetPrevious()) };
-        yield return new object[] { "SetPlay", (Func<CastHub, Task>)(h => h.SetPlay()) };
-        yield return new object[] { "SetPause", (Func<CastHub, Task>)(h => h.SetPause()) };
-        yield return new object[] { "SetStop", (Func<CastHub, Task>)(h => h.SetStop()) };
+        ];
+        yield return ["SetAudioTrack", (Func<CastHub, Task>)(h => h.SetAudioTrack(1))];
+        yield return ["SetSubtitleTrack", (Func<CastHub, Task>)(h => h.SetSubtitleTrack(1))];
+        yield return ["SetPlaylistItem", (Func<CastHub, Task>)(h => h.SetPlaylistItem(1))];
+        yield return ["SetVolume", (Func<CastHub, Task>)(h => h.SetVolume(50))];
+        yield return ["SetMuted", (Func<CastHub, Task>)(h => h.SetMuted(true))];
+        yield return ["SetSeek", (Func<CastHub, Task>)(h => h.SetSeek(10))];
+        yield return ["SetNext", (Func<CastHub, Task>)(h => h.SetNext())];
+        yield return ["SetPrevious", (Func<CastHub, Task>)(h => h.SetPrevious())];
+        yield return ["SetPlay", (Func<CastHub, Task>)(h => h.SetPlay())];
+        yield return ["SetPause", (Func<CastHub, Task>)(h => h.SetPause())];
+        yield return ["SetStop", (Func<CastHub, Task>)(h => h.SetStop())];
     }
 
     [Theory]
