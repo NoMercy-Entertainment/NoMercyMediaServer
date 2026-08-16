@@ -137,7 +137,15 @@ public partial class FileManager
                 );
                 if (match != null)
                 {
-                    path = folderStorage.CombinePath(rootFolder.Path, folderStorage.GetName(match));
+                    // match is the driver-absolute hit EnumerateFileSystemEntries
+                    // returned — OS-separated (backslash on Windows). GetName splits
+                    // on '/' only (Rule 2), so an un-normalized match reads as having
+                    // no separator at all and comes back unchanged, doubling the path
+                    // when combined with rootFolder.Path below.
+                    path = folderStorage.CombinePath(
+                        rootFolder.Path,
+                        folderStorage.GetName(match.Replace('\\', '/'))
+                    );
                     exists = TryExists(folderStorage, path);
                 }
             }
