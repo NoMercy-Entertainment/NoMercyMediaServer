@@ -88,6 +88,57 @@ public class FontExtractorTests : IDisposable
     }
 
     // ------------------------------------------------------------------
+    // A non-ASCII (but validly decoded) attachment name folds to ASCII too —
+    // char.IsLetterOrDigit alone treats CJK as a letter and would leave it
+    // untouched, which this NAS's SMB share cannot always write.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void BuildExtractionCommand_NonAsciiFilename_FoldsToAscii()
+    {
+        // The real attachment name ffprobe reports for 2.5 Dimensional
+        // Seduction S01E24's font 15 (HanYi YanKai), correctly UTF-8 decoded.
+        IReadOnlyList<AttachmentInfo> attachments =
+        [
+            new(Index: 15, Codec: "ttf", Filename: "汉仪颜楷W.ttf", MimeType: null),
+        ];
+
+        FfmpegCommand cmd = _extractor.BuildExtractionCommand(
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            attachments
+        );
+
+        cmd.Arguments.Should().NotContain(arg => arg.Any(c => !char.IsAscii(c)));
+    }
+
+    // ------------------------------------------------------------------
+    // The same attachment name as it appeared when ProcessRunner decoded
+    // ffprobe's UTF-8 stdout as cp850 — reproduced live against the source
+    // file. Every character here IS a Unicode letter, so the old sanitizer
+    // let it straight through and the NAS write failed with an I/O error.
+    // ------------------------------------------------------------------
+
+    [Fact]
+    public void BuildExtractionCommand_MisdecodedFilename_FoldsToAscii()
+    {
+        IReadOnlyList<AttachmentInfo> attachments =
+        [
+            new(Index: 15, Codec: "ttf", Filename: "µ▒ëõ╗¬Úó£µÑÀW.ttf", MimeType: null),
+        ];
+
+        FfmpegCommand cmd = _extractor.BuildExtractionCommand(
+            "ffmpeg",
+            "/input/movie.mkv",
+            _tempDir,
+            attachments
+        );
+
+        cmd.Arguments.Should().NotContain(arg => arg.Any(c => !char.IsAscii(c)));
+    }
+
+    // ------------------------------------------------------------------
     // Two attachments that sanitize to the same name stay distinct
     // ------------------------------------------------------------------
 

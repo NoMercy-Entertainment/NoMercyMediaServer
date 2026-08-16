@@ -167,6 +167,10 @@ public class ProcessRunner(ILogger<ProcessRunner> logger) : IProcessRunner
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             WorkingDirectory = resolvedWorkingDirectory,
+            // Every child here writes UTF-8; unset, .NET falls back to the OEM
+            // console codepage and mangles any multi-byte character. See commit.
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
         };
 
         if (extraEnv is { Count: > 0 })

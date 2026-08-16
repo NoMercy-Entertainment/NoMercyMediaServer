@@ -192,12 +192,18 @@ public class FontExtractor(IStorage storage) : IFontExtractor
         return deduped;
     }
 
+    // ASCII-only: a non-ASCII letter (legitimate CJK font name, or a mis-decoded
+    // byte that still classifies as "a letter" to char.IsLetterOrDigit) has to
+    // fold too, not just punctuation — see commit for the reproduced NAS failure.
     private static string Sanitize(string value)
     {
         StringBuilder builder = new(value.Length);
         foreach (char character in value)
             builder.Append(
-                char.IsLetterOrDigit(character) || character is '.' or '-' or '_' ? character : '_'
+                character is '.' or '-' or '_'
+                || (char.IsAscii(character) && char.IsLetterOrDigit(character))
+                    ? character
+                    : '_'
             );
         return builder.ToString();
     }
