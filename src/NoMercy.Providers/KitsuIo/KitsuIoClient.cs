@@ -18,15 +18,19 @@ namespace NoMercy.Providers.KitsuIo;
 
 public static class KitsuIoClient
 {
+    // filter[text] carries the show's raw title verbatim — any space (i.e. almost
+    // every real title) breaks the query string, and Kitsu returns no candidates at
+    // all. Unescaped, this made every multi-word title classify as not-anime.
+    internal static string BuildQuery(string title, int year) =>
+        $"anime?filter[text]={Uri.EscapeDataString(title)}&filter[year]={year}";
+
     public static async Task<bool> IsAnime(string title, int year)
     {
         bool isAnime = false;
 
         HttpClient client = HttpClientProvider.CreateClient(HttpClientNames.KitsuIo);
 
-        using HttpResponseMessage response = await client.GetAsync(
-            $"anime?filter[text]={title}&filter[year]={year}"
-        );
+        using HttpResponseMessage response = await client.GetAsync(BuildQuery(title, year));
         string content = await response.Content.ReadAsStringAsync();
 
         try
