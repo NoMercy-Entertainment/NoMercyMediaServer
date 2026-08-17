@@ -868,4 +868,8 @@
     <Key>Something went wrong moving the item</Key>
     <Value lang="nl">Something went wrong moving the item</Value>
   </Entry>
+  <Entry>
+    <Key>Failed job has been queued for retry</Key>
+    <Value lang="nl">Failed job has been queued for retry</Value>
+  </Entry>
 </I18N>

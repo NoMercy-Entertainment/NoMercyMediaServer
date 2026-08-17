@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
@@ -272,6 +273,18 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
         return [];
     }
 
+    /// <summary>
+    /// Fetched the artist's FanArt entry for a cover-palette thumbnail only —
+    /// the same response also carries backgrounds, logos, banners and hd logos,
+    /// which were read off the wire and discarded. Every artist onboarded
+    /// through <c>ArtistManager</c>/<c>RecordingManager</c> (the only two
+    /// callers) ended up with a cover thumbnail and nothing else: no backdrop
+    /// to show behind "now playing", no logo, no banner — reproduced live
+    /// against a FanArt entry (Robbie Williams) that has all four. One fetch
+    /// now does both jobs: the palette callers already expect, and persisting
+    /// the full set via <see cref="StoreArtistImages"/> so it survives past this
+    /// one HTTP response instead of being thrown away.
+    /// </summary>
     public static async Task<CoverArtImageManagerManager.CoverPalette?> Add(
         Guid id,
         bool priority = false
@@ -283,6 +296,11 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
             FanArtArtistDetails? fanArt = await fanArtMusicClient.Artist(id);
             if (fanArt is null)
                 return null;
+
+            await using MediaContext context = new();
+            ImageRepository imageRepository = new(context);
+            FanArtImageManager imageManager = new(imageRepository);
+            await imageManager.StoreArtistImages(fanArt, id, new Artist { Id = id });
 
             List<Uri> coverList = fanArt.Thumbs.Select(t => t.Url).ToList();
 
