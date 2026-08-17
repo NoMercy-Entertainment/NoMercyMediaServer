@@ -864,4 +864,8 @@
     <Key>No repository offers this plugin</Key>
     <Value lang="nl">No repository offers this plugin</Value>
   </Entry>
+  <Entry>
+    <Key>Something went wrong moving the item</Key>
+    <Value lang="nl">Something went wrong moving the item</Value>
+  </Entry>
 </I18N>
