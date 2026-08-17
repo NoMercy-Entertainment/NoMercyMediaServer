@@ -34,7 +34,8 @@ public class AnimeClassificationAuditService(
                 tv.Id,
                 tv.Title,
                 tv.FirstAirDate,
-                tv.Library.Type
+                tv.Library.Type,
+                tv.OriginCountry
             ))
             .ToListAsync(ct);
 
@@ -44,7 +45,8 @@ public class AnimeClassificationAuditService(
         {
             string? classifiedType = await mediaTypeClassifier.ClassifyAsync(
                 row.Title,
-                row.FirstAirDate.ParseYear()
+                row.FirstAirDate.ParseYear(),
+                row.OriginCountry is not null ? [row.OriginCountry] : null
             );
 
             // An inconclusive lookup (provider failure, e.g. Kitsu rate-limiting a
@@ -69,6 +71,7 @@ public class AnimeClassificationAuditService(
         int Id,
         string Title,
         DateTime? FirstAirDate,
-        string LibraryType
+        string LibraryType,
+        string? OriginCountry
     );
 }

@@ -22,5 +22,6 @@ public class StubMediaTypeClassifier : IMediaTypeClassifier
 {
     public Task<string?> ClassifyAsync(TmdbTvShowAppends show) => Task.FromResult<string?>("tv");
 
-    public Task<string?> ClassifyAsync(string name, int? year) => Task.FromResult<string?>("tv");
+    public Task<string?> ClassifyAsync(string name, int? year, string[]? originCountry = null) =>
+        Task.FromResult<string?>("tv");
 }

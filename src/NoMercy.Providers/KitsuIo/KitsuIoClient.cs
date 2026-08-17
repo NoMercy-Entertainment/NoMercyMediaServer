@@ -41,6 +41,16 @@ public static partial class KitsuIoClient
             .Replace(title.Sanitize().Replace('-', ' ').Replace('.', ' '), " ")
             .Trim();
 
+    // Word SET, not sequence: Kitsu's English localizers don't preserve word
+    // order either — reproduced live, Kitsu answers "SAINT SEIYA: Knights of
+    // the Zodiac" with en: "Knights of the Zodiac: Saint Seiya", same words,
+    // reordered. A prefix/substring compare can never match that; requiring
+    // every word of the search title to appear somewhere in the candidate does,
+    // while still catching the year-suffix case (the suffix is simply an extra
+    // word neither side requires the other to also have).
+    private static string[] WordsForMatch(string title) =>
+        NormalizeForMatch(title).ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
     internal static string BuildQuery(string title, int year) =>
         $"anime?filter[text]={Uri.EscapeDataString(NormalizeForMatch(title))}&filter[year]={year}";
 
@@ -90,16 +100,15 @@ public static partial class KitsuIoClient
             // disambiguating "(YYYY)" suffix the local title never has ("Fruits
             // Basket" vs "Fruits Basket (2019)"), Kitsu's editors use typographic
             // punctuation ("Journey's End" with a curly apostrophe) where the
-            // local title has a plain one, and the dash/colon used to set off a
+            // local title has a plain one, the dash/colon used to set off a
             // subtitle is inconsistent in EITHER direction ("Nichijou: My
             // Ordinary Life" locally vs Kitsu's "Nichijou - My Ordinary Life", and
-            // the reverse for other shows) — all reproduced live, all fail an
-            // exact match. NormalizeForMatch washes out the punctuation and
-            // spacing differences; comparing with spaces stripped too makes the
-            // dash-vs-colon divide irrelevant, and a StartsWith — not a full
-            // Equals — lets the year-suffixed candidate still match the
-            // un-suffixed search title.
-            string sanitizedTitle = NormalizeForMatch(title).Replace(" ", "").ToLower();
+            // the reverse for other shows), and the words themselves can come back
+            // reordered ("SAINT SEIYA: Knights of the Zodiac" vs Kitsu's "Knights
+            // of the Zodiac: Saint Seiya") — all reproduced live, all fail an
+            // exact or prefix match. Comparing word SETS (every search-title word
+            // present somewhere in the candidate) survives all four.
+            string[] titleWords = WordsForMatch(title);
 
             foreach (Data data in anime.Data)
             {
@@ -116,11 +125,10 @@ public static partial class KitsuIoClient
 
                 if (
                     candidateTitles.Any(candidateTitle =>
-                        NormalizeForMatch(candidateTitle)
-                            .Replace(" ", "")
-                            .ToLower()
-                            .StartsWith(sanitizedTitle)
-                    )
+                    {
+                        HashSet<string> candidateWords = WordsForMatch(candidateTitle).ToHashSet();
+                        return titleWords.Length > 0 && titleWords.All(candidateWords.Contains);
+                    })
                 )
                     return true;
             }

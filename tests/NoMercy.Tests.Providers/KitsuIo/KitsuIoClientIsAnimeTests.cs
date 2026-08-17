@@ -170,6 +170,28 @@ public sealed class KitsuIoClientIsAnimeTests : ProviderHttpHarness
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Reproduced live: Kitsu answers "SAINT SEIYA: Knights of the Zodiac" with
+    /// en "Knights of the Zodiac: Saint Seiya" — the exact same words, reordered.
+    /// A prefix/substring compare can never match a reordering; only a word-set
+    /// comparison can.
+    /// </summary>
+    [Fact]
+    public async Task IsAnime_CandidateWordsReordered_StillMatches()
+    {
+        Handler.WhenGet(
+            "anime",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                """{"data":[{"attributes":{"titles":{"en":"Knights of the Zodiac: Saint Seiya"},"abbreviatedTitles":[]}}]}"""
+            )
+        );
+
+        bool? result = await KitsuIoClient.IsAnime("SAINT SEIYA: Knights of the Zodiac", 2019);
+
+        result.Should().BeTrue();
+    }
+
     [Fact]
     public async Task IsAnime_NoMatchingTitle_ReturnsFalse()
     {

@@ -93,8 +93,11 @@ public sealed class AnimeClassificationAuditServiceTests : IDisposable
         public Task<string?> ClassifyAsync(TmdbTvShowAppends show) =>
             ClassifyAsync(show.Name, null);
 
-        public Task<string?> ClassifyAsync(string name, int? year) =>
-            Task.FromResult(verdictsByTitle.GetValueOrDefault(name));
+        public Task<string?> ClassifyAsync(
+            string name,
+            int? year,
+            string[]? originCountry = null
+        ) => Task.FromResult(verdictsByTitle.GetValueOrDefault(name));
     }
 
     [Fact]

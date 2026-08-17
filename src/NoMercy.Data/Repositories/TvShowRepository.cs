@@ -331,7 +331,8 @@ public class TvShowRepository(
 
         string? mediaType = await mediaTypeClassifier.ClassifyAsync(
             show.Name,
-            show.FirstAirDate.ParseYear()
+            show.FirstAirDate.ParseYear(),
+            show.OriginCountry
         );
 
         // mediaType is null when the classifier lookup was inconclusive — skip the
