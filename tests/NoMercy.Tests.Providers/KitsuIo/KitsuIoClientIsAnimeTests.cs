@@ -18,14 +18,21 @@ using Xunit;
 namespace NoMercy.Tests.Providers.KitsuIo;
 
 /// <summary>
-/// A sequential audit over hundreds of shows trips Kitsu's rate limit partway
-/// through. Before this, a non-2xx response body failed to deserialize into the
-/// expected shape, <c>Data</c> came back empty, and the loop that looks for a
-/// title match simply never ran — collapsing "the lookup failed" into "confirmed
-/// not anime" with no distinction. That silently moved genuinely-anime shows
-/// (Hunter x Hunter, Fruits Basket, Little Witch Academia — all reproduced live)
-/// out of the library on nothing more than a rate-limited response. IsAnime must
-/// return null for a failed lookup, never collapse it into false.
+/// Two independent bugs conspired to misfile genuinely-anime shows (Hunter x
+/// Hunter, Fruits Basket, Little Witch Academia — all reproduced live):
+/// <para>
+/// 1. A sequential audit over hundreds of shows trips Kitsu's rate limit partway
+/// through, and a non-2xx response used to deserialize into an empty candidate
+/// list — collapsing "the lookup failed" into "confirmed not anime" with no
+/// distinction. IsAnime must return null for a failed lookup.
+/// </para>
+/// <para>
+/// 2. Even a successful lookup could still fail an exact string match: Kitsu's
+/// canonical title often carries a "(YYYY)" disambiguation suffix the local
+/// title lacks, uses typographic punctuation where the local title has a plain
+/// one, and the "en_us" field — sometimes the only populated title — was never
+/// checked at all.
+/// </para>
 /// </summary>
 [Collection("HttpClientProvider")]
 public sealed class KitsuIoClientIsAnimeTests : ProviderHttpHarness
@@ -45,6 +52,69 @@ public sealed class KitsuIoClientIsAnimeTests : ProviderHttpHarness
         );
 
         bool? result = await KitsuIoClient.IsAnime("Hunter x Hunter", 2011);
+
+        result.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Kitsu's canonical en/en_jp title commonly carries a disambiguating year
+    /// suffix the local title never has — reproduced live: Kitsu answers "Fruits
+    /// Basket" with en: "Fruits Basket (2019)", and the old exact-Equals match
+    /// failed it, reporting a genuine anime as "tv".
+    /// </summary>
+    [Fact]
+    public async Task IsAnime_CandidateTitleHasYearSuffix_StillMatches()
+    {
+        Handler.WhenGet(
+            "anime",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                """{"data":[{"attributes":{"titles":{"en":"Fruits Basket (2019)"},"abbreviatedTitles":[]}}]}"""
+            )
+        );
+
+        bool? result = await KitsuIoClient.IsAnime("Fruits Basket", 2019);
+
+        result.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Kitsu's editors use typographic punctuation (a curly apostrophe) where the
+    /// local title has a plain one — reproduced live against Frieren's actual
+    /// Kitsu entry.
+    /// </summary>
+    [Fact]
+    public async Task IsAnime_CandidateTitleUsesCurlyApostrophe_StillMatches()
+    {
+        Handler.WhenGet(
+            "anime",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                """{"data":[{"attributes":{"titles":{"en":"Frieren: Beyond Journey’s End"},"abbreviatedTitles":[]}}]}"""
+            )
+        );
+
+        bool? result = await KitsuIoClient.IsAnime("Frieren: Beyond Journey's End", 2023);
+
+        result.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Reproduced live: Little Witch Academia's Kitsu entry has no "en" title at
+    /// all, only "en_us" — a field the matcher never checked.
+    /// </summary>
+    [Fact]
+    public async Task IsAnime_OnlyEnUsTitlePopulated_StillMatches()
+    {
+        Handler.WhenGet(
+            "anime",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                """{"data":[{"attributes":{"titles":{"en_us":"Little Witch Academia"},"abbreviatedTitles":[]}}]}"""
+            )
+        );
+
+        bool? result = await KitsuIoClient.IsAnime("Little Witch Academia", 2017);
 
         result.Should().BeTrue();
     }

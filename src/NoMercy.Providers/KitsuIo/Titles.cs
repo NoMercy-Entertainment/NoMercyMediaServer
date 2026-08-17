@@ -18,6 +18,9 @@ public class Titles
     [JsonProperty("en")]
     public string? En { get; set; }
 
+    [JsonProperty("en_us")]
+    public string? EnUs { get; set; }
+
     [JsonProperty("en_jp")]
     public string? EnJp { get; set; }
 

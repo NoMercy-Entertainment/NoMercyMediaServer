@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Providers.Helpers;
@@ -67,29 +68,38 @@ public static class KitsuIoClient
                 return null;
             }
 
+            // Byte-exact equality against Kitsu's title fields is too fragile to
+            // trust: Kitsu's canonical en/en_jp title commonly carries a
+            // disambiguating "(YYYY)" suffix the local title never has ("Fruits
+            // Basket" vs "Fruits Basket (2019)"), and Kitsu's editors use
+            // typographic punctuation ("Journey's End" with a curly apostrophe)
+            // where the local title has a plain one — both reproduced live and
+            // both fail an exact match. Sanitizing strips both differences
+            // (punctuation removed, so the suffix and quote style wash out), and a
+            // StartsWith — not a full Equals — lets the year-suffixed candidate
+            // still match the un-suffixed search title.
+            string sanitizedTitle = title.Sanitize().ToLower();
+
             foreach (Data data in anime.Data)
+            {
+                IEnumerable<string> candidateTitles = new[]
+                {
+                    data.Attributes.Titles.En,
+                    data.Attributes.Titles.EnUs,
+                    data.Attributes.Titles.EnJp,
+                    data.Attributes.Titles.JaJp,
+                    data.Attributes.Titles.ThTh,
+                }
+                    .Concat(data.Attributes.AbbreviatedTitles)
+                    .Where(candidateTitle => !string.IsNullOrEmpty(candidateTitle))!;
+
                 if (
-                    data.Attributes.Titles.En?.Equals(
-                        title,
-                        StringComparison.CurrentCultureIgnoreCase
-                    ) == true
-                    || data.Attributes.Titles.EnJp?.Equals(
-                        title,
-                        StringComparison.CurrentCultureIgnoreCase
-                    ) == true
-                    || data.Attributes.Titles.JaJp?.Equals(
-                        title,
-                        StringComparison.CurrentCultureIgnoreCase
-                    ) == true
-                    || data.Attributes.Titles.ThTh?.Equals(
-                        title,
-                        StringComparison.CurrentCultureIgnoreCase
-                    ) == true
-                    || data.Attributes.AbbreviatedTitles.Any(abbreviatedTitle =>
-                        abbreviatedTitle.Equals(title, StringComparison.CurrentCultureIgnoreCase)
+                    candidateTitles.Any(candidateTitle =>
+                        candidateTitle.Sanitize().ToLower().StartsWith(sanitizedTitle)
                     )
                 )
                     return true;
+            }
 
             return false;
         }
