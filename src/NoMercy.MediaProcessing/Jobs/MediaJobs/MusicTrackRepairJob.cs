@@ -62,7 +62,26 @@ public class MusicTrackRepairJob : AbstractMusicFolderJob
         await using MediaContext mediaContext = new();
 
         using MusicBrainzReleaseClient musicBrainzReleaseClient = new(ReleaseId);
-        MusicBrainzReleaseAppends? release = await musicBrainzReleaseClient.WithAllAppends();
+        MusicBrainzReleaseAppends? release;
+        try
+        {
+            release = await musicBrainzReleaseClient.WithAllAppends();
+        }
+        catch (HttpRequestException ex)
+        {
+            // MusicBrainz rate-limits aggressively, and a repair batch can dispatch
+            // hundreds of these at once. A 429/503 here is transient — the row is
+            // left exactly as it was (safe, just still unrepaired), and re-running
+            // the repair endpoint later picks it back up since it is idempotent.
+            Log.LogWarning(
+                "MusicTrackRepairJob: MusicBrainz lookup failed for release {ReleaseId} ({InputFolder}): {Message}",
+                ReleaseId,
+                InputFolder,
+                ex.Message
+            );
+            return;
+        }
+
         if (release is null)
         {
             Log.LogWarning(
