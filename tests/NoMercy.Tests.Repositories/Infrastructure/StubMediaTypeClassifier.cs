@@ -20,7 +20,7 @@ namespace NoMercy.Tests.Repositories.Infrastructure;
 /// </summary>
 public class StubMediaTypeClassifier : IMediaTypeClassifier
 {
-    public Task<string> ClassifyAsync(TmdbTvShowAppends show) => Task.FromResult("tv");
+    public Task<string?> ClassifyAsync(TmdbTvShowAppends show) => Task.FromResult<string?>("tv");
 
-    public Task<string> ClassifyAsync(string name, int? year) => Task.FromResult("tv");
+    public Task<string?> ClassifyAsync(string name, int? year) => Task.FromResult<string?>("tv");
 }

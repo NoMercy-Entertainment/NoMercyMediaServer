@@ -57,9 +57,12 @@ public class ShowManager(
             return null;
 
         string baseUrl = BaseUrl(showAppends.Name, showAppends.FirstAirDate);
-        string mediaType = await mediaTypeClassifier.ClassifyAsync(showAppends);
+        string? mediaType = await mediaTypeClassifier.ClassifyAsync(showAppends);
 
-        if (library.Type != mediaType)
+        // A null verdict is "don't know" (the lookup failed), never "confirmed tv" —
+        // keep the library the folder scan already resolved rather than reclassify
+        // on an inconclusive answer.
+        if (mediaType is not null && library.Type != mediaType)
         {
             Library? resolvedLibrary = await showRepository.GetLibraryByTypeAsync(mediaType);
             resolvedLibrary ??= await showRepository.GetLibraryByTypeAsync("tv");

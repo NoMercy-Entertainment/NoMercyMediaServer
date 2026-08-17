@@ -19,7 +19,13 @@ namespace NoMercy.MediaProcessing.Shows;
 /// </summary>
 public interface IMediaTypeClassifier
 {
-    Task<string> ClassifyAsync(TmdbTvShowAppends show);
+    /// <summary>
+    /// Null means the classifier could not reach a confident answer (the provider
+    /// lookup failed or was inconclusive) — a real "don't know", distinct from a
+    /// confirmed "tv". Callers must never treat null as license to move a show out
+    /// of wherever it is already filed.
+    /// </summary>
+    Task<string?> ClassifyAsync(TmdbTvShowAppends show);
 
-    Task<string> ClassifyAsync(string name, int? year);
+    Task<string?> ClassifyAsync(string name, int? year);
 }

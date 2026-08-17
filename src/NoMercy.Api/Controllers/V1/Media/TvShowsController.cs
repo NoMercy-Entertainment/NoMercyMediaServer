@@ -277,22 +277,27 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+            bool? isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             // Require Japanese origin to avoid false positives on western co-productions
             if (
-                isAnime
+                isAnime == true
                 && !show.OriginCountry.Any(c =>
                     string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
                 )
             )
                 isAnime = false;
 
-            Library? tvLibrary = await libraryRepository.GetLibraryByTypeAsync(
-                isAnime ? "anime" : "tv",
-                "tv",
-                ct
-            );
+            // null means the Kitsu lookup was inconclusive, not "confirmed not
+            // anime" — skip reclassification and keep the show where it already is
+            // rather than bounce it on a lookup failure.
+            Library? tvLibrary = isAnime is not null
+                ? await libraryRepository.GetLibraryByTypeAsync(
+                    isAnime.Value ? "anime" : "tv",
+                    "tv",
+                    ct
+                )
+                : null;
 
             targetLibraryId = tvLibrary?.Id ?? tv.Library.Id;
         }
@@ -333,18 +338,21 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+            bool? isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
 
             if (
-                isAnime
+                isAnime == true
                 && !show.OriginCountry.Any(c =>
                     string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
                 )
             )
                 isAnime = false;
 
+            // No existing placement to fall back to for a brand-new show, so an
+            // inconclusive lookup defaults to "tv" the same way a confirmed "not
+            // anime" already does.
             library = await libraryRepository.GetLibraryByTypeAsync(
-                isAnime ? "anime" : "tv",
+                isAnime == true ? "anime" : "tv",
                 "tv",
                 ct
             );

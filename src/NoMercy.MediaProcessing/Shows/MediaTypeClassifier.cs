@@ -16,14 +16,19 @@ namespace NoMercy.MediaProcessing.Shows;
 
 public class MediaTypeClassifier : IMediaTypeClassifier
 {
-    public Task<string> ClassifyAsync(TmdbTvShowAppends show)
+    public Task<string?> ClassifyAsync(TmdbTvShowAppends show)
     {
         return ClassifyAsync(show.Name, show.FirstAirDate.ParseYear());
     }
 
-    public async Task<string> ClassifyAsync(string name, int? year)
+    public async Task<string?> ClassifyAsync(string name, int? year)
     {
-        bool isAnime = await KitsuIoClient.IsAnime(name, year ?? 0);
-        return isAnime ? "anime" : "tv";
+        bool? isAnime = await KitsuIoClient.IsAnime(name, year ?? 0);
+        return isAnime switch
+        {
+            true => "anime",
+            false => "tv",
+            null => null,
+        };
     }
 }
