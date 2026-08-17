@@ -119,6 +119,57 @@ public sealed class KitsuIoClientIsAnimeTests : ProviderHttpHarness
         result.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Reproduced live in both directions: Kitsu's canonical title sets off a
+    /// subtitle with a dash where the local title uses a colon ("Nichijou: My
+    /// Ordinary Life" locally vs Kitsu's "Nichijou - My Ordinary Life"), and vice
+    /// versa for other shows ("KONOSUBA - God's blessing..." locally vs Kitsu's
+    /// "KonoSuba: God's Blessing..."). Sanitize() alone keeps "-", so an
+    /// unnormalized comparison fails both directions.
+    /// </summary>
+    [Fact]
+    public async Task IsAnime_ColonVsDashSubtitleSeparator_StillMatches()
+    {
+        Handler.WhenGet(
+            "anime",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                """{"data":[{"attributes":{"titles":{"en":"Nichijou - My Ordinary Life"},"abbreviatedTitles":[]}}]}"""
+            )
+        );
+
+        bool? result = await KitsuIoClient.IsAnime("Nichijou: My Ordinary Life", 2011);
+
+        result.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Reproduced live: Kitsu's own full-text search reads a leading "-" in
+    /// filter[text] as an exclusion token — querying the raw local title
+    /// "Re:ZERO -Starting Life in Another World-" returns zero candidates, while
+    /// the same query with the dash-delimited subtitle stripped ("Re:ZERO")
+    /// finds the show immediately. The query sent to Kitsu, not just the
+    /// candidate comparison, must have its dashes normalized away first.
+    /// </summary>
+    [Fact]
+    public async Task IsAnime_QueryWithLeadingDashSubtitle_SearchesWithoutTheDash()
+    {
+        Handler.WhenGet(
+            "anime",
+            MockResponse.Json(
+                HttpStatusCode.OK,
+                """{"data":[{"attributes":{"titles":{"en":"Re:ZERO -Starting Life in Another World-"},"abbreviatedTitles":[]}}]}"""
+            )
+        );
+
+        bool? result = await KitsuIoClient.IsAnime(
+            "Re:ZERO -Starting Life in Another World-",
+            2016
+        );
+
+        result.Should().BeTrue();
+    }
+
     [Fact]
     public async Task IsAnime_NoMatchingTitle_ReturnsFalse()
     {

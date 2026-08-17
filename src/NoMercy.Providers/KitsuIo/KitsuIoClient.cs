@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Text.RegularExpressions;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.NewtonSoftConverters;
 using NoMercy.NmSystem.SystemCalls;
@@ -17,15 +18,31 @@ using Serilog.Events;
 
 namespace NoMercy.Providers.KitsuIo;
 
-public static class KitsuIoClient
+public static partial class KitsuIoClient
 {
     private static readonly Uri BaseUrl = new("https://kitsu.io/api/edge/");
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex CollapseWhitespace();
 
     // filter[text] carries the show's raw title verbatim — any space (i.e. almost
     // every real title) breaks the query string, and Kitsu returns no candidates at
     // all. Unescaped, this made every multi-word title classify as not-anime.
+    //
+    // A leading/standalone "-" also breaks Kitsu's own search: querying the exact
+    // local title "Re:ZERO -Starting Life in Another World-" returns nothing,
+    // while the same query with the dash-delimited subtitle stripped ("Re:ZERO")
+    // finds the show immediately — Kitsu's search backend reads a bare "-word" as
+    // an exclusion token. Sanitize() keeps "-" and "." (needed elsewhere, e.g.
+    // hyphenated titles and years), so normalize them to spaces here, specifically
+    // for what we send Kitsu and what we compare its answer against.
+    private static string NormalizeForMatch(string title) =>
+        CollapseWhitespace()
+            .Replace(title.Sanitize().Replace('-', ' ').Replace('.', ' '), " ")
+            .Trim();
+
     internal static string BuildQuery(string title, int year) =>
-        $"anime?filter[text]={Uri.EscapeDataString(title)}&filter[year]={year}";
+        $"anime?filter[text]={Uri.EscapeDataString(NormalizeForMatch(title))}&filter[year]={year}";
 
     /// <summary>
     /// Whether Kitsu confirms this title as anime. Null means the lookup itself
@@ -71,14 +88,18 @@ public static class KitsuIoClient
             // Byte-exact equality against Kitsu's title fields is too fragile to
             // trust: Kitsu's canonical en/en_jp title commonly carries a
             // disambiguating "(YYYY)" suffix the local title never has ("Fruits
-            // Basket" vs "Fruits Basket (2019)"), and Kitsu's editors use
-            // typographic punctuation ("Journey's End" with a curly apostrophe)
-            // where the local title has a plain one — both reproduced live and
-            // both fail an exact match. Sanitizing strips both differences
-            // (punctuation removed, so the suffix and quote style wash out), and a
-            // StartsWith — not a full Equals — lets the year-suffixed candidate
-            // still match the un-suffixed search title.
-            string sanitizedTitle = title.Sanitize().ToLower();
+            // Basket" vs "Fruits Basket (2019)"), Kitsu's editors use typographic
+            // punctuation ("Journey's End" with a curly apostrophe) where the
+            // local title has a plain one, and the dash/colon used to set off a
+            // subtitle is inconsistent in EITHER direction ("Nichijou: My
+            // Ordinary Life" locally vs Kitsu's "Nichijou - My Ordinary Life", and
+            // the reverse for other shows) — all reproduced live, all fail an
+            // exact match. NormalizeForMatch washes out the punctuation and
+            // spacing differences; comparing with spaces stripped too makes the
+            // dash-vs-colon divide irrelevant, and a StartsWith — not a full
+            // Equals — lets the year-suffixed candidate still match the
+            // un-suffixed search title.
+            string sanitizedTitle = NormalizeForMatch(title).Replace(" ", "").ToLower();
 
             foreach (Data data in anime.Data)
             {
@@ -95,7 +116,10 @@ public static class KitsuIoClient
 
                 if (
                     candidateTitles.Any(candidateTitle =>
-                        candidateTitle.Sanitize().ToLower().StartsWith(sanitizedTitle)
+                        NormalizeForMatch(candidateTitle)
+                            .Replace(" ", "")
+                            .ToLower()
+                            .StartsWith(sanitizedTitle)
                     )
                 )
                     return true;
