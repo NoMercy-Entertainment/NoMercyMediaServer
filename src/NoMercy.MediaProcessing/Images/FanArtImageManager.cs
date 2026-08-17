@@ -302,6 +302,18 @@ public class FanArtImageManager(ImageRepository imageRepository) : IFanArtImageM
             FanArtImageManager imageManager = new(imageRepository);
             await imageManager.StoreArtistImages(fanArt, id, new Artist { Id = id });
 
+            // A DB row alone 404s at /images/music/{file} until Download() below
+            // actually writes the bytes — the thumb loop gets this for free via
+            // ColorPalette(); these four types don't have one otherwise.
+            foreach (
+                Uri url in fanArt
+                    .Backgrounds.Concat(fanArt.Logos)
+                    .Concat(fanArt.HdLogos)
+                    .Concat(fanArt.Banners)
+                    .Select(image => image.Url)
+            )
+                using (await FanArtImageClient.Download(url)) { }
+
             List<Uri> coverList = fanArt.Thumbs.Select(t => t.Url).ToList();
 
             foreach (Uri coverItem in coverList)
