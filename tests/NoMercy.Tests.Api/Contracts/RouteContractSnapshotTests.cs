@@ -331,6 +331,7 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/folders [Libraries.AddFolder]",
         "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/folders/{folderId:ulid}/encoder_profiles [Libraries.AddEncoderProfile]",
         "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/refresh [Libraries.Refresh]",
+        "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/repair-track-matches [Libraries.RepairTrackMatches]",
         "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/rescan [Libraries.Rescan]",
         "POST api/v{version:apiVersion}/dashboard/libraries/{id:ulid}/scan-new [Libraries.ScanNew]",
         "POST api/v{version:apiVersion}/dashboard/notifications/broadcast [Notifications.Broadcast]",

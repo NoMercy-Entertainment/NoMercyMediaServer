@@ -33,6 +33,7 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Files;
 using NoMercy.MediaProcessing.Files.Parsing;
+using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Domain;
@@ -498,6 +499,88 @@ public class LibrariesController(
                 Status = "ok",
                 Message = "Rescanning {0} library.",
                 Args = [library.Title],
+            }
+        );
+    }
+
+    /// <summary>
+    /// A regular library rescan only discovers NEW folders (<see cref="ScanNewAudioFolder"/>
+    /// filters by <c>existingFolders</c>), so it can never revisit a folder whose tracks are
+    /// already registered — which is exactly the state a track-matching bug leaves behind: the
+    /// rows exist, they are just paired with the wrong file. This walks every folder that has
+    /// more <c>Tracks</c> rows than distinct files, re-runs the corrected matcher
+    /// (<see cref="AudioImportJob.ResolveFilesForTracks"/>) against what is actually on disk, and
+    /// re-stores each corrected pairing onto the SAME track ids. No file is re-encoded — only
+    /// which title is attached to which already-playable source file changes.
+    /// </summary>
+    [HttpPost]
+    [Route("{id:ulid}/repair-track-matches")]
+    [Authorize(Policy = "Moderator")]
+    public async Task<IActionResult> RepairTrackMatches(Ulid id)
+    {
+        Library? library = await libraryRepository.GetLibraryByIdAsync(id);
+
+        if (library is null)
+            return NotFoundResponse("Library not found");
+
+        if (library.Type != MediaTypes.MusicMediaType)
+            return BadRequestResponse("This operation only applies to music libraries");
+
+        await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
+
+        List<(string HostFolder, string Filename, Guid AlbumId)> rows = await (
+            from track in context.Tracks
+            join libraryTrack in context.LibraryTrack on track.Id equals libraryTrack.TrackId
+            join albumTrack in context.AlbumTrack on track.Id equals albumTrack.TrackId
+            where libraryTrack.LibraryId == id && track.HostFolder != null && track.Filename != null
+            select new
+            {
+                track.HostFolder,
+                track.Filename,
+                albumTrack.AlbumId,
+            }
+        )
+            .ToListAsync()
+            .ContinueWith(task =>
+                task.Result.Select(row => (row.HostFolder!, row.Filename!, row.AlbumId)).ToList()
+            );
+
+        List<(string HostFolder, Guid AlbumId)> affectedFolders =
+        [
+            .. rows.GroupBy(row => row.HostFolder)
+                .Where(group =>
+                    group.Select(row => row.Filename).Distinct().Count() < group.Count()
+                )
+                .Select(group => (group.Key, group.First().AlbumId)),
+        ];
+
+        if (affectedFolders.Count == 0)
+            return Ok(
+                new StatusResponseDto<List<dynamic>>
+                {
+                    Status = "ok",
+                    Message = "No mismatched tracks found in {0}.",
+                    Args = [library.Title],
+                }
+            );
+
+        Folder folderLibrary = library.FolderLibraries.First().Folder;
+        JobDispatcher dispatcher = new();
+
+        foreach ((string hostFolder, Guid albumId) in affectedFolders)
+            dispatcher.DispatchJob<MusicTrackRepairJob>(
+                library.Id,
+                folderLibrary.Id,
+                albumId,
+                hostFolder
+            );
+
+        return Ok(
+            new StatusResponseDto<List<dynamic>>
+            {
+                Status = "ok",
+                Message = "Repairing track matches in {0} folder(s) of {1}.",
+                Args = [affectedFolders.Count, library.Title],
             }
         );
     }
