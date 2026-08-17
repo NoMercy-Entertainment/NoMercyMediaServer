@@ -73,12 +73,23 @@ public record PlaylistTrackDto
     [JsonProperty("artist_track")]
     public List<ArtistDto> Artist { get; set; }
 
+    private static Image? ResolveBackdropImage(Track track, Album? primaryAlbum)
+    {
+        Image? trackArtistBackdrop = track
+            .ArtistTrack.Select(artistTrack =>
+                artistTrack.Artist.Images.FirstOrDefault(image => image.Type == "background")
+            )
+            .FirstOrDefault(image => image is not null);
+
+        return trackArtistBackdrop
+            ?? primaryAlbum
+                ?.AlbumArtist.FirstOrDefault()
+                ?.Artist.Images.FirstOrDefault(image => image.Type == "background");
+    }
+
     public PlaylistTrackDto(Track track, string country)
     {
-        Image? img = track
-            .AlbumTrack.FirstOrDefault()
-            ?.Album.AlbumArtist.FirstOrDefault()
-            ?.Artist.Images.FirstOrDefault(image => image.Type == "background");
+        Image? img = ResolveBackdropImage(track, track.AlbumTrack.FirstOrDefault()?.Album);
         Id = track.Id;
         Name = track.Name;
         Backdrop = img?.FilePath is not null
@@ -118,7 +129,10 @@ public record PlaylistTrackDto
 
     public PlaylistTrackDto(ArtistTrack artistTrack, string country)
     {
-        Image? img = artistTrack.Artist.Images.FirstOrDefault(image => image.Type == "background");
+        Image? img = ResolveBackdropImage(
+            artistTrack.Track,
+            artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album
+        );
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
         Backdrop = img?.FilePath is not null
@@ -161,10 +175,10 @@ public record PlaylistTrackDto
 
     public PlaylistTrackDto(PlaylistTrack trackTrack, string country)
     {
-        Image? img = trackTrack
-            .Track.AlbumTrack.FirstOrDefault()
-            ?.Album.AlbumArtist.FirstOrDefault()
-            ?.Artist.Images.FirstOrDefault(image => image.Type == "background");
+        Image? img = ResolveBackdropImage(
+            trackTrack.Track,
+            trackTrack.Track.AlbumTrack.FirstOrDefault()?.Album
+        );
         Id = trackTrack.Track.Id;
         Name = trackTrack.Track.Name;
         Backdrop = img?.FilePath is not null
@@ -204,9 +218,10 @@ public record PlaylistTrackDto
 
     public PlaylistTrackDto(AlbumTrack artistTrack, string country)
     {
-        Image? img = artistTrack
-            .Track.AlbumTrack.FirstOrDefault()
-            ?.Album.Images.FirstOrDefault(image => image.Type == "background");
+        Image? img = ResolveBackdropImage(
+            artistTrack.Track,
+            artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album
+        );
         Id = artistTrack.Track.Id;
         Name = artistTrack.Track.Name;
         Backdrop = img?.FilePath is not null
@@ -248,10 +263,10 @@ public record PlaylistTrackDto
 
     public PlaylistTrackDto(MusicGenreTrack genreTrack, string country)
     {
-        Image? img = genreTrack
-            .Track.AlbumTrack.FirstOrDefault()
-            ?.Album.AlbumArtist.FirstOrDefault()
-            ?.Artist.Images.FirstOrDefault(image => image.Type == "background");
+        Image? img = ResolveBackdropImage(
+            genreTrack.Track,
+            genreTrack.Track.AlbumTrack.FirstOrDefault()?.Album
+        );
         Id = genreTrack.Track.Id;
         Name = genreTrack.Track.Name.ToTitleCase();
         Backdrop = img?.FilePath is not null

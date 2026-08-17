@@ -30,8 +30,10 @@ public partial class MusicRepository
                 .ThenInclude(albumTrack => albumTrack.Album)
                     .ThenInclude(album => album.AlbumArtist)
                         .ThenInclude(albumArtist => albumArtist.Artist)
+                            .ThenInclude(artist => artist.Images)
             .Include(track => track.ArtistTrack)
                 .ThenInclude(artistTrack => artistTrack.Artist)
+                    .ThenInclude(artist => artist.Images)
             .FirstOrDefaultAsync(ct);
     }
 

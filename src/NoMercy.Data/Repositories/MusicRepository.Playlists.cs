@@ -53,10 +53,14 @@ public partial class MusicRepository
                 .ThenInclude(trackUser => trackUser.Track)
                     .ThenInclude(track => track.AlbumTrack)
                         .ThenInclude(albumTrack => albumTrack.Album)
+                            .ThenInclude(album => album.AlbumArtist)
+                                .ThenInclude(albumArtist => albumArtist.Artist)
+                                    .ThenInclude(artist => artist.Images)
             .Include(playlist => playlist.Tracks)
                 .ThenInclude(trackUser => trackUser.Track)
                     .ThenInclude(track => track.ArtistTrack)
                         .ThenInclude(artistTrack => artistTrack.Artist)
+                            .ThenInclude(artist => artist.Images)
             .FirstOrDefaultAsync(ct);
     }
 
@@ -89,6 +93,7 @@ public partial class MusicRepository
             .Include(pt => pt.Track)
                 .ThenInclude(track => track.ArtistTrack)
                     .ThenInclude(artistTrack => artistTrack.Artist)
+                        .ThenInclude(artist => artist.Images)
             .Include(pt => pt.Track)
                 .ThenInclude(track => track.TrackUser)
             .ToListAsync(ct);
@@ -134,6 +139,7 @@ public partial class MusicRepository
             .Include(at => at.Track)
                 .ThenInclude(track => track.ArtistTrack)
                     .ThenInclude(artistTrack => artistTrack.Artist)
+                        .ThenInclude(artist => artist.Images)
             .Include(at => at.Track)
                 .ThenInclude(track => track.TrackUser)
             .ToListAsync(ct);
@@ -161,6 +167,9 @@ public partial class MusicRepository
             .Where(album => distinctAlbumIds.Contains(album.Id))
             .Include(album => album.Images)
             .Include(album => album.Translations)
+            .Include(album => album.AlbumArtist)
+                .ThenInclude(albumArtist => albumArtist.Artist)
+                    .ThenInclude(artist => artist.Images)
             .ToListAsync(ct);
 
         Dictionary<Guid, Album> albumById = albumsWithDetails.ToDictionary(album => album.Id);
@@ -235,6 +244,7 @@ public partial class MusicRepository
             .Where(track => trackIds.Contains(track.Id))
             .Include(track => track.ArtistTrack)
                 .ThenInclude(artistTrack => artistTrack.Artist)
+                    .ThenInclude(artist => artist.Images)
             .ToListAsync(ct);
 
         Dictionary<Guid, ICollection<ArtistTrack>> creditsByTrackId =
@@ -261,6 +271,9 @@ public partial class MusicRepository
             .Albums.AsNoTracking()
             .Where(album => distinctAlbumIds.Contains(album.Id))
             .Include(album => album.Translations)
+            .Include(album => album.AlbumArtist)
+                .ThenInclude(albumArtist => albumArtist.Artist)
+                    .ThenInclude(artist => artist.Images)
             .ToListAsync(ct);
 
         Dictionary<Guid, Album> albumById = albumsWithTranslations.ToDictionary(album => album.Id);
@@ -317,6 +330,7 @@ public partial class MusicRepository
             .Include(mgt => mgt.Track)
                 .ThenInclude(track => track.ArtistTrack)
                     .ThenInclude(artistTrack => artistTrack.Artist)
+                        .ThenInclude(artist => artist.Images)
             .Include(mgt => mgt.Track)
                 .ThenInclude(track => track.TrackUser)
             .ToListAsync(ct);
