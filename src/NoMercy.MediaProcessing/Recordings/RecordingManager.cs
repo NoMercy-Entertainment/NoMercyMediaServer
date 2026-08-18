@@ -455,7 +455,11 @@ public partial class RecordingManager(
         {
             Id = trackAppends.Id,
             Name = trackAppends.Title,
-            Date = trackAppends.Recording.FirstReleaseDate,
+            Date =
+                trackAppends.Recording.FirstReleaseDate
+                ?? releaseAppends.DateTime
+                ?? releaseAppends.ReleaseEvents?.FirstOrDefault()?.DateTime
+                ?? releaseAppends.MusicBrainzReleaseGroup?.FirstReleaseDate,
             DiscNumber = mediaFile.Parsed?.DiscNumber ?? 0,
             TrackNumber = mediaFile.Parsed?.TrackNumber ?? 0,
 
