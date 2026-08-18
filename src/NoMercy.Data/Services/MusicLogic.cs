@@ -551,10 +551,7 @@ public partial class MusicLogic : IAsyncDisposable
             Disambiguation = string.IsNullOrEmpty(musicBrainzRelease.Disambiguation)
                 ? null
                 : musicBrainzRelease.Disambiguation,
-            Year =
-                musicBrainzRelease.DateTime?.ParseYear()
-                ?? musicBrainzRelease.ReleaseEvents?.FirstOrDefault()?.DateTime?.ParseYear()
-                ?? 0,
+            Year = musicBrainzRelease.ResolvedYear() ?? 0,
             Tracks = media.Tracks.Length,
 
             LibraryId = Library.Id,

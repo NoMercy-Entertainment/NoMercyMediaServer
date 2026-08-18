@@ -1,0 +1,139 @@
+name: Retract Release
+
+# Pulling a GitHub release does NOT unpublish what that release pushed out.
+# The immutable ghcr tags stay live and, worse, the moving tags (:latest,
+# :latest-nvidia, ...) keep pointing at the retracted build, so every user who
+# pulls :latest still lands on it. This workflow re-points those moving tags
+# back at a known-good version and marks the release itself as retracted.
+#
+# It never DELETES an image tag or a release. A self-hosted user who pinned
+# :1.2.3 must keep booting after we retract 1.2.3 — deleting the tag would
+# break them harder than the bug we are retracting.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version being retracted, without a leading v (e.g. 1.2.3)'
+        required: true
+      rollback_to:
+        description: 'Known-good version to re-point moving tags at (e.g. 1.2.2)'
+        required: true
+      reason:
+        description: 'Why this release is being retracted. Shown to users.'
+        required: true
+      dry_run:
+        description: 'Report what would change without touching anything'
+        type: boolean
+        default: true
+
+concurrency:
+  group: retract-release
+  cancel-in-progress: false
+
+jobs:
+  retract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: nomercy-entertainment/nomercymediaserver
+      VERSION: ${{ inputs.version }}
+      ROLLBACK_TO: ${{ inputs.rollback_to }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Reject retracting to itself
+        run: |
+          if [ "${VERSION}" = "${ROLLBACK_TO}" ]; then
+            echo "::error::rollback_to must differ from version"
+            exit 1
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # The rollback target must exist as an immutable tag before we move a
+      # single pointer. Re-pointing :latest at a version that was never pushed
+      # replaces a bad release with a broken pull.
+      - name: Verify rollback target exists
+        run: |
+          BASE="${REGISTRY}/${IMAGE_NAME}"
+          missing=0
+          for suffix in "" "-nvidia" "-intel" "-amd"; do
+            ref="${BASE}:${ROLLBACK_TO}${suffix}"
+            if docker buildx imagetools inspect "$ref" >/dev/null 2>&1; then
+              echo "ok      $ref"
+            else
+              echo "::error::missing $ref"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Re-point moving tags
+        run: |
+          BASE="${REGISTRY}/${IMAGE_NAME}"
+          # variant:moving tags it owns
+          set -- \
+            ":latest" \
+            "-nvidia:nvidia latest-nvidia" \
+            "-intel:intel latest-intel" \
+            "-amd:amd latest-amd"
+          for entry in "$@"; do
+            suffix="${entry%%:*}"
+            moving="${entry#*:}"
+            args=""
+            for tag in $moving; do
+              args="$args --tag ${BASE}:${tag}"
+            done
+            src="${BASE}:${ROLLBACK_TO}${suffix}"
+            echo "==> $moving -> ${ROLLBACK_TO}${suffix}"
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "    dry run: docker buildx imagetools create$args $src"
+            else
+              docker buildx imagetools create $args "$src"
+            fi
+          done
+
+      # Marking it a prerelease takes it out of /releases/latest and out of any
+      # installer or doc that resolves "the current version" through that
+      # endpoint, without breaking links to the release page or its assets.
+      - name: Mark the GitHub release as retracted
+        run: |
+          tag="v${VERSION}"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            echo "::warning::no GitHub release $tag — skipping release notes update"
+            exit 0
+          fi
+          notice=$(printf '> [!CAUTION]\n> **RETRACTED %s.** %s\n>\n> Roll back to v%s. Moving Docker tags (`latest`, `latest-nvidia`, `latest-intel`, `latest-amd`) now point at v%s.\n\n' \
+            "$tag" "${{ inputs.reason }}" "$ROLLBACK_TO" "$ROLLBACK_TO")
+          body=$(gh release view "$tag" --json body --jq .body)
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "dry run: would prepend"
+            echo "$notice"
+          else
+            printf '%s%s' "$notice" "$body" > /tmp/body.md
+            gh release edit "$tag" --prerelease --notes-file /tmp/body.md
+          fi
+
+      - name: Summarise
+        run: |
+          {
+            echo "## Retracted v${VERSION}"
+            echo
+            echo "- Rolled moving tags back to **v${ROLLBACK_TO}**"
+            echo "- Reason: ${{ inputs.reason }}"
+            echo "- Dry run: ${{ inputs.dry_run }}"
+            echo
+            echo "Immutable tag \`:${VERSION}\` is intentionally left published so pinned users keep booting."
+          } >> "$GITHUB_STEP_SUMMARY"

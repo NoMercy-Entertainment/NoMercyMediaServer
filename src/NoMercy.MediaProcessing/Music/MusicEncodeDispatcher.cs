@@ -134,7 +134,7 @@ public static class MusicEncodeDispatcher
                 ArtistName =
                     release.ArtistCredit.FirstOrDefault()?.MusicBrainzArtist.Name ?? string.Empty,
                 ReleaseName = release.Title,
-                Year = release.DateTime?.Year ?? 0,
+                Year = release.ResolvedYear() ?? 0,
             }
         );
     }
@@ -172,7 +172,7 @@ public static class MusicEncodeDispatcher
         {
             AlbumType = AlbumTypeFor(release),
             AlbumName = release.Title,
-            Year = release.DateTime?.Year,
+            Year = release.ResolvedYear(),
             AlbumArtistId = albumArtist?.MusicBrainzArtist.Id.ToString(),
             AlbumArtistSort =
                 albumArtist?.MusicBrainzArtist.SortName ?? albumArtist?.MusicBrainzArtist.Name,

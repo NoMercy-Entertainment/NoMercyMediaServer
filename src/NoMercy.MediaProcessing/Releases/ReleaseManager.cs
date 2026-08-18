@@ -88,7 +88,7 @@ public class ReleaseManager(
                 Disambiguation = string.IsNullOrEmpty(releaseAppends.Disambiguation)
                     ? null
                     : releaseAppends.Disambiguation,
-                Year = releaseAppends.DateTime?.Year ?? 0,
+                Year = releaseAppends.ResolvedYear() ?? 0,
                 Tracks = releaseAppends.Media.Sum(m => m.TrackCount),
 
                 LibraryId = library.Id,
@@ -159,7 +159,7 @@ public class ReleaseManager(
                 Disambiguation = string.IsNullOrEmpty(releaseAppends.Disambiguation)
                     ? null
                     : releaseAppends.Disambiguation,
-                Year = releaseAppends.DateTime?.Year ?? 0,
+                Year = releaseAppends.ResolvedYear() ?? 0,
                 Tracks = releaseAppends.Media.Sum(m => m.TrackCount),
 
                 LibraryId = library.Id,
