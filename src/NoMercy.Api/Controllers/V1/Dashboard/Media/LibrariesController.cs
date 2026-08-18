@@ -507,11 +507,14 @@ public class LibrariesController(
     /// A regular library rescan only discovers NEW folders (<see cref="ScanNewAudioFolder"/>
     /// filters by <c>existingFolders</c>), so it can never revisit a folder whose tracks are
     /// already registered — which is exactly the state a track-matching bug leaves behind: the
-    /// rows exist, they are just paired with the wrong file. This walks every folder that has
-    /// more <c>Tracks</c> rows than distinct files, re-runs the corrected matcher
-    /// (<see cref="AudioImportJob.ResolveFilesForTracks"/>) against what is actually on disk, and
-    /// re-stores each corrected pairing onto the SAME track ids. No file is re-encoded — only
-    /// which title is attached to which already-playable source file changes.
+    /// rows exist, they are just paired with the wrong file. A mismatch is not always several
+    /// tracks sharing one file (a distinct-file-count check only catches that shape) — it can
+    /// also be a 1:1 swap, where two tracks each keep their own distinct file but hold each
+    /// other's title. So every folder with tracked files is walked, re-running the corrected
+    /// matcher (<see cref="AudioImportJob.ResolveFilesForTracks"/>) against what is actually on
+    /// disk and re-storing each corrected pairing onto the SAME track ids. The job is a no-op
+    /// where nothing was wrong. No file is re-encoded — only which title is attached to which
+    /// already-playable source file changes.
     /// </summary>
     [HttpPost]
     [Route("{id:ulid}/repair-track-matches")]
@@ -528,29 +531,21 @@ public class LibrariesController(
 
         await using MediaContext context = await mediaContextFactory.CreateDbContextAsync();
 
-        List<(string HostFolder, string Filename, Guid AlbumId)> rows = await (
+        List<(string HostFolder, Guid AlbumId)> rows = await (
             from track in context.Tracks
             join libraryTrack in context.LibraryTrack on track.Id equals libraryTrack.TrackId
             join albumTrack in context.AlbumTrack on track.Id equals albumTrack.TrackId
             where libraryTrack.LibraryId == id && track.HostFolder != null && track.Filename != null
-            select new
-            {
-                track.HostFolder,
-                track.Filename,
-                albumTrack.AlbumId,
-            }
+            select new { track.HostFolder, albumTrack.AlbumId }
         )
             .ToListAsync()
             .ContinueWith(task =>
-                task.Result.Select(row => (row.HostFolder!, row.Filename!, row.AlbumId)).ToList()
+                task.Result.Select(row => (row.HostFolder!, row.AlbumId)).ToList()
             );
 
         List<(string HostFolder, Guid AlbumId)> affectedFolders =
         [
             .. rows.GroupBy(row => row.HostFolder)
-                .Where(group =>
-                    group.Select(row => row.Filename).Distinct().Count() < group.Count()
-                )
                 .Select(group => (group.Key, group.First().AlbumId)),
         ];
 

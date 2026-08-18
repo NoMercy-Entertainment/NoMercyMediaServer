@@ -14,11 +14,13 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.Music;
+using NoMercy.Database.Music;
 using NoMercy.MediaProcessing.Artists;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Images;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Music;
 using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Extensions;
@@ -88,10 +90,19 @@ public partial class RecordingManager(
 
                 logger.LogTrace("Recording {Title} found", musicBrainzTrack.Title);
 
+                string scanLibraryRoot = ResolveLibraryRoot(libraryFolder);
+                await RelocateToPicardLayout(
+                    releaseAppends,
+                    musicBrainzTrack,
+                    mediaFile,
+                    libraryFolder,
+                    scanLibraryRoot
+                );
+
                 if (
                     !StoragePathHelpers.TryGetLibraryRelativeParts(
                         mediaFile.Path,
-                        ResolveLibraryRoot(libraryFolder),
+                        scanLibraryRoot,
                         out string relativeFolder,
                         out string filename
                     )
@@ -368,6 +379,95 @@ public partial class RecordingManager(
     [GeneratedRegex("^00:")]
     private static partial Regex HmsRegex();
 
+    /// <summary>
+    /// Places the source file itself on Stoney's Picard layout, not just an encoder's
+    /// output copy. <see cref="MusicEncodeDispatcher"/> only ever organizes an ENCODED
+    /// file — a library with encoding turned off left every imported file sitting
+    /// wherever it was scanned from, undoing the whole point of importing it. Reuses the
+    /// same <see cref="PicardNaming"/> rules and the same <see cref="MusicEncodeDispatcher.NamingContextFor"/>
+    /// so a file lands in the identical folder an encode of it would have used.
+    /// A no-op when the file already sits at its target path.
+    /// </summary>
+    private async Task RelocateToPicardLayout(
+        MusicBrainzReleaseAppends releaseAppends,
+        MusicBrainzTrack trackAppends,
+        MediaFile mediaFile,
+        Folder libraryFolder,
+        string libraryRoot
+    )
+    {
+        if (
+            !StoragePathHelpers.TryGetLibraryRelativeParts(
+                mediaFile.Path,
+                libraryRoot,
+                out string currentRelativeFolder,
+                out string currentFilename
+            )
+        )
+            return;
+
+        // TryGetLibraryRelativeParts returns currentFilename with its OWN leading slash
+        // (the same shape Track.Filename is stored in, e.g. "/01 Nebraska.mp3") — trimming
+        // only the folder side still leaves a doubled separator at the join.
+        string currentRelativePath =
+            $"{currentRelativeFolder.Trim('/')}/{currentFilename.TrimStart('/')}".Trim('/');
+
+        MusicNamingContext namingContext = MusicEncodeDispatcher.NamingContextFor(
+            releaseAppends,
+            trackAppends
+        );
+        string targetRelativePath = PicardNaming.Sanitize(
+            $"{PicardNaming.BuildDirectory(namingContext)}/{PicardNaming.BuildFileName(namingContext)}{Path.GetExtension(mediaFile.Path)}"
+        );
+
+        if (string.Equals(currentRelativePath, targetRelativePath, StringComparison.Ordinal))
+            return;
+
+        IStorage libraryStorage = storageFactory.For(
+            libraryFolder.Id,
+            libraryFolder.DriverId,
+            string.Empty
+        );
+
+        // storageFactory.For(...) scopes to the DRIVE root, not the library folder — the
+        // same reason ResolveLibraryRoot resolves libraryFolder.Path through it rather than
+        // treating the folder itself as the scope. MoveAsync validates its paths against
+        // that same drive-rooted scope, so both sides need the folder's own path prefixed
+        // back on, or a move lands one directory short of where relativeFolder says it did.
+        string scopedFrom = $"{libraryFolder.Path.Trim('/')}/{currentRelativePath}".Trim('/');
+        string scopedTo = $"{libraryFolder.Path.Trim('/')}/{targetRelativePath}".Trim('/');
+
+        // A repair can be untangling a genuine swap — track A's real file already sits
+        // where track B's file needs to land, and vice versa. MoveFile refuses to
+        // overwrite, so a straight rename into an occupied slot throws. Side-stepping the
+        // occupant into a disambiguated name in the same folder — rather than overwriting
+        // it — keeps its bytes intact for the NEXT repair pass to re-fingerprint and place
+        // correctly, once the slot it actually needs has, in turn, been vacated.
+        if (await libraryStorage.ExistsAsync(scopedTo, CancellationToken.None))
+        {
+            string displaced =
+                $"{StoragePathHelpers.GetParent(scopedTo)}/.repair-displaced-{Guid.NewGuid():N}{Path.GetExtension(scopedTo)}";
+            await libraryStorage.MoveAsync(scopedTo, displaced, CancellationToken.None);
+            logger.LogInformation(
+                "Displaced occupant of '{Path}' to '{Displaced}' to make room for {Track}",
+                scopedTo,
+                displaced,
+                trackAppends.Title
+            );
+        }
+
+        await libraryStorage.MoveAsync(scopedFrom, scopedTo, CancellationToken.None);
+
+        logger.LogInformation(
+            "Organized {Track}: moved '{From}' to '{To}'",
+            trackAppends.Title,
+            currentRelativePath,
+            targetRelativePath
+        );
+
+        mediaFile.Path = $"{libraryRoot.TrimEnd('/')}/{targetRelativePath}";
+    }
+
     public async Task Store(
         MusicBrainzReleaseAppends releaseAppends,
         MusicBrainzTrack trackAppends,
@@ -380,9 +480,18 @@ public partial class RecordingManager(
         JobDispatcher jobDispatcher = new();
         logger.LogTrace("Recording {Title} found", releaseAppends.Title);
 
+        string libraryRoot = ResolveLibraryRoot(libraryFolder);
+        await RelocateToPicardLayout(
+            releaseAppends,
+            trackAppends,
+            mediaFile,
+            libraryFolder,
+            libraryRoot
+        );
+
         StoragePathHelpers.TryGetLibraryRelativeParts(
             mediaFile.Path,
-            ResolveLibraryRoot(libraryFolder),
+            libraryRoot,
             out string artistRelativeFolder,
             out _
         );
@@ -435,7 +544,7 @@ public partial class RecordingManager(
         if (
             !StoragePathHelpers.TryGetLibraryRelativeParts(
                 mediaFile.Path,
-                ResolveLibraryRoot(libraryFolder),
+                libraryRoot,
                 out string relativeFolder,
                 out string filename
             )

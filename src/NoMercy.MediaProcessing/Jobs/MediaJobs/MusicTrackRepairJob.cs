@@ -20,6 +20,8 @@ using NoMercy.MediaProcessing.MusicGenres;
 using NoMercy.MediaProcessing.Recordings;
 using NoMercy.NmSystem.Dto;
 using NoMercy.Providers.AcoustId;
+using NoMercy.Providers.AcoustId.Client;
+using NoMercy.Providers.AcoustId.Models;
 using NoMercy.Providers.MusicBrainz.Client;
 using NoMercy.Providers.MusicBrainz.Models;
 using NoMercy.Storage;
@@ -113,6 +115,9 @@ public class MusicTrackRepairJob : AbstractMusicFolderJob
         }
 
         List<MusicBrainzTrack> allTracks = release.Media.SelectMany(m => m.Tracks).ToList();
+
+        await EnrichUntaggedFilesByFingerprint(audioFiles, allTracks);
+
         Dictionary<Guid, MediaFile> resolvedFileByTrackId = AudioImportJob.ResolveFilesForTracks(
             allTracks,
             audioFiles
@@ -147,6 +152,70 @@ public class MusicTrackRepairJob : AbstractMusicFolderJob
             release.Title,
             InputFolder
         );
+    }
+
+    /// <summary>
+    /// The title/duration fallback in <see cref="AudioImportJob.ResolveFilesForTracks"/> is
+    /// only as good as the file's own name and tags — a rip with neither a MusicBrainz tag
+    /// NOR reliable title/duration data (the exact state that produced this album's swap:
+    /// several tracks with no embedded MusicBrainz id at all) has no signal left for it to
+    /// use and repeats whatever wrong guess made the mismatch in the first place. AcoustID
+    /// identifies a file from its audio content directly, so it survives that: a fingerprint
+    /// match against a recording that is actually IN this release sets the file's
+    /// RecordingId, giving the exact-match pass real evidence instead of another guess.
+    /// Restricted to files the tag already failed for, and to recordings this release
+    /// actually contains, so a fingerprint false positive from a cover or a live version
+    /// on AcoustID can't misfile a track.
+    /// </summary>
+    private async Task EnrichUntaggedFilesByFingerprint(
+        List<(MediaFile MediaFile, AudioTagModel AudioTag)> audioFiles,
+        List<MusicBrainzTrack> allTracks
+    )
+    {
+        HashSet<Guid> recordingIdsInRelease = [.. allTracks.Select(track => track.Recording.Id)];
+
+        foreach ((MediaFile mediaFile, AudioTagModel audioTag) in audioFiles)
+        {
+            bool alreadyIdentified =
+                (audioTag.MusicBrainz?.ReleaseTrackId ?? Guid.Empty) != Guid.Empty
+                || (audioTag.MusicBrainz?.RecordingId ?? Guid.Empty) != Guid.Empty;
+
+            if (alreadyIdentified)
+                continue;
+
+            try
+            {
+                using AcoustIdFingerprintClient client = new(AudioFingerprinter);
+                AcoustIdFingerprint? result = await client.Lookup(mediaFile.Path);
+                if (result is null)
+                    continue;
+
+                Guid matchedRecordingId = result
+                    .Results.SelectMany(r => r.Recordings ?? [])
+                    .Select(recording => recording?.Id ?? Guid.Empty)
+                    .FirstOrDefault(recordingId => recordingIdsInRelease.Contains(recordingId));
+
+                if (matchedRecordingId == Guid.Empty)
+                    continue;
+
+                audioTag.MusicBrainz ??= new();
+                audioTag.MusicBrainz.RecordingId = matchedRecordingId;
+
+                Log.LogInformation(
+                    "MusicTrackRepairJob: fingerprint-identified {Path} as recording {RecordingId}",
+                    mediaFile.Path,
+                    matchedRecordingId
+                );
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning(
+                    "MusicTrackRepairJob: fingerprint lookup failed for {Path}: {Message}",
+                    mediaFile.Path,
+                    ex.Message
+                );
+            }
+        }
     }
 
     private async IAsyncEnumerable<(MediaFile MediaFile, AudioTagModel AudioTag)> GetAudioFiles()

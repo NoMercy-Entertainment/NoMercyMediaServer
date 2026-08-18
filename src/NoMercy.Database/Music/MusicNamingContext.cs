@@ -27,9 +27,10 @@ public record MusicNamingContext
     /// <summary>MusicBrainz id of the album artist; identifies the Various and Unknown buckets.</summary>
     public string? AlbumArtistId { get; init; }
 
-    /// <summary>Sort name, which is what the artist folder and its initial are taken from.</summary>
+    /// <summary>Sort name; only a fallback when the display name is unavailable.</summary>
     public string? AlbumArtistSort { get; init; }
 
+    /// <summary>Display name — "Bruce Springsteen", not "Springsteen, Bruce" — which is what the artist folder and its initial are taken from.</summary>
     public string? AlbumArtistPrimary { get; init; }
 
     public string? TrackTitle { get; init; }

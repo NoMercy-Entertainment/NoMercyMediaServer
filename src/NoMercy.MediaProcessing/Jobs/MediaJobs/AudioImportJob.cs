@@ -533,21 +533,39 @@ public class AudioImportJob : AbstractMusicFolderJob
                 coverPalette
             );
 
-            Log.LogInformation(
-                "AudioImportJob: encoding {Track} from {File}",
-                musicBrainzTrack.Title,
-                mediaFile.Path
-            );
+            // Same per-library opt-in AutoEncodeSubscriber already enforces for
+            // video — a preset assignment is "the preset to use when I encode",
+            // not "re-encode everything the moment it is scanned". Without this
+            // gate music had no opt-out at all: every import, including an
+            // already-playable MP3, was unconditionally transcoded through
+            // ffmpeg regardless of the library's own auto-encode setting.
+            if (!albumLibrary.AutoEncodeOnScan)
+            {
+                Log.LogDebug(
+                    "Auto-encode-on-scan is off for library {LibraryId}; {Track} from {File} stored, encode skipped",
+                    albumLibrary.Id,
+                    musicBrainzTrack.Title,
+                    mediaFile.Path
+                );
+            }
+            else
+            {
+                Log.LogInformation(
+                    "AudioImportJob: encoding {Track} from {File}",
+                    musicBrainzTrack.Title,
+                    mediaFile.Path
+                );
 
-            await MusicEncodeDispatcher.Dispatch(
-                StorageFactory,
-                albumLibrary,
-                folderLibrary,
-                release,
-                musicBrainzTrack,
-                mediaFile,
-                InputFolder
-            );
+                await MusicEncodeDispatcher.Dispatch(
+                    StorageFactory,
+                    albumLibrary,
+                    folderLibrary,
+                    release,
+                    musicBrainzTrack,
+                    mediaFile,
+                    InputFolder
+                );
+            }
 
             foreach (MusicBrainzArtistCredit artistCredit in musicBrainzRecording.ArtistCredit)
             {

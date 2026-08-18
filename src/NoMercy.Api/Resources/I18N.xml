@@ -872,4 +872,8 @@
     <Key>Failed job has been queued for retry</Key>
     <Value lang="nl">Failed job has been queued for retry</Value>
   </Entry>
+  <Entry>
+    <Key>Live session not found</Key>
+    <Value lang="nl">Live session not found</Value>
+  </Entry>
 </I18N>
