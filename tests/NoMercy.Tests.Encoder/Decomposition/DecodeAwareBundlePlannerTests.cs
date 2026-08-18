@@ -447,13 +447,13 @@ public class DecodeAwareBundlePlannerTests
     [Fact]
     public void Plan_CapacityOverflow_SplitsIntoFullDecodeBundlesOnDecodeIndependentBoundaries()
     {
-        DecomposedTask[] tasks = Enumerable
-            .Range(0, 5)
-            .Select(i => VideoTask(i, "libx264", Cpu()))
-            .ToArray();
-        OutputPlan plan = PlanWith(
-            Enumerable.Range(0, 5).Select(i => TranscodeVideo(1920 - i * 100, 1080)).ToArray()
-        );
+        DecomposedTask[] tasks =
+        [
+            .. Enumerable.Range(0, 5).Select(i => VideoTask(i, "libx264", Cpu())),
+        ];
+        OutputPlan plan = PlanWith([
+            .. Enumerable.Range(0, 5).Select(i => TranscodeVideo(1920 - i * 100, 1080)),
+        ]);
 
         DecomposedTask[] bundles = DecodeAwareBundlePlanner.Plan(
             tasks,

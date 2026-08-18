@@ -20,8 +20,7 @@ public class PluginAbiTests
     [InlineData([null, true])]
     [InlineData(["", true])]
     [InlineData(["10.0", true])]
-    [InlineData(["10.1", true])]
-    [InlineData(["10.2", false])]
+    [InlineData(["10.1", false])]
     [InlineData(["9.0", false])]
     [InlineData(["9.5", false])]
     [InlineData(["11.0", false])]
@@ -32,22 +31,8 @@ public class PluginAbiTests
     }
 
     [Fact]
-    public void Current_IsTenOne()
+    public void Current_IsTenZero()
     {
-        Assert.Equal(new Version(10, 1), PluginAbi.Current);
-    }
-
-    /// <summary>
-    /// A plugin built for an earlier minor keeps loading. The ceiling exists to stop a
-    /// plugin asking a server for something that server cannot answer - not to make every
-    /// installed plugin move in lockstep with the contract.
-    /// </summary>
-    [Fact]
-    public void IsCompatible_StillAcceptsEveryEarlierMinor()
-    {
-        for (int minor = 0; minor <= PluginAbi.Current.Minor; minor++)
-        {
-            Assert.True(PluginAbi.IsCompatible($"{PluginAbi.Current.Major}.{minor}"));
-        }
+        Assert.Equal(new Version(10, 0), PluginAbi.Current);
     }
 }

@@ -65,7 +65,7 @@ public class NullableExtensionsTests
     [Fact]
     public void OrEmpty_WithNonNullEnumerable_ReturnsEnumerable()
     {
-        IEnumerable<int>? value = new[] { 1, 2, 3 };
+        IEnumerable<int>? value = [1, 2, 3];
         IEnumerable<int> result = value.OrEmpty();
         result.Should().Equal([1, 2, 3]);
     }

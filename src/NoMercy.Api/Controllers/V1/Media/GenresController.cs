@@ -55,10 +55,12 @@ public class GenresController : BaseController
         );
 
         // Create cards for each genre
-        List<GenreCardData> genreCards = genreDtos
-            .Where(g => g.TotalTvShows > 0 || g.TotalMovies > 0)
-            .Select(dto => new GenreCardData(dto))
-            .ToList();
+        List<GenreCardData> genreCards =
+        [
+            .. genreDtos
+                .Where(g => g.TotalTvShows > 0 || g.TotalMovies > 0)
+                .Select(dto => new GenreCardData(dto)),
+        ];
 
         ComponentEnvelope response = Component
             .Grid()
@@ -113,41 +115,47 @@ public class GenresController : BaseController
         }
 
         // Carousel view organized by first letter
-        List<ComponentEnvelope> carousels = Letters
-            .Select(
-                (letter, index) =>
-                {
-                    List<CardData> carouselItems = movies
-                        .Select(movie => new CardData(movie, country))
-                        .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
-                        .Concat(
-                            tvShows
-                                .Select(tv => new CardData(tv, country))
+        List<ComponentEnvelope> carousels =
+        [
+            .. Letters
+                .Select(
+                    (letter, index) =>
+                    {
+                        List<CardData> carouselItems =
+                        [
+                            .. movies
+                                .Select(movie => new CardData(movie, country))
                                 .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
-                        )
-                        .OrderBy(card => card.TitleSort)
-                        .ToList();
+                                .Concat(
+                                    tvShows
+                                        .Select(tv => new CardData(tv, country))
+                                        .Where(card => AlphaBucket.Matches(card.TitleSort, letter))
+                                )
+                                .OrderBy(card => card.TitleSort),
+                        ];
 
-                    if (carouselItems.Count == 0)
-                        return null;
+                        if (carouselItems.Count == 0)
+                            return null;
 
-                    return Component
-                        .Carousel()
-                        .WithId(letter)
-                        .WithTitle(letter)
-                        .WithNavigation(
-                            index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
-                            index == Letters.Length - 1
-                                ? null
-                                : Letters.ElementAtOrDefault(index + 1) ?? null
-                        )
-                        .WithItems(carouselItems.Select(card => Component.Card().WithData(card)))
-                        .Build();
-                }
-            )
-            .Where(c => c != null)
-            .Cast<ComponentEnvelope>()
-            .ToList();
+                        return Component
+                            .Carousel()
+                            .WithId(letter)
+                            .WithTitle(letter)
+                            .WithNavigation(
+                                index == 0 ? null : Letters.ElementAtOrDefault(index - 1) ?? null,
+                                index == Letters.Length - 1
+                                    ? null
+                                    : Letters.ElementAtOrDefault(index + 1) ?? null
+                            )
+                            .WithItems(
+                                carouselItems.Select(card => Component.Card().WithData(card))
+                            )
+                            .Build();
+                    }
+                )
+                .Where(c => c != null)
+                .Cast<ComponentEnvelope>(),
+        ];
 
         ComponentEnvelope containerResponse = Component
             .Container()

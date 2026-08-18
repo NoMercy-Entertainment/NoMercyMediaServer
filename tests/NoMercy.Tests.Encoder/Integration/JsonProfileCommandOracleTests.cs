@@ -947,18 +947,20 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             // outputDir prefix itself contains both "Video" and "Audio"
             // substrings (from the case name), so matching the full path
             // would find every init.mp4 under either filter.
-            string[] videoTargets = initSegments
-                .Where(p =>
+            string[] videoTargets =
+            [
+                .. initSegments.Where(p =>
                     Path.GetFileName(Path.GetDirectoryName(p))!
                         .Contains("video", StringComparison.OrdinalIgnoreCase)
-                )
-                .ToArray();
-            string[] audioTargets = initSegments
-                .Where(p =>
+                ),
+            ];
+            string[] audioTargets =
+            [
+                .. initSegments.Where(p =>
                     Path.GetFileName(Path.GetDirectoryName(p))!
                         .Contains("audio", StringComparison.OrdinalIgnoreCase)
-                )
-                .ToArray();
+                ),
+            ];
 
             videoTargets.Should().NotBeEmpty("the copy-video output must write segment files");
             audioTargets.Should().NotBeEmpty("the copy-audio output must write segment files");
@@ -1197,8 +1199,12 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         string stdout = await process.StandardOutput.ReadToEndAsync();
         await process.WaitForExitAsync();
 
-        return stdout
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToArray();
+        return
+        [
+            .. stdout.Split(
+                '\n',
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+            ),
+        ];
     }
 }

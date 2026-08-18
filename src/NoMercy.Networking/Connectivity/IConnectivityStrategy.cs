@@ -37,6 +37,15 @@ public interface IConnectivityStrategy
     /// the caller must defer it rather than counting a skipped attempt as a failure.
     /// </summary>
     bool IsReady => true;
+
+    /// <summary>
+    /// Fired the instant the host begins shutting down — before Kestrel stops accepting
+    /// requests and well before TeardownAsync runs. A strategy fronting a live process (the
+    /// cloudflared tunnel) uses this to stop treating "origin unreachable" as a surprise
+    /// during the window where the origin is closing on purpose. No-op for strategies with
+    /// nothing to warn.
+    /// </summary>
+    void BeginShutdown() { }
 }
 
 /// <summary>

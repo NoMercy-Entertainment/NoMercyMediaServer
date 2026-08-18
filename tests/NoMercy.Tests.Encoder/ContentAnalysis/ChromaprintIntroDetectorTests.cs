@@ -27,7 +27,7 @@ public class ChromaprintIntroDetectorTests
     [Fact]
     public void Detect_IdenticalFingerprints_ReturnsFullWindowMarker()
     {
-        uint[] hashes = Enumerable.Range(1, 200).Select(i => (uint)(i * 7919)).ToArray();
+        uint[] hashes = [.. Enumerable.Range(1, 200).Select(i => (uint)(i * 7919))];
         AudioFingerprint a = Print(hashes);
         AudioFingerprint b = Print(hashes);
 
@@ -42,9 +42,9 @@ public class ChromaprintIntroDetectorTests
     public void Detect_SharedIntroDifferentSuffix_FindsIntroOnly()
     {
         // Frames 0..79 identical (the intro), then content diverges.
-        uint[] intro = Enumerable.Range(1, 80).Select(i => (uint)(i * 65537)).ToArray();
-        uint[] showA = intro.Concat(RandomBlock(120, seed: 1)).ToArray();
-        uint[] showB = intro.Concat(RandomBlock(120, seed: 2)).ToArray();
+        uint[] intro = [.. Enumerable.Range(1, 80).Select(i => (uint)(i * 65537))];
+        uint[] showA = [.. intro, .. RandomBlock(120, seed: 1)];
+        uint[] showB = [.. intro, .. RandomBlock(120, seed: 2)];
 
         IntroMarker? marker = new ChromaprintIntroDetector().DetectIntro([
             Print(showA),
@@ -92,10 +92,10 @@ public class ChromaprintIntroDetectorTests
     [Fact]
     public void Detect_ThreeEpisodesSharedIntro_AllAgree()
     {
-        uint[] intro = Enumerable.Range(1, 100).Select(i => (uint)(i * 2654435761)).ToArray();
-        uint[] ep1 = intro.Concat(RandomBlock(100, seed: 1)).ToArray();
-        uint[] ep2 = intro.Concat(RandomBlock(100, seed: 2)).ToArray();
-        uint[] ep3 = intro.Concat(RandomBlock(100, seed: 3)).ToArray();
+        uint[] intro = [.. Enumerable.Range(1, 100).Select(i => (uint)(i * 2654435761))];
+        uint[] ep1 = [.. intro, .. RandomBlock(100, seed: 1)];
+        uint[] ep2 = [.. intro, .. RandomBlock(100, seed: 2)];
+        uint[] ep3 = [.. intro, .. RandomBlock(100, seed: 3)];
 
         IntroMarker? marker = new ChromaprintIntroDetector().DetectIntro([
             Print(ep1),
@@ -113,14 +113,11 @@ public class ChromaprintIntroDetectorTests
     [Fact]
     public void Detect_IntroShiftedOffsetInOneEpisode_StillMatches()
     {
-        uint[] intro = Enumerable.Range(1, 80).Select(i => (uint)(i * 3_141_592)).ToArray();
-        uint[] ep1 = intro.Concat(RandomBlock(120, seed: 1)).ToArray();
+        uint[] intro = [.. Enumerable.Range(1, 80).Select(i => (uint)(i * 3_141_592))];
+        uint[] ep1 = [.. intro, .. RandomBlock(120, seed: 1)];
         // ep2's intro starts 20 frames later (common in real content —
         // network idents / recaps shift the intro offset).
-        uint[] ep2 = RandomBlock(20, seed: 99)
-            .Concat(intro)
-            .Concat(RandomBlock(100, seed: 2))
-            .ToArray();
+        uint[] ep2 = [.. RandomBlock(20, seed: 99), .. intro, .. RandomBlock(100, seed: 2)];
 
         IntroMarker? marker = new ChromaprintIntroDetector().DetectIntro([Print(ep1), Print(ep2)]);
 
@@ -137,9 +134,9 @@ public class ChromaprintIntroDetectorTests
         // Fingerprint taken from minute 25 of a 27-minute show — outro
         // marker times should be expressed in source-file coordinates,
         // not relative to the fingerprint window.
-        uint[] outro = Enumerable.Range(1, 100).Select(i => (uint)(i * 11_411)).ToArray();
-        uint[] ep1 = RandomBlock(80, seed: 11).Concat(outro).ToArray();
-        uint[] ep2 = RandomBlock(80, seed: 12).Concat(outro).ToArray();
+        uint[] outro = [.. Enumerable.Range(1, 100).Select(i => (uint)(i * 11_411))];
+        uint[] ep1 = [.. RandomBlock(80, seed: 11), .. outro];
+        uint[] ep2 = [.. RandomBlock(80, seed: 12), .. outro];
 
         AudioFingerprint p1 = new(ep1, FrameDuration, TimeSpan.FromMinutes(25));
         AudioFingerprint p2 = new(ep2, FrameDuration, TimeSpan.FromMinutes(25));
@@ -155,7 +152,7 @@ public class ChromaprintIntroDetectorTests
     [Fact]
     public void BestAlignment_IdenticalInputs_ReturnsFullLength()
     {
-        uint[] hashes = Enumerable.Range(1, 50).Select(i => (uint)(i * 9_973)).ToArray();
+        uint[] hashes = [.. Enumerable.Range(1, 50).Select(i => (uint)(i * 9_973))];
         ChromaprintIntroDetector detector = new();
 
         (int aStart, int bStart, int length) = detector.BestAlignment(hashes, hashes);

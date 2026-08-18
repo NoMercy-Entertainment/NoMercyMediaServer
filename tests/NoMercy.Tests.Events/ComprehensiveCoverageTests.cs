@@ -32,7 +32,13 @@ public class LoggingCapture : ILogger<InMemoryEventBus>
         _capture = capture;
     }
 
-    void ILogger.Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    void ILogger.Log<TState>(
+        LogLevel logLevel,
+        EventId eventId,
+        TState state,
+        Exception? exception,
+        Func<TState, Exception?, string> formatter
+    )
     {
         _capture.Messages.Add($"{logLevel}:{formatter(state, exception)}");
     }
@@ -71,25 +77,31 @@ public class ComprehensiveCoverageTests
 
     private class ThrowingJsonConverter : System.Text.Json.Serialization.JsonConverter<string>
     {
-        public override string Read(ref System.Text.Json.Utf8JsonReader reader, Type typeToConvert, System.Text.Json.JsonSerializerOptions options)
+        public override string Read(
+            ref System.Text.Json.Utf8JsonReader reader,
+            Type typeToConvert,
+            System.Text.Json.JsonSerializerOptions options
+        )
         {
             return "";
         }
 
-        public override void Write(System.Text.Json.Utf8JsonWriter writer, string value, System.Text.Json.JsonSerializerOptions options)
+        public override void Write(
+            System.Text.Json.Utf8JsonWriter writer,
+            string value,
+            System.Text.Json.JsonSerializerOptions options
+        )
         {
             throw new NotSupportedException("Intentional serialization failure");
         }
     }
-
 
     [Fact]
     public void EventBusProvider_ConfigureNull_ThrowsArgumentNullException()
     {
         Action act = () => EventBusProvider.Configure(null!);
 
-        act.Should().Throw<ArgumentNullException>()
-            .WithParameterName("eventBus");
+        act.Should().Throw<ArgumentNullException>().WithParameterName("eventBus");
     }
 
     [Fact]
@@ -110,9 +122,7 @@ public class ComprehensiveCoverageTests
         LoggingCapture logger = new(capture);
         InMemoryEventBus bus = new(logger);
 
-        bus.Subscribe<TestEvent>(
-            (_, _) => throw new InvalidOperationException("test error")
-        );
+        bus.Subscribe<TestEvent>((_, _) => throw new InvalidOperationException("test error"));
 
         await bus.PublishAsync(new TestEvent { Data = "test" });
 
@@ -128,9 +138,7 @@ public class ComprehensiveCoverageTests
         LoggingCapture logger = new(capture);
         InMemoryEventBus bus = new(logger);
 
-        bus.Subscribe<TestEvent>(
-            (_, _) => Task.CompletedTask
-        );
+        bus.Subscribe<TestEvent>((_, _) => Task.CompletedTask);
 
         await bus.PublishAsync(new TestEvent { Data = "test" });
 
@@ -237,23 +245,29 @@ public class ComprehensiveCoverageTests
         List<TestEvent> received2 = [];
         List<TestEvent> received3 = [];
 
-        bus.Subscribe<TestEvent>((e, _) =>
-        {
-            received1.Add(e);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (e, _) =>
+            {
+                received1.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
-        bus.Subscribe<TestEvent>((e, _) =>
-        {
-            received2.Add(e);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (e, _) =>
+            {
+                received2.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
-        bus.Subscribe<TestEvent>((e, _) =>
-        {
-            received3.Add(e);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (e, _) =>
+            {
+                received3.Add(e);
+                return Task.CompletedTask;
+            }
+        );
 
         await bus.PublishAsync(evt);
 
@@ -298,8 +312,7 @@ public class ComprehensiveCoverageTests
     {
         Action act = () => new LoggingEventBusDecorator(null!, _ => { });
 
-        act.Should().Throw<ArgumentNullException>()
-            .WithParameterName("inner");
+        act.Should().Throw<ArgumentNullException>().WithParameterName("inner");
     }
 
     [Fact]
@@ -309,8 +322,7 @@ public class ComprehensiveCoverageTests
 
         Action act = () => new LoggingEventBusDecorator(inner, null!);
 
-        act.Should().Throw<ArgumentNullException>()
-            .WithParameterName("log");
+        act.Should().Throw<ArgumentNullException>().WithParameterName("log");
     }
 
     [Fact]
@@ -318,7 +330,11 @@ public class ComprehensiveCoverageTests
     {
         InMemoryEventBus inner = new();
         List<string> logs = [];
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: ["OtherEvent"]);
+        LoggingEventBusDecorator decorator = new(
+            inner,
+            logs.Add,
+            excludedEventTypes: ["OtherEvent"]
+        );
 
         await decorator.PublishAsync(new TestEvent { Data = "test" });
 
@@ -331,7 +347,11 @@ public class ComprehensiveCoverageTests
     {
         InMemoryEventBus inner = new();
         List<string> logs = [];
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: ["TestEvent"]);
+        LoggingEventBusDecorator decorator = new(
+            inner,
+            logs.Add,
+            excludedEventTypes: ["TestEvent"]
+        );
 
         await decorator.PublishAsync(new TestEvent { Data = "test" });
 
@@ -357,12 +377,18 @@ public class ComprehensiveCoverageTests
         List<string> logs = [];
         List<TestEvent> received = [];
 
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: ["TestEvent"]);
-        decorator.Subscribe<TestEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        LoggingEventBusDecorator decorator = new(
+            inner,
+            logs.Add,
+            excludedEventTypes: ["TestEvent"]
+        );
+        decorator.Subscribe<TestEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         await decorator.PublishAsync(new TestEvent { Data = "test" });
 
@@ -377,11 +403,13 @@ public class ComprehensiveCoverageTests
         LoggingEventBusDecorator decorator = new(inner, _ => { });
 
         List<TestEvent> received = [];
-        IDisposable sub = decorator.Subscribe<TestEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        IDisposable sub = decorator.Subscribe<TestEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         TestEvent evt = new() { Data = "test" };
         await decorator.PublishAsync(evt);
@@ -411,7 +439,11 @@ public class ComprehensiveCoverageTests
     {
         InMemoryEventBus inner = new();
         List<string> logs = [];
-        LoggingEventBusDecorator decorator = new(inner, logs.Add, excludedEventTypes: ["testevent"]);
+        LoggingEventBusDecorator decorator = new(
+            inner,
+            logs.Add,
+            excludedEventTypes: ["testevent"]
+        );
 
         await decorator.PublishAsync(new TestEvent { Data = "test" });
 
@@ -425,8 +457,7 @@ public class ComprehensiveCoverageTests
 
         Action act = () => new AuditingEventBusDecorator(null!, auditLog);
 
-        act.Should().Throw<ArgumentNullException>()
-            .WithParameterName("inner");
+        act.Should().Throw<ArgumentNullException>().WithParameterName("inner");
     }
 
     [Fact]
@@ -436,8 +467,7 @@ public class ComprehensiveCoverageTests
 
         Action act = () => new AuditingEventBusDecorator(inner, null!);
 
-        act.Should().Throw<ArgumentNullException>()
-            .WithParameterName("auditLog");
+        act.Should().Throw<ArgumentNullException>().WithParameterName("auditLog");
     }
 
     [Fact]
@@ -474,11 +504,13 @@ public class ComprehensiveCoverageTests
         AuditingEventBusDecorator decorator = new(inner, auditLog);
 
         List<TestEvent> received = [];
-        decorator.Subscribe<TestEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        decorator.Subscribe<TestEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         TestEvent evt = new() { Data = "test" };
         await decorator.PublishAsync(evt);
@@ -495,11 +527,13 @@ public class ComprehensiveCoverageTests
         AuditingEventBusDecorator decorator = new(inner, auditLog);
 
         List<TestEvent> received = [];
-        decorator.Subscribe<TestEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        decorator.Subscribe<TestEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         TestEvent evt = new() { Data = "test" };
         await decorator.PublishAsync(evt);
@@ -516,11 +550,13 @@ public class ComprehensiveCoverageTests
         AuditingEventBusDecorator decorator = new(inner, auditLog);
 
         List<TestEvent> received = [];
-        IDisposable sub = decorator.Subscribe<TestEvent>((evt, _) =>
-        {
-            received.Add(evt);
-            return Task.CompletedTask;
-        });
+        IDisposable sub = decorator.Subscribe<TestEvent>(
+            (evt, _) =>
+            {
+                received.Add(evt);
+                return Task.CompletedTask;
+            }
+        );
 
         TestEvent evt = new() { Data = "test" };
         await decorator.PublishAsync(evt);
@@ -562,15 +598,20 @@ public class ComprehensiveCoverageTests
         InMemoryEventBus bus = new();
         int successCount = 0;
 
-        bus.Subscribe<TestEvent>((_, _) =>
-        {
-            Interlocked.Increment(ref successCount);
-            return Task.CompletedTask;
-        });
+        bus.Subscribe<TestEvent>(
+            (_, _) =>
+            {
+                Interlocked.Increment(ref successCount);
+                return Task.CompletedTask;
+            }
+        );
 
-        Task[] tasks = Enumerable.Range(0, 50).Select(i =>
-            bus.PublishAsync(new TestEvent { Data = $"event-{i}" })
-        ).ToArray();
+        Task[] tasks =
+        [
+            .. Enumerable
+                .Range(0, 50)
+                .Select(i => bus.PublishAsync(new TestEvent { Data = $"event-{i}" })),
+        ];
 
         await Task.WhenAll(tasks);
 
@@ -668,7 +709,7 @@ public class ComprehensiveCoverageTests
         {
             Enabled = false,
             MaxEntries = 5000,
-            CompactionPercentage = 0.5
+            CompactionPercentage = 0.5,
         };
 
         EventAuditLog log = new(options);

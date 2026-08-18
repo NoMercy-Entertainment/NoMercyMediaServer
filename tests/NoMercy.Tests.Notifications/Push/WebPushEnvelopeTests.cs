@@ -69,16 +69,8 @@ public class WebPushEnvelopeTests
         Vector vector = LoadVector();
         WebPushEnvelope envelope = new();
 
-        byte[] first = envelope.Seal(
-            "same"u8.ToArray(),
-            vector.UserAgentPublicKey,
-            vector.AuthSecret
-        );
-        byte[] second = envelope.Seal(
-            "same"u8.ToArray(),
-            vector.UserAgentPublicKey,
-            vector.AuthSecret
-        );
+        byte[] first = envelope.Seal([.. "same"u8], vector.UserAgentPublicKey, vector.AuthSecret);
+        byte[] second = envelope.Seal([.. "same"u8], vector.UserAgentPublicKey, vector.AuthSecret);
 
         Assert.NotEqual(Convert.ToBase64String(first), Convert.ToBase64String(second));
     }
@@ -89,7 +81,7 @@ public class WebPushEnvelopeTests
         WebPushEnvelope envelope = new();
 
         Assert.ThrowsAny<Exception>(() =>
-            envelope.Seal("x"u8.ToArray(), "BAAAAAAAAAAAAAAAAAAA", "AAAAAAAAAAAAAAAAAAAAAA")
+            envelope.Seal([.. "x"u8], "BAAAAAAAAAAAAAAAAAAA", "AAAAAAAAAAAAAAAAAAAAAA")
         );
     }
 
@@ -105,7 +97,7 @@ public class WebPushEnvelopeTests
 
         Assert.Throws<CryptographicException>(() =>
             envelope.Seal(
-                "x"u8.ToArray(),
+                [.. "x"u8],
                 Base64UrlCodec.Encode(offCurvePoint),
                 "AAAAAAAAAAAAAAAAAAAAAA"
             )

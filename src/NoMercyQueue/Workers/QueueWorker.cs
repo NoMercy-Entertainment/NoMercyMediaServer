@@ -114,10 +114,21 @@ public class QueueWorker(
 
             if (job != null)
             {
-                // Resource-budget gate: for encoder-gpu / encoder-cpu queues,
-                // check whether the budget has a free slot before executing.
-                // If not, release the reservation and let the job be picked up
+                // Resource-budget gate: for resource-aware queues, check
+                // whether the budget has a free slot before executing. If
+                // not, release the reservation and let the job be picked up
                 // again after a short delay.
+                //
+                // Dispatch order itself needs no gate here: encoder-task's
+                // own ReserveJobQuery (Priority DESC, Id ASC) already governs
+                // which child runs next among what has been decomposed, and
+                // the "encoder" queue's own reserve governs which coordinator
+                // decomposes next. A cross-queue peek that also deferred to
+                // an eligible-but-undecomposed coordinator livelocked every
+                // encoder-task worker whenever the single coordinator thread
+                // was busy elsewhere — coordinators and children never
+                // compete for the same execution slot, so there is nothing
+                // for a peek across them to correctly arbitrate.
                 ResourceLease? lease = null;
 
                 if (resourceBudget is not null && resourceAwareQueues?.Contains(name) == true)

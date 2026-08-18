@@ -54,6 +54,7 @@ public class Encoder(
             OriginalInputPath = request.OriginalInputPath,
             OriginalOutputDirectory = request.OriginalOutputDirectory,
             EnableMetadataInjection = request.Options?.EnableMetadataInjection ?? false,
+            Resources = request.Options?.TaskFilter?.Resources,
         };
         Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -127,14 +128,17 @@ public class Encoder(
         // Update observer with resolved stream info from the actual output plan.
         // Format: "{index}:{detail}" for dashboard display.
         progress?.OnPlanResolved(
-            plan.OutputPlan.VideoOutputs.Select(
+            [
+                .. plan.OutputPlan.VideoOutputs.Select(
                     (v, i) => $"{i}:{v.Width}x{v.Height}_{v.EncoderName}"
-                )
-                .ToList(),
-            plan.OutputPlan.AudioOutputs.Select((a, i) => $"{i}:{a.Language}_{a.CodecToken}")
-                .ToList(),
-            plan.OutputPlan.SubtitleOutputs.Select((s, i) => $"{i}:{s.Language}_{s.OutputCodec}")
-                .ToList(),
+                ),
+            ],
+            [.. plan.OutputPlan.AudioOutputs.Select((a, i) => $"{i}:{a.Language}_{a.CodecToken}")],
+            [
+                .. plan.OutputPlan.SubtitleOutputs.Select(
+                    (s, i) => $"{i}:{s.Language}_{s.OutputCodec}"
+                ),
+            ],
             hasGpu: plan.OutputPlan.VideoOutputs.Any(v =>
                 v.EncoderName.Contains("nvenc", StringComparison.OrdinalIgnoreCase)
                 || v.EncoderName.Contains("qsv", StringComparison.OrdinalIgnoreCase)
@@ -458,6 +462,7 @@ public class Encoder(
             MediaItem = request.MediaItem,
             OriginalInputPath = request.OriginalInputPath,
             OriginalOutputDirectory = request.OriginalOutputDirectory,
+            Resources = request.Options?.TaskFilter?.Resources,
         };
 
         StageResult analyzeResult = await analyzeStage.ExecuteAsync(request.InputPath, context, ct);

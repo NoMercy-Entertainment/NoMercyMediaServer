@@ -58,7 +58,7 @@ public sealed class NfsReadStreamTests
     [Fact]
     public void Read_returns_full_content_in_one_call()
     {
-        byte[] content = "hello shared nfs stream"u8.ToArray();
+        byte[] content = [.. "hello shared nfs stream"u8];
         (FaultyLibNfs fake, IntPtr ctx, IntPtr fh) = OpenSeeded(content);
         using SemaphoreSlim lockObj = new(1, 1);
         using NfsReadStream stream = new(ctx, fh, content.Length, lockObj, fake);

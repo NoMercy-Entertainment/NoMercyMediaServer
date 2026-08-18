@@ -37,7 +37,7 @@ public class ResponseEnvelopeContractTests : IClassFixture<NoMercyApiFactory>
             .Value.SerializerSettings;
 
     private static string[] SortedPropertyNames(JObject obj) =>
-        obj.Properties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal).ToArray();
+        [.. obj.Properties().Select(p => p.Name).OrderBy(n => n, StringComparer.Ordinal)];
 
     [Fact]
     public void StatusResponseDto_SerializesTheLockedEnvelopeFields()

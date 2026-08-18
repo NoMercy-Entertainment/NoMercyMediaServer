@@ -445,7 +445,6 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         }
         finally
         {
-            _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId);
             stateManager.RemoveState(userId);
         }
     }
@@ -486,7 +485,6 @@ public class VideoHubPlaybackTests : IClassFixture<NoMercyApiFactory>
         finally
         {
             connectedClients.Clients.TryRemove(connectionId, out _);
-            _factory.Services.GetRequiredService<VideoPlaybackService>().RemoveTimer(userId);
             stateManager.RemoveState(userId);
         }
     }

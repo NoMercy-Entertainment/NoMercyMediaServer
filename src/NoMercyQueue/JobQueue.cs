@@ -369,7 +369,7 @@ public class JobQueue(
         {
             lock (_writeLock)
             {
-                context.UpdateJobPayload(jobId, newPayload, DateTime.UtcNow + availableAfter);
+                context.UpdateJobPayload(jobId, newPayload, NextGridWakeUp(availableAfter));
             }
 
             WorkAvailable.Release();
@@ -391,6 +391,32 @@ public class JobQueue(
                 logger?.LogError(e, "Failed to update payload for job {JobId}", jobId);
             }
         }
+    }
+
+    /// <summary>
+    /// Rounds a self-reschedule up to the next shared wall-clock boundary of
+    /// <paramref name="interval"/> instead of stamping <c>UtcNow + interval</c>.
+    /// A polling coordinator that wakes at whatever moment it last ran drifts
+    /// out of phase with every other coordinator on the same queue — each has
+    /// its own independent 30s cycle, so at any given reserve instant, whichever
+    /// one's private cycle happens to have just ticked over wins, regardless of
+    /// which was dispatched first. Anchoring every coordinator to the same grid
+    /// (:00, :30, :00, :30, ... from the Unix epoch) makes them become eligible at
+    /// the SAME instants, so the reserve query's `ORDER BY CreatedAt` — not poll
+    /// timing luck — decides who goes first. Reproduced live: a season dispatched
+    /// E02...E88 processed E10 then E11 then skipped back to E02, which had been
+    /// eligible-and-waiting the entire time but kept losing the race to jobs
+    /// created minutes later whose private cycle happened to align first.
+    /// </summary>
+    private static DateTime NextGridWakeUp(TimeSpan interval)
+    {
+        if (interval <= TimeSpan.Zero)
+            return DateTime.UtcNow;
+
+        long intervalTicks = interval.Ticks;
+        long nowTicks = DateTime.UtcNow.Ticks;
+        long nextTick = (nowTicks / intervalTicks + 1) * intervalTicks;
+        return new DateTime(nextTick, DateTimeKind.Utc);
     }
 
     /// <summary>

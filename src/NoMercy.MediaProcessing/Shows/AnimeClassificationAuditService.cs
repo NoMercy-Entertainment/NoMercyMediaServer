@@ -34,7 +34,8 @@ public class AnimeClassificationAuditService(
                 tv.Id,
                 tv.Title,
                 tv.FirstAirDate,
-                tv.Library.Type
+                tv.Library.Type,
+                tv.OriginCountry
             ))
             .ToListAsync(ct);
 
@@ -42,12 +43,17 @@ public class AnimeClassificationAuditService(
 
         foreach (TvLibraryProjection row in rows)
         {
-            string classifiedType = await mediaTypeClassifier.ClassifyAsync(
+            string? classifiedType = await mediaTypeClassifier.ClassifyAsync(
                 row.Title,
-                row.FirstAirDate.ParseYear()
+                row.FirstAirDate.ParseYear(),
+                row.OriginCountry is not null ? [row.OriginCountry] : null
             );
 
-            if (classifiedType == row.LibraryType)
+            // An inconclusive lookup (provider failure, e.g. Kitsu rate-limiting a
+            // run over hundreds of shows) is not a verdict — reporting it as a
+            // mismatch would flood the audit with false positives on every show the
+            // lookup happened to fail for.
+            if (classifiedType is null || classifiedType == row.LibraryType)
                 continue;
 
             mismatches.Add(new(row.Id, row.Title, row.LibraryType, classifiedType));
@@ -65,6 +71,7 @@ public class AnimeClassificationAuditService(
         int Id,
         string Title,
         DateTime? FirstAirDate,
-        string LibraryType
+        string LibraryType,
+        string? OriginCountry
     );
 }

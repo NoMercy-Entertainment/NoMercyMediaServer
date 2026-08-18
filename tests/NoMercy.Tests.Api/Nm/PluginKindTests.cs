@@ -68,15 +68,28 @@ public class PluginKindTests
             {
                 Mounts =
                 [
-                    new() { Section = "Video", Label = "subtitles", Route = "/", Kind = PluginKind.Video },
-                    new() { Section = "Library", Label = "subtitles.settings", Route = "/settings", Kind = PluginKind.Dashboard }
-                ]
-            }
+                    new()
+                    {
+                        Section = "Video",
+                        Label = "subtitles",
+                        Route = "/",
+                        Kind = PluginKind.Video,
+                    },
+                    new()
+                    {
+                        Section = "Library",
+                        Label = "subtitles.settings",
+                        Route = "/settings",
+                        Kind = PluginKind.Dashboard,
+                    },
+                ],
+            },
         };
 
         Assert.Equal(
             [PluginKind.Video, PluginKind.Dashboard],
-            capabilities.Ui!.Mounts.Select(mount => mount.Kind));
+            capabilities.Ui!.Mounts.Select(mount => mount.Kind)
+        );
     }
 
     [Fact]
@@ -85,7 +98,12 @@ public class PluginKindTests
         // A request, not a setting. If every plugin could take a top-level slot
         // the navigation becomes a junk drawer and the last one installed wins
         // the most prominent place.
-        PluginUiMount mount = new() { Section = "Library", Label = "x", Route = "/" };
+        PluginUiMount mount = new()
+        {
+            Section = "Library",
+            Label = "x",
+            Route = "/",
+        };
 
         Assert.False(mount.RequestsTopLevel);
     }
@@ -95,10 +113,12 @@ public class PluginKindTests
     {
         // Two kinds sharing a prefix would put one plugin's pages inside
         // another's, and whichever loaded second would win.
-        List<string> prefixes = PluginKind
-            .All.Where(PluginKind.DrawsUi)
-            .Select(kind => PluginRoutes.PrefixFor(kind, Id))
-            .ToList();
+        List<string> prefixes =
+        [
+            .. PluginKind
+                .All.Where(PluginKind.DrawsUi)
+                .Select(kind => PluginRoutes.PrefixFor(kind, Id)),
+        ];
 
         Assert.Equal(prefixes.Count, prefixes.Distinct().Count());
     }
@@ -108,7 +128,12 @@ public class PluginKindTests
     {
         // A manifest written before kinds existed keeps working, and keeps
         // appearing exactly where its author last saw it.
-        PluginUiMount mount = new() { Section = "Advanced", Label = "x", Route = "/" };
+        PluginUiMount mount = new()
+        {
+            Section = "Advanced",
+            Label = "x",
+            Route = "/",
+        };
 
         Assert.Equal(PluginKind.Dashboard, mount.Kind);
     }

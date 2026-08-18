@@ -157,7 +157,7 @@ public class PluginRegistryTests
         PluginRegistry registry = new();
         Ulid id = Ulid.NewUlid();
         const int concurrentWriters = 50;
-        ConcurrentBag<DisposalTrackingPlugin> instances = new();
+        ConcurrentBag<DisposalTrackingPlugin> instances = [];
 
         Parallel.For(
             0,

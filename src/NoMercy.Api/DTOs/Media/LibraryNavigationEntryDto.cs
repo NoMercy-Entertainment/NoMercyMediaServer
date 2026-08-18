@@ -51,6 +51,9 @@ public record LibraryNavigationEntryDto
 
     [JsonProperty("plugin_id", NullValueHandling = NullValueHandling.Ignore)]
     public Ulid? PluginId { get; set; }
+
+    [JsonProperty("route_type")]
+    public string RouteType { get; set; } = string.Empty;
 }
 
 public static class LibraryNavigationOrigin

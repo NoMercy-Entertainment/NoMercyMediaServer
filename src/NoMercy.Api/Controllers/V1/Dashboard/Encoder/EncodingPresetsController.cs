@@ -452,12 +452,14 @@ public class EncodingPresetsController(
         // clients keep working without modification.
         ValidationEnvelope envelope = profileValidator.ValidateAsEnvelope(profile);
 
-        object[] errors = envelope
-            .Errors.Select(e => (object)new { field = e.Field, message = e.Message })
-            .ToArray();
-        object[] warnings = envelope
-            .Warnings.Select(e => (object)new { field = e.Field, message = e.Message })
-            .ToArray();
+        object[] errors =
+        [
+            .. envelope.Errors.Select(e => (object)new { field = e.Field, message = e.Message }),
+        ];
+        object[] warnings =
+        [
+            .. envelope.Warnings.Select(e => (object)new { field = e.Field, message = e.Message }),
+        ];
 
         return Ok(
             new

@@ -110,9 +110,10 @@ public class DnsSchemeResolverTests : IDisposable
 
         Assert.True(result);
 
-        List<Configuration> rows = _context
-            .Configuration.Where(c => c.Key == DnsSchemeResolver.ConfigKey)
-            .ToList();
+        List<Configuration> rows =
+        [
+            .. _context.Configuration.Where(c => c.Key == DnsSchemeResolver.ConfigKey),
+        ];
         Assert.Single(rows);
         Assert.Equal("True", rows[0].Value);
     }
@@ -138,9 +139,10 @@ public class DnsSchemeResolverTests : IDisposable
 
         Assert.Equal(first, second);
 
-        List<Configuration> rows = _context
-            .Configuration.Where(c => c.Key == DnsSchemeResolver.ConfigKey)
-            .ToList();
+        List<Configuration> rows =
+        [
+            .. _context.Configuration.Where(c => c.Key == DnsSchemeResolver.ConfigKey),
+        ];
         Assert.Single(rows);
     }
 

@@ -95,11 +95,12 @@ public class SubtitleAcquisitionService(
         if (!request.Config.FillMissingOnly)
             return languages;
 
-        return languages
-            .Where(lang =>
+        return
+        [
+            .. languages.Where(lang =>
                 !request.LanguagesAlreadyInSource.Contains(lang, StringComparer.OrdinalIgnoreCase)
-            )
-            .ToArray();
+            ),
+        ];
     }
 
     private async Task<(
@@ -204,17 +205,19 @@ public class SubtitleAcquisitionService(
         double? sourceFps
     )
     {
-        return candidates
-            .Where(c => c.Rating >= config.MinRating)
-            .Where(c => c.Downloads >= config.MinDownloads)
-            .Where(c => !config.TrustedUploadersOnly || c.IsTrustedUploader)
-            .Where(c =>
-                !config.RequireMatchingFps
-                || sourceFps is null
-                || c.Fps is null
-                || Math.Abs(c.Fps.Value - sourceFps.Value) <= FpsTolerance
-            )
-            .ToList();
+        return
+        [
+            .. candidates
+                .Where(c => c.Rating >= config.MinRating)
+                .Where(c => c.Downloads >= config.MinDownloads)
+                .Where(c => !config.TrustedUploadersOnly || c.IsTrustedUploader)
+                .Where(c =>
+                    !config.RequireMatchingFps
+                    || sourceFps is null
+                    || c.Fps is null
+                    || Math.Abs(c.Fps.Value - sourceFps.Value) <= FpsTolerance
+                ),
+        ];
     }
 
     private static IReadOnlyList<SubtitleCandidate> SelectTopPerLanguage(
@@ -222,13 +225,15 @@ public class SubtitleAcquisitionService(
         int maxPerLanguage
     )
     {
-        return candidates
-            .GroupBy(c => c.Language, StringComparer.OrdinalIgnoreCase)
-            .SelectMany(g =>
-                g.OrderByDescending(c => c.Rating * Math.Log10(c.Downloads + 1))
-                    .Take(maxPerLanguage)
-            )
-            .ToList();
+        return
+        [
+            .. candidates
+                .GroupBy(c => c.Language, StringComparer.OrdinalIgnoreCase)
+                .SelectMany(g =>
+                    g.OrderByDescending(c => c.Rating * Math.Log10(c.Downloads + 1))
+                        .Take(maxPerLanguage)
+                ),
+        ];
     }
 
     private async Task<AcquiredSubtitle?> DownloadCandidateAsync(

@@ -93,10 +93,12 @@ public class HlsOnDiskPlanReconstructorTests : IDisposable
 
         string master = await File.ReadAllTextAsync(Path.Combine(_outputDirectory, "Title.m3u8"));
 
-        List<string> streamInfLines = master
-            .Split('\n')
-            .Where(line => line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal))
-            .ToList();
+        List<string> streamInfLines =
+        [
+            .. master
+                .Split('\n')
+                .Where(line => line.StartsWith("#EXT-X-STREAM-INF:", StringComparison.Ordinal)),
+        ];
         streamInfLines.Should().HaveCount(2);
 
         string? hdrLine = streamInfLines.FirstOrDefault(line =>

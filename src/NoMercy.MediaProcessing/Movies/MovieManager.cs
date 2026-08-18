@@ -38,19 +38,38 @@ public class MovieManager(
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
     ILogger<MovieManager> logger,
-    IPluginMetadataResolver? pluginMetadata = null
+    IPluginMetadataResolver? pluginMetadata = null,
+    Func<int, ITmdbMovieClient>? movieClientFactory = null
 ) : BaseManager, IMovieManager
 {
+    private readonly Func<int, ITmdbMovieClient> _movieClientFactory =
+        movieClientFactory ?? (movieId => new TmdbMovieClient(movieId));
+
     public async Task<TmdbMovieAppends?> Add(int id, Library library)
     {
         logger.LogInformation("Movie: {Id}: Adding to Library {Title}", [id, library.Title]);
 
-        using TmdbMovieClient movieClient = new(id);
-        TmdbMovieAppends? movieAppends = await MetadataRetry.FetchAsync(
-            () => movieClient.WithAllAppends(),
-            $"TMDB movie {id}"
-        );
+        ITmdbMovieClient movieClient = _movieClientFactory(id);
+        try
+        {
+            TmdbMovieAppends? movieAppends = await MetadataRetry.FetchAsync(
+                () => movieClient.WithAllAppends(false),
+                $"TMDB movie {id}"
+            );
+            return await AddFromAppends(id, library, movieAppends);
+        }
+        finally
+        {
+            (movieClient as IDisposable)?.Dispose();
+        }
+    }
 
+    private async Task<TmdbMovieAppends?> AddFromAppends(
+        int id,
+        Library library,
+        TmdbMovieAppends? movieAppends
+    )
+    {
         if (movieAppends == null)
             return null;
 
@@ -470,46 +489,55 @@ public class MovieManager(
             return;
         }
 
-        TmdbMovieClient movieClient = new(movie.Id);
+        ITmdbMovieClient movieClient = _movieClientFactory(movie.Id);
 
         ConcurrentDictionary<int, Company> companiesDict = new();
 
-        await Parallel.ForEachAsync(
-            movie.ProductionCompanies,
-            SystemParallelism.Options,
-            async (productionCompany, _) =>
-            {
-                TmdbTmdbNetworkDetails? nw = await movieClient.CompanyDetails(productionCompany.Id);
-                if (nw == null)
-                    return;
+        try
+        {
+            await Parallel.ForEachAsync(
+                movie.ProductionCompanies,
+                SystemParallelism.Options,
+                async (productionCompany, _) =>
+                {
+                    TmdbTmdbNetworkDetails? nw = await movieClient.CompanyDetails(
+                        productionCompany.Id
+                    );
+                    if (nw == null)
+                        return;
 
-                companiesDict.TryAdd(
-                    nw.Id,
-                    new()
-                    {
-                        Id = nw.Id,
-                        Name = nw.Name,
-                        Logo = nw.LogoPath,
-                        OriginCountry = nw.OriginCountry,
-                        Headquarters = nw.Headquarters,
-                        Homepage = nw.Homepage,
-                    }
-                );
-            }
-        );
+                    companiesDict.TryAdd(
+                        nw.Id,
+                        new()
+                        {
+                            Id = nw.Id,
+                            Name = nw.Name,
+                            Logo = nw.LogoPath,
+                            OriginCountry = nw.OriginCountry,
+                            Headquarters = nw.Headquarters,
+                            Homepage = nw.Homepage,
+                        }
+                    );
+                }
+            );
 
-        List<Company> companies = companiesDict.Values.ToList();
+            List<Company> companies = companiesDict.Values.ToList();
 
-        List<CompanyMovie> companyMovies = companies
-            .Select(company => new CompanyMovie { CompanyId = company.Id, MovieId = movie.Id })
-            .ToList();
+            List<CompanyMovie> companyMovies = companies
+                .Select(company => new CompanyMovie { CompanyId = company.Id, MovieId = movie.Id })
+                .ToList();
 
-        if (companies.Count != 0)
-            await movieRepository.StoreCompanies(companies);
+            if (companies.Count != 0)
+                await movieRepository.StoreCompanies(companies);
 
-        if (companyMovies.Count != 0)
-            await movieRepository.StoreCompanyMovies(companyMovies);
+            if (companyMovies.Count != 0)
+                await movieRepository.StoreCompanyMovies(companyMovies);
 
-        logger.LogDebug("Movie: {Title}: Companies stored", movie.Title);
+            logger.LogDebug("Movie: {Title}: Companies stored", movie.Title);
+        }
+        finally
+        {
+            (movieClient as IDisposable)?.Dispose();
+        }
     }
 }

@@ -225,7 +225,7 @@ public class LocalStorageIntegrationTests : IDisposable
     {
         // SHA-256("hello") = 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824
         string path = Path.Combine(_root, "hello.txt");
-        await _storage.WriteAsync(path, "hello"u8.ToArray(), CancellationToken.None);
+        await _storage.WriteAsync(path, [.. "hello"u8], CancellationToken.None);
 
         string digest = await _storage.HashAsync(path, "sha256", CancellationToken.None);
 

@@ -70,13 +70,15 @@ public class ConfigPluginGrantStore(IPluginConfiguration configuration) : IPlugi
     public IReadOnlyList<string> Granted(Ulid pluginId, string kind)
     {
         PluginGrantRecord record = Read();
-        return record
-            .Grants.Where(entry =>
-                entry.PluginId == pluginId
-                && string.Equals(entry.Kind, kind, StringComparison.OrdinalIgnoreCase)
-            )
-            .Select(entry => entry.Value)
-            .ToList();
+        return
+        [
+            .. record
+                .Grants.Where(entry =>
+                    entry.PluginId == pluginId
+                    && string.Equals(entry.Kind, kind, StringComparison.OrdinalIgnoreCase)
+                )
+                .Select(entry => entry.Value),
+        ];
     }
 
     public bool Holds(Ulid pluginId, string kind, string value)
@@ -177,15 +179,16 @@ public class ConfigPluginGrantStore(IPluginConfiguration configuration) : IPlugi
     }
 
     public IReadOnlyList<PluginGrantRequest> PendingRequests() =>
-        Read()
-            .Requests.Select(entry => new PluginGrantRequest(
-                entry.PluginId,
-                entry.Kind,
-                entry.Value,
-                entry.Reason,
-                entry.RequestedAt
-            ))
-            .ToList();
+        [
+            .. Read()
+                .Requests.Select(entry => new PluginGrantRequest(
+                    entry.PluginId,
+                    entry.Kind,
+                    entry.Value,
+                    entry.Reason,
+                    entry.RequestedAt
+                )),
+        ];
 
     public void ClearRequest(Ulid pluginId, string kind, string value)
     {

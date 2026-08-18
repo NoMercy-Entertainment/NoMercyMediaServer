@@ -98,7 +98,7 @@ public class UserPlaylistsController(IUserPlaylistRepository userPlaylistReposit
                     Name = playlist.Name,
                     Description = playlist.Description,
                     Cover = playlist.Cover,
-                    Items = (items ?? []).Select(PlaylistItemCardDto.From).ToList(),
+                    Items = [.. (items ?? []).Select(PlaylistItemCardDto.From)],
                 },
             }
         );

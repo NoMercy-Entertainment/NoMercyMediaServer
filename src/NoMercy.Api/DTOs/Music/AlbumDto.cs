@@ -137,10 +137,12 @@ public class AlbumDto
         // Tracks = album.AlbumTrack.Select(a => a.Track);
         Year = album.Year;
 
-        List<IGrouping<Guid, AlbumArtist>> artists = album
-            .AlbumArtist.GroupBy(albumArtist => albumArtist.ArtistId)
-            .OrderBy(artist => artist.Count())
-            .ToList();
+        List<IGrouping<Guid, AlbumArtist>> artists =
+        [
+            .. album
+                .AlbumArtist.GroupBy(albumArtist => albumArtist.ArtistId)
+                .OrderBy(artist => artist.Count()),
+        ];
 
         int trackCount = album.Tracks;
 

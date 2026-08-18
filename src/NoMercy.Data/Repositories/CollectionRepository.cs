@@ -270,7 +270,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
             return null;
 
         // Query 2: Movie-level cast/crew — loaded separately to reduce query complexity
-        List<int> movieIds = collection.CollectionMovies.Select(cm => cm.MovieId).ToList();
+        List<int> movieIds = [.. collection.CollectionMovies.Select(cm => cm.MovieId)];
         List<Movie> moviesWithCastCrew = await context
             .Movies.AsNoTracking()
             .Where(m => movieIds.Contains(m.Id))

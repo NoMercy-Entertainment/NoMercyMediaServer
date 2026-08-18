@@ -56,13 +56,16 @@ public static class OutputPlanMerger
                     + $"expected every plan to be {primary.Format}."
             );
 
-        VideoOutputPlan[] mergedVideo = PlanStageDisambiguation.DisambiguateVideo(
-            plans.SelectMany(plan => plan.VideoOutputs).ToArray()
-        );
+        VideoOutputPlan[] mergedVideo = PlanStageDisambiguation.DisambiguateVideo([
+            .. plans.SelectMany(plan => plan.VideoOutputs),
+        ]);
 
-        AudioOutputPlan[] mergedAudio = PlanStageDisambiguation
-            .DisambiguateAudio(DeduplicateAudio(plans.SelectMany(plan => plan.AudioOutputs)))
-            .ToArray();
+        AudioOutputPlan[] mergedAudio =
+        [
+            .. PlanStageDisambiguation.DisambiguateAudio(
+                DeduplicateAudio(plans.SelectMany(plan => plan.AudioOutputs))
+            ),
+        ];
 
         return primary with
         {
@@ -96,6 +99,6 @@ public static class OutputPlanMerger
             seen.TryAdd(key, audio);
         }
 
-        return seen.Values.ToList();
+        return [.. seen.Values];
     }
 }

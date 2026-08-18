@@ -32,24 +32,23 @@ public interface IServerConfiguration
     bool UpdateAvailable { get; }
     bool RestartNeeded { get; }
     string? LatestVersion { get; }
-    
+
     int LibraryWorkers { get; }
     int ImportWorkers { get; }
     int ExtrasWorkers { get; }
     int EncoderWorkers { get; }
-    int EncoderTaskWorkers { get; }
     int GpuEncoderWorkers { get; }
     int CpuEncoderWorkers { get; }
-    
+
     double EncoderCpuHeadroomPercent { get; }
     double EncoderGpuHeadroomPercent { get; }
     long EncoderMinFreeMemoryMb { get; }
-    
+
     int CronWorkers { get; }
     int ImageWorkers { get; }
     int FileWorkers { get; }
     int MusicWorkers { get; }
     int PaletteWorkers { get; }
-    
+
     bool ShowAdultContent { get; }
 }

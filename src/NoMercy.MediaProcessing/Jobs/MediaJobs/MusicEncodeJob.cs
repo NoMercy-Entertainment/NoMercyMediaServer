@@ -187,6 +187,8 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
                     encodeResult.Metrics?.EncoderUsed ?? "unknown"
                 );
 
+                await RecordHistoryAsync(context, MediaFile.Path, encodingProfile, encodeResult);
+
                 await AddRecording(folder);
 
                 if (EventBusProvider.IsConfigured)
@@ -246,6 +248,51 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
     }
 
     /// <summary>
+    /// Appends the dashboard-facing <see cref="EncodingHistory"/> row for this track.
+    /// <see cref="EncodeTaskJob"/> carries the identical block for the video side —
+    /// AddAsync existed on <see cref="NoMercy.Data.Repositories.IEncodingHistoryRepository"/>
+    /// since Task 8.1 but nothing ever called it, so "Encoding history" on the
+    /// dashboard read zero rows regardless of how much real encoding had happened.
+    /// Best-effort: a failure here must not turn a completed encode into a failed job.
+    /// </summary>
+    private async Task RecordHistoryAsync(
+        MediaContext context,
+        string inputPath,
+        EncodingProfile profile,
+        EncodingResult result
+    )
+    {
+        try
+        {
+            long inputBytes = result.Stats?.SourceBytes ?? 0;
+            long outputBytes = result.Stats?.OutputBytes ?? 0;
+
+            context.EncodingHistory.Add(
+                new()
+                {
+                    InputPath = inputPath,
+                    OutputPath = result.OutputPath,
+                    ProfileId = profile.Id,
+                    ProfileName = profile.Name,
+                    EncoderUsed = result.Metrics?.EncoderUsed ?? string.Empty,
+                    GpuUsed = result.Metrics?.GpuUsed,
+                    DurationSeconds = result.Stats?.DurationSeconds ?? 0,
+                    InputSizeBytes = inputBytes,
+                    OutputSizeBytes = outputBytes,
+                    CompressionRatio = inputBytes > 0 ? (double)outputBytes / inputBytes : 0,
+                    AverageSpeed = result.Metrics?.AverageSpeed ?? 0,
+                    AverageFps = result.Stats?.AvgFps ?? result.Metrics?.AverageFps ?? 0,
+                }
+            );
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Could not record encoding history for {Path}", inputPath);
+        }
+    }
+
+    /// <summary>
     /// The album folder the encoder writes into, relative to the destination
     /// storage root — which is what an OutputDirectory has to be.
     ///
@@ -269,9 +316,18 @@ public class MusicEncodeJob : AbstractMusicEncoderJob, IJobStorageInjector
         if (normalized.Length == 0)
             return string.Empty;
 
-        return StoragePathGuard.IsRootedAnyStyle(normalized)
+        string relative = StoragePathGuard.IsRootedAnyStyle(normalized)
             ? normalized[(normalized.LastIndexOf('/') + 1)..]
             : normalized;
+
+        // Sanitized only after the root is stripped, never before: the drive-letter
+        // colon in a legacy rooted row (see the two tests above) is part of the shape
+        // IsRootedAnyStyle and the LastIndexOf('/') split both key off, and folding it
+        // to '_' here would corrupt that detection before it ever runs. What's left
+        // once the root is gone is exactly the Windows-reserved characters the stored
+        // title carries — including the straight quote the unicode fold above itself
+        // produces by folding curly quotes — which CreateDirectory then rejects.
+        return PicardNaming.Sanitize(relative);
     }
 
     private async Task AddRecording(Folder folder)

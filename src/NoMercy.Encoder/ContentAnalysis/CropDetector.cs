@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.ContentAnalysis;
@@ -101,6 +102,10 @@ public partial class CropDetector(
             ((int)ScanDuration.TotalSeconds).ToString(),
             "-vf",
             CropDetectFilter(isHdr),
+            "-threads",
+            EncodeThreadBudget.AuxiliaryPass.ToString(),
+            "-filter_threads",
+            EncodeThreadBudget.AuxiliaryPass.ToString(),
             "-f",
             "null",
             "-",

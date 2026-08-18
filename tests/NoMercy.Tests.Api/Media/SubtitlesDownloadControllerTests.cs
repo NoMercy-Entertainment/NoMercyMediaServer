@@ -72,10 +72,22 @@ public class SubtitlesDownloadControllerTests : IClassFixture<NoMercyApiFactory>
     {
         Mock<IStorage> storageMock = new();
         storageMock
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
             .Returns(
-                (string parent, string child) =>
-                    $"{parent.TrimEnd('/', '\\')}/{child.TrimStart('/', '\\')}"
+                (string parent, string[] segments) =>
+                {
+                    string result = string.IsNullOrEmpty(parent)
+                        ? string.Empty
+                        : parent.TrimEnd('/', '\\');
+                    foreach (string segment in segments)
+                    {
+                        if (string.IsNullOrEmpty(segment))
+                            continue;
+                        string trimmed = segment.TrimStart('/', '\\');
+                        result = string.IsNullOrEmpty(result) ? trimmed : $"{result}/{trimmed}";
+                    }
+                    return result;
+                }
             );
 
         NonDisposingMemoryStream stream = new();

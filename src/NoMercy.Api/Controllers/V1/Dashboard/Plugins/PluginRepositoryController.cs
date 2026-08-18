@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.NmSystem.Information;
+using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Verification;
 using NoMercy.Storage;
@@ -163,7 +164,7 @@ public class PluginRepositoryController(
         if (target is null)
             return NotFoundResponse("The catalogue does not carry that version");
 
-        string stagingDirectory = Path.Combine(
+        string stagingDirectory = storageDriver.CombinePath(
             AppFiles.TempPath,
             $"plugin-fetch-{Ulid.NewUlid():N}"
         );
@@ -171,7 +172,7 @@ public class PluginRepositoryController(
         // single assembly publishes an archive. Staging it under the wrong
         // extension would hand a zip to the assembly loader.
         bool isArchive = target.DownloadUrl.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
-        string stagedPath = Path.Combine(
+        string stagedPath = storageDriver.CombinePath(
             stagingDirectory,
             $"{entry.Name}{(isArchive ? ".zip" : ".dll")}"
         );
@@ -195,6 +196,14 @@ public class PluginRepositoryController(
             else
                 await pluginManager.InstallPluginAsync(stagedPath, target.Checksum, ct);
         }
+        // Not a failure: the new version is unpacked and verified, and the next
+        // start applies it. Updating a plugin that is running is the ordinary
+        // case, and the file being locked while it runs is the expected outcome
+        // on Windows - it used to reach the owner as a 500 with a stack trace.
+        catch (PluginUpdatePendingRestartException ex)
+        {
+            return ConflictResponse(ex.Message);
+        }
         catch (PluginVerificationException ex)
         {
             return UnprocessableEntityResponse(ex.Message);
@@ -202,6 +211,14 @@ public class PluginRepositoryController(
         catch (HttpRequestException ex)
         {
             return UnprocessableEntityResponse($"The download failed: {ex.Message}");
+        }
+        // Anything else the filesystem refuses - a permission, a full disk, a
+        // second install running at the same time. The installed plugin is
+        // untouched either way, because nothing is written over it until the
+        // staged copy is complete.
+        catch (IOException ex)
+        {
+            return UnprocessableEntityResponse($"The install could not be written: {ex.Message}");
         }
         catch (InvalidOperationException ex)
         {

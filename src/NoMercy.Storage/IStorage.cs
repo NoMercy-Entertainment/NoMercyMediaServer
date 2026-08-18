@@ -228,7 +228,7 @@ public interface IStorage
     /// into an IStorage method. <c>Path.Combine</c> uses the OS separator
     /// which is <c>'\\'</c> on Windows — violating Rule 2 of the path contract.
     /// </summary>
-    string CombinePath(string parent, string child) => Driver.CombinePath(parent, child);
+    string CombinePath(string parent, params string[] child) => Driver.CombinePath(parent, child);
 
     /// <summary>
     /// Returns the last segment of a storage-relative path — the storage-aware

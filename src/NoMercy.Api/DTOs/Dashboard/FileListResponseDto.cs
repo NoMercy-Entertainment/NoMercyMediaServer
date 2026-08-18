@@ -20,5 +20,5 @@ public record FileListResponseDto
     public string Status { get; set; } = string.Empty;
 
     [JsonProperty("files")]
-    public List<FileItem> Files { get; set; } = new();
+    public List<FileItem> Files { get; set; } = [];
 }

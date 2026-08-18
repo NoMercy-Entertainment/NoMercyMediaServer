@@ -34,7 +34,7 @@ public static class StorageDriverGrouper
     /// </summary>
     public static IReadOnlyList<DriverGroup> Group(IEnumerable<FolderRootInput> inputs)
     {
-        List<FolderRootInput> inputList = inputs.ToList();
+        List<FolderRootInput> inputList = [.. inputs];
         if (inputList.Count == 0)
             return [];
 
@@ -66,17 +66,18 @@ public static class StorageDriverGrouper
             const string driverType = "local";
 
             string driverRoot = ComputeCommonAncestor(
-                members.Select(m => m.AbsoluteRootPath).ToList(),
+                [.. members.Select(m => m.AbsoluteRootPath)],
                 kind
             );
 
-            List<FolderAssignment> assignments = members
-                .Select(member =>
+            List<FolderAssignment> assignments =
+            [
+                .. members.Select(member =>
                 {
                     string subPath = ComputeSubPath(driverRoot, member.AbsoluteRootPath, kind);
                     return new FolderAssignment(member.FolderId, subPath);
-                })
-                .ToList();
+                }),
+            ];
 
             result.Add(new(driverRoot, driverType, assignments));
         }
@@ -137,9 +138,7 @@ public static class StorageDriverGrouper
 
         char separator = kind == StorageEndpointKind.Smb ? '\\' : LocalSeparator(absolutePaths[0]);
 
-        List<string[]> splitPaths = absolutePaths
-            .Select(path => SplitPath(path, separator))
-            .ToList();
+        List<string[]> splitPaths = [.. absolutePaths.Select(path => SplitPath(path, separator))];
 
         int minLength = splitPaths.Min(segments => segments.Length);
         int commonSegments = 0;

@@ -329,14 +329,22 @@ public class TvShowRepository(
         if (show == null)
             return;
 
-        string mediaType = await mediaTypeClassifier.ClassifyAsync(
+        string? mediaType = await mediaTypeClassifier.ClassifyAsync(
             show.Name,
-            show.FirstAirDate.ParseYear()
+            show.FirstAirDate.ParseYear(),
+            show.OriginCountry
         );
 
+        // mediaType is null when the classifier lookup was inconclusive — skip the
+        // type-specific match entirely rather than querying for a library of type
+        // null, and fall through to the same "tv" default used when no library of
+        // the classified type exists.
         Library? tvLibrary =
-            await context.Libraries.Where(f => f.Type == mediaType).FirstOrDefaultAsync()
-            ?? await context.Libraries.Where(f => f.Type == "tv").FirstOrDefaultAsync();
+            (
+                mediaType is not null
+                    ? await context.Libraries.Where(f => f.Type == mediaType).FirstOrDefaultAsync()
+                    : null
+            ) ?? await context.Libraries.Where(f => f.Type == "tv").FirstOrDefaultAsync();
 
         if (tvLibrary == null)
             return;

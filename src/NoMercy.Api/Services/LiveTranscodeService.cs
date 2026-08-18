@@ -56,8 +56,9 @@ public class LiveTranscodeService(
     public IReadOnlyList<LiveSessionDto> ListSessions()
     {
         IReadOnlyList<LiveSessionSnapshot> snapshots = streamingService.GetActiveSessions();
-        return snapshots
-            .Select(s => new LiveSessionDto(
+        return
+        [
+            .. snapshots.Select(s => new LiveSessionDto(
                 SessionId: s.SessionId,
                 State: s.State.ToString(),
                 QualityId: s.QualityId,
@@ -70,8 +71,8 @@ public class LiveTranscodeService(
                 SegmentCount: s.SegmentCount,
                 IsComplete: s.IsComplete,
                 LastAccess: s.LastAccess
-            ))
-            .ToList();
+            )),
+        ];
     }
 
     public async Task<LiveResult> StartSessionAsync(
@@ -694,16 +695,17 @@ public class LiveTranscodeService(
             defaultIndex = 0;
 
         string baseFolder = $"/{file.Share}{file.Folder}";
-        return tracks
-            .Select(
+        return
+        [
+            .. tracks.Select(
                 (a, index) =>
                     new LiveAudioRendition(
                         Language: a.Language,
                         Uri: $"{baseFolder}{a.FileName}".EncodePath(),
                         IsDefault: index == defaultIndex
                     )
-            )
-            .ToList();
+            ),
+        ];
     }
 
     // Spawn one audio-only transcode per source language for a raw source, and

@@ -116,19 +116,21 @@ public class EncoderProcessRegistryTests
         const int taskCount = 20;
         const int pidsPerTask = 50;
 
-        Task[] tasks = Enumerable
-            .Range(0, taskCount)
-            .Select(taskIndex =>
-                Task.Run(() =>
-                {
-                    for (int i = 0; i < pidsPerTask; i++)
+        Task[] tasks =
+        [
+            .. Enumerable
+                .Range(0, taskCount)
+                .Select(taskIndex =>
+                    Task.Run(() =>
                     {
-                        int pid = taskIndex * 1000 + i + 1;
-                        _registry.Register(jobId: 1, processId: pid);
-                    }
-                })
-            )
-            .ToArray();
+                        for (int i = 0; i < pidsPerTask; i++)
+                        {
+                            int pid = taskIndex * 1000 + i + 1;
+                            _registry.Register(jobId: 1, processId: pid);
+                        }
+                    })
+                ),
+        ];
 
         await Task.WhenAll(tasks);
 

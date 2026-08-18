@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Encoder.ContentAnalysis;
@@ -63,7 +64,10 @@ public class EncodeYieldProbe(
             return null;
 
         string? encoder = target.EncoderName;
-        if (string.IsNullOrWhiteSpace(encoder) && !SoftwareEncoders.TryGetValue(target.Codec, out encoder))
+        if (
+            string.IsNullOrWhiteSpace(encoder)
+            && !SoftwareEncoders.TryGetValue(target.Codec, out encoder)
+        )
             return null;
 
         // Hardware encoders take the quality target on their own flag and reject
@@ -106,6 +110,12 @@ public class EncodeYieldProbe(
                 encoder!,
                 isHardware ? "-cq" : "-crf",
                 target.Crf.ToString(),
+                "-threads",
+                (
+                    isHardware
+                        ? EncodeThreadBudget.GpuResidentEncode
+                        : EncodeThreadBudget.SoftwareEncode
+                ).ToString(),
             ];
 
             if (!isHardware && !string.IsNullOrWhiteSpace(target.Preset))
@@ -131,7 +141,7 @@ public class EncodeYieldProbe(
             ProcessResult result = await processRunner
                 .RunAsync(
                     options.FfmpegPath,
-                    args.ToArray(),
+                    [.. args],
                     workingDirectory: null,
                     cancellationToken: ct
                 )

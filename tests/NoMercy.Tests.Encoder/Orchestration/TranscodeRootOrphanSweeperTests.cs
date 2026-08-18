@@ -32,12 +32,20 @@ public class TranscodeRootOrphanSweeperTests : IDisposable
     private static IStorage MakeStorage() =>
         new LocalStorage(new LocalStorageDriver(), new([], new LocalStorageDriver()));
 
-    private TranscodeRootOrphanSweeper BuildSweeper(bool sweepAllChildren) =>
+    private TranscodeRootOrphanSweeper BuildSweeper(
+        bool sweepAllChildren,
+        TimeSpan? minOrphanAge = null
+    ) =>
         new(
             NullLogger<TranscodeRootOrphanSweeper>.Instance,
             MakeStorage(),
             _root,
-            sweepAllChildren
+            sweepAllChildren,
+            // Zero unless a test opts into age-gating: these existing cases assert
+            // on prefix/pattern selection and write their fixture files immediately
+            // before StartAsync runs, so any positive grace window would make every
+            // one of them look "recent" and never reach the delete branch at all.
+            minOrphanAge ?? TimeSpan.Zero
         );
 
     [Fact]
@@ -92,5 +100,50 @@ public class TranscodeRootOrphanSweeperTests : IDisposable
         Func<Task> act = () => sweeper.StartAsync(CancellationToken.None);
 
         await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task StartAsync_DirWithRecentWrite_SurvivesTheSweep()
+    {
+        // Reproduces the incident: a deliberate restart during a live encode finds
+        // a working directory ffmpeg wrote to seconds ago. "No encode is in flight
+        // at boot" does not hold here, and the old unconditional sweep destroyed it.
+        Directory.CreateDirectory(_root);
+        string liveShow = Path.Combine(_root, "Frieren.Beyond.Journey's.End.(2023)");
+        Directory.CreateDirectory(liveShow);
+        await File.WriteAllTextAsync(Path.Combine(liveShow, "segment003.ts"), "live output");
+
+        TranscodeRootOrphanSweeper sweeper = BuildSweeper(
+            sweepAllChildren: true,
+            minOrphanAge: TimeSpan.FromMinutes(15)
+        );
+        await sweeper.StartAsync(CancellationToken.None);
+
+        Directory
+            .Exists(liveShow)
+            .Should()
+            .BeTrue("a directory written to inside the grace window is not an orphan");
+    }
+
+    [Fact]
+    public async Task StartAsync_DirWithOnlyStaleWrites_IsStillSwept()
+    {
+        Directory.CreateDirectory(_root);
+        string crashedShow = Path.Combine(_root, "Crashed.Show.(2020)");
+        Directory.CreateDirectory(crashedShow);
+        string staleFile = Path.Combine(crashedShow, "segment001.ts");
+        await File.WriteAllTextAsync(staleFile, "abandoned output");
+        File.SetLastWriteTimeUtc(staleFile, DateTime.UtcNow - TimeSpan.FromHours(1));
+
+        TranscodeRootOrphanSweeper sweeper = BuildSweeper(
+            sweepAllChildren: true,
+            minOrphanAge: TimeSpan.FromMinutes(15)
+        );
+        await sweeper.StartAsync(CancellationToken.None);
+
+        Directory
+            .Exists(crashedShow)
+            .Should()
+            .BeFalse("nothing in it was written within the grace window, so it is a real orphan");
     }
 }

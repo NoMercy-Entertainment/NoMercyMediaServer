@@ -97,7 +97,7 @@ public class ExtractionCommandBuilderTests : IDisposable
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, []);
 
         command.Should().NotBeNull();
-        List<string> args = command!.Arguments.ToList();
+        List<string> args = [.. command!.Arguments];
 
         CountOccurrences(args, "-map").Should().Be(2);
         args.Should().Contain("0:s:0");
@@ -129,7 +129,7 @@ public class ExtractionCommandBuilderTests : IDisposable
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
 
         command.Should().NotBeNull();
-        List<string> args = command!.Arguments.ToList();
+        List<string> args = [.. command!.Arguments];
 
         args.Should().Contain("-dump_attachment:5");
         args.Should().Contain("-dump_attachment:6");
@@ -152,9 +152,10 @@ public class ExtractionCommandBuilderTests : IDisposable
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
 
         command.Should().NotBeNull();
-        List<string> fontArgs = command!
-            .Arguments.Where(a => a.StartsWith("fonts/", StringComparison.Ordinal))
-            .ToList();
+        List<string> fontArgs =
+        [
+            .. command!.Arguments.Where(a => a.StartsWith("fonts/", StringComparison.Ordinal)),
+        ];
 
         fontArgs.Should().OnlyHaveUniqueItems();
         fontArgs.Should().HaveCount(2);
@@ -177,7 +178,7 @@ public class ExtractionCommandBuilderTests : IDisposable
         FfmpegCommand? command = BuildCommand(plan, mediaInfo, attachments);
 
         command.Should().NotBeNull();
-        List<string> args = command!.Arguments.ToList();
+        List<string> args = [.. command!.Arguments];
 
         args.Should().Contain("-dump_attachment:3");
         args.Should().Contain("-f");

@@ -68,7 +68,7 @@ public class AudioCodecDefinitionTests
         // depending on source layout, never 7.1.
         AudioEncoderInfo ac3 = AudioCodecDefinitions.GetEncoder(AudioCodecType.Ac3);
         ac3.Channels.Should().NotContain(8);
-        ac3.Channels.Should().BeEquivalentTo(new[] { 1, 2, 6 });
+        ac3.Channels.Should().BeEquivalentTo([1, 2, 6]);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class AudioCodecDefinitionTests
         // broken on its face — the MP3 container validation layer relies
         // on this assertion.
         AudioEncoderInfo mp3 = AudioCodecDefinitions.GetEncoder(AudioCodecType.Mp3);
-        mp3.Channels.Should().BeEquivalentTo(new[] { 1, 2 });
+        mp3.Channels.Should().BeEquivalentTo([1, 2]);
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ public class AudioCodecDefinitionTests
     public void Opus_SampleRate_48kHzOnly()
     {
         AudioEncoderInfo opus = AudioCodecDefinitions.GetEncoder(AudioCodecType.Opus);
-        opus.SampleRates.Should().BeEquivalentTo(new[] { 48000 });
+        opus.SampleRates.Should().BeEquivalentTo([48000]);
     }
 
     [Fact]
@@ -118,9 +118,7 @@ public class AudioCodecDefinitionTests
         foreach (AudioCodecType codec in dolbyDts)
         {
             AudioEncoderInfo encoder = AudioCodecDefinitions.GetEncoder(codec);
-            encoder
-                .SampleRates.Should()
-                .BeEquivalentTo(new[] { 48000 }, $"{codec} is 48 kHz only by spec");
+            encoder.SampleRates.Should().BeEquivalentTo([48000], $"{codec} is 48 kHz only by spec");
         }
     }
 

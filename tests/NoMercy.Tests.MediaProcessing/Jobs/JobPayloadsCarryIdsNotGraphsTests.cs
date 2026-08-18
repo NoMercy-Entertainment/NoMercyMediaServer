@@ -60,23 +60,25 @@ public class JobPayloadsCarryIdsNotGraphsTests
             Path.GetDirectoryName(typeof(JobPayloadsCarryIdsNotGraphsTests).Assembly.Location)
             ?? AppContext.BaseDirectory;
 
-        Assembly[] assemblies = Directory
-            .EnumerateFiles(probeDirectory, "NoMercy*.dll")
-            .Select(path =>
-            {
-                try
+        Assembly[] assemblies =
+        [
+            .. Directory
+                .EnumerateFiles(probeDirectory, "NoMercy*.dll")
+                .Select(path =>
                 {
-                    return Assembly.LoadFrom(path);
-                }
-                catch (Exception)
-                {
-                    // Native or otherwise unloadable neighbour — it holds no
-                    // managed job types by definition.
-                    return null;
-                }
-            })
-            .OfType<Assembly>()
-            .ToArray();
+                    try
+                    {
+                        return Assembly.LoadFrom(path);
+                    }
+                    catch (Exception)
+                    {
+                        // Native or otherwise unloadable neighbour — it holds no
+                        // managed job types by definition.
+                        return null;
+                    }
+                })
+                .OfType<Assembly>(),
+        ];
 
         return assemblies
             .SelectMany(assembly =>
@@ -187,7 +189,7 @@ public class JobPayloadsCarryIdsNotGraphsTests
     [Fact]
     public void NoQueuedJobSerializesAProviderResponseIntoItsPayload()
     {
-        List<Type> jobs = QueuedJobTypes().ToList();
+        List<Type> jobs = [.. QueuedJobTypes()];
 
         jobs.Should()
             .NotBeEmpty("the reflection walk must actually find the job types it claims to cover");
@@ -207,8 +209,8 @@ public class JobPayloadsCarryIdsNotGraphsTests
             }
         }
 
-        List<string> unexpected = offenders.Except(KnownRemaining).OrderBy(name => name).ToList();
-        List<string> nowFixed = KnownRemaining.Except(offenders).OrderBy(name => name).ToList();
+        List<string> unexpected = [.. offenders.Except(KnownRemaining).OrderBy(name => name)];
+        List<string> nowFixed = [.. KnownRemaining.Except(offenders).OrderBy(name => name)];
 
         unexpected
             .Should()

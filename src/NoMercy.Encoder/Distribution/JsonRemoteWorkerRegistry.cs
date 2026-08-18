@@ -98,7 +98,7 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
                 CpuCores: caps.CpuCores,
                 AvailableCpuThreads: budget.AvailableCpuThreads,
                 AvailableGpuSlots: budget.AvailableGpuSlots,
-                Gpus: caps.Gpus.ToList()
+                Gpus: [.. caps.Gpus]
             );
             FlushToDisk();
         }
@@ -162,8 +162,7 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
                 // Unix parses a rooted path like "/foo" into an absolute file:// URI,
                 // so guard the scheme explicitly to drop non-network entries
                 // consistently across platforms.
-                if (baseUri.Scheme != Uri.UriSchemeHttp
-                    && baseUri.Scheme != Uri.UriSchemeHttps)
+                if (baseUri.Scheme != Uri.UriSchemeHttp && baseUri.Scheme != Uri.UriSchemeHttps)
                     continue;
 
                 HttpClient http = _httpClientFactory.CreateClient("remote-worker");
@@ -214,7 +213,7 @@ public class JsonRemoteWorkerRegistry : IRemoteWorkerRegistry
             string dir = Path.GetDirectoryName(_filePath)!;
             _storage.CreateDirectory(dir);
 
-            List<PersistedWorkerEntry> entries = _persisted.Values.ToList();
+            List<PersistedWorkerEntry> entries = [.. _persisted.Values];
             string json = JsonSerializer.Serialize(entries, JsonOptions);
 
             // Atomic write: temp file in same directory + Move overwrites.

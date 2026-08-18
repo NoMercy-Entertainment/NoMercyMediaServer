@@ -109,7 +109,7 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         Size? maxDecodeSize = null
     )
     {
-        List<ColorPaletteArgument> list = new();
+        List<ColorPaletteArgument> list = [];
         foreach (MultiUriType item in items)
         {
             Image<Rgba32>? imageData = await client.Invoke(item.Url, download, maxDecodeSize);
@@ -146,7 +146,7 @@ public class BaseImageManager : IBaseImageManager, IDisposable
         Size? maxDecodeSize = null
     )
     {
-        List<ColorPaletteArgument> list = new();
+        List<ColorPaletteArgument> list = [];
         foreach (MultiStringType item in items)
         {
 #pragma warning disable CS8602 // Dereference of a possibly null reference.

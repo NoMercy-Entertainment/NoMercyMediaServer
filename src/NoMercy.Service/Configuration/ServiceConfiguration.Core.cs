@@ -308,7 +308,10 @@ public static partial class ServiceConfiguration
             sp.GetServices<IConnectivityStrategy>(),
             sp.GetRequiredService<IBootStatus>(),
             sp.GetRequiredService<IConnectivityStatus>(),
-            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability()
+            () => sp.GetRequiredService<IServerRegistrationService>().GetTunnelAvailability(),
+            delayOverride: null,
+            readinessDeferralWindow: null,
+            lifetime: sp.GetRequiredService<IHostApplicationLifetime>()
         ));
         services.AddHostedService(sp =>
             (ConnectivityManager)sp.GetRequiredService<IConnectivityManager>()
@@ -648,11 +651,6 @@ public static partial class ServiceConfiguration
         // Attaches and detaches a plugin's controllers as it is enabled and
         // disabled, so neither takes a restart.
         services.AddHostedService<PluginRouteSubscriber>();
-
-        // The same for a plugin's scheduled work. Start-up's one registration pass
-        // runs before a slow server has finished loading its plugins, and a plugin
-        // that misses it serves its pages perfectly and never ticks.
-        services.AddHostedService<PluginCronSubscriber>();
 
         services.AddVideoHubServices();
         services.AddMusicHubServices();

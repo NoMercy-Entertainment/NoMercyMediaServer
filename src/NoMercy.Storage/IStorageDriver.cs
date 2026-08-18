@@ -168,15 +168,26 @@ public interface IStorageDriver
     /// sides so the result is canonical. Replaces every storage-path
     /// <c>Path.Combine</c> in the codebase.
     /// </summary>
-    string CombinePath(string parent, string child)
+    string CombinePath(string parent, params string[] segments)
     {
         char sep = DirectorySeparator;
-        if (string.IsNullOrEmpty(child))
-            return parent;
-        if (string.IsNullOrEmpty(parent))
-            return child;
-        string trimmedParent = parent.TrimEnd('/', '\\');
-        string trimmedChild = child.TrimStart('/', '\\');
-        return $"{trimmedParent}{sep}{trimmedChild}";
+
+        // Normalize the parent first
+        string result = string.IsNullOrEmpty(parent) ? "" : parent.TrimEnd('/', '\\');
+
+        foreach (string seg in segments)
+        {
+            if (string.IsNullOrEmpty(seg))
+                continue;
+
+            string trimmed = seg.Trim('/', '\\');
+
+            if (string.IsNullOrEmpty(result))
+                result = trimmed;
+            else
+                result = $"{result}{sep}{trimmed}";
+        }
+
+        return result;
     }
 }

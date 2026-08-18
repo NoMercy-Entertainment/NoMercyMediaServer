@@ -507,52 +507,14 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
 
         List<MusicBrainzTrack> allTracks = release.Media.SelectMany(m => m.Tracks).ToList();
+        Dictionary<Guid, MediaFile> resolvedFileByTrackId = ResolveFilesForTracks(
+            allTracks,
+            audioFiles
+        );
 
-        for (int index = 0; index < allTracks.Count; index++)
+        foreach (MusicBrainzTrack musicBrainzTrack in allTracks)
         {
-            MusicBrainzTrack musicBrainzTrack = allTracks[index];
-
-            int idx = release
-                .Media.ToList()
-                .FindIndex(t => t.Tracks.All(w => w.Id == musicBrainzTrack.Id));
-
-            MediaFile? mediaFile = null;
-            AudioTagModel? audioTag = null;
-            foreach ((MediaFile file, AudioTagModel tag) in audioFiles)
-            {
-                if (
-                    (
-                        tag.MusicBrainz?.ReleaseTrackId != musicBrainzTrack.Id
-                        && tag.MusicBrainz?.ReleaseTrackId != musicBrainzTrack.Recording.Id
-                        && tag.MusicBrainz?.RecordingId != musicBrainzTrack.Id
-                        && tag.MusicBrainz?.RecordingId != musicBrainzTrack.Recording.Id
-                    )
-                    // A rip with no MusicBrainz tags fails every id comparison above, and
-                    // with || that alone skipped the track — so the title/duration/position
-                    // fallback underneath could never rescue a file and no untagged album
-                    // ever paired a track to encode.
-                    && (
-                        !musicBrainzTrack.Title.ContainsSanitized(
-                            tag.Tags?.Title ?? file.Parsed?.Title
-                        )
-                        && !(Math.Abs(tag.Duration - musicBrainzTrack.Duration) < 5)
-                        && musicBrainzTrack.Position != tag.Tags?.Track
-                        && musicBrainzTrack.Position != file.Parsed?.TrackNumber
-                    // The two comparisons that used to close this list — position
-                    // against index + 1, and against index + 1 over the medium —
-                    // read the track's own place in the loop and never looked at
-                    // the file, so every track matched whichever file came first
-                    // and one file was handed to all eleven encodes. A file pairs
-                    // on something about that file: its title, its length, or the
-                    // track number it carries.
-                    )
-                )
-                    continue;
-                mediaFile = file;
-                audioTag = tag;
-                break;
-            }
-            if (mediaFile is null || audioTag is null)
+            if (!resolvedFileByTrackId.TryGetValue(musicBrainzTrack.Id, out MediaFile? mediaFile))
                 continue;
 
             MusicBrainzRecordingAppends? musicBrainzRecording =
@@ -608,6 +570,82 @@ public class AudioImportJob : AbstractMusicFolderJob
         }
 
         await SendRefresh(["music", "album", release.Id]);
+    }
+
+    /// <summary>
+    /// Which physical file, if any, IS each release track.
+    /// <para>
+    /// Pass 1: an embedded MusicBrainz tag id is the one signal precise enough to
+    /// trust outright, so every track gets first refusal on it before any fuzzy
+    /// signal runs — otherwise a loosely-matching earlier track could claim the
+    /// file a later track actually had an exact id match for.
+    /// </para>
+    /// <para>
+    /// Pass 2: title / duration / position fallback for whatever pass 1 left
+    /// unresolved (a rip with no MusicBrainz tags fails every id comparison above),
+    /// restricted to files no earlier track already claimed. A file can satisfy this
+    /// loose OR for several different tracks — a soundtrack's short, similarly-timed
+    /// cues especially — and previously the same file was handed to every one of
+    /// them, producing a separate Track row under a different title for each, all
+    /// pointing at the one physical file.
+    /// </para>
+    /// </summary>
+    internal static Dictionary<Guid, MediaFile> ResolveFilesForTracks(
+        List<MusicBrainzTrack> allTracks,
+        List<(MediaFile MediaFile, AudioTagModel AudioTag)> audioFiles
+    )
+    {
+        HashSet<MediaFile> claimedFiles = [];
+        Dictionary<Guid, MediaFile> resolvedFileByTrackId = new();
+
+        foreach (MusicBrainzTrack musicBrainzTrack in allTracks)
+        {
+            foreach ((MediaFile file, AudioTagModel tag) in audioFiles)
+            {
+                if (claimedFiles.Contains(file))
+                    continue;
+
+                bool exactMatch =
+                    tag.MusicBrainz?.ReleaseTrackId == musicBrainzTrack.Id
+                    || tag.MusicBrainz?.ReleaseTrackId == musicBrainzTrack.Recording.Id
+                    || tag.MusicBrainz?.RecordingId == musicBrainzTrack.Id
+                    || tag.MusicBrainz?.RecordingId == musicBrainzTrack.Recording.Id;
+
+                if (!exactMatch)
+                    continue;
+
+                resolvedFileByTrackId[musicBrainzTrack.Id] = file;
+                claimedFiles.Add(file);
+                break;
+            }
+        }
+
+        foreach (MusicBrainzTrack musicBrainzTrack in allTracks)
+        {
+            if (resolvedFileByTrackId.ContainsKey(musicBrainzTrack.Id))
+                continue;
+
+            foreach ((MediaFile file, AudioTagModel tag) in audioFiles)
+            {
+                if (claimedFiles.Contains(file))
+                    continue;
+
+                bool fuzzyMatch =
+                    musicBrainzTrack.Title.ContainsSanitized(tag.Tags?.Title ?? file.Parsed?.Title)
+                    || Math.Abs(tag.Duration - musicBrainzTrack.Duration) < 5
+                    || musicBrainzTrack.Position == tag.Tags?.Track
+                    || musicBrainzTrack.Position == file.Parsed?.TrackNumber;
+
+                if (!fuzzyMatch)
+                    continue;
+
+                resolvedFileByTrackId[musicBrainzTrack.Id] = file;
+                claimedFiles.Add(file);
+                break;
+            }
+        }
+
+        return resolvedFileByTrackId;
     }
 
     private static async Task AddGenres(

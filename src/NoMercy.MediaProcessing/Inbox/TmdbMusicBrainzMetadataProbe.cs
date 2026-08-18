@@ -33,18 +33,20 @@ public sealed class TmdbMusicBrainzMetadataProbe : IInboxMetadataProbe
         if (response?.Results is null || response.Results.Count == 0)
             return [];
 
-        return response
-            .Results.Take(5)
-            .Select(m => new CandidateMatch
-            {
-                Provider = "tmdb",
-                ExternalId = m.Id.ToString(),
-                Title = m.Title,
-                Year = m.ReleaseDate?.Year,
-                PosterPath = m.PosterPath,
-                Score = NormalizePopularity(m.Popularity, m.VoteAverage),
-            })
-            .ToArray();
+        return
+        [
+            .. response
+                .Results.Take(5)
+                .Select(m => new CandidateMatch
+                {
+                    Provider = "tmdb",
+                    ExternalId = m.Id.ToString(),
+                    Title = m.Title,
+                    Year = m.ReleaseDate?.Year,
+                    PosterPath = m.PosterPath,
+                    Score = NormalizePopularity(m.Popularity, m.VoteAverage),
+                }),
+        ];
     }
 
     public async Task<CandidateMatch[]> SearchTvAsync(string title, int? year, CancellationToken ct)
@@ -55,18 +57,20 @@ public sealed class TmdbMusicBrainzMetadataProbe : IInboxMetadataProbe
         if (response?.Results is null || response.Results.Count == 0)
             return [];
 
-        return response
-            .Results.Take(5)
-            .Select(show => new CandidateMatch
-            {
-                Provider = "tmdb",
-                ExternalId = show.Id.ToString(),
-                Title = show.Name,
-                Year = show.FirstAirDate?.Year,
-                PosterPath = show.PosterPath,
-                Score = NormalizePopularity(show.Popularity, show.VoteAverage),
-            })
-            .ToArray();
+        return
+        [
+            .. response
+                .Results.Take(5)
+                .Select(show => new CandidateMatch
+                {
+                    Provider = "tmdb",
+                    ExternalId = show.Id.ToString(),
+                    Title = show.Name,
+                    Year = show.FirstAirDate?.Year,
+                    PosterPath = show.PosterPath,
+                    Score = NormalizePopularity(show.Popularity, show.VoteAverage),
+                }),
+        ];
     }
 
     public async Task<CandidateMatch?> LookupMusicReleaseAsync(Guid releaseId, CancellationToken ct)

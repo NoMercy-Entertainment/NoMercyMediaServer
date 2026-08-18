@@ -54,7 +54,7 @@ public class LogCategoriesTests
     public void Providers_HaveDistinctDarkColours()
     {
         string[] providerKeys =
-        {
+        [
             "youtube",
             "acoustid",
             "anidb",
@@ -68,7 +68,7 @@ public class LogCategoriesTests
             "musixmatch",
             "opensubs",
             "tvdb",
-        };
+        ];
 
         IEnumerable<string> colours = providerKeys.Select(k => LogCategories.Resolve(k).DarkHex);
         colours.Distinct().Should().HaveCount(providerKeys.Length);

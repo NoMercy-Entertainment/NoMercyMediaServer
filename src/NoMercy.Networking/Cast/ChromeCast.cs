@@ -75,7 +75,7 @@ public class ChromeCastService : IChromeCastService
         await _rediscoveryGate.WaitAsync();
         try
         {
-            _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
+            _chromecastReceivers = [.. await Locator.FindReceiversAsync()];
             _lastRediscoveryUtc = DateTime.UtcNow;
 
             foreach (ChromecastReceiver chromecast in _chromecastReceivers)
@@ -89,7 +89,7 @@ public class ChromeCastService : IChromeCastService
 
     public string[] GetChromeCasts()
     {
-        return _chromecastReceivers.Select(x => x.Name).ToArray();
+        return [.. _chromecastReceivers.Select(x => x.Name)];
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public class ChromeCastService : IChromeCastService
                 _logger.LogInformation("Chromecast cache miss for {Ip} — refreshing mDNS", ip);
                 try
                 {
-                    _chromecastReceivers = (await Locator.FindReceiversAsync()).ToList();
+                    _chromecastReceivers = [.. await Locator.FindReceiversAsync()];
                     foreach (ChromecastReceiver chromecast in _chromecastReceivers)
                         _logger.LogInformation(
                             "Discovered chromecast: {Name} @ {Host}",
@@ -964,7 +964,7 @@ public class ChromeCastService : IChromeCastService
     /// </summary>
     public async Task DisconnectAllAsync()
     {
-        string[] keys = ClientPool.Keys.ToArray();
+        string[] keys = [.. ClientPool.Keys];
         foreach (string key in keys)
         {
             if (!ClientPool.TryRemove(key, out ChromecastClient? client))

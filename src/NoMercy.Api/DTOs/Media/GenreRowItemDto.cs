@@ -106,7 +106,7 @@ public record GenreRowItemDto
         Tags = movie.KeywordMovies.Select(tag => tag.Keyword.Name);
 
         ColorPalette = movie.ColorPalette;
-        Videos = movie.Media.Select(media => new VideoDto(media)).ToArray();
+        Videos = [.. movie.Media.Select(media => new VideoDto(media))];
 
         ContentRatings = movie
             .CertificationMovies.Where(certificationMovie =>
@@ -148,7 +148,7 @@ public record GenreRowItemDto
         HaveItems = tv.Episodes.Count(episode => episode.VideoFiles.Any(v => v.Folder != null));
 
         ColorPalette = tv.ColorPalette;
-        Videos = tv.Media.Select(media => new VideoDto(media)).ToArray();
+        Videos = [.. tv.Media.Select(media => new VideoDto(media))];
 
         ContentRatings = tv
             .CertificationTvs.Where(certificationMovie =>

@@ -80,10 +80,12 @@ public class Track : ColorPaletteTimeStamps
             }
             catch (Exception)
             {
-                return _lyrics
-                    .Split("\\n")
-                    .Select(l => new Lyric { Text = Regex.Replace(l, "^\"|\"$", "") })
-                    .ToArray();
+                return
+                [
+                    .. _lyrics
+                        .Split("\\n")
+                        .Select(l => new Lyric { Text = Regex.Replace(l, "^\"|\"$", "") }),
+                ];
             }
         }
         set => _lyrics = JsonConvert.SerializeObject(value);
@@ -148,8 +150,16 @@ public class Track : ColorPaletteTimeStamps
 
         // Track may be orphaned during ingest (no AlbumTrack row yet) — fall
         // back to an empty album prefix instead of throwing.
-        return string.Concat([AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty, ": ", DiscNumber.ToString(), "-", TrackNumber.ToString().PadLeft(padding, '0'), " - ", Name, " NoMercy"]
-        );
+        return string.Concat([
+            AlbumTrack.FirstOrDefault()?.Album.Name ?? string.Empty,
+            ": ",
+            DiscNumber.ToString(),
+            "-",
+            TrackNumber.ToString().PadLeft(padding, '0'),
+            " - ",
+            Name,
+            " NoMercy",
+        ]);
     }
 
     public string CreateTitle()

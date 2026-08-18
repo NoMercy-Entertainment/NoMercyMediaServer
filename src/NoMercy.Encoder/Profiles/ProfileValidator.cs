@@ -36,14 +36,14 @@ public static class ProfileValidator
         "scodec",
     };
 
-    private static readonly HashSet<Container> AudioOnlyContainers = new()
-    {
+    private static readonly HashSet<Container> AudioOnlyContainers =
+    [
         Container.Mp3,
         Container.Aac,
         Container.Flac,
         Container.Ogg,
         Container.Mka,
-    };
+    ];
 
     public static ProfileValidationResult Validate(EncodingProfile profile)
     {
@@ -277,7 +277,11 @@ public static class ProfileValidator
 
         // Rule 5 — ExactMatchOnly + TitleOnly: warn, never embed
         if (
-            acq is { EmbedPolicy: SubtitleEmbedPolicy.ExactMatchOnly, Strategy: SubtitleMatchStrategy.TitleOnly }
+            acq is
+            {
+                EmbedPolicy: SubtitleEmbedPolicy.ExactMatchOnly,
+                Strategy: SubtitleMatchStrategy.TitleOnly
+            }
         )
             warnings.Add(
                 "TitleOnly + ExactMatchOnly will never embed; titles can't satisfy exact-match. Acquisition will run sidecar-only."

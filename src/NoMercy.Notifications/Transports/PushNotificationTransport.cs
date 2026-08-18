@@ -66,11 +66,13 @@ public sealed class PushNotificationTransport(
                 JsonSerializer.Serialize(notification.Payload)
             );
 
-            List<PushRelayEntry> entries = keys.Select(key => new PushRelayEntry(
+            List<PushRelayEntry> entries =
+            [
+                .. keys.Select(key => new PushRelayEntry(
                     key.Id,
                     Convert.ToBase64String(envelope.Seal(plaintext, key.P256dh, key.Auth))
-                ))
-                .ToList();
+                )),
+            ];
 
             await relayClient.DispatchAsync(
                 notification.Channel,
@@ -95,6 +97,6 @@ public sealed class PushNotificationTransport(
             ct
         );
 
-        return keys.Where(key => key.UserId == userId).ToArray();
+        return [.. keys.Where(key => key.UserId == userId)];
     }
 }

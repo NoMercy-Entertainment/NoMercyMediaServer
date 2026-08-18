@@ -121,7 +121,7 @@ internal sealed class InMemoryStorageDriver : IStorageDriver
             throw new FileNotFoundException($"no such object: {source}", source);
         if (!overwrite && _files.ContainsKey(to))
             throw new IOException($"object already exists: {destination}");
-        _files[to] = bytes.ToArray();
+        _files[to] = [.. bytes];
         _mtimes[to] = DateTime.UtcNow;
     }
 

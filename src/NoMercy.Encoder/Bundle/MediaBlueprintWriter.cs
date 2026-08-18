@@ -99,12 +99,13 @@ public class MediaBlueprintWriter(IMediaBlueprintBuilder builder) : IMediaBluepr
         BlueprintEncode encode
     )
     {
-        List<BlueprintEncode> merged = existing
-            .Where(e =>
+        List<BlueprintEncode> merged =
+        [
+            .. existing.Where(e =>
                 !string.Equals(e.PresetSlug, encode.PresetSlug, StringComparison.OrdinalIgnoreCase)
-            )
-            .ToList();
-        merged.Add(encode);
+            ),
+            encode,
+        ];
         return merged;
     }
 }

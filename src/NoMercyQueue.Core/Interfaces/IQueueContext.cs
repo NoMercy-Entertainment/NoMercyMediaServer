@@ -29,6 +29,7 @@ public interface IQueueContext : IDisposable
     /// available earlier in the same second.
     /// </summary>
     QueueJobModel? GetNextJob(string queueName, byte maxAttempts, long? currentJobId, DateTime now);
+
     QueueJobModel? FindJob(int id);
     bool JobExists(string payload);
     void UpdateJob(QueueJobModel job);

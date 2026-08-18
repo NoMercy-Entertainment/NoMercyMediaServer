@@ -16,7 +16,7 @@ namespace NoMercy.Encoder.Output;
 public class OutputStrategyFactory(IEnumerable<IOutputStrategy> strategies) : IOutputStrategyFactory
 {
     // Walk in reverse so later DI registrations (plugins) shadow built-ins.
-    private readonly IReadOnlyList<IOutputStrategy> _strategies = strategies.Reverse().ToList();
+    private readonly IReadOnlyList<IOutputStrategy> _strategies = [.. strategies.Reverse()];
 
     public IOutputStrategy Resolve(OutputFormat format)
     {

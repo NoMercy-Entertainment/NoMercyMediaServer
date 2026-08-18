@@ -85,17 +85,19 @@ public class PushKeyClient : IPushKeyClient
             );
         }
 
-        return envelope
-            .Subscriptions.Where(entry => entry.P256dh is not null && entry.Auth is not null)
-            .Select(entry => new PushSubscriptionKey(
-                entry.Id,
-                entry.P256dh!,
-                entry.Auth!,
-                entry.UserRef,
-                entry.UserId is not null && Guid.TryParse(entry.UserId, out Guid userId)
-                    ? userId
-                    : null
-            ))
-            .ToArray();
+        return
+        [
+            .. envelope
+                .Subscriptions.Where(entry => entry.P256dh is not null && entry.Auth is not null)
+                .Select(entry => new PushSubscriptionKey(
+                    entry.Id,
+                    entry.P256dh!,
+                    entry.Auth!,
+                    entry.UserRef,
+                    entry.UserId is not null && Guid.TryParse(entry.UserId, out Guid userId)
+                        ? userId
+                        : null
+                )),
+        ];
     }
 }

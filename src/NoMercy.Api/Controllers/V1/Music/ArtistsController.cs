@@ -202,17 +202,35 @@ public class ArtistsController : BaseController
         );
     }
 
+    /// <summary>
+    /// Nothing ever backfills an existing artist's FanArt images: they're only
+    /// ever fetched once, at onboarding, and this stub — despite being the one
+    /// endpoint named for exactly this — never actually did anything. An
+    /// artist onboarded before <c>FanArtImageManager.Add</c> started persisting
+    /// backgrounds/logos/banners (or one whose fetch failed then) stays without
+    /// them forever otherwise.
+    /// </summary>
     [HttpPost]
     [Route("{id:guid}/rescan")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(Guid id)
     {
+        Artist? artist = await _musicRepository.GetArtistByIdAsync(id);
+        if (artist is null)
+            return NotFoundResponse("Artist not found");
+
+        await FanArtImageManager.Add(id, true);
+
+        await _eventBus.PublishAsync(
+            new LibraryRefreshedEvent { QueryKey = ["music", "artist", id] }
+        );
+
         return Ok(
             new StatusResponseDto<string>
             {
                 Status = "ok",
-                Message = "Rescan started",
-                Args = [],
+                Message = "{0} images refreshed",
+                Args = [artist.Name],
             }
         );
     }

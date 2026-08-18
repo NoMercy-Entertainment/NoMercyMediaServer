@@ -278,7 +278,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
 
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string path = $"roundtrip-{Ulid.NewUlid()}.txt";
-        byte[] data = "hello webdav"u8.ToArray();
+        byte[] data = [.. "hello webdav"u8];
 
         await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
@@ -338,7 +338,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         string fileA = $"{dirName}/a.txt";
         string fileB = $"{dirName}/b.txt";
         string fileC = $"{dirName}/c.bin";
-        byte[] bytes = "x"u8.ToArray();
+        byte[] bytes = [.. "x"u8];
 
         await using (Stream w = driver.OpenWrite(fileA, overwrite: true))
             await w.WriteAsync(bytes);
@@ -366,7 +366,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string src = $"move-src-{Ulid.NewUlid()}.txt";
         string dst = $"move-dst-{Ulid.NewUlid()}.txt";
-        byte[] data = "move me"u8.ToArray();
+        byte[] data = [.. "move me"u8];
 
         await using (Stream w = driver.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
@@ -387,7 +387,7 @@ public class WebDavStorageDriverIntegrationTests(StorageBackendsFixture fix)
         WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string src = $"copy-src-{Ulid.NewUlid()}.txt";
         string dst = $"copy-dst-{Ulid.NewUlid()}.txt";
-        byte[] data = "copy me"u8.ToArray();
+        byte[] data = [.. "copy me"u8];
 
         await using (Stream w = driver.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
@@ -480,9 +480,10 @@ public class WebDavEnumerateContractTests
 
         WebDavStorageDriver driver = BuildDriver(mock);
 
-        List<string> entries = driver
-            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
-            .ToList();
+        List<string> entries =
+        [
+            .. driver.EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly),
+        ];
 
         entries.Should().Contain("folder/file.mp3");
         entries.Should().Contain("folder");
@@ -528,9 +529,10 @@ public class WebDavEnumerateContractTests
 
         WebDavStorageDriver driver = BuildDriver(mock);
 
-        List<string> entries = driver
-            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
-            .ToList();
+        List<string> entries =
+        [
+            .. driver.EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly),
+        ];
 
         string dirEntry = entries.Single(e => e == "music");
         bool exists = driver.DirectoryExists(dirEntry);

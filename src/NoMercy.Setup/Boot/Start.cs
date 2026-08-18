@@ -141,7 +141,7 @@ public class Start
 
         _allTasks = BuildStartupTasks();
 
-        List<StartupTask> phase1Tasks = _allTasks.Where(t => t.Phase == 1).ToList();
+        List<StartupTask> phase1Tasks = [.. _allTasks.Where(t => t.Phase == 1)];
         StartupTaskRunner runner = new(phase1Tasks);
 
         await runner.RunAll();
@@ -155,7 +155,7 @@ public class Start
         string? accessToken = null
     )
     {
-        List<StartupTask> remainingTasks = _allTasks.Where(t => t.Phase > 1).ToList();
+        List<StartupTask> remainingTasks = [.. _allTasks.Where(t => t.Phase > 1)];
         StartupTaskRunner runner = new(remainingTasks, _phase1Completed);
 
         await runner.RunAll();

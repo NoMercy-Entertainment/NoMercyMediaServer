@@ -43,30 +43,34 @@ public class FileListService(
     // season of every show. One folder is the whole show.
     public FileInfo[] GetVideoFilesInDirectory(string directoryPath)
     {
-        return storageDriver
-            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.AllDirectories)
-            .Where(p => !storageDriver.DirectoryExists(p))
-            .Where(p =>
-            {
-                string ext = Path.GetExtension(p);
-                return ext is ".mkv" or ".mp4" or ".avi" or ".webm" or ".flv";
-            })
-            .Select(p => new FileInfo(p))
-            .ToArray();
+        return
+        [
+            .. storageDriver
+                .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.AllDirectories)
+                .Where(p => !storageDriver.DirectoryExists(p))
+                .Where(p =>
+                {
+                    string ext = Path.GetExtension(p);
+                    return ext is ".mkv" or ".mp4" or ".avi" or ".webm" or ".flv";
+                })
+                .Select(p => new FileInfo(p)),
+        ];
     }
 
     public FileInfo[] GetAudioFilesInDirectory(string directoryPath)
     {
-        return storageDriver
-            .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.AllDirectories)
-            .Where(p => !storageDriver.DirectoryExists(p))
-            .Where(p =>
-            {
-                string ext = Path.GetExtension(p);
-                return ext is ".mp3" or ".flac" or ".wav" or ".m4a";
-            })
-            .Select(p => new FileInfo(p))
-            .ToArray();
+        return
+        [
+            .. storageDriver
+                .EnumerateFileSystemEntries(directoryPath, "*", SearchOption.AllDirectories)
+                .Where(p => !storageDriver.DirectoryExists(p))
+                .Where(p =>
+                {
+                    string ext = Path.GetExtension(p);
+                    return ext is ".mp3" or ".flac" or ".wav" or ".m4a";
+                })
+                .Select(p => new FileInfo(p)),
+        ];
     }
 
     private static readonly string[] VideoExtensions = [".mkv", ".mp4", ".avi", ".webm", ".flv"];
@@ -80,7 +84,7 @@ public class FileListService(
 
         ConcurrentBag<FileItem> fileList = [];
         if (videoFiles.Length == 0 && audioFiles.Length == 0)
-            return fileList.ToList();
+            return [.. fileList];
 
         if (audioFiles.Length > 0 && videoFiles.Length == 0)
         {
@@ -141,7 +145,7 @@ public class FileListService(
             }
         }
 
-        return fileList.OrderBy(file => file.Name).ToList();
+        return [.. fileList.OrderBy(file => file.Name)];
     }
 
     /// <summary>
@@ -162,30 +166,32 @@ public class FileListService(
             recursive: true
         );
 
-        StorageEntry[] videoEntries = allEntries
-            .Where(e =>
+        StorageEntry[] videoEntries =
+        [
+            .. allEntries.Where(e =>
                 !e.IsDirectory
                 && VideoExtensions.Contains(
                     Path.GetExtension(e.Path),
                     StringComparer.OrdinalIgnoreCase
                 )
-            )
-            .ToArray();
+            ),
+        ];
 
-        StorageEntry[] audioEntries = allEntries
-            .Where(e =>
+        StorageEntry[] audioEntries =
+        [
+            .. allEntries.Where(e =>
                 !e.IsDirectory
                 && AudioExtensions.Contains(
                     Path.GetExtension(e.Path),
                     StringComparer.OrdinalIgnoreCase
                 )
-            )
-            .ToArray();
+            ),
+        ];
 
         ConcurrentBag<FileItem> fileList = [];
 
         if (videoEntries.Length == 0 && audioEntries.Length == 0)
-            return fileList.ToList();
+            return [.. fileList];
 
         if (audioEntries.Length > 0 && videoEntries.Length == 0)
         {
@@ -242,7 +248,7 @@ public class FileListService(
             }
         }
 
-        return fileList.OrderBy(file => file.Name).ToList();
+        return [.. fileList.OrderBy(file => file.Name)];
     }
 
     private async Task<bool> ProcessVideoStorageEntry(

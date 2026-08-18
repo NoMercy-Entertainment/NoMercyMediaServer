@@ -145,7 +145,7 @@ public class PluginRepository : IPluginRepository
         List<PluginRepositoryInfo> repos;
         lock (_lock)
         {
-            repos = _repositories.Where(r => r.Enabled).ToList();
+            repos = [.. _repositories.Where(r => r.Enabled)];
         }
 
         List<PluginRepositoryEntry> allPlugins = [];
@@ -278,7 +278,7 @@ public class PluginRepository : IPluginRepository
     {
         Name = "NoMercy Plugins",
         Url =
-            "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-plugins/master/index.json",
+            "https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-plugins/master/index.json?v=1",
         // Someone running this server has already decided to trust what we
         // publish. Asking them to approve our own plugins one at a time teaches
         // them to click through the prompt that is supposed to mean something.
@@ -334,7 +334,7 @@ public class PluginRepository : IPluginRepository
             List<PluginRepositoryInfo> snapshot;
             lock (_lock)
             {
-                snapshot = _repositories.ToList();
+                snapshot = [.. _repositories];
             }
 
             string json = JsonSerializer.Serialize(snapshot, JsonOptions);

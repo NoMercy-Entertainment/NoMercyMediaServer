@@ -243,8 +243,8 @@ public class MusicPlayerState
     public MusicPlayerState CloneForBroadcast()
     {
         MusicPlayerState copy = (MusicPlayerState)MemberwiseClone();
-        copy.Playlist = Playlist.Take(BroadcastPlaylistWindow).Select(StripQueueEntry).ToList();
-        copy.Backlog = Backlog.TakeLast(BroadcastBacklogWindow).Select(StripQueueEntry).ToList();
+        copy.Playlist = [.. Playlist.Take(BroadcastPlaylistWindow).Select(StripQueueEntry)];
+        copy.Backlog = [.. Backlog.TakeLast(BroadcastBacklogWindow).Select(StripQueueEntry)];
         return copy;
     }
 
@@ -253,7 +253,7 @@ public class MusicPlayerState
         {
             Lyrics = null,
             ColorPalette = null,
-            Album = track.Album.Select(album => album.ForBroadcastQueueEntry()).ToList(),
-            Artist = track.Artist.Select(artist => artist.ForBroadcastQueueEntry()).ToList(),
+            Album = [.. track.Album.Select(album => album.ForBroadcastQueueEntry())],
+            Artist = [.. track.Artist.Select(artist => artist.ForBroadcastQueueEntry())],
         };
 }

@@ -19,7 +19,7 @@ namespace NoMercy.Database.Models.Queue;
 [PrimaryKey(nameof(Id))]
 // Matches the task-list sort (Priority desc, CreatedAt asc) so SQLite serves it
 // from the index instead of sorting the whole growing queue table.
-[Index(nameof(Priority), nameof(CreatedAt), IsDescending = new[] { true, false })]
+[Index(nameof(Priority), nameof(CreatedAt), IsDescending = [true, false])]
 // Every Dispatch dedups via QueueJobs.Any(j => j.Payload == x). Without an index
 // that is a full scan of the (large, history-retaining) queue table — seconds per
 // enqueue, which surfaced as multi-second endpoints that dispatch a job inline.
@@ -42,7 +42,7 @@ namespace NoMercy.Database.Models.Queue;
 [Index(
     nameof(Queue),
     [nameof(ReservedAt), nameof(Priority), nameof(CreatedAt), nameof(Id)],
-    IsDescending = new[] { false, false, true, false, false }
+    IsDescending = [false, false, true, false, false]
 )]
 public class QueueJob
 {

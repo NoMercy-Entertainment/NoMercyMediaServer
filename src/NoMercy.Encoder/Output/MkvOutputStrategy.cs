@@ -69,7 +69,7 @@ public class MkvOutputStrategy(IStorage storage) : IOutputStrategy
                 AudioBitrateKbps: primaryAudio?.Action == StreamAction.Transcode
                     ? primaryAudio.BitrateKbps
                     : null,
-                MapStreams: mapStreams.ToArray(),
+                MapStreams: [.. mapStreams],
                 ExtraFlags: extraFlags
             )
         );

@@ -189,22 +189,24 @@ public class DashMultiVariantTwoPassTests : IDisposable
                 Ladder: new()
                 {
                     Mode = LadderMode.Manual,
-                    Rungs = Enumerable
-                        .Range(0, variantCount)
-                        .Select(i => new LadderRung(
-                            Width: 1920 >> i,
-                            Height: 1080 >> i,
-                            Codec: VideoCodecType.H264,
-                            BitrateKbps: 4000 >> i,
-                            MaxBitrateKbps: 6000 >> i,
-                            BufferSizeKbps: 8000 >> i,
-                            Framerate: 24.0,
-                            Preset: "medium",
-                            CodecProfile: CodecProfile.High,
-                            BitDepth: 8,
-                            PixelFormat: "yuv420p"
-                        ))
-                        .ToArray(),
+                    Rungs =
+                    [
+                        .. Enumerable
+                            .Range(0, variantCount)
+                            .Select(i => new LadderRung(
+                                Width: 1920 >> i,
+                                Height: 1080 >> i,
+                                Codec: VideoCodecType.H264,
+                                BitrateKbps: 4000 >> i,
+                                MaxBitrateKbps: 6000 >> i,
+                                BufferSizeKbps: 8000 >> i,
+                                Framerate: 24.0,
+                                Preset: "medium",
+                                CodecProfile: CodecProfile.High,
+                                BitDepth: 8,
+                                PixelFormat: "yuv420p"
+                            )),
+                    ],
                 }
             )
         );

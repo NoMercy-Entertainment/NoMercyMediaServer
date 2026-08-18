@@ -154,10 +154,10 @@ public class TasksControllerQueuePlanTests : IClassFixture<NoMercyApiFactory>, I
         JsonElement array =
             root.ValueKind == JsonValueKind.Object ? root.GetProperty("data") : root;
 
-        JsonElement[] matches = array
-            .EnumerateArray()
-            .Where(row => row.GetProperty("id").GetInt32() == _rowId)
-            .ToArray();
+        JsonElement[] matches =
+        [
+            .. array.EnumerateArray().Where(row => row.GetProperty("id").GetInt32() == _rowId),
+        ];
 
         matches.Should().ContainSingle("the seeded row must appear exactly once");
         return matches[0];
@@ -182,12 +182,14 @@ public class TasksControllerQueuePlanTests : IClassFixture<NoMercyApiFactory>, I
         // The archive preset encodes at the source's own height and the
         // streaming one runs a ladder, so a merge that dropped either loses a
         // codec the encode is going to write.
-        string[] codecs = row.GetProperty("plan")
-            .GetProperty("video")
-            .EnumerateArray()
-            .Select(rendition => rendition.GetProperty("codec").GetString()!)
-            .Distinct()
-            .ToArray();
+        string[] codecs =
+        [
+            .. row.GetProperty("plan")
+                .GetProperty("video")
+                .EnumerateArray()
+                .Select(rendition => rendition.GetProperty("codec").GetString()!)
+                .Distinct(),
+        ];
 
         codecs.Should().Contain("H264", "the streaming preset's ladder is H.264");
         codecs.Should().Contain("H265", "the archive preset writes HEVC");

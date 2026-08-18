@@ -103,7 +103,9 @@ public sealed class DeviceHub : ConnectionHub
             .Devices.Where(d => d.OwnerUserId == user.Id && d.Fingerprint != null)
             .ToListAsync();
 
-        return rows.Select(d =>
+        return
+        [
+            .. rows.Select(d =>
             {
                 (bool Foreground, bool ScreenOn) s = _busRegistry.GetStatus(d.Id);
                 return new DeviceListItem
@@ -118,8 +120,8 @@ public sealed class DeviceHub : ConnectionHub
                     Foreground = s.Foreground,
                     ScreenOn = s.ScreenOn,
                 };
-            })
-            .ToList();
+            }),
+        ];
     }
 
     public async Task<WakeResult> WakeForMusic(string deviceId)
@@ -199,7 +201,7 @@ public sealed class DeviceHub : ConnectionHub
             n.Acknowledged = true;
         await ctx.SaveChangesAsync();
 
-        return notices.Select(n => new DeviceDropNoticeDto(n.DeviceName, n.Reason)).ToList();
+        return [.. notices.Select(n => new DeviceDropNoticeDto(n.DeviceName, n.Reason))];
     }
 
     public override async Task OnConnectedAsync()

@@ -364,7 +364,10 @@ public partial class FileLogic(
                     folder
                 );
                 if (match != null)
-                    path = folderStorage.CombinePath(rootFolder.Path, folderStorage.GetName(match));
+                    path = folderStorage.CombinePath(
+                        rootFolder.Path,
+                        folderStorage.GetName(match.Replace('\\', '/'))
+                    );
             }
 
             if (folderStorage.Exists(path))

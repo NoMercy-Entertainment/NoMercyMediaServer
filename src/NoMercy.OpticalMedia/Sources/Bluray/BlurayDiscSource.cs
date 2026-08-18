@@ -99,20 +99,22 @@ public sealed partial class BlurayDiscSource(
         // (movie disc) or the season-concat title (TV disc). Mark it so the
         // UI can highlight it as the default selection.
         TimeSpan maxDuration = playlists.Max(p => p.Duration);
-        DiscTitle[] titles = playlists
-            .Select(p => new DiscTitle(
-                Index: p.Index,
-                Name: $"Playlist {p.Index:D5}",
-                Duration: p.Duration,
-                VideoStreams: [],
-                AudioStreams: [],
-                Subtitles: [],
-                Chapters: [],
-                EstimatedSizeBytes: 0,
-                IsMainFeature: p.Duration == maxDuration
-            ))
-            .OrderByDescending(t => t.Duration)
-            .ToArray();
+        DiscTitle[] titles =
+        [
+            .. playlists
+                .Select(p => new DiscTitle(
+                    Index: p.Index,
+                    Name: $"Playlist {p.Index:D5}",
+                    Duration: p.Duration,
+                    VideoStreams: [],
+                    AudioStreams: [],
+                    Subtitles: [],
+                    Chapters: [],
+                    EstimatedSizeBytes: 0,
+                    IsMainFeature: p.Duration == maxDuration
+                ))
+                .OrderByDescending(t => t.Duration),
+        ];
 
         return new(
             Type: OpticalDiscType.BluRay,
@@ -273,7 +275,7 @@ public sealed partial class BlurayDiscSource(
 
     internal static List<(int Index, TimeSpan Duration)> ParsePlaylists(string stderr)
     {
-        List<(int, TimeSpan)> playlists = new();
+        List<(int, TimeSpan)> playlists = [];
         if (string.IsNullOrEmpty(stderr))
             return playlists;
 
@@ -297,7 +299,7 @@ public sealed partial class BlurayDiscSource(
             playlists.Add((idx, dur));
         }
 
-        return playlists.DistinctBy(p => p.Item1).ToList();
+        return [.. playlists.DistinctBy(p => p.Item1)];
     }
 
     private static bool TryParseHmsDuration(string value, out TimeSpan dur)

@@ -690,9 +690,10 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     private static void RemoveHostedServices(IServiceCollection services)
     {
-        List<ServiceDescriptor> hostedServices = services
-            .Where(d => d.ServiceType == typeof(IHostedService))
-            .ToList();
+        List<ServiceDescriptor> hostedServices =
+        [
+            .. services.Where(d => d.ServiceType == typeof(IHostedService)),
+        ];
 
         foreach (ServiceDescriptor descriptor in hostedServices)
             services.Remove(descriptor);
@@ -773,13 +774,12 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     private sealed class EmptyApiVersionDescriptionProvider : IApiVersionDescriptionProvider
     {
-        public IReadOnlyList<ApiVersionDescription> ApiVersionDescriptions { get; } =
-            Array.Empty<ApiVersionDescription>();
+        public IReadOnlyList<ApiVersionDescription> ApiVersionDescriptions { get; } = [];
     }
 
     private sealed class StubPluginManager : IPluginManager
     {
-        public IReadOnlyList<PluginInfo> GetInstalledPlugins() => Array.Empty<PluginInfo>();
+        public IReadOnlyList<PluginInfo> GetInstalledPlugins() => [];
 
         public Task InstallPluginAsync(string packageUrl, CancellationToken ct = default) =>
             Task.CompletedTask;
@@ -794,9 +794,9 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             Task.CompletedTask;
 
         public Task<IReadOnlyList<PluginLoadResult>> LoadAllAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<PluginLoadResult>>(Array.Empty<PluginLoadResult>());
+            Task.FromResult<IReadOnlyList<PluginLoadResult>>([]);
 
         public IEnumerable<T> GetPluginsOfType<T>()
-            where T : IPlugin => Array.Empty<T>();
+            where T : IPlugin => [];
     }
 }

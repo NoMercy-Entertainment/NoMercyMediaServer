@@ -563,7 +563,7 @@ public class BuildStartupTasksTests
     {
         List<StartupTask> tasks = Start.BuildStartupTasks();
 
-        List<StartupTask> phase1 = tasks.Where(t => t.Phase == 1).ToList();
+        List<StartupTask> phase1 = [.. tasks.Where(t => t.Phase == 1)];
 
         Assert.All(
             phase1,
@@ -576,7 +576,7 @@ public class BuildStartupTasksTests
     {
         List<StartupTask> tasks = Start.BuildStartupTasks();
 
-        List<string> names = tasks.Select(t => t.Name).ToList();
+        List<string> names = [.. tasks.Select(t => t.Name)];
         Assert.Equal(names.Count, names.Distinct().Count());
     }
 
@@ -584,7 +584,7 @@ public class BuildStartupTasksTests
     public void BuildStartupTasks_AllDependenciesExist()
     {
         List<StartupTask> tasks = Start.BuildStartupTasks();
-        HashSet<string> taskNames = tasks.Select(t => t.Name).ToHashSet();
+        HashSet<string> taskNames = [.. tasks.Select(t => t.Name)];
 
         foreach (StartupTask task in tasks)
         {

@@ -14,7 +14,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Media;
 using NoMercy.Api.DTOs.Media.Components;
@@ -24,8 +23,6 @@ using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Plugins.Abstractions;
-using NoMercy.Plugins.Capabilities;
 
 namespace NoMercy.Api.Controllers.V1.Media;
 
@@ -36,128 +33,9 @@ namespace NoMercy.Api.Controllers.V1.Media;
 [Route("api/v{version:apiVersion}/libraries")]
 public class LibrariesController(
     ILibraryRepository libraryRepository,
-    IDbContextFactory<MediaContext> contextFactory,
-    IPluginManager pluginManager
+    IDbContextFactory<MediaContext> contextFactory
 ) : BaseController
 {
-    /// <summary>
-    /// Every way into the library section, in the order they are drawn.
-    ///
-    /// <para>
-    /// Which of these exist is not a client's question to answer. A viewer
-    /// granted only a music library has no people, specials or genres to browse,
-    /// and a plugin's page exists only while that plugin is enabled — both are
-    /// facts the server holds. The clients each carried their own copy of this
-    /// list and drifted, and a plugin that mounted into the library section had
-    /// nowhere to appear at all.
-    /// </para>
-    /// </summary>
-    [HttpGet]
-    [Route("navigation")]
-    public async Task<IActionResult> Navigation(CancellationToken ct = default)
-    {
-        Guid userId = User.UserId();
-
-        List<Library> libraries = await libraryRepository.GetLibraries(userId, ct);
-        List<LibraryNavigationEntryDto> entries = [];
-
-        foreach (
-            Library library in libraries
-                .Where(library => library.Type != "music")
-                .OrderBy(library => library.Order)
-        )
-        {
-            entries.Add(
-                new()
-                {
-                    Id = library.Id.ToString(),
-                    Label = library.Title,
-                    Icon = IconForLibraryType(library.Type),
-                    Link = $"/libraries/{library.Id}",
-                    Origin = LibraryNavigationOrigin.Library,
-                }
-            );
-        }
-
-        bool hasVideo = libraries.Any(library => library.Type != "music");
-        bool hasMovies = libraries.Any(library => library.Type == "movie");
-
-        if (hasMovies)
-        {
-            entries.Add(
-                Page("collections", "library.base.collections", "collection1", "/collection")
-            );
-        }
-
-        if (hasVideo)
-        {
-            entries.Add(Page("specials", "library.base.specials", "sparkles", "/specials"));
-            entries.Add(Page("genres", "library.base.genres", "witchHat", "/genres"));
-            entries.Add(Page("people", "library.base.people", "user", "/person"));
-            entries.Add(Page("favorites", "library.base.favorites", "heart", "/favorites"));
-            entries.Add(Page("lists", "library.base.my_lists", "bulletList", "/lists"));
-        }
-
-        entries.AddRange(PluginEntries(PluginKind.Library, PluginKind.Video));
-
-        return Ok(new DataResponseDto<List<LibraryNavigationEntryDto>> { Data = entries });
-    }
-
-    private static LibraryNavigationEntryDto Page(
-        string id,
-        string label,
-        string icon,
-        string link
-    ) =>
-        new()
-        {
-            Id = id,
-            Label = label,
-            Icon = icon,
-            Link = link,
-            Origin = LibraryNavigationOrigin.Page,
-        };
-
-    /// <summary>
-    /// A library the app has no glyph for is still a library: it gets the folder
-    /// rather than nothing, which is what an unmapped type used to draw.
-    /// </summary>
-    private static string IconForLibraryType(string? type) =>
-        type switch
-        {
-            "anime" or "tv" => "monitor",
-            "movie" => "movieClap",
-            "music" => "noteDouble",
-            _ => "folder",
-        };
-
-    /// <summary>
-    /// The pages plugins mount into this section. A plugin awaiting consent or
-    /// disabled has no instance, so it contributes nothing — the entry appears
-    /// the moment it is enabled and disappears again when it is not.
-    /// </summary>
-    private List<LibraryNavigationEntryDto> PluginEntries(params string[] kinds) =>
-        pluginManager
-            .GetInstalledPlugins()
-            .SelectMany(info =>
-                (pluginManager.GetPluginInstance(info.Id) as IUiPlugin)
-                    ?.NavEntries.Where(entry => kinds.Contains(entry.Section))
-                    .Select(entry => new LibraryNavigationEntryDto
-                    {
-                        Id = $"plugin-{info.Id}-{entry.Route.Trim('/')}".TrimEnd('-'),
-                        Label = entry.Label,
-                        Icon = entry.Icon ?? string.Empty,
-                        Link =
-                            PluginRoutes.PrefixFor(entry.Section, info.Id).TrimEnd('/')
-                            + (entry.Route == "/" ? string.Empty : entry.Route),
-                        Origin = LibraryNavigationOrigin.Plugin,
-                        PluginId = info.Id,
-                    })
-                ?? []
-            )
-            .OrderBy(entry => entry.Label)
-            .ToList();
-
     [HttpGet]
     [ResponseCache(Duration = 300)]
     public async Task<IActionResult> Libraries(CancellationToken ct = default)
@@ -388,10 +266,11 @@ public class LibrariesController(
                 {
                     Title = library.Title,
                     MoreLink = moreLink,
-                    Items = libraryMovies
-                        .Select(m => new NmCardDto(m, country))
-                        .Concat(libraryShows.Select(t => new NmCardDto(t, country)))
-                        .ToList(),
+                    Items =
+                    [
+                        .. libraryMovies.Select(m => new NmCardDto(m, country)),
+                        .. libraryShows.Select(t => new NmCardDto(t, country)),
+                    ],
                 }
             );
         }

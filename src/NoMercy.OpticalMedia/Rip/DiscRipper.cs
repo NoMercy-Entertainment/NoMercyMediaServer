@@ -94,7 +94,7 @@ public partial class DiscRipper(
                     result.Error
                 );
         }
-        return results.ToArray();
+        return [.. results];
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public partial class DiscRipper(
                 );
         }
 
-        return results.ToArray();
+        return [.. results];
     }
 
     /// <summary>
@@ -184,7 +184,7 @@ public partial class DiscRipper(
         Stopwatch stopwatch = Stopwatch.StartNew();
         ProcessResult result = await processRunner.RunAsync(
             options.FfmpegPath,
-            args.ToArray(),
+            [.. args],
             workingDirectory: outputDirectory,
             cancellationToken: ct
         );
@@ -332,14 +332,14 @@ public partial class DiscRipper(
         ProcessResult result = envOverrides is { Count: > 0 }
             ? await processRunner.RunAsync(
                 options.FfmpegPath,
-                args.ToArray(),
+                [.. args],
                 envOverrides,
                 workingDirectory: outputDirectory,
                 cancellationToken: ct
             )
             : await processRunner.RunAsync(
                 options.FfmpegPath,
-                args.ToArray(),
+                [.. args],
                 workingDirectory: outputDirectory,
                 cancellationToken: ct
             );

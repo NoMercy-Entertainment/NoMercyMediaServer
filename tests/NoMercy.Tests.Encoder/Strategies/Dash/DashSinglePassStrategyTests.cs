@@ -211,10 +211,10 @@ public class DashSinglePassStrategyTests
             Thumbnails: null
         );
 
-        DecomposedTask[] videoTasks = strategy
-            .Decompose(plan, "gtag")
-            .Where(t => t.Kind == EncodeTaskKind.Video)
-            .ToArray();
+        DecomposedTask[] videoTasks =
+        [
+            .. strategy.Decompose(plan, "gtag").Where(t => t.Kind == EncodeTaskKind.Video),
+        ];
 
         videoTasks.Should().HaveCount(3);
         videoTasks[0].TaskId.Should().Be("gtag-video-0");
@@ -344,10 +344,10 @@ public class DashSinglePassStrategyTests
             Thumbnails: null
         );
 
-        DecomposedTask[] subs = strategy
-            .Decompose(plan, "g")
-            .Where(t => t.Kind == EncodeTaskKind.Subtitle)
-            .ToArray();
+        DecomposedTask[] subs =
+        [
+            .. strategy.Decompose(plan, "g").Where(t => t.Kind == EncodeTaskKind.Subtitle),
+        ];
 
         subs.Should().HaveCount(3);
         subs.Select(s => s.TaskId).Should().Equal("g-sub-0", "g-sub-1", "g-sub-2");
@@ -381,10 +381,10 @@ public class DashSinglePassStrategyTests
             GenerateChapterThumbs: true
         );
 
-        DecomposedTask[] chapters = strategy
-            .Decompose(plan, "g")
-            .Where(t => t.Kind == EncodeTaskKind.Chapters)
-            .ToArray();
+        DecomposedTask[] chapters =
+        [
+            .. strategy.Decompose(plan, "g").Where(t => t.Kind == EncodeTaskKind.Chapters),
+        ];
 
         chapters.Should().HaveCount(3);
         chapters[0].TaskId.Should().Be("g-chapter-0");
@@ -413,10 +413,10 @@ public class DashSinglePassStrategyTests
             GenerateChapterThumbs: false
         );
 
-        DecomposedTask[] chapters = strategy
-            .Decompose(plan, "g")
-            .Where(t => t.Kind == EncodeTaskKind.Chapters)
-            .ToArray();
+        DecomposedTask[] chapters =
+        [
+            .. strategy.Decompose(plan, "g").Where(t => t.Kind == EncodeTaskKind.Chapters),
+        ];
 
         chapters.Should().BeEmpty();
     }
@@ -441,10 +441,10 @@ public class DashSinglePassStrategyTests
             GenerateChapterThumbs: true
         );
 
-        DecomposedTask[] chapters = strategy
-            .Decompose(plan, "g")
-            .Where(t => t.Kind == EncodeTaskKind.Chapters)
-            .ToArray();
+        DecomposedTask[] chapters =
+        [
+            .. strategy.Decompose(plan, "g").Where(t => t.Kind == EncodeTaskKind.Chapters),
+        ];
 
         chapters.Should().BeEmpty();
     }
@@ -468,10 +468,10 @@ public class DashSinglePassStrategyTests
             GenerateChapterThumbs: true
         );
 
-        DecomposedTask[] chapters = strategy
-            .Decompose(plan, "g")
-            .Where(t => t.Kind == EncodeTaskKind.Chapters)
-            .ToArray();
+        DecomposedTask[] chapters =
+        [
+            .. strategy.Decompose(plan, "g").Where(t => t.Kind == EncodeTaskKind.Chapters),
+        ];
 
         chapters.Should().BeEmpty();
     }

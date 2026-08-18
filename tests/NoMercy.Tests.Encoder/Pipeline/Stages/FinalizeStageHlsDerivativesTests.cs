@@ -117,14 +117,16 @@ public class FinalizeStageHlsDerivativesTests
 
     private static EncodingContext ContextWithChapters(int chapterCount = 2)
     {
-        ChapterInfo[] chapters = Enumerable
-            .Range(0, chapterCount)
-            .Select(i => new ChapterInfo(
-                TimeSpan.FromMinutes(i),
-                TimeSpan.FromMinutes(i + 1),
-                $"Chapter {i + 1}"
-            ))
-            .ToArray();
+        ChapterInfo[] chapters =
+        [
+            .. Enumerable
+                .Range(0, chapterCount)
+                .Select(i => new ChapterInfo(
+                    TimeSpan.FromMinutes(i),
+                    TimeSpan.FromMinutes(i + 1),
+                    $"Chapter {i + 1}"
+                )),
+        ];
 
         return EncodingContext.Create() with
         {

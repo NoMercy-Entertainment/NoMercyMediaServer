@@ -48,16 +48,16 @@ public class DiscRipJobCdBranchTests
         );
 
     private static DiscRipResult[] SuccessResults(int[] trackIndices) =>
-        trackIndices
-            .Select(i => new DiscRipResult(
+        [
+            .. trackIndices.Select(i => new DiscRipResult(
                 TitleIndex: i,
                 OutputPath: Path.Combine(Path.GetTempPath(), $"{i:D2} - Track {i:D2}.flac"),
                 Success: true,
                 Duration: TimeSpan.FromMinutes(3),
                 OutputSizeBytes: 50_000_000,
                 Error: null
-            ))
-            .ToArray();
+            )),
+        ];
 
     private static DiscRipJob MakeJob(
         RipRequest request,
@@ -75,10 +75,7 @@ public class DiscRipJobCdBranchTests
         );
 
         job.DiscRipper = ripper;
-        job.IdentificationService = new(
-            [],
-            NullLogger<DiscIdentificationService>.Instance
-        );
+        job.IdentificationService = new([], NullLogger<DiscIdentificationService>.Instance);
         job.StorageFactory = Mock.Of<IStorageFactory>();
         job.StorageDriver = Mock.Of<IStorageDriver>();
         job.DriveLockRegistry = new();
@@ -278,12 +275,7 @@ public class DiscRipJobCdBranchTests
             DrivePath: "bluray:/dev/sr0",
             SelectedTitleIndices: [1],
             MetadataId: null,
-            Custom: new(
-                Title: "The Matrix",
-                Year: 1999,
-                Type: MediaType.Movie,
-                PosterUrl: null
-            ),
+            Custom: new(Title: "The Matrix", Year: 1999, Type: MediaType.Movie, PosterUrl: null),
             LibraryId: Ulid.NewUlid(),
             FolderId: Ulid.NewUlid(),
             EncodingProfileId: null,

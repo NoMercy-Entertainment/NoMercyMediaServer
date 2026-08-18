@@ -25,5 +25,5 @@ public class Resource
     public Memory Memory { get; set; } = new();
 
     [JsonProperty("gpu")]
-    public List<Gpu> Gpu => _gpu.Values.ToList();
+    public List<Gpu> Gpu => [.. _gpu.Values];
 }

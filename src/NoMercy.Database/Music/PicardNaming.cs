@@ -46,11 +46,15 @@ public static partial class PicardNaming
     private const int TrackPadMinLength = 2;
 
     /// <summary>
-    /// Runs of <c>? * : \ _</c> collapse to a single underscore. Applied to the joined
-    /// path exactly as the script's closing <c>$rreplace</c> does, so a title carrying a
-    /// colon lands identically to the files already on disk.
+    /// Runs of <c>? * : \ _</c> collapse to a single underscore, matching the script's
+    /// closing <c>$rreplace</c> exactly so a title carrying a colon lands identically to
+    /// the files already on disk. <c>" &lt; &gt; |</c> are folded alongside them — not part
+    /// of the original script, but reserved on Windows regardless, and left unfolded here
+    /// a title carrying one (or the curly-quote fold in <see cref="FoldUnsafeUnicode"/>
+    /// producing a straight <c>"</c>) fails CreateDirectory outright rather than just
+    /// looking different from Picard's own output.
     /// </summary>
-    [GeneratedRegex(@"[?*:\\_]+")]
+    [GeneratedRegex("[?*:\\\\_\"<>|]+")]
     private static partial Regex UnsafeRun();
 
     [GeneratedRegex(@"^(the|a|an)\s+", RegexOptions.IgnoreCase)]

@@ -157,4 +157,78 @@ public class LibraryRescanDispatchTests
             Times.Never
         );
     }
+
+    [Fact]
+    public async Task RepairTrackMatches_UnknownLibrary_ReturnsNotFound()
+    {
+        Mock<ILibraryRepository> libraryRepository = new();
+        libraryRepository
+            .Setup(repository => repository.GetLibraryByIdAsync(It.IsAny<Ulid>()))
+            .ReturnsAsync((Library?)null);
+
+        LibrariesController controller = new(
+            libraryRepository.Object,
+            Mock.Of<IEncodingPresetRepository>(),
+            Mock.Of<IFolderRepository>(),
+            Mock.Of<IJobDispatcher>(),
+            Mock.Of<ILanguageRepository>(),
+            Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<NoMercy.Database.MediaContext>>(),
+            Mock.Of<NoMercy.Data.Activity.IActivityLogger>(),
+            Mock.Of<NoMercy.Storage.IStorageDriver>(),
+            Mock.Of<NoMercy.Storage.IStorageFactory>(),
+            Mock.Of<NoMercy.MediaProcessing.Libraries.IDefaultEncodingPresetLinker>(),
+            Mock.Of<NoMercy.Encoder.Analysis.IMediaAnalyzer>(),
+            Mock.Of<NoMercy.MediaProcessing.Files.Parsing.IFilenameParserPipeline>(),
+            Mock.Of<NoMercy.MediaProcessing.Shows.IAnimeClassificationAuditService>(),
+            Mock.Of<Microsoft.Extensions.Logging.ILogger<LibrariesController>>()
+        );
+
+        IActionResult result = await controller.RepairTrackMatches(Ulid.NewUlid());
+
+        ObjectResult objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(404);
+    }
+
+    /// <summary>
+    /// The matcher bug this endpoint repairs is specific to the audio import path
+    /// (<c>AudioImportJob</c>) — a video library was never routed through it, so
+    /// running the repair there could only ever be a mistake, not a real request.
+    /// </summary>
+    [Fact]
+    public async Task RepairTrackMatches_NonMusicLibrary_ReturnsBadRequest()
+    {
+        Ulid libraryId = Ulid.NewUlid();
+        Library library = new()
+        {
+            Id = libraryId,
+            Title = "Films",
+            Type = MediaTypes.MovieMediaType,
+        };
+        Mock<ILibraryRepository> libraryRepository = new();
+        libraryRepository
+            .Setup(repository => repository.GetLibraryByIdAsync(libraryId))
+            .ReturnsAsync(library);
+
+        LibrariesController controller = new(
+            libraryRepository.Object,
+            Mock.Of<IEncodingPresetRepository>(),
+            Mock.Of<IFolderRepository>(),
+            Mock.Of<IJobDispatcher>(),
+            Mock.Of<ILanguageRepository>(),
+            Mock.Of<Microsoft.EntityFrameworkCore.IDbContextFactory<NoMercy.Database.MediaContext>>(),
+            Mock.Of<NoMercy.Data.Activity.IActivityLogger>(),
+            Mock.Of<NoMercy.Storage.IStorageDriver>(),
+            Mock.Of<NoMercy.Storage.IStorageFactory>(),
+            Mock.Of<NoMercy.MediaProcessing.Libraries.IDefaultEncodingPresetLinker>(),
+            Mock.Of<NoMercy.Encoder.Analysis.IMediaAnalyzer>(),
+            Mock.Of<NoMercy.MediaProcessing.Files.Parsing.IFilenameParserPipeline>(),
+            Mock.Of<NoMercy.MediaProcessing.Shows.IAnimeClassificationAuditService>(),
+            Mock.Of<Microsoft.Extensions.Logging.ILogger<LibrariesController>>()
+        );
+
+        IActionResult result = await controller.RepairTrackMatches(libraryId);
+
+        ObjectResult objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(400);
+    }
 }

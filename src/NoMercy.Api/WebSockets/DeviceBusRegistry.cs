@@ -100,7 +100,9 @@ public sealed class DeviceBusRegistry(
             .Devices.Where(d => d.OwnerUserId == ownerUserId && d.Fingerprint != null)
             .ToListAsync();
 
-        List<DeviceListItem> items = rows.Select(d =>
+        List<DeviceListItem> items =
+        [
+            .. rows.Select(d =>
             {
                 (bool Foreground, bool ScreenOn) s = GetStatus(d.Id);
                 return new DeviceListItem
@@ -115,8 +117,8 @@ public sealed class DeviceBusRegistry(
                     Foreground = s.Foreground,
                     ScreenOn = s.ScreenOn,
                 };
-            })
-            .ToList();
+            }),
+        ];
 
         await hubContext.Clients.User(ownerUserId.ToString()).SendAsync("DeviceListChanged", items);
     }

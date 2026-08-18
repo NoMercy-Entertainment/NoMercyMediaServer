@@ -37,7 +37,6 @@ public class SqliteQueueContext : IQueueContext
                 .Where(j => currentJobId == null)
                 .Where(j => j.Queue == name)
                 .OrderByDescending(j => j.Priority)
-                .ThenBy(j => j.CreatedAt)
                 .ThenBy(j => j.Id)
                 .FirstOrDefault()
     );
@@ -108,7 +107,6 @@ public class SqliteQueueContext : IQueueContext
         {
             QueueJobEntity? anyJob = _context
                 .QueueJobs.OrderByDescending(j => j.Priority)
-                .ThenBy(j => j.CreatedAt)
                 .ThenBy(j => j.Id)
                 .FirstOrDefault();
             return anyJob == null ? null : ToModel(anyJob);

@@ -118,8 +118,7 @@ public sealed class RemoteStoragePathGuardTests
     public async Task NFS_WriteAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildNfsStorage();
-        Func<Task> act = () =>
-            storage.WriteAsync(path, new byte[] { 0x01 }, CancellationToken.None);
+        Func<Task> act = () => storage.WriteAsync(path, [0x01], CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
                 $"NFS RemoteStorage must reject absolute path form: {form}"
@@ -147,8 +146,7 @@ public sealed class RemoteStoragePathGuardTests
     public async Task S3_WriteAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildS3Storage();
-        Func<Task> act = () =>
-            storage.WriteAsync(path, new byte[] { 0x01 }, CancellationToken.None);
+        Func<Task> act = () => storage.WriteAsync(path, [0x01], CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
                 $"S3 RemoteStorage must reject absolute path form: {form}"
@@ -176,8 +174,7 @@ public sealed class RemoteStoragePathGuardTests
     public async Task WebDav_WriteAsync_rejects_absolute_path(string path, string form)
     {
         RemoteStorage storage = BuildWebDavStorage();
-        Func<Task> act = () =>
-            storage.WriteAsync(path, new byte[] { 0x01 }, CancellationToken.None);
+        Func<Task> act = () => storage.WriteAsync(path, [0x01], CancellationToken.None);
         await act.Should()
             .ThrowAsync<StoragePathNotAllowedException>(
                 $"WebDAV RemoteStorage must reject absolute path form: {form}"

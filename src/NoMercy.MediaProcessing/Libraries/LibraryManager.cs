@@ -231,9 +231,10 @@ public class LibraryManager(
         string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
         ConcurrentBag<MediaFolderExtend> rootFolders = await mediaScan.Process(scanRoot, depth);
 
-        List<MediaFolderExtend> newFolders = rootFolders
-            .Where(f => !existingFolders.Contains(f.Name.NormalizeForComparison()))
-            .ToList();
+        List<MediaFolderExtend> newFolders =
+        [
+            .. rootFolders.Where(f => !existingFolders.Contains(f.Name.NormalizeForComparison())),
+        ];
 
         IEventBus? bus =
             eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
@@ -285,15 +286,17 @@ public class LibraryManager(
         // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
         // driver only for remote backends, whose driver embeds its own export.
         string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
-        List<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
-        )
-            .SelectMany(r => r.SubFolders ?? [])
-            .ToList();
+        List<MediaFolderExtend> rootFolders =
+        [
+            .. (await mediaScan.DisableRegexFilter().Process(scanRoot, depth)).SelectMany(r =>
+                r.SubFolders ?? []
+            ),
+        ];
 
-        List<MediaFolderExtend> newFolders = rootFolders
-            .Where(f => !existingFolders.Contains(f.Name.NormalizeForComparison()))
-            .ToList();
+        List<MediaFolderExtend> newFolders =
+        [
+            .. rootFolders.Where(f => !existingFolders.Contains(f.Name.NormalizeForComparison())),
+        ];
 
         IEventBus? bus =
             eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);
@@ -386,11 +389,12 @@ public class LibraryManager(
         // that does not exist -> "0 subfolders". ResolveScanRoot falls back to the
         // driver only for remote backends, whose driver embeds its own export.
         string scanRoot = ResolveScanRoot(folderStorage, folder.Path);
-        List<MediaFolderExtend> rootFolders = (
-            await mediaScan.DisableRegexFilter().Process(scanRoot, depth)
-        )
-            .SelectMany(r => r.SubFolders ?? [])
-            .ToList();
+        List<MediaFolderExtend> rootFolders =
+        [
+            .. (await mediaScan.DisableRegexFilter().Process(scanRoot, depth)).SelectMany(r =>
+                r.SubFolders ?? []
+            ),
+        ];
 
         IEventBus? bus =
             eventBus ?? (EventBusProvider.IsConfigured ? EventBusProvider.Current : null);

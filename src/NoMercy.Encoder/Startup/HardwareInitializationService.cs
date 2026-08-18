@@ -207,7 +207,7 @@ public class HardwareInitializationService(
                     driverResult.PreviousHash,
                     driverResult.CurrentHash
                 );
-                benchmarkJobTracker.Start(Array.Empty<VideoCodecType>(), Array.Empty<int>());
+                benchmarkJobTracker.Start([], []);
             }
             else
             {
@@ -247,11 +247,12 @@ public class HardwareInitializationService(
     {
         try
         {
-            IReadOnlyList<string> candidates = ffmpegCapabilities
-                .AvailableEncoders.Where(encoderName =>
+            IReadOnlyList<string> candidates =
+            [
+                .. ffmpegCapabilities.AvailableEncoders.Where(encoderName =>
                     GpuEncoderTokens.VendorForEncoderName(encoderName) is not null
-                )
-                .ToList();
+                ),
+            ];
 
             if (candidates.Count == 0)
                 return new HashSet<string>();

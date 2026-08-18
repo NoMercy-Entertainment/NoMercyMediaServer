@@ -30,7 +30,7 @@ public class InMemoryIpBanRepository : IIpBanRepository
 
     public Task<int> PriorBanCountAsync(string address, CancellationToken ct)
     {
-        List<IpBan> matching = Rows.Where(ban => ban.Address == address).ToList();
+        List<IpBan> matching = [.. Rows.Where(ban => ban.Address == address)];
 
         return Task.FromResult(matching.Count == 0 ? 0 : matching.Max(ban => ban.BanNumber));
     }

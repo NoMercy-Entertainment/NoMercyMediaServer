@@ -88,7 +88,12 @@ public static partial class StringExtensions
     [GeneratedRegex(@"[0-9]+")]
     public static partial Regex MatchNumbers();
 
-    [GeneratedRegex(@"[\.\s\-_]S[0-9]{1,2}(?:E[0-9]+)?(?:[\.\s\-_]|$)", RegexOptions.IgnoreCase)]
+    // '+' joins the earlier one is included: a BD batch folder like
+    // "...Ah! My Goddess!... S1+S2+Movie+OVAs [BD]..." names every season it
+    // contains with '+' rather than a space/dash/underscore, so "S1" was never
+    // bounded on its right and the whole "S1+S2+Movie+OVAs" tail leaked into
+    // the show title handed to TitleFromFolder.
+    [GeneratedRegex(@"[\.\s\-_+]S[0-9]{1,2}(?:E[0-9]+)?(?:[\.\s\-_+]|$)", RegexOptions.IgnoreCase)]
     public static partial Regex MatchSeasonTag();
 
     [GeneratedRegex(@"^S([0-9]{1,2})E([0-9]+)", RegexOptions.IgnoreCase)]
@@ -583,9 +588,7 @@ public static partial class StringExtensions
             return 0;
 
         string[] rawParts = hms.Split('.')[0].Split(':');
-        int[] parts = rawParts
-            .Select(part => int.TryParse(part, out int value) ? value : 0)
-            .ToArray();
+        int[] parts = [.. rawParts.Select(part => int.TryParse(part, out int value) ? value : 0)];
 
         return parts.Length switch
         {

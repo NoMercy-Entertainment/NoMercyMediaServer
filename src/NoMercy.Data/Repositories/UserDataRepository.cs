@@ -86,7 +86,7 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
         CancellationToken ct = default
     )
     {
-        List<Ulid> ids = userData.Select(data => data.Id).ToList();
+        List<Ulid> ids = [.. userData.Select(data => data.Id)];
         if (ids.Count == 0)
             return 0;
 

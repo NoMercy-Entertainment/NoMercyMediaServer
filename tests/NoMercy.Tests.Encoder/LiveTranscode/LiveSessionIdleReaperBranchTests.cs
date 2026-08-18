@@ -72,7 +72,7 @@ public class LiveSessionIdleReaperBranchTests
     public async Task SweepAsync_no_sessions_no_op()
     {
         Mock<ILiveStreamingService> service = new();
-        service.Setup(s => s.ActiveSessionIds).Returns(Array.Empty<string>());
+        service.Setup(s => s.ActiveSessionIds).Returns([]);
 
         Mock<ISessionManager> sessionMgr = new();
         LiveSessionIdleReaper reaper = BuildReaper(service.Object, sessionMgr.Object);

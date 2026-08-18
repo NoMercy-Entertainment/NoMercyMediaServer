@@ -44,4 +44,25 @@ public static class EncodeThreadBudget
     /// ffmpeg's demux/mux and the encoder's own helper threads touch the CPU.
     /// </summary>
     public const int GpuResidentEncode = 2;
+
+    /// <summary>
+    /// A standalone decode-only pass (subtitle OCR, thumbnail sprite refresh) run
+    /// outside the main encode command, so it never inherits the plan stage's
+    /// budget-derived <c>-threads</c> flag. Left uncapped, ffmpeg's default thread
+    /// pool scales to every logical core, and several such passes running
+    /// concurrently (nothing else gates them) can peg the host on their own.
+    /// </summary>
+    public const int AuxiliaryPass = 2;
+
+    /// <summary>
+    /// A thumbnail sprite refresh (decode + fps decimation + scale + pad).
+    /// <c>-threads</c>/<c>-filter_threads</c> cap ffmpeg's own decoder and filter
+    /// pools, but swscale's internal scaling threads ignore both — measured at
+    /// 6-7 real cores on this box regardless of either flag. Budgeted above the
+    /// measured cost, not at it: the live CPU-headroom gate is a point-in-time
+    /// sample that can grant a job before an already-running one's ramp-up is
+    /// reflected, so the hard semaphore cap needs to bound concurrency on its
+    /// own — a 32-thread box exhausts its semaphore at 2 of these, not 4.
+    /// </summary>
+    public const int ThumbnailSpriteRefresh = 11;
 }

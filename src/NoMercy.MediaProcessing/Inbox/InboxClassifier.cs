@@ -257,7 +257,11 @@ public sealed partial class InboxClassifier
         // file with no bracket still lands in the right library.
         if (structuralType == "tv")
         {
-            structuralType = await _mediaTypeClassifier.ClassifyAsync(title, year);
+            // A null verdict is an inconclusive lookup, not a "confirmed not
+            // anime" — keep the structural "tv" guess rather than let a Kitsu
+            // hiccup silently stand in for a real answer.
+            structuralType =
+                await _mediaTypeClassifier.ClassifyAsync(title, year) ?? structuralType;
         }
 
         // Probe both movie and tv to handle ambiguous cases
@@ -429,7 +433,7 @@ public sealed partial class InboxClassifier
 
     private static CandidateMatch[] RankCandidates(CandidateMatch[] candidates)
     {
-        return candidates.OrderByDescending(c => c.Score).ToArray();
+        return [.. candidates.OrderByDescending(c => c.Score)];
     }
 
     private static string ExtractTitle(string path, MovieFile info)

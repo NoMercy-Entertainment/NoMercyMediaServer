@@ -43,7 +43,6 @@ public class ServerConfiguration : IServerConfiguration
     public int ImportWorkers { get; set; } = 2;
     public int ExtrasWorkers { get; set; } = 4;
     public int EncoderWorkers { get; set; } = 1;
-    public int EncoderTaskWorkers { get; set; } = 0;
     public int GpuEncoderWorkers { get; set; } = 1;
     public int CpuEncoderWorkers { get; set; } = 1;
 
@@ -90,7 +89,6 @@ public class ServerConfigurationWrapper(IOptions<ServerConfiguration> options)
     public int ImportWorkers => _config.ImportWorkers;
     public int ExtrasWorkers => _config.ExtrasWorkers;
     public int EncoderWorkers => _config.EncoderWorkers;
-    public int EncoderTaskWorkers => _config.EncoderTaskWorkers;
     public int GpuEncoderWorkers => _config.GpuEncoderWorkers;
     public int CpuEncoderWorkers => _config.CpuEncoderWorkers;
     public double EncoderCpuHeadroomPercent => _config.EncoderCpuHeadroomPercent;

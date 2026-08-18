@@ -69,10 +69,12 @@ public class LibraryFileWatcher
     public static void RefreshLibraryCache()
     {
         using MediaContext mediaContext = new();
-        _libraries = mediaContext
-            .Libraries.Include(library => library.FolderLibraries)
-                .ThenInclude(folderLibrary => folderLibrary.Folder)
-            .ToList();
+        _libraries =
+        [
+            .. mediaContext
+                .Libraries.Include(library => library.FolderLibraries)
+                    .ThenInclude(folderLibrary => folderLibrary.Folder),
+        ];
     }
 
     // ReSharper disable once MemberCanBePrivate.Global
@@ -83,13 +85,14 @@ public class LibraryFileWatcher
         // remote backend. FolderWatcher.CreateWatcher supports network (UNC)
         // paths via IsNetworkPath, so this must resolve for NFS / SMB backends
         // too, not just LocalStorage.
-        List<string> paths = library
-            .FolderLibraries.Select(folderLibrary =>
+        List<string> paths =
+        [
+            .. library.FolderLibraries.Select(folderLibrary =>
                 StorageFactory
                     .For(folderLibrary.Folder.Id, folderLibrary.Folder.DriverId, string.Empty)
                     .Driver.GetFullPath(folderLibrary.Folder.Path)
-            )
-            .ToList();
+            ),
+        ];
 
         List<Action> disposers = [];
 

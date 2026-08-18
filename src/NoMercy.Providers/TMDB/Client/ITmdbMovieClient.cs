@@ -10,10 +10,12 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Providers.TMDB.Models.Networks;
 
 namespace NoMercy.Providers.TMDB.Client;
 
 public interface ITmdbMovieClient
 {
     Task<TmdbMovieAppends?> WithAllAppends(bool? append);
+    Task<TmdbTmdbNetworkDetails?> CompanyDetails(int id, bool? priority = false);
 }

@@ -62,7 +62,7 @@ internal static class PlanStageDisambiguation
                 entry.Plan.PlaylistNameTemplate
             ));
 
-        AudioOutputPlan[] result = plans.ToArray();
+        AudioOutputPlan[] result = [.. plans];
         foreach (IGrouping<AudioGroupKey, IndexedAudioPlan> group in groups)
         {
             if (group.Count() < 2)
@@ -105,7 +105,7 @@ internal static class PlanStageDisambiguation
                 entry.Plan.PlaylistNameTemplate
             ));
 
-        VideoOutputPlan[] result = plans.ToArray();
+        VideoOutputPlan[] result = [.. plans];
         foreach (IGrouping<VideoGroupKey, IndexedVideoPlan> group in groups)
         {
             if (group.Count() < 2)

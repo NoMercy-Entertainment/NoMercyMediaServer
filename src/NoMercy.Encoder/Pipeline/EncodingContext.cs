@@ -13,6 +13,7 @@ using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Naming;
 using NoMercy.Storage;
+using NoMercyQueue.Core.Resources;
 
 namespace NoMercy.Encoder.Pipeline;
 
@@ -87,7 +88,19 @@ public record EncodingContext(
     /// staging directory that gets published and removed. Null when nothing was
     /// staged.
     /// </summary>
-    string? OriginalOutputDirectory = null
+    string? OriginalOutputDirectory = null,
+    /// <summary>
+    /// The decomposed task's own resource reservation (see
+    /// <see cref="NoMercyQueue.Core.Resources.IHasResourceRequirement"/>), when this
+    /// run is one child of a coordinator. PlanStage sizes the ffmpeg <c>-threads</c>
+    /// flag from this instead of a fixed share of the host, so a task never asks
+    /// ffmpeg for more CPU than <see cref="NoMercy.Encoder.Hardware.ResourceBudget"/>
+    /// actually reserved for it — the mismatch between the two let N budget-compliant
+    /// concurrent tasks each spawn a full-width ffmpeg process and peg the host. Null
+    /// for whole-file runs with no coordinator (preview, live-transcode) — those keep
+    /// the flat host-fraction default.
+    /// </summary>
+    ResourceRequirement? Resources = null
 )
 {
     /// <summary>

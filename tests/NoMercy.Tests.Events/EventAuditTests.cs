@@ -55,7 +55,9 @@ public class EventAuditTests
     [Fact]
     public void AuditLog_ExcludedEventTypesAreSkipped()
     {
-        EventAuditLog auditLog = new(new() { ExcludedEventTypes = ["EncodingProgressUpdatedEvent"] });
+        EventAuditLog auditLog = new(
+            new() { ExcludedEventTypes = ["EncodingProgressUpdatedEvent"] }
+        );
 
         auditLog.Record(
             new EncodingProgressUpdatedEvent
@@ -107,7 +109,10 @@ public class EventAuditTests
 
         for (int i = 0; i < 5; i++)
         {
-            auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["test"] }, "LibraryRefreshedEvent");
+            auditLog.Record(
+                new LibraryRefreshedEvent { QueryKey = ["test"] },
+                "LibraryRefreshedEvent"
+            );
         }
 
         auditLog.Count.Should().Be(5);
@@ -121,7 +126,10 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new();
 
-        auditLog.Record(new LibraryRefreshedEvent { QueryKey = ["music"] }, "LibraryRefreshedEvent");
+        auditLog.Record(
+            new LibraryRefreshedEvent { QueryKey = ["music"] },
+            "LibraryRefreshedEvent"
+        );
 
         auditLog.Record(
             new EncodingStartedEvent
@@ -139,7 +147,9 @@ public class EventAuditTests
             "LibraryRefreshedEvent"
         );
 
-        IReadOnlyList<EventAuditEntry> refreshEntries = auditLog.GetEntries("LibraryRefreshedEvent");
+        IReadOnlyList<EventAuditEntry> refreshEntries = auditLog.GetEntries(
+            "LibraryRefreshedEvent"
+        );
         refreshEntries.Should().HaveCount(2);
 
         IReadOnlyList<EventAuditEntry> encodingEntries = auditLog.GetEntries(
@@ -239,24 +249,26 @@ public class EventAuditTests
     {
         EventAuditLog auditLog = new(new() { MaxEntries = 50_000 });
 
-        Task[] tasks = Enumerable
-            .Range(0, 100)
-            .Select(i =>
-                Task.Run(() =>
-                {
-                    for (int j = 0; j < 100; j++)
+        Task[] tasks =
+        [
+            .. Enumerable
+                .Range(0, 100)
+                .Select(i =>
+                    Task.Run(() =>
                     {
-                        auditLog.Record(
-                            new LibraryRefreshedEvent
-                            {
-                                QueryKey = ["test", i.ToString(), j.ToString()],
-                            },
-                            "LibraryRefreshedEvent"
-                        );
-                    }
-                })
-            )
-            .ToArray();
+                        for (int j = 0; j < 100; j++)
+                        {
+                            auditLog.Record(
+                                new LibraryRefreshedEvent
+                                {
+                                    QueryKey = ["test", i.ToString(), j.ToString()],
+                                },
+                                "LibraryRefreshedEvent"
+                            );
+                        }
+                    })
+                ),
+        ];
 
         await Task.WhenAll(tasks);
 

@@ -605,18 +605,18 @@ public class QueueCoreTests
         }
 
         public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
-            _jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc).ToList();
+            [.. _jobs.Where(j => j.ReservedAt != null && j.ReservedAt < cutoffUtc)];
 
         public IReadOnlyList<QueueJobModel> GetStrandedJobs(
             byte maxAttempts,
             byte maxInterruptions
         ) =>
-            _jobs
-                .Where(j =>
+            [
+                .. _jobs.Where(j =>
                     j.ReservedAt == null
                     && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
-                )
-                .ToList();
+                ),
+            ];
 
         public void AddFailedJob(FailedJobModel failedJob)
         {

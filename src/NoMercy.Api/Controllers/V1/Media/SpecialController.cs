@@ -37,7 +37,7 @@ public class SpecialController(
     ISpecialRepository specialRepository,
     IJobDispatcher jobDispatcher,
     ILogger<SpecialController> logger
-    ) : BaseController
+) : BaseController
 {
     [HttpGet]
     public async Task<IActionResult> Index(
@@ -60,9 +60,10 @@ public class SpecialController(
 
         if (request.Version != "lolomo")
         {
-            List<CardData> cardItems = specials
-                .Select(special => new CardData(special, country))
-                .ToList();
+            List<CardData> cardItems =
+            [
+                .. specials.Select(special => new CardData(special, country)),
+            ];
 
             ComponentEnvelope response = Component
                 .Grid()
@@ -71,13 +72,16 @@ public class SpecialController(
             return Ok(ComponentResponse.From(response));
         }
 
-        List<ComponentEnvelope> carousels = Letters
-            .Select(letter =>
+        List<ComponentEnvelope> carousels =
+        [
+            .. Letters.Select(letter =>
             {
-                List<CardData> letterItems = specials
-                    .Select(special => new CardData(special, country))
-                    .Where(item => AlphaBucket.Matches(item.TitleSort, letter))
-                    .ToList();
+                List<CardData> letterItems =
+                [
+                    .. specials
+                        .Select(special => new CardData(special, country))
+                        .Where(item => AlphaBucket.Matches(item.TitleSort, letter)),
+                ];
 
                 return Component
                     .Carousel()
@@ -85,8 +89,8 @@ public class SpecialController(
                     .WithTitle(letter)
                     .WithItems(letterItems.Select(item => Component.Card().WithData(item)))
                     .Build();
-            })
-            .ToList();
+            }),
+        ];
 
         ComponentEnvelope containerResponse = Component.Container().WithItems(carousels);
 
@@ -180,21 +184,23 @@ public class SpecialController(
         if (special is null)
             return NotFoundResponse("Special not found");
 
-        VideoPlaylistResponseDto[] items = special
-            .Items.OrderBy(item => item.Order)
-            .Select(
-                (item, index) =>
-                    item.EpisodeId is not null
-                        ? new(item.Episode ?? new Episode(), "specials", id, country, index)
-                        : new VideoPlaylistResponseDto(
-                            item.Movie ?? new Movie(),
-                            "specials",
-                            id,
-                            country,
-                            index
-                        )
-            )
-            .ToArray();
+        VideoPlaylistResponseDto[] items =
+        [
+            .. special
+                .Items.OrderBy(item => item.Order)
+                .Select(
+                    (item, index) =>
+                        item.EpisodeId is not null
+                            ? new(item.Episode ?? new Episode(), "specials", id, country, index)
+                            : new VideoPlaylistResponseDto(
+                                item.Movie ?? new Movie(),
+                                "specials",
+                                id,
+                                country,
+                                index
+                            )
+                ),
+        ];
 
         if (items.Length == 0)
             return NotFoundResponse("Special not found");
@@ -256,26 +262,22 @@ public class SpecialController(
             }
         );
     }
-    
+
     [HttpPost]
     [Route("{id:ulid}/rescan")]
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> Rescan(Ulid id, CancellationToken ct = default)
     {
         Guid userId = User.UserId();
-        
+
         Special? special = await specialRepository.GetSpecialWithTvAsync(userId, id, ct);
 
         if (special is null)
             return UnprocessableEntityResponse("Special not found");
-        
-        var movies = special.Items
-            .Where(item => item.MovieId is not null)
-            .Select(item => new
-            {
-                id = item.MovieId ?? 0,
-                libraryId = item.Movie!.LibraryId!
-            })
+
+        var movies = special
+            .Items.Where(item => item.MovieId is not null)
+            .Select(item => new { id = item.MovieId ?? 0, libraryId = item.Movie!.LibraryId! })
             .ToList();
 
         foreach (var movie in movies)
@@ -290,19 +292,19 @@ public class SpecialController(
                 return InternalServerErrorResponse(e.Message);
             }
         }
-        
-        var tvs = special.Items
-            .Where(item => item.Episode is not null)
+
+        var tvs = special
+            .Items.Where(item => item.Episode is not null)
             .Select(item => new
             {
                 id = item.Episode?.TvId ?? 0,
-                libraryId = item.Episode?.Tv.LibraryId ?? Ulid.Empty
+                libraryId = item.Episode?.Tv.LibraryId ?? Ulid.Empty,
             })
             .GroupBy(item => new { item.id, item.libraryId })
             .DistinctBy(group => new { group.Key.id, group.Key.libraryId })
             .Select(group => group.Key)
             .ToList();
-        
+
         foreach (var tv in tvs)
         {
             try
@@ -356,7 +358,6 @@ public class SpecialController(
     //     );
     // }
 
-    
     [HttpPost]
     [Route("seed")]
     [Authorize(Policy = "Moderator")]

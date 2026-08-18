@@ -298,10 +298,10 @@ public class BaseController : Controller
         [FromQuery] PageRequestDto request
     )
     {
-        List<T> newData = data.ToList();
+        List<T> newData = [.. data];
         bool hasMore = newData.Count >= request.Take;
 
-        newData = newData.Take(request.Take).ToList();
+        newData = [.. newData.Take(request.Take)];
 
         PaginatedResponse<T> response = new()
         {

@@ -21,6 +21,7 @@ using NoMercy.Encoder.Metadata;
 using NoMercy.Encoder.Output;
 using NoMercy.Encoder.Profiles;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.Resources;
 using NoMercy.Storage;
 using DrmConfig = NoMercy.Encoder.BuildingBlocks.Drm.DrmConfig;
 
@@ -434,6 +435,9 @@ public class BuildStage(
                                         ["-sprite_columns"] = thumbs.Grid.Columns.ToString(),
                                         ["-vtt_filename"] =
                                             $"thumbs_{thumbs.Width}x{thumbs.Height}.vtt",
+                                        ["-threads"] = EncodeThreadBudget.AuxiliaryPass.ToString(),
+                                        ["-filter_threads"] =
+                                            EncodeThreadBudget.AuxiliaryPass.ToString(),
                                     }
                                 )
                             )
@@ -618,7 +622,7 @@ public class BuildStage(
                     allCommands.Add(extractionCommand);
             }
 
-            return new StageSuccess<FfmpegCommand[]>(allCommands.ToArray());
+            return new StageSuccess<FfmpegCommand[]>([.. allCommands]);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -663,16 +667,17 @@ public class BuildStage(
             .PrepareAsync(input.OutputDirectory, drm, ct)
             .ConfigureAwait(false);
 
-        VideoOutputPlan[] encryptedVideos = input
-            .Plan.OutputPlan.VideoOutputs.Select(v =>
+        VideoOutputPlan[] encryptedVideos =
+        [
+            .. input.Plan.OutputPlan.VideoOutputs.Select(v =>
             {
                 Dictionary<string, string> extra = new(v.ExtraFlags)
                 {
                     ["-hls_key_info_file"] = artifact.KeyInfoFilePath,
                 };
                 return v with { ExtraFlags = extra };
-            })
-            .ToArray();
+            }),
+        ];
 
         OutputPlan newOutputPlan = input.Plan.OutputPlan with { VideoOutputs = encryptedVideos };
         ExecutionPlan newPlan = input.Plan with { OutputPlan = newOutputPlan };

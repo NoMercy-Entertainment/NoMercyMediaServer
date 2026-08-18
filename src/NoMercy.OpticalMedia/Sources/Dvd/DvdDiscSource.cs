@@ -45,7 +45,7 @@ public sealed class DvdDiscSource(
         // the caller to walk titles 1..N sequentially. We probe each title
         // with -show_format until ffprobe emits "Title N not found" on
         // stderr, which is the enumeration boundary.
-        List<DiscTitle> titles = new();
+        List<DiscTitle> titles = [];
         DiscProtection? protection = null;
         for (int titleIdx = 1; titleIdx <= MaxTitleProbes; titleIdx++)
         {
@@ -145,10 +145,12 @@ public sealed class DvdDiscSource(
 
         // Flag the longest title as the main feature.
         TimeSpan maxDuration = titles.Max(t => t.Duration);
-        DiscTitle[] flagged = titles
-            .Select(t => t with { IsMainFeature = t.Duration == maxDuration })
-            .OrderByDescending(t => t.Duration)
-            .ToArray();
+        DiscTitle[] flagged =
+        [
+            .. titles
+                .Select(t => t with { IsMainFeature = t.Duration == maxDuration })
+                .OrderByDescending(t => t.Duration),
+        ];
 
         return new(
             Type: OpticalDiscType.Dvd,

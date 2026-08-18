@@ -120,55 +120,68 @@ public record ArtistResponseItemDto
         Type = "artist";
         Link = new($"/music/artists/{Id}", UriKind.Relative);
 
-        Genres = artist
-            .ArtistMusicGenre.Select(artistMusicGenre => new GenreDto(artistMusicGenre))
-            .ToList();
+        Genres =
+        [
+            .. artist.ArtistMusicGenre.Select(artistMusicGenre => new GenreDto(artistMusicGenre)),
+        ];
 
-        Images = artist.Images.Select(image => new ImageDto(image)).ToList();
+        Images = [.. artist.Images.Select(image => new ImageDto(image))];
 
         // Materialized: Featured below calls Albums.All(...) per candidate. Left lazy,
         // that re-ran this whole AlbumArtist projection for every featured album, which
         // for an artist with many track-albums was tens of seconds of recomputation.
-        Albums = artist
-            .AlbumArtist.Select(album => new AlbumDto(album, country!))
-            .GroupBy(album => album.Id)
-            .Select(album => album.First())
-            .OrderBy(artistTrack => artistTrack.Year)
-            .ToList();
+        Albums =
+        [
+            .. artist
+                .AlbumArtist.Select(album => new AlbumDto(album, country!))
+                .GroupBy(album => album.Id)
+                .Select(album => album.First())
+                .OrderBy(artistTrack => artistTrack.Year),
+        ];
 
-        Featured = artist
-            .ArtistTrack.Select(artistTrack => artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album)
-            .Where(album => album != null)
-            .GroupBy(album => album!.Name.RemoveNonAlphaNumericCharacters())
-            .Select(album => album.First()!)
-            .OrderBy(album => album.Year)
-            .Where(album => Albums.All(albumDto => albumDto.Id != album.Id))
-            .Select(album => new AlbumDto(album, country!))
-            .OrderBy(artistTrack => artistTrack.Year)
-            .ToList();
+        Featured =
+        [
+            .. artist
+                .ArtistTrack.Select(artistTrack =>
+                    artistTrack.Track.AlbumTrack.FirstOrDefault()?.Album
+                )
+                .Where(album => album != null)
+                .GroupBy(album => album!.Name.RemoveNonAlphaNumericCharacters())
+                .Select(album => album.First()!)
+                .OrderBy(album => album.Year)
+                .Where(album => Albums.All(albumDto => albumDto.Id != album.Id))
+                .Select(album => new AlbumDto(album, country!))
+                .OrderBy(artistTrack => artistTrack.Year),
+        ];
 
-        Playlists = artist
-            .AlbumArtist.DistinctBy(albumArtist => albumArtist.AlbumId)
-            .Where(album => album.Album.AlbumUser.Any(user => user.UserId.Equals(userId)))
-            .Select(trackAlbum => new AlbumDto(trackAlbum, country!))
-            .OrderBy(album => album.Year)
-            .ToList();
+        Playlists =
+        [
+            .. artist
+                .AlbumArtist.DistinctBy(albumArtist => albumArtist.AlbumId)
+                .Where(album => album.Album.AlbumUser.Any(user => user.UserId.Equals(userId)))
+                .Select(trackAlbum => new AlbumDto(trackAlbum, country!))
+                .OrderBy(album => album.Year),
+        ];
 
-        Tracks = artist
-            .ArtistTrack.Select(artistTrack => new ArtistTrackDto(artistTrack, country!))
-            .DistinctBy(artistTrack => artistTrack.Id)
-            .OrderBy(artistTrack => artistTrack.AlbumName)
-            .ThenBy(artistTrack => artistTrack.Disc)
-            .ThenBy(artistTrack => artistTrack.Track)
-            .ToList();
+        Tracks =
+        [
+            .. artist
+                .ArtistTrack.Select(artistTrack => new ArtistTrackDto(artistTrack, country!))
+                .DistinctBy(artistTrack => artistTrack.Id)
+                .OrderBy(artistTrack => artistTrack.AlbumName)
+                .ThenBy(artistTrack => artistTrack.Disc)
+                .ThenBy(artistTrack => artistTrack.Track),
+        ];
 
         // Use the per-user TrackUser "liked" relation instead of MusicPlays.
         // TrackUser is already included (filtered by userId) in the repo query,
         // so no extra fan-out. MusicPlays would re-introduce the Ed Sheeran
         // timeout via O(tracks × plays) explosion.
-        FavoriteTracks = artist
-            .ArtistTrack.Where(artistTrack => artistTrack.Track.TrackUser.Count > 0)
-            .Select(artistTrack => new FavoriteTrackDto(artistTrack, country!))
-            .ToList();
+        FavoriteTracks =
+        [
+            .. artist
+                .ArtistTrack.Where(artistTrack => artistTrack.Track.TrackUser.Count > 0)
+                .Select(artistTrack => new FavoriteTrackDto(artistTrack, country!)),
+        ];
     }
 }

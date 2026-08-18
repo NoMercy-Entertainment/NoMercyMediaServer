@@ -101,7 +101,7 @@ public record CollectionMovieDto
         Type = MediaTypes.MovieMediaType;
         Year = movie.ReleaseDate.ParseYear();
         Link = new($"/movie/{Id}", UriKind.Relative);
-        Genres = movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie.Genre)).ToArray();
+        Genres = [.. movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie.Genre))];
 
         Rating = movie
             .CertificationMovies.Select(certificationMovie => certificationMovie.Certification)

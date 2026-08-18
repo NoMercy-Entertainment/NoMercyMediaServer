@@ -61,7 +61,8 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         IConnectivityStatus connectivityStatus,
         Func<Task>? tunnelAvailability = null,
         TimeSpan? delayOverride = null,
-        TimeSpan? readinessDeferralWindow = null
+        TimeSpan? readinessDeferralWindow = null,
+        IHostApplicationLifetime? lifetime = null
     )
     {
         _logger = logger;
@@ -73,6 +74,11 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         _tunnelAvailability = tunnelAvailability;
         _delayOverride = delayOverride;
         _readinessDeferralWindow = readinessDeferralWindow ?? DefaultReadinessDeferralWindow;
+
+        // Fires before any IHostedService.StopAsync — including Kestrel's — so the active
+        // strategy learns shutdown has begun while the origin is still reachable, not after
+        // it has already gone dark and logged a burst of "connection refused".
+        lifetime?.ApplicationStopping.Register(() => _activeStrategy?.BeginShutdown());
     }
 
     /// <summary>

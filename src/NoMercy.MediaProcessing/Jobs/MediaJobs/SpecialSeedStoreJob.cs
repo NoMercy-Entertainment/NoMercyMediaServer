@@ -33,7 +33,7 @@ public class SpecialSeedStoreJob : AbstractJob
     {
         //
     }
-    
+
     public override async Task Handle()
     {
         Logger.Setup("Adding Special");
@@ -52,22 +52,11 @@ public class SpecialSeedStoreJob : AbstractJob
                 switch (item.Type)
                 {
                     case MediaTypes.MovieMediaType:
-                        await AddMovieItem(
-                            client,
-                            item,
-                            movieIds,
-                            specialItems
-                        );
+                        await AddMovieItem(client, item, movieIds, specialItems);
                         break;
                     case MediaTypes.TvMediaType:
                     case MediaTypes.AnimeMediaType:
-                        await AddTvItem(
-                            mediaContext,
-                            client,
-                            item,
-                            tvIds,
-                            specialItems
-                        );
+                        await AddTvItem(mediaContext, client, item, tvIds, specialItems);
                         break;
                 }
             }
@@ -89,12 +78,12 @@ public class SpecialSeedStoreJob : AbstractJob
     )
     {
         Logger.Setup($"Searching for {item.Title} ({item.Year})");
-        
+
         TmdbPaginatedResponse<TmdbMovie>? result = await client.Movie(
             item.Title,
             item.Year.ToString()
         );
-        
+
         TmdbMovie? movie = result?.Results.FirstOrDefault(r =>
             !r.Title.ToLower().Contains("making of")
         );
@@ -104,7 +93,8 @@ public class SpecialSeedStoreJob : AbstractJob
 
         movieIds.Add(movie.Id);
 
-        specialItems.Add(new()
+        specialItems.Add(
+            new()
             {
                 SpecialId = McuSeedData.Special.Id,
                 MovieId = movie.Id,
@@ -122,12 +112,12 @@ public class SpecialSeedStoreJob : AbstractJob
     )
     {
         Logger.Setup($"Searching for {item.Title} ({item.Year})");
-        
+
         TmdbPaginatedResponse<TmdbTvShow>? result = await client.TvShow(
             item.Title,
             item.Year.ToString()
         );
-        
+
         TmdbTvShow? tv = result?.Results.FirstOrDefault(r =>
             !r.Name.Contains("making of", StringComparison.InvariantCultureIgnoreCase)
         );
@@ -143,7 +133,7 @@ public class SpecialSeedStoreJob : AbstractJob
                 .Where(x => x.SeasonNumber == item.Seasons.First())
                 .Select(selector: x => x.EpisodeNumber)
                 .ToArrayAsync();
-        
+
         foreach (int episodeNumber in item.Episodes)
         {
             Episode? episode = await context.Episodes.FirstOrDefaultAsync(predicate: x =>
@@ -173,7 +163,9 @@ public class SpecialSeedStoreJob : AbstractJob
     {
         Logger.Setup($"Upsetting {specialItems.Count} SpecialItems");
 
-        IEnumerable<SpecialItem> movies = specialItems.Where(specialItem => specialItem.MovieId is not null);
+        IEnumerable<SpecialItem> movies = specialItems.Where(specialItem =>
+            specialItem.MovieId is not null
+        );
 
         foreach (SpecialItem movie in movies)
             try
@@ -181,13 +173,14 @@ public class SpecialSeedStoreJob : AbstractJob
                 await context
                     .SpecialItems.Upsert(movie)
                     .On(specialItem => new { specialItem.SpecialId, specialItem.MovieId })
-                    .WhenMatched((old, @new) =>
-                        new()
-                        {
-                            SpecialId = @new.SpecialId,
-                            MovieId = @new.MovieId,
-                            Order = @new.Order,
-                        }
+                    .WhenMatched(
+                        (old, @new) =>
+                            new()
+                            {
+                                SpecialId = @new.SpecialId,
+                                MovieId = @new.MovieId,
+                                Order = @new.Order,
+                            }
                     )
                     .RunAsync();
             }
@@ -196,9 +189,10 @@ public class SpecialSeedStoreJob : AbstractJob
                 Logger.Error(ex);
             }
 
-        List<SpecialItem> episodes = specialItems
-            .Where(specialItem => specialItem.EpisodeId is not null)
-            .ToList();
+        List<SpecialItem> episodes =
+        [
+            .. specialItems.Where(specialItem => specialItem.EpisodeId is not null),
+        ];
 
         foreach (SpecialItem episode in episodes)
             try
@@ -206,13 +200,14 @@ public class SpecialSeedStoreJob : AbstractJob
                 await context
                     .SpecialItems.Upsert(episode)
                     .On(specialItem => new { specialItem.SpecialId, specialItem.EpisodeId })
-                    .WhenMatched((old, @new) =>
-                        new()
-                        {
-                            SpecialId = @new.SpecialId,
-                            EpisodeId = @new.EpisodeId,
-                            Order = @new.Order,
-                        }
+                    .WhenMatched(
+                        (old, @new) =>
+                            new()
+                            {
+                                SpecialId = @new.SpecialId,
+                                EpisodeId = @new.EpisodeId,
+                                Order = @new.Order,
+                            }
                     )
                     .RunAsync();
             }

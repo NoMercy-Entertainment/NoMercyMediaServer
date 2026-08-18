@@ -13,21 +13,7 @@ namespace NoMercy.Plugins.Abstractions;
 
 public static class PluginAbi
 {
-    /// <summary>
-    /// What this server's plugin contract can do.
-    /// <para>
-    /// The minor goes up whenever something is <em>added</em> that a plugin can ask for
-    /// and an older server cannot answer. A plugin declaring the higher minor is then
-    /// refused by the older server with a sentence naming the ABI, which is the whole
-    /// point: without the bump it loads, runs, and fails on a member that is not there —
-    /// a <c>MissingMethodException</c> from inside plugin code, which reads like the
-    /// plugin's bug and is not.
-    /// </para>
-    /// <para>
-    /// 10.1 added <see cref="PluginLibraryShow.Status"/>.
-    /// </para>
-    /// </summary>
-    public static Version Current { get; } = new(10, 1);
+    public static Version Current { get; } = new(10, 0);
 
     public static bool IsCompatible(string? targetAbi)
     {

@@ -49,10 +49,12 @@ public sealed record CapturedRequest(
     // every value rather than take the first.
     public string? HeaderValue(string name)
     {
-        List<string> values = Headers
-            .Where(kv => string.Equals(kv.Key, name, StringComparison.OrdinalIgnoreCase))
-            .SelectMany(kv => kv.Value)
-            .ToList();
+        List<string> values =
+        [
+            .. Headers
+                .Where(kv => string.Equals(kv.Key, name, StringComparison.OrdinalIgnoreCase))
+                .SelectMany(kv => kv.Value),
+        ];
 
         return values.Count == 0 ? null : string.Join(" ", values);
     }
@@ -109,7 +111,7 @@ public sealed class ScriptableHttpMessageHandler : HttpMessageHandler
         get
         {
             lock (_gate)
-                return _requests.ToList();
+                return [.. _requests];
         }
     }
 

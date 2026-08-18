@@ -37,6 +37,11 @@ public class PluginManager : IPluginManager, IDisposable
     private readonly PluginLoader _loader;
     private readonly PluginLifecycleManager _lifecycle;
 
+    // Held because an install has to know whether the copy it would replace is
+    // still resident, and the answer decides whether the update lands now or on
+    // the next start.
+    private readonly IPluginAssemblyTracker? _assemblyTracker;
+
     public PluginManager(
         IEventBus eventBus,
         IServiceProvider serviceProvider,
@@ -65,12 +70,13 @@ public class PluginManager : IPluginManager, IDisposable
             ?? new PluginConsentService(
                 new ConfigPluginConsentStore(
                     new PluginConfiguration(
-                        Path.Combine(_pluginsPath, "data", "platform"),
+                        _storage.CombinePath(_pluginsPath, "data", "platform"),
                         _storage
                     )
                 )
             );
         _registry = new PluginRegistry();
+        _assemblyTracker = assemblyTracker;
 
         // Built here only when DI did not supply one, which is the test and
         // direct-construction path. Its protector is ephemeral, so a secret
@@ -118,7 +124,7 @@ public class PluginManager : IPluginManager, IDisposable
     }
 
     private PluginConfiguration PlatformConfiguration() =>
-        new(Path.Combine(_pluginsPath, "data", "platform"), _storage);
+        new(_storage.CombinePath(_pluginsPath, "data", "platform"), _storage);
 
     public IReadOnlyList<PluginInfo> GetInstalledPlugins()
     {
@@ -178,14 +184,14 @@ public class PluginManager : IPluginManager, IDisposable
         }
 
         string pluginName = Path.GetFileNameWithoutExtension(fullPath);
-        string pluginDir = Path.Combine(_pluginsPath, pluginName);
+        string pluginDir = _storage.CombinePath(_pluginsPath, pluginName);
 
-        if (!_storage.Exists(pluginDir))
+        if (!await _storage.ExistsAsync(pluginDir, ct))
         {
-            _storage.CreateDirectory(pluginDir);
+            await _storage.CreateDirectoryAsync(pluginDir, ct);
         }
 
-        string destPath = Path.Combine(pluginDir, Path.GetFileName(fullPath));
+        string destPath = _storage.CombinePath(pluginDir, Path.GetFileName(fullPath));
         _driver.CopyFile(fullPath, destPath, overwrite: true);
 
         await LoadPluginAssemblyAsync(destPath, ct);
@@ -220,19 +226,186 @@ public class PluginManager : IPluginManager, IDisposable
             }
         }
 
-        using ZipArchive archive = ZipFile.OpenRead(fullPath);
+        await using ZipArchive archive = await ZipFile.OpenReadAsync(fullPath, ct);
 
         PluginManifestEntry manifest = FindManifest(archive, fullPath);
-        string pluginDir = Path.Combine(_pluginsPath, manifest.FolderName);
+        string pluginDir = _storage.CombinePath(_pluginsPath, manifest.FolderName);
+        string staging = _storage.CombinePath(
+            _pluginsPath,
+            PendingUpdatesFolder,
+            manifest.FolderName
+        );
 
-        if (!_storage.Exists(pluginDir))
+        // Unpacked beside the installed copy, never over it. Extraction writes
+        // one entry at a time, so anything that fails part way through used to
+        // leave the folder holding some of the new plugin and some of the old.
+        // That state is worse than a refusal: the manifest would name one
+        // version while the assembly actually running is another, and a
+        // catalogue comparing versions would call it up to date and never offer
+        // the update again.
+        if (_driver.DirectoryExists(staging))
         {
-            _storage.CreateDirectory(pluginDir);
+            _driver.DeleteDirectory(staging, recursive: true);
         }
 
-        string assemblyPath = await ExtractAsync(archive, manifest, pluginDir, ct);
+        _driver.CreateDirectory(staging);
 
-        await LoadPluginAssemblyAsync(assemblyPath, ct);
+        await ExtractAsync(archive, manifest, staging, ct);
+
+        // Replacing a loaded plugin's own assembly cannot work: unloading a
+        // collectible context is best-effort, one live reference anywhere keeps
+        // it, and on Windows the file stays locked for as long as it does. So
+        // the staged copy is left where the next start finds it, before a single
+        // assembly is loaded and while nothing holds the file.
+        if (IsResident(manifest.Id))
+        {
+            _logger.LogInformation(
+                "Plugin update for {Folder} is staged: its assembly is still loaded, so it is applied on the next start.",
+                manifest.FolderName
+            );
+
+            throw new PluginUpdatePendingRestartException(manifest.FolderName);
+        }
+
+        ApplyStaged(staging, pluginDir);
+
+        await LoadPluginAssemblyAsync(
+            _storage.CombinePath(pluginDir, manifest.AssemblyFileName),
+            ct
+        );
+    }
+
+    /// <summary>
+    /// Where an update waits when the copy it replaces is still loaded.
+    ///
+    /// Inside the plugins folder rather than in temp, because a pending update
+    /// has to survive the shutdown it is waiting for, and temp does not have to.
+    /// The boot scan skips it by name for the same reason it skips
+    /// <c>configurations</c> and <c>data</c>: it holds plugins that are not
+    /// installed yet, and loading one from here would run a version the rest of
+    /// the server does not know about.
+    /// </summary>
+    internal const string PendingUpdatesFolder = ".pending-updates";
+
+    /// <summary>
+    /// Whether this plugin's assembly is loaded in this process right now.
+    ///
+    /// Two questions, because they fail the same way and neither alone covers
+    /// it: the registry answers for a plugin that is loaded, and the tracker
+    /// answers for one that has been unloaded and whose files are still held —
+    /// which is the case a best-effort unload leaves behind.
+    /// </summary>
+    private bool IsResident(Ulid pluginId) =>
+        _registry.TryGetValue(pluginId, out _)
+        || (_assemblyTracker?.IsStillLoaded(pluginId) ?? false);
+
+    /// <summary>
+    /// Moves a staged plugin into place, replacing what is there.
+    ///
+    /// Only ever called once the assembly is known to be replaceable, so this
+    /// is the point where the update becomes visible and there is nothing to
+    /// roll back.
+    /// </summary>
+    private void ApplyStaged(string staging, string pluginDir)
+    {
+        if (!_driver.DirectoryExists(pluginDir))
+        {
+            _driver.CreateDirectory(pluginDir);
+        }
+
+        // Through the driver rather than IStorage: a StorageEntry's path is
+        // relative to the storage scope, and the two roots here are real paths.
+        // Mixing the two produced a destination full of `..` segments that the
+        // path guard refused - correctly.
+        foreach (
+            StorageEntryInfo info in _driver.EnumerateEntries(
+                staging,
+                "*",
+                SearchOption.AllDirectories
+            )
+        )
+        {
+            if (info.IsDirectory)
+            {
+                continue;
+            }
+
+            string relative = Path.GetRelativePath(staging, info.Path);
+            string destination = _storage.CombinePath(pluginDir, relative);
+            string? parent = Path.GetDirectoryName(destination);
+
+            if (parent is not null && !_driver.DirectoryExists(parent))
+            {
+                _driver.CreateDirectory(parent);
+            }
+
+            using Stream source = _driver.OpenRead(info.Path);
+            using Stream target = _driver.OpenWrite(destination, overwrite: true);
+            source.CopyTo(target);
+        }
+
+        _driver.DeleteDirectory(staging, recursive: true);
+
+        // And the folder they wait in, once the last one has gone. An empty
+        // .pending-updates sitting in the plugins directory reads like something
+        // is still queued when nothing is.
+        string pending = _storage.CombinePath(_pluginsPath, PendingUpdatesFolder);
+
+        if (
+            _driver.DirectoryExists(pending)
+            && !_driver.EnumerateEntries(pending, "*", SearchOption.TopDirectoryOnly).Any()
+        )
+        {
+            _driver.DeleteDirectory(pending, recursive: false);
+        }
+    }
+
+    /// <summary>
+    /// Applies every update that was waiting on this restart.
+    ///
+    /// Before anything is loaded, which is the whole point: this is the one
+    /// moment in the process's life when no plugin assembly is held and the
+    /// files can be replaced. A single failure is logged and skipped rather
+    /// than thrown, because one plugin that cannot be updated must not stop the
+    /// server from starting the others.
+    /// </summary>
+    private void ApplyPendingUpdates()
+    {
+        string pending = _storage.CombinePath(_pluginsPath, PendingUpdatesFolder);
+
+        if (!_driver.DirectoryExists(pending))
+        {
+            return;
+        }
+
+        foreach (
+            StorageEntryInfo entry in _driver
+                .EnumerateEntries(pending, "*", SearchOption.TopDirectoryOnly)
+                .ToList()
+        )
+        {
+            if (!entry.IsDirectory)
+            {
+                continue;
+            }
+
+            string folderName = Path.GetFileName(entry.Path);
+
+            try
+            {
+                ApplyStaged(entry.Path, _storage.CombinePath(_pluginsPath, folderName));
+
+                _logger.LogInformation("Applied the staged update for {Folder}.", folderName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Could not apply the staged update for {Folder}. The installed version is untouched and the update stays staged.",
+                    folderName
+                );
+            }
+        }
     }
 
     /// <summary>
@@ -278,7 +451,12 @@ public class PluginManager : IPluginManager, IDisposable
             );
         }
 
-        return new(prefix, parsed.Assembly, Path.GetFileNameWithoutExtension(parsed.Assembly));
+        return new(
+            prefix,
+            parsed.Assembly,
+            Path.GetFileNameWithoutExtension(parsed.Assembly),
+            parsed.Id
+        );
     }
 
     private async Task<string> ExtractAsync(
@@ -304,7 +482,7 @@ public class PluginManager : IPluginManager, IDisposable
             }
 
             string relative = entry.FullName[manifest.Prefix.Length..];
-            string destination = Path.GetFullPath(Path.Combine(root, relative));
+            string destination = Path.GetFullPath(_storage.CombinePath(root, relative));
 
             // The archive names its own entries, so an entry may name a path.
             // Resolve first and refuse anything that lands outside the plugin's
@@ -363,7 +541,8 @@ public class PluginManager : IPluginManager, IDisposable
     private sealed record PluginManifestEntry(
         string Prefix,
         string AssemblyFileName,
-        string FolderName
+        string FolderName,
+        Ulid Id
     );
 
     public Task EnablePluginAsync(Ulid pluginId, CancellationToken ct = default)
@@ -388,6 +567,10 @@ public class PluginManager : IPluginManager, IDisposable
             return;
         }
 
+        // Before the scan below, because this is the one moment no plugin
+        // assembly is held and a staged update can replace the files it needs to.
+        ApplyPendingUpdates();
+
         IReadOnlyList<StorageEntry> entries = _storage.List(_pluginsPath, null, recursive: false);
         foreach (StorageEntry entry in entries)
         {
@@ -398,14 +581,14 @@ public class PluginManager : IPluginManager, IDisposable
 
             string pluginDir = entry.Path;
             string dirName = Path.GetFileName(pluginDir);
-            if (dirName is "configurations" or "data")
+            if (dirName is "configurations" or "data" or PendingUpdatesFolder)
             {
                 continue;
             }
 
             try
             {
-                string manifestPath = Path.Combine(pluginDir, "plugin.json");
+                string manifestPath = _storage.CombinePath(pluginDir, "plugin.json");
                 if (_storage.Exists(manifestPath))
                 {
                     await LoadPluginFromManifestAsync(manifestPath, ct);
@@ -534,7 +717,7 @@ public class PluginManager : IPluginManager, IDisposable
         // written in, never in empty labels.
         string wanted = declared.Locales.Contains(locale) ? locale : declared.Source;
 
-        return await ReadLocaleFileAsync(Path.Combine(root, declared.Path), wanted, ct);
+        return await ReadLocaleFileAsync(_storage.CombinePath(root, declared.Path), wanted, ct);
     }
 
     private static readonly JsonSerializerOptions TranslationJson = new()
@@ -548,7 +731,7 @@ public class PluginManager : IPluginManager, IDisposable
         CancellationToken ct
     )
     {
-        string path = Path.Combine(directory, $"{locale}.json");
+        string path = _storage.CombinePath(directory, $"{locale}.json");
 
         if (!_storage.Exists(path))
             return null;
@@ -568,20 +751,24 @@ public class PluginManager : IPluginManager, IDisposable
     public IEnumerable<T> GetPluginsOfType<T>()
         where T : IPlugin
     {
-        return _registry
-            .Values.Where(lp => lp is { Instance: T, Info.Status: PluginStatus.Active })
-            .Select(lp => (T)lp.Instance!)
-            .ToList();
+        return
+        [
+            .. _registry
+                .Values.Where(lp => lp is { Instance: T, Info.Status: PluginStatus.Active })
+                .Select(lp => (T)lp.Instance!),
+        ];
     }
 
     public IEnumerable<IPluginServiceRegistrator> GetServiceRegistrators()
     {
-        return _registry
-            .Values.Where(lp =>
-                lp is { Instance: IPluginServiceRegistrator, Info.Status: PluginStatus.Active }
-            )
-            .Select(lp => (IPluginServiceRegistrator)lp.Instance!)
-            .ToList();
+        return
+        [
+            .. _registry
+                .Values.Where(lp =>
+                    lp is { Instance: IPluginServiceRegistrator, Info.Status: PluginStatus.Active }
+                )
+                .Select(lp => (IPluginServiceRegistrator)lp.Instance!),
+        ];
     }
 
     public void Dispose()

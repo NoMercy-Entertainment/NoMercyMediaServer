@@ -83,11 +83,12 @@ public class WorkerInputResolver(
         if (string.IsNullOrEmpty(task.InputPath))
             return task;
 
-        string[] newArgs = task
-            .Command.Arguments.Select(arg =>
+        string[] newArgs =
+        [
+            .. task.Command.Arguments.Select(arg =>
                 string.Equals(arg, task.InputPath, StringComparison.Ordinal) ? localPath : arg
-            )
-            .ToArray();
+            ),
+        ];
 
         return task with
         {

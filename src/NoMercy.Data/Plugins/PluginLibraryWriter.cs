@@ -59,9 +59,12 @@ public class PluginLibraryWriter(
             ))
             .ToListAsync(ct);
 
-        return libraries
-            .Where(library => grants.Holds(pluginId, PluginGrantKind.LibraryWrite, library.Id))
-            .ToList();
+        return
+        [
+            .. libraries.Where(library =>
+                grants.Holds(pluginId, PluginGrantKind.LibraryWrite, library.Id)
+            ),
+        ];
     }
 
     public async Task<bool> CanWriteAsync(string path, CancellationToken ct = default)

@@ -39,11 +39,13 @@ public sealed partial class StoragePathGuard
         _comparison = OperatingSystem.IsWindows()
             ? StringComparison.OrdinalIgnoreCase
             : StringComparison.Ordinal;
-        _normalizedRoots = (allowedRoots ?? [])
-            .Where(static r => !string.IsNullOrWhiteSpace(r))
-            .Select(NormalizeRoot)
-            .Distinct(StringComparerFromComparison.For(_comparison))
-            .ToArray();
+        _normalizedRoots =
+        [
+            .. (allowedRoots ?? [])
+                .Where(static r => !string.IsNullOrWhiteSpace(r))
+                .Select(NormalizeRoot)
+                .Distinct(StringComparerFromComparison.For(_comparison)),
+        ];
     }
 
     /// <summary>

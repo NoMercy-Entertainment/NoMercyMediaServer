@@ -22,18 +22,15 @@ namespace NoMercy.Tests.MediaProcessing.Files;
 internal static class TestFilenameParser
 {
     public static IFilenameParserPipeline Default =>
-        new FilenameParserPipeline(
-            new IFilenameParseAdapter[]
-            {
-                new EpisodePrefixAdapter(),
-                new EpisodeWordAdapter(),
-                new CrossFormatAdapter(),
-                new SeasonEpisodeAdapter(),
-                new SeasonSpecialAdapter(),
-                new AnimeAbsoluteAdapter(),
-                new EpisodeShortFormAdapter(),
-                new SpecialsAdapter(),
-                new MovieDetectorAdapter(),
-            }
-        );
+        new FilenameParserPipeline([
+            new EpisodePrefixAdapter(),
+            new EpisodeWordAdapter(),
+            new CrossFormatAdapter(),
+            new SeasonEpisodeAdapter(),
+            new SeasonSpecialAdapter(),
+            new AnimeAbsoluteAdapter(),
+            new EpisodeShortFormAdapter(),
+            new SpecialsAdapter(),
+            new MovieDetectorAdapter(),
+        ]);
 }

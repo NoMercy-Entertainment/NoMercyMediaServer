@@ -44,9 +44,10 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
     public void EnumerateRoot_returns_entries_or_empty_listing()
     {
         using WebDavStorageDriver driver = Driver();
-        List<string> entries = driver
-            .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-            .ToList();
+        List<string> entries =
+        [
+            .. driver.EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly),
+        ];
         Console.WriteLine($"[WebDAV] root entry count: {entries.Count}");
     }
 
@@ -60,9 +61,10 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
 
         try
         {
-            List<string> entries = driver
-                .EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly)
-                .ToList();
+            List<string> entries =
+            [
+                .. driver.EnumerateFileSystemEntries("/", "*", SearchOption.TopDirectoryOnly),
+            ];
 
             entries.Should().NotContain(e => e.StartsWith("http", StringComparison.Ordinal));
             entries.Should().Contain(e => e.EndsWith(marker, StringComparison.Ordinal));
@@ -353,9 +355,10 @@ public sealed class WebDavLiveTests(StorageBackendsFixture fix)
             await using (Stream w = driver.OpenWrite(fileC, overwrite: true))
                 await w.WriteAsync(bytes);
 
-            List<string> txtEntries = driver
-                .EnumerateFileSystemEntries(dir, "*.txt", SearchOption.TopDirectoryOnly)
-                .ToList();
+            List<string> txtEntries =
+            [
+                .. driver.EnumerateFileSystemEntries(dir, "*.txt", SearchOption.TopDirectoryOnly),
+            ];
             txtEntries.Should().HaveCount(2);
             txtEntries.Should().Contain(e => e.EndsWith("a.txt", StringComparison.Ordinal));
             txtEntries.Should().Contain(e => e.EndsWith("b.txt", StringComparison.Ordinal));

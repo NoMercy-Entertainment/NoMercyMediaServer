@@ -38,9 +38,10 @@ public class OpenSubtitlesResponseParserTests
     [Fact]
     public void Parse_FindsTheDutchSubtitleInARealResponse()
     {
-        List<OpenSubtitlesSearchResult> results = OpenSubtitlesResponseParser
-            .Parse(WhatIfDutchResponse(), "title")
-            .ToList();
+        List<OpenSubtitlesSearchResult> results =
+        [
+            .. OpenSubtitlesResponseParser.Parse(WhatIfDutchResponse(), "title"),
+        ];
 
         results.Should().ContainSingle();
         results[0].Language.Should().Be("dut");

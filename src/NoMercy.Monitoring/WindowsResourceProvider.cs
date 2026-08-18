@@ -187,11 +187,13 @@ internal sealed class WindowsResourceProvider : IResourceProvider, IDisposable
         try
         {
             PerformanceCounterCategory category = new("Processor Information");
-            string[] instances = category
-                .GetInstanceNames()
-                .Where(n => n != "_Total" && !n.StartsWith("0,_"))
-                .OrderBy(n => n)
-                .ToArray();
+            string[] instances =
+            [
+                .. category
+                    .GetInstanceNames()
+                    .Where(n => n != "_Total" && !n.StartsWith("0,_"))
+                    .OrderBy(n => n),
+            ];
 
             foreach (string instance in instances)
             {

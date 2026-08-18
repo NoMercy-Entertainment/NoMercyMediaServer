@@ -839,7 +839,7 @@ public class BinaryDownloaderTests : IDisposable
         {
             TagName = "v1.0.0",
             PublishedAt = DateTimeOffset.UtcNow.AddDays(-1),
-            Assets = assets.ToArray(),
+            Assets = [.. assets],
         };
     }
 }

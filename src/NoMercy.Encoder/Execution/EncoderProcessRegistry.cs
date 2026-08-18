@@ -121,7 +121,7 @@ public class EncoderProcessRegistry : IEncoderProcessRegistry
         {
             if (!_processes.TryGetValue(jobId, out HashSet<int>? set))
                 return [];
-            return set.ToArray();
+            return [.. set];
         }
     }
 
@@ -131,7 +131,7 @@ public class EncoderProcessRegistry : IEncoderProcessRegistry
         {
             lock (_lock)
             {
-                return _processes.Keys.ToArray();
+                return [.. _processes.Keys];
             }
         }
     }

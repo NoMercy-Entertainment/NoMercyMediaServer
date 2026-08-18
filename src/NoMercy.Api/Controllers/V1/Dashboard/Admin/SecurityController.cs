@@ -49,7 +49,7 @@ public class SecurityController(
             new StatusResponseDto<List<IpBanDto>>
             {
                 Status = "ok",
-                Data = bans.Select(IpBanDto.From).ToList(),
+                Data = [.. bans.Select(IpBanDto.From)],
             }
         );
     }

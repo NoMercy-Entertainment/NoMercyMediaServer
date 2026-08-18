@@ -14,11 +14,15 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.7" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Extensions" Version="2.3.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc" Version="2.3.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Abstractions" Version="2.3.12" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.7" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.2.9" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.7" />
-    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="10.0.7" />
+    <PackageVersion
+      Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson"
+      Version="10.0.7"
+    />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.7" />
     <PackageVersion Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.7" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.7" />
@@ -80,7 +84,10 @@
     <PackageVersion Include="MusixmatchClientLib" Version="1.1.9" />
     <!-- Plugin System -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+    <PackageVersion
+      Include="Microsoft.Extensions.DependencyInjection.Abstractions"
+      Version="10.0.10"
+    />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.7" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
@@ -119,7 +126,10 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.3.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit" Version="1.1.2" />
+    <PackageVersion
+      Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing.XUnit"
+      Version="1.1.2"
+    />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzer.Testing" Version="1.1.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing.XUnit" Version="1.1.2" />
     <PackageVersion Include="Mono.Nat" Version="3.0.4" />
@@ -160,5 +170,9 @@
     <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
+    <!-- SSH.NET transitive via Testcontainers: 2025.1.0 carries NU1903 / GHSA-q939-rpr3-3284
+         (ScpClient recursive download allows arbitrary file write via server-controlled SCP
+         filenames). 2026.0.0 is the patched release. -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>
 </Project>

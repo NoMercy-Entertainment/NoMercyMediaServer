@@ -42,29 +42,38 @@ using NoMercy.MediaProcessing.Libraries;
 using NoMercy.NmSystem.Domain;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.NmSystem.SystemCalls;
+using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
+using NoMercyQueue.Core.Resources;
 using Serilog.Events;
 using EncodingProfile = NoMercy.Encoder.Profiles.EncodingProfile;
 using MediaType = NoMercy.Encoder.Naming.MediaType;
-using QueueJobDispatcher = NoMercyQueue.JobDispatcher;
 
 namespace NoMercy.MediaProcessing.Jobs.MediaJobs;
 
 /// <summary>
-/// Coordinator job for video encoding. Implements a durable polling state machine
-/// so that server restarts between child completions do not orphan the encode run.
+/// The one job type for video encoding — coordinator and executor at once.
+/// Implements a durable, self-rescheduling state machine so that server
+/// restarts between bundles do not orphan the encode run, and implements
+/// <see cref="IHasResourceRequirement"/>/<see cref="IResourceDegradable"/> so
+/// the SAME row is what the queue's resource-budget gate reads before every
+/// wake-up decides whether this job runs next.
 ///
 /// <para><b>Phase flow for decomposable strategies (HLS, DASH):</b>
-/// <c>Initial</c> → decomposes, dispatches all children, saves state, re-enqueues self →
-/// <c>WaitChildren</c> → polls <c>EncodeTaskOutcomes</c> table until all TaskIds are present →
+/// <c>Initial</c> → decomposes, plans resource-proportional bundles, saves state,
+/// re-enqueues self (ungated — analysis only) →
+/// <c>WaitChildren</c> → each wake-up runs ONE bundle inline (gated by
+/// <see cref="ResourceRequirement"/> for that bundle) and re-enqueues for the
+/// next, or transitions once every bundle has succeeded →
 /// <c>Finalize</c> → opens fresh <see cref="MediaContext"/>, runs post-encode, completes.</para>
 ///
-/// <para><b>Phase flow for two-pass strategies:</b>
-/// <c>Initial</c> → dispatches Pass1 children, saves state →
-/// <c>WaitPass1</c> → when all Pass1 done, dispatches Pass2 children, transitions to <c>WaitChildren</c> →
-/// <c>WaitChildren</c> → <c>Finalize</c>.</para>
+/// <para><b>Phase flow for two-pass strategies:</b> the same sequential-bundle
+/// mechanism runs the Pass1 bundles first (<c>WaitPass1</c>); once every Pass1
+/// bundle has succeeded, the coordinator resolves the shared stats path,
+/// patches it onto the pending Pass2 bundles, and switches to running them the
+/// same way under <c>WaitChildren</c>.</para>
 ///
 /// <para><b>Whole-task path:</b> coordinator resolves a single <see cref="EncodeTaskKind.Whole"/>
 /// task and runs it inline — no coordinator state, no re-enqueue, matches original behavior.</para>
@@ -77,7 +86,9 @@ public class VideoEncodeJob
     : AbstractEncoderJob,
         IJobIdReceiver,
         IJobStorageInjector,
-        ISelfRescheduling
+        ISelfRescheduling,
+        IHasResourceRequirement,
+        IResourceDegradable
 {
     private IEncodingOrchestrator? _encodingOrchestrator;
     private IHardwareBenchmark? _hardwareBenchmark;
@@ -146,6 +157,66 @@ public class VideoEncodeJob
     /// delete, or a live coordinator waiting on its next wake-up.
     /// </summary>
     public bool RescheduledInPlace { get; private set; }
+
+    /// <inheritdoc/>
+    /// <summary>
+    /// Null while decomposing (that phase is cheap ffprobe/analysis work and
+    /// stays ungated, matching the original coordinator's behavior) or once
+    /// every bundle has succeeded. Otherwise the requirement of the bundle
+    /// this row will run INLINE the moment a worker reserves it next — the
+    /// queue worker's budget gate reads this BEFORE calling
+    /// <see cref="Handle"/>, so "the dispatcher picks the first FIFO item and
+    /// right then decides how to process it" falls out of the normal
+    /// reserve-then-gate sequence instead of a second dispatch step.
+    /// </summary>
+    public ResourceRequirement? ResourceRequirement =>
+        Coordinator?.Bundles is { Length: > 0 } bundles
+        && Coordinator.CurrentBundleIndex < bundles.Length
+            ? bundles[Coordinator.CurrentBundleIndex].Resources
+            : null;
+
+    /// <summary>
+    /// Re-plans the bundle this row is about to run without its GPU
+    /// requirement — see <see cref="IResourceDegradable"/>. Called by the
+    /// queue worker's budget gate when that bundle's
+    /// <see cref="ResourceRequirement.GpuDeviceKey"/> is not a registered
+    /// device on this host. Returns null (nothing to degrade) when there is
+    /// no active bundle or it is already CPU-only.
+    /// </summary>
+    public IShouldQueue? DegradeToSoftware()
+    {
+        CoordinatorState? state = Coordinator;
+        if (
+            state?.Bundles is not { Length: > 0 } bundles
+            || state.CurrentBundleIndex >= bundles.Length
+        )
+            return null;
+
+        DecomposedTask current = bundles[state.CurrentBundleIndex];
+        if (current.Resources?.GpuDeviceKey is null)
+            return null; // already CPU-only — nothing to degrade
+
+        // Same reasoning as the original per-task degrade: without a GPU this
+        // becomes a full software encode, which needs a software encode's CPU
+        // share, not the smaller hardware-task reservation. Max, never
+        // assignment — never shrinks an already-larger reservation.
+        DecomposedTask[] degradedBundles = [.. bundles];
+        degradedBundles[state.CurrentBundleIndex] = current with
+        {
+            Resources = current.Resources with
+            {
+                GpuDeviceKey = null,
+                GpuSlots = 0,
+                CpuThreads = Math.Max(
+                    current.Resources.CpuThreads,
+                    EncodeThreadBudget.SoftwareEncode
+                ),
+            },
+        };
+
+        Coordinator = state with { Bundles = degradedBundles };
+        return this;
+    }
 
     public override async Task Handle()
     {
@@ -733,29 +804,23 @@ public class VideoEncodeJob
     {
         await using MediaContext context = new();
 
-        string[] pass1TaskIds = state.TaskIds.Where(tid => tid.Contains("-pass1-")).ToArray();
+        DecomposedTask[] pass1Bundles = state.Bundles ?? [];
 
-        List<string> completedTaskIds = await context
-            .EncodeTaskOutcomes.AsNoTracking()
-            .Where(o => o.GroupTag == state.GroupTag)
-            .Select(o => o.TaskId)
-            .ToListAsync();
-
-        bool allPass1Done = pass1TaskIds.All(tid => completedTaskIds.Contains(tid));
-
-        if (!allPass1Done)
+        if (pass1Bundles.Length > 0 && state.CurrentBundleIndex < pass1Bundles.Length)
         {
-            int doneCount = pass1TaskIds.Count(tid => completedTaskIds.Contains(tid));
-            Log.LogInformation(
-                "[VideoEncodeJob] WaitPass1: {DoneCount}/{Length} Pass1 tasks done — re-enqueueing",
-                doneCount,
-                pass1TaskIds.Length
+            bool allPass1Done = await RunSequentialBundlesAsync(
+                state,
+                pass1Bundles,
+                context,
+                CoordinatorPhase.WaitPass1
             );
-            ReEnqueueSelf(state with { Phase = CoordinatorPhase.WaitPass1 });
-            return;
+
+            if (!allPass1Done)
+                return; // re-enqueued to run the next Pass1 bundle
         }
 
-        // All Pass1 tasks done — resolve stats file path and dispatch Pass2.
+        // Every Pass1 bundle has succeeded — resolve the shared stats file
+        // path and patch it onto the pending Pass2 bundles.
         EncodeTaskOutcome? anyPass1Outcome = await context
             .EncodeTaskOutcomes.AsNoTracking()
             .FirstOrDefaultAsync(o =>
@@ -765,92 +830,39 @@ public class VideoEncodeJob
         string pass1StatsPath =
             anyPass1Outcome?.OutputArtifactsJson?.Split('\n').FirstOrDefault() ?? string.Empty;
 
-        string[] pass2TaskIds = state.TaskIds.Where(tid => tid.Contains("-pass2-")).ToArray();
+        DecomposedTask[] pass2AndOtherBundles =
+        [
+            .. (state.PendingBundles ?? []).Select(task =>
+                task.Kind == EncodeTaskKind.Pass2
+                    ? task with
+                    {
+                        StatsFilePath = pass1StatsPath,
+                    }
+                    : task
+            ),
+        ];
 
-        string[] otherTaskIds = state
-            .TaskIds.Where(tid => !tid.Contains("-pass1-") && !tid.Contains("-pass2-"))
-            .ToArray();
-
-        // Dispatch Pass2 children with the resolved stats file path.
-        QueueJobDispatcher dispatcher = GetDispatcher();
-
-        foreach (string pass2TaskId in pass2TaskIds)
-        {
-            int outputIndex = ParseOutputIndex(pass2TaskId);
-
-            DecomposedTask pass2Task = new(
-                TaskId: pass2TaskId,
-                ParentJobId: _selfJobId,
-                GroupTag: state.GroupTag,
-                Kind: EncodeTaskKind.Pass2,
-                OutputIndex: outputIndex,
-                Resources: null,
-                StatsFilePath: pass1StatsPath,
-                Label: $"pass2 variant {outputIndex}"
-            );
-
-            EncodeTaskJob childJob = BuildChildJob(
-                pass2Task,
-                state.PresetId,
-                state.PresetIds,
-                state.OutputDirectory
-            );
-            dispatcher.DispatchChild(
-                childJob,
-                onQueue: childJob.QueueName,
-                priority: childJob.Priority,
-                parentJobId: _selfJobId,
-                groupTag: state.GroupTag
-            );
-        }
-
-        // Dispatch non-pass1/non-pass2 tasks that were held (audio, subtitle, thumbnails).
-        foreach (string otherTaskId in otherTaskIds)
-        {
-            if (completedTaskIds.Contains(otherTaskId))
-                continue;
-
-            EncodeTaskKind kind = InferKindFromTaskId(otherTaskId);
-            int outputIndex = ParseOutputIndex(otherTaskId);
-
-            DecomposedTask otherTask = new(
-                TaskId: otherTaskId,
-                ParentJobId: _selfJobId,
-                GroupTag: state.GroupTag,
-                Kind: kind,
-                OutputIndex: outputIndex,
-                Resources: null,
-                Label: otherTaskId
-            );
-
-            EncodeTaskJob childJob = BuildChildJob(
-                otherTask,
-                state.PresetId,
-                state.PresetIds,
-                state.OutputDirectory
-            );
-            dispatcher.DispatchChild(
-                childJob,
-                onQueue: childJob.QueueName,
-                priority: childJob.Priority,
-                parentJobId: _selfJobId,
-                groupTag: state.GroupTag
-            );
-        }
-
-        Log.LogTrace(
-            "[VideoEncodeJob] WaitPass1 complete — dispatched {Length} Pass2 + {Length2} other tasks. Transitioning to WaitChildren.",
-            pass2TaskIds.Length,
-            otherTaskIds.Length
+        Log.LogInformation(
+            "[VideoEncodeJob] All Pass1 bundles complete — {Length} Pass2/other bundle(s) queued. Transitioning to WaitChildren.",
+            pass2AndOtherBundles.Length
         );
 
+        // Always through WaitChildren, even on the (never-expected in
+        // practice — every Pass1 bundle pairs with a Pass2 bundle) empty
+        // case: HandleWaitChildrenAsync already treats an empty/exhausted
+        // Bundles array as "nothing left, go to Finalize" on its own next
+        // wake-up, so WaitPass1 never needs its own shortcut around it.
         ReEnqueueSelf(
             state with
             {
                 Phase = CoordinatorPhase.WaitChildren,
                 Pass1StatsPath = pass1StatsPath,
                 Pass2DispatchedAt = DateTime.UtcNow,
-            }
+                Bundles = pass2AndOtherBundles,
+                PendingBundles = null,
+                CurrentBundleIndex = 0,
+            },
+            TimeSpan.Zero
         );
     }
 
@@ -858,161 +870,109 @@ public class VideoEncodeJob
     {
         await using MediaContext context = new();
 
-        // Success matters, not just arrival. This used to read every outcome
-        // row for the group as proof its task was finished, so a child that
-        // died still satisfied the wait: the coordinator advanced to Finalize,
-        // deleted its own queue row, and the encode disappeared leaving nothing
-        // in FailedJobs and nothing in the log. Twenty-nine files went that way
-        // in a single night, and the only reason they were ever found was
-        // counting Success=0 rows against a queue that reported itself healthy.
-        List<EncodeTaskOutcome> outcomes = await context
-            .EncodeTaskOutcomes.AsNoTracking()
-            .Where(o => o.GroupTag == state.GroupTag)
-            .ToListAsync();
+        DecomposedTask[] bundles = state.Bundles ?? [];
 
-        EncodeTaskOutcome? failedTask = outcomes.Find(outcome => !outcome.Success);
-        if (failedTask is not null)
+        if (bundles.Length == 0 || state.CurrentBundleIndex >= bundles.Length)
         {
-            throw new InvalidOperationException(
-                $"Encode task {failedTask.TaskId} failed: "
-                    + $"{failedTask.ErrorMessage ?? "no error recorded"}"
+            Log.LogTrace(
+                "[VideoEncodeJob] WaitChildren: nothing left to run. Transitioning to Finalize."
             );
-        }
-
-        List<string> completedTaskIds = outcomes.Select(outcome => outcome.TaskId).ToList();
-
-        // Sequential bundle dispatch: when Bundles[] is set on state, only
-        // the CURRENT bundle's BundledTaskIds need to be complete to advance.
-        // Each bundle = one ffmpeg invocation; running them one at a time
-        // means the host never has two encoder processes fighting for the
-        // GPU/CPU at once. The next bundle dispatches on this wake-up.
-        if (state.Bundles is { Length: > 0 } bundles && state.CurrentBundleIndex < bundles.Length)
-        {
-            DecomposedTask currentBundle = bundles[state.CurrentBundleIndex];
-            string[] currentBundleTaskIds = currentBundle.BundledTaskIds ?? [currentBundle.TaskId];
-
-            bool currentBundleDone = currentBundleTaskIds.All(tid =>
-                completedTaskIds.Contains(tid)
-            );
-
-            if (!currentBundleDone)
-            {
-                int doneCount = currentBundleTaskIds.Count(tid => completedTaskIds.Contains(tid));
-                // Polling is fast (sub-second re-enqueue intervals) but child
-                // tasks complete on encoder cadence (minutes). Logging on every
-                // wake-up produced ~thousands of identical lines per encode —
-                // emit only when the count actually advances + at Verbose so
-                // routine progress doesn't pollute Info-level dashboards.
-                if (doneCount != state.LastLoggedDoneCount)
-                {
-                    Log.LogTrace(
-                        "[VideoEncodeJob] WaitChildren: bundle {CurrentBundleIndex}/{Length}, {DoneCount}/{Length2} streams done",
-                        state.CurrentBundleIndex + 1,
-                        bundles.Length,
-                        doneCount,
-                        currentBundleTaskIds.Length
-                    );
-                }
-                ReEnqueueSelf(
-                    state with
-                    {
-                        Phase = CoordinatorPhase.WaitChildren,
-                        LastLoggedDoneCount = doneCount,
-                    }
-                );
-                return;
-            }
-
-            int nextIndex = state.CurrentBundleIndex + 1;
-            if (nextIndex < bundles.Length)
-            {
-                Log.LogInformation(
-                    "[VideoEncodeJob] Bundle {CurrentBundleIndex}/{Length} complete. Dispatching bundle {NextIndex}/{Length2}.",
-                    state.CurrentBundleIndex + 1,
-                    bundles.Length,
-                    nextIndex + 1,
-                    bundles.Length
-                );
-                DispatchSingleBundle(
-                    bundles[nextIndex],
-                    state.PresetId,
-                    state.PresetIds,
-                    state.GroupTag,
-                    state.OutputDirectory
-                );
-                ReEnqueueSelf(
-                    state with
-                    {
-                        Phase = CoordinatorPhase.WaitChildren,
-                        CurrentBundleIndex = nextIndex,
-                        // Fresh bundle — reset the throttle so the first
-                        // progress line for this bundle always emits.
-                        LastLoggedDoneCount = -1,
-                    }
-                );
-                return;
-            }
-
-            Log.LogInformation(
-                "[VideoEncodeJob] All {Length} bundles complete. Transitioning to Finalize.",
-                bundles.Length
-            );
-            // Finalize is one-shot post-encode work — fire immediately so the
-            // library refresh doesn't wait out a full poll interval.
             ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize }, TimeSpan.Zero);
             return;
         }
 
-        // Legacy path (no Bundles tracked, e.g. two-pass): wait for every
-        // non-pass1 task to land.
-        string[] nonPass1TaskIds = state.TaskIds.Where(tid => !tid.Contains("-pass1-")).ToArray();
-        bool allDone = nonPass1TaskIds.All(tid => completedTaskIds.Contains(tid));
-
-        if (!allDone)
-        {
-            int doneCount = nonPass1TaskIds.Count(tid => completedTaskIds.Contains(tid));
-            if (doneCount != state.LastLoggedDoneCount)
-            {
-                Log.LogTrace(
-                    "[VideoEncodeJob] WaitChildren: {DoneCount}/{Length} tasks done",
-                    doneCount,
-                    nonPass1TaskIds.Length
-                );
-            }
-            ReEnqueueSelf(
-                state with
-                {
-                    Phase = CoordinatorPhase.WaitChildren,
-                    LastLoggedDoneCount = doneCount,
-                }
-            );
-            return;
-        }
-
-        Log.LogTrace(
-            "[VideoEncodeJob] WaitChildren complete — all tasks done. Transitioning to Finalize."
+        bool allBundlesDone = await RunSequentialBundlesAsync(
+            state,
+            bundles,
+            context,
+            CoordinatorPhase.WaitChildren
         );
+
+        if (!allBundlesDone)
+            return; // re-enqueued to run the next bundle
+
+        Log.LogInformation(
+            "[VideoEncodeJob] All {Length} bundle(s) complete. Transitioning to Finalize.",
+            bundles.Length
+        );
+        // Finalize is one-shot post-encode work — fire immediately.
         ReEnqueueSelf(state with { Phase = CoordinatorPhase.Finalize }, TimeSpan.Zero);
     }
 
-    private void DispatchSingleBundle(
-        DecomposedTask bundle,
-        Ulid presetId,
-        Ulid[]? presetIds,
-        string groupTag,
-        string? outputDirectory = null
+    /// <summary>
+    /// The dispatcher, collapsed: ensures the bundle at
+    /// <paramref name="bundles"/>[state.CurrentBundleIndex] has succeeded,
+    /// running its ffmpeg command INLINE right now when it has not been
+    /// attempted yet — this <see cref="Handle"/> call already passed the
+    /// resource-budget gate for exactly this bundle's <see cref="ResourceRequirement"/>,
+    /// so there is nothing left to arbitrate before running it. A bundle
+    /// that fails throws, so the queue's own attempt/retry/dead-letter
+    /// accounting governs it exactly like any other job — no separate child
+    /// row, no separate retry budget.
+    /// <para>
+    /// Re-enqueues the coordinator (available immediately — there is no
+    /// external completion left to poll for) and returns false when there is
+    /// more work in <paramref name="bundles"/>; returns true once every
+    /// bundle has succeeded, so the caller decides the next phase.
+    /// </para>
+    /// </summary>
+    private async Task<bool> RunSequentialBundlesAsync(
+        CoordinatorState state,
+        DecomposedTask[] bundles,
+        MediaContext context,
+        CoordinatorPhase phaseWhileRunning
     )
     {
-        DecomposedTask stamped = bundle with { ParentJobId = _selfJobId };
-        EncodeTaskJob bundleJob = BuildChildJob(stamped, presetId, presetIds, outputDirectory);
-        GetDispatcher()
-            .DispatchChild(
-                bundleJob,
-                onQueue: bundleJob.QueueName,
-                priority: bundleJob.Priority,
-                parentJobId: _selfJobId,
-                groupTag: groupTag
+        DecomposedTask current = bundles[state.CurrentBundleIndex];
+        string[] currentTaskIds = current.BundledTaskIds ?? [current.TaskId];
+
+        List<EncodeTaskOutcome> currentOutcomes = await context
+            .EncodeTaskOutcomes.AsNoTracking()
+            .Where(o => o.GroupTag == state.GroupTag && currentTaskIds.Contains(o.TaskId))
+            .ToListAsync();
+
+        bool alreadySucceeded =
+            currentOutcomes.Count > 0 && currentOutcomes.All(outcome => outcome.Success);
+
+        if (!alreadySucceeded)
+        {
+            (bool success, string? error) = await RunBundleInlineAsync(
+                current,
+                state.PresetId,
+                state.PresetIds,
+                state.OutputDirectory
             );
+
+            if (!success)
+            {
+                throw new InvalidOperationException(
+                    $"Encode bundle '{current.TaskId}' failed: {error ?? "no error recorded"}"
+                );
+            }
+        }
+
+        int nextIndex = state.CurrentBundleIndex + 1;
+        if (nextIndex < bundles.Length)
+        {
+            Log.LogInformation(
+                "[VideoEncodeJob] Bundle {CurrentBundleIndex}/{Length} complete. Running bundle {NextIndex}/{Length2} on next wake-up.",
+                state.CurrentBundleIndex + 1,
+                bundles.Length,
+                nextIndex + 1,
+                bundles.Length
+            );
+            ReEnqueueSelf(
+                state with
+                {
+                    Phase = phaseWhileRunning,
+                    CurrentBundleIndex = nextIndex,
+                },
+                TimeSpan.Zero
+            );
+            return false;
+        }
+
+        return true;
     }
 
     private async Task HandleFinalizeAsync(CoordinatorState state)
@@ -1510,18 +1470,15 @@ public class VideoEncodeJob
         bool isPartialTopUp = false
     )
     {
-        int parentJobId = _selfJobId;
         string groupTag = tasks[0].GroupTag;
         Ulid primaryPresetId = presetIds[0];
         Ulid[]? mergedPresetIds = presetIds.Length > 1 ? presetIds : null;
 
         Log.LogTrace(
-            "[VideoEncodeJob] Decomposed into {Length} child tasks (groupTag={GroupTag})",
+            "[VideoEncodeJob] Decomposed into {Length} tasks (groupTag={GroupTag})",
             tasks.Length,
             groupTag
         );
-
-        QueueJobDispatcher dispatcher = GetDispatcher();
 
         bool hasTwoPass = tasks.Any(task =>
             task.Kind == EncodeTaskKind.Pass1 || task.Kind == EncodeTaskKind.Pass2
@@ -1531,33 +1488,22 @@ public class VideoEncodeJob
 
         if (hasTwoPass)
         {
-            // Two-pass: dispatch only Pass1 tasks first. Pass2 and aux are dispatched
-            // by the coordinator after all Pass1 tasks complete.
-            DecomposedTask[] pass1Tasks = tasks
+            // Two-pass: the Pass1 bundles run first (one per wake-up, gated by
+            // resource budget); Pass2 + aux bundles wait in PendingBundles
+            // until every Pass1 bundle has succeeded (see HandleWaitPass1Async).
+            DecomposedTask[] pass1Bundles = tasks
                 .Where(task => task.Kind == EncodeTaskKind.Pass1)
+                .Select(task => task with { ParentJobId = _selfJobId })
                 .ToArray();
 
-            foreach (DecomposedTask task in pass1Tasks)
-            {
-                DecomposedTask stamped = task with { ParentJobId = parentJobId };
-                EncodeTaskJob childJob = BuildChildJob(
-                    stamped,
-                    primaryPresetId,
-                    mergedPresetIds,
-                    fileMetadata.Path
-                );
-                dispatcher.DispatchChild(
-                    childJob,
-                    onQueue: childJob.QueueName,
-                    priority: childJob.Priority,
-                    parentJobId: parentJobId,
-                    groupTag: groupTag
-                );
-            }
+            DecomposedTask[] pendingBundles = tasks
+                .Where(task => task.Kind != EncodeTaskKind.Pass1)
+                .Select(task => task with { ParentJobId = _selfJobId })
+                .ToArray();
 
             Log.LogInformation(
-                "[VideoEncodeJob] Dispatched {Length} Pass1 tasks. Transitioning to WaitPass1.",
-                pass1Tasks.Length
+                "[VideoEncodeJob] Planned {Length} Pass1 bundle(s). Transitioning to WaitPass1.",
+                pass1Bundles.Length
             );
 
             ReEnqueueSelf(
@@ -1569,50 +1515,38 @@ public class VideoEncodeJob
                     Pass2DispatchedAt: null,
                     Pass1StatsPath: null,
                     PresetId: primaryPresetId,
-                    ExpectedFinalCount: tasks.Count(task => task.Kind != EncodeTaskKind.Pass1),
+                    ExpectedFinalCount: pendingBundles.Length,
+                    Bundles: pass1Bundles,
+                    CurrentBundleIndex: 0,
                     OutputDirectory: fileMetadata.Path,
-                    PresetIds: mergedPresetIds
-                )
+                    PresetIds: mergedPresetIds,
+                    PendingBundles: pendingBundles
+                ),
+                TimeSpan.Zero
             );
         }
         else
         {
             // Single-pass: pack tasks into resource-proportional bundles and
-            // dispatch ONE bundle at a time. The coordinator state carries
-            // the full bundle list and an index; WaitChildren waits for the
-            // current bundle's BundledTaskIds, then dispatches the next on
-            // wake-up. One ffmpeg in flight per source — never N parallel
+            // run ONE bundle at a time, each gated by its own resource
+            // requirement. One ffmpeg in flight per source — never two
             // bundles racing the GPU / CPU / shared writes.
             DecomposedTask[] bundles = BuildResourceBundles(
                 tasks,
                 plan,
-                parentJobId,
+                _selfJobId,
                 groupTag,
                 isPartialTopUp
             );
 
             if (bundles.Length == 0)
             {
-                Log.LogInformation("[VideoEncodeJob] No bundles produced — nothing to dispatch.");
+                Log.LogInformation("[VideoEncodeJob] No bundles produced — nothing to run.");
                 return;
             }
 
-            EncodeTaskJob firstBundleJob = BuildChildJob(
-                bundles[0],
-                primaryPresetId,
-                mergedPresetIds,
-                fileMetadata.Path
-            );
-            dispatcher.DispatchChild(
-                firstBundleJob,
-                onQueue: firstBundleJob.QueueName,
-                priority: firstBundleJob.Priority,
-                parentJobId: parentJobId,
-                groupTag: groupTag
-            );
-
             Log.LogInformation(
-                "[VideoEncodeJob] Dispatched bundle 1/{Length} covering {Length2} streams. Sequential dispatch — bundle N+1 fires on bundle N completion. Transitioning to WaitChildren.",
+                "[VideoEncodeJob] Planned {Length} bundle(s) covering {Length2} streams. Sequential — bundle N+1 runs after bundle N succeeds. Transitioning to WaitChildren.",
                 bundles.Length,
                 tasks.Length
             );
@@ -1631,7 +1565,8 @@ public class VideoEncodeJob
                     CurrentBundleIndex: 0,
                     OutputDirectory: fileMetadata.Path,
                     PresetIds: mergedPresetIds
-                )
+                ),
+                TimeSpan.Zero
             );
         }
 
@@ -1639,37 +1574,6 @@ public class VideoEncodeJob
         _ = fileMetadata;
         _ = stopwatch;
     }
-
-    /// <summary>
-    /// Re-enqueues the coordinator as a new job with updated <see cref="CoordinatorState"/>.
-    /// The current job instance is deleted by the worker after <see cref="Handle"/> returns.
-    /// The new job has a different payload (new Phase), so the deduplication check passes.
-    /// </summary>
-    /// <summary>
-    /// How long a polling coordinator (WaitPass1 / WaitChildren) sleeps
-    /// before its next wake-up. Children run on encoder cadence (minutes),
-    /// so a 5s poll interval just stamped the queue with thousands of
-    /// no-op DB hits per minute. 30s is well below typical encode lengths
-    /// while cutting wake-up rate ~6x.
-    /// </summary>
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
-
-    /// <summary>
-    /// Every waiting coordinator sleeps for the SAME interval, so a queue of
-    /// them stays in the order it was dispatched in.
-    /// <para>
-    /// This used to add ±5s of random jitter to spread the wake-ups out. The
-    /// reserve query takes the first job whose <c>AvailableAt</c> has passed,
-    /// ordered by priority then position — but with a different random offset
-    /// written onto every row on every wake-up, one job is eligible at a time
-    /// and WHICH one is a dice roll. The ordering never got to decide anything:
-    /// a season dispatched E01…E13 encoded in whatever sequence the jitter
-    /// happened to produce, and re-rolled it on every poll. A shared delay costs
-    /// one burst of cheap "are my children done" reads per interval, which is
-    /// what the interval itself was already widened to make affordable.
-    /// </para>
-    /// </summary>
-    private static TimeSpan NextPollDelay() => PollInterval;
 
     /// <summary>
     /// Persists the coordinator's next phase and schedules the wake-up that will
@@ -1686,7 +1590,7 @@ public class VideoEncodeJob
     /// row fixes both, and it stops the next thing that reaches for a job ID from
     /// finding a value that will not hold still.</para>
     /// </summary>
-    private void ReEnqueueSelf(CoordinatorState newState, TimeSpan? availableAfter = null)
+    private void ReEnqueueSelf(CoordinatorState newState, TimeSpan availableAfter = default)
     {
         // Bump WakeSequence so the serialized payload differs from the row this
         // worker is currently processing. JobQueue.Enqueue dedups by Payload, and
@@ -1714,11 +1618,10 @@ public class VideoEncodeJob
             );
 
         string payload = SerializationHelper.Serialize(continueJob);
-        TimeSpan delay = availableAfter ?? NextPollDelay();
 
         if (_selfJobId > 0)
         {
-            queue.UpdateJobPayload(_selfJobId, payload, delay);
+            queue.UpdateJobPayload(_selfJobId, payload, availableAfter);
             RescheduledInPlace = true;
             return;
         }
@@ -1733,7 +1636,7 @@ public class VideoEncodeJob
                 Queue = QueueName,
                 Payload = payload,
                 Priority = Priority,
-                AvailableAt = DateTime.UtcNow + delay,
+                AvailableAt = DateTime.UtcNow + availableAfter,
             }
         );
 
@@ -1741,44 +1644,6 @@ public class VideoEncodeJob
         // while bundles encode) and even at Verbose it floods the console. The
         // companion wake-up trace was already dropped for the same reason; real
         // phase transitions emit their own descriptive lines.
-    }
-
-    private EncodeTaskJob BuildChildJob(DecomposedTask task, Ulid presetId) =>
-        BuildChildJob(task, presetId, presetIds: null, outputDirectory: null);
-
-    private EncodeTaskJob BuildChildJob(
-        DecomposedTask task,
-        Ulid presetId,
-        string? outputDirectory
-    ) => BuildChildJob(task, presetId, presetIds: null, outputDirectory);
-
-    private EncodeTaskJob BuildChildJob(
-        DecomposedTask task,
-        Ulid presetId,
-        Ulid[]? presetIds,
-        string? outputDirectory
-    )
-    {
-        return new()
-        {
-            LibraryId = LibraryId,
-            FolderId = FolderId,
-            Id = Id,
-            InputFile = InputFile,
-            SourceDriverId = SourceDriverId,
-            PresetId = presetId,
-            PresetIds = presetIds,
-            Task = task,
-            OutputDirectory = outputDirectory,
-        };
-    }
-
-    private static QueueJobDispatcher GetDispatcher()
-    {
-        return QueueRunner.Current?.Dispatcher
-            ?? throw new InvalidOperationException(
-                "QueueRunner.Current is null — queue not initialized"
-            );
     }
 
     /// <summary>
@@ -1960,6 +1825,360 @@ public class VideoEncodeJob
                 }
             );
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Inline bundle execution — collapsed from the former EncodeTaskJob.
+    // Every wake-up that reaches WaitPass1/WaitChildren with a bundle to run
+    // arrives here already holding the resource-budget lease QueueWorker
+    // acquired for THIS bundle's ResourceRequirement, so the ffmpeg command
+    // runs right here, synchronously, inside the same Handle() call.
+    // ------------------------------------------------------------------
+
+    /// <summary>
+    /// Runs one decomposed bundle's ffmpeg command to completion, records its
+    /// <see cref="EncodingHistory"/> row, and upserts its
+    /// <see cref="EncodeTaskOutcome"/> row(s) — the same work the former
+    /// <c>EncodeTaskJob.Handle()</c> did as a separate queue row. Returns the
+    /// failure reason (if any) so the caller can surface it without a second
+    /// round-trip to the outcomes table.
+    /// </summary>
+    private async Task<(bool Success, string? Error)> RunBundleInlineAsync(
+        DecomposedTask task,
+        Ulid presetId,
+        Ulid[]? presetIds,
+        string? outputDirectory
+    )
+    {
+        await using MediaContext context = new();
+        await using LibraryRepository libraryRepository = new(context, StorageDriver);
+
+        Folder? folder = await libraryRepository.GetLibraryFolder(FolderId);
+        if (folder is null)
+            return (false, "folder not found");
+
+        EncodingProfile encodingProfile;
+        try
+        {
+            encodingProfile = PresetResolver.Resolve(presetId, new DbPresetLookup(context));
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(
+                "[VideoEncodeJob] Skipping bundle '{Label}' for preset {PresetId}: resolve failed — {Message}",
+                task.Label,
+                presetId,
+                ex.Message
+            );
+            await WriteBundleOutcomeAsync(task, success: false, error: ex.Message, artifacts: []);
+            return (false, ex.Message);
+        }
+
+        FileMetadata fileMetadata = await GetFileMetaData(folder, context);
+        if (!fileMetadata.Success)
+        {
+            const string error = "Could not resolve media metadata";
+            await WriteBundleOutcomeAsync(task, success: false, error: error, artifacts: []);
+            return (false, error);
+        }
+
+        IEncodingOrchestrator orchestrator = _encodingOrchestrator!;
+
+        IStorage destinationStorage = StorageFactory.For(folder.Id, folder.DriverId, folder.Path);
+        IStorage sourceStorage = SourceStorageResolver.Resolve(
+            StorageFactory,
+            SourceDriverId,
+            InputFile,
+            folder,
+            destinationStorage
+        );
+
+        EncodingRequest request = new(
+            InputPath: InputFile,
+            OutputDirectory: fileMetadata.Path,
+            Profile: encodingProfile,
+            MediaTitle: fileMetadata.FileName,
+            SourceStorage: sourceStorage,
+            DestinationStorage: destinationStorage,
+            MediaItem: fileMetadata.MediaItem
+        );
+
+        // Smart-orchestrator merged run: task.OutputIndex indexes the MERGED
+        // plan (union of every listed preset's video renditions). Re-plan and
+        // re-merge every preset the same deterministic way the coordinator
+        // did at decompose time, rather than carry the whole plan through
+        // the serialized coordinator state.
+        if (presetIds is { Length: > 1 })
+        {
+            List<EncodingRequest> mergeRequests = new(presetIds.Length);
+            foreach (Ulid mergedPresetId in presetIds)
+            {
+                EncodingProfile presetProfile;
+                try
+                {
+                    presetProfile = PresetResolver.Resolve(
+                        mergedPresetId,
+                        new DbPresetLookup(context)
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Log.LogWarning(
+                        "[VideoEncodeJob] Merged bundle '{Label}': preset {PresetId} resolve failed — {Message}",
+                        task.Label,
+                        mergedPresetId,
+                        ex.Message
+                    );
+                    await WriteBundleOutcomeAsync(
+                        task,
+                        success: false,
+                        error: ex.Message,
+                        artifacts: []
+                    );
+                    return (false, ex.Message);
+                }
+
+                mergeRequests.Add(request with { Profile = presetProfile });
+            }
+
+            OutputPlan? mergedPlan = await orchestrator.PlanMergedAsync(mergeRequests);
+            if (mergedPlan is null)
+            {
+                string error =
+                    $"Could not rebuild the merged plan for preset set [{string.Join(", ", presetIds)}]";
+                Log.LogError(
+                    "[VideoEncodeJob] Merged bundle '{Label}' failed: {Error}",
+                    task.Label,
+                    error
+                );
+                await WriteBundleOutcomeAsync(task, success: false, error: error, artifacts: []);
+                return (false, error);
+            }
+
+            request = request with
+            {
+                Options = (request.Options ?? new EncodingOptions()) with
+                {
+                    PrecomputedPlan = mergedPlan,
+                },
+            };
+        }
+
+        // Propagate StatsFilePath from the task descriptor so TwoPassStrategyBase
+        // receives the coordinator-resolved path for Pass2 bundles.
+        if (!string.IsNullOrEmpty(task.StatsFilePath))
+        {
+            request = request with
+            {
+                Options = (request.Options ?? new EncodingOptions()) with
+                {
+                    StatsFilePath = task.StatsFilePath,
+                },
+            };
+        }
+
+        IEncoderProcessRegistry? processRegistry = _encoderProcessRegistry;
+
+        using EventBusProgressObserver progressObserver = new(
+            jobId: fileMetadata.Id,
+            title: fileMetadata.Title,
+            baseFolder: fileMetadata.Path,
+            sharePath: fileMetadata.Path,
+            registry: processRegistry,
+            backdrop: fileMetadata.ImgPath
+        );
+
+        Stopwatch stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            EncodingResult result = await orchestrator.EncodeAsync(
+                request,
+                task,
+                progressObserver,
+                _shutdownToken
+            );
+            stopwatch.Stop();
+
+            if (!result.Success)
+            {
+                string errorMsg =
+                    result.Error?.Message ?? result.EnrichedError?.Message ?? "encode failed";
+                Log.LogWarning(
+                    "[VideoEncodeJob] Bundle '{Label}' failed: {ErrorMsg}",
+                    task.Label,
+                    errorMsg
+                );
+                await WriteBundleOutcomeAsync(task, success: false, error: errorMsg, artifacts: []);
+                return (false, errorMsg);
+            }
+
+            Log.LogInformation(
+                "[VideoEncodeJob] Bundle '{Label}' completed in {TotalSeconds:F1}s",
+                task.Label,
+                stopwatch.Elapsed.TotalSeconds
+            );
+
+            await RecordBundleHistoryAsync(
+                context,
+                task.Label,
+                request.InputPath,
+                encodingProfile,
+                result
+            );
+
+            List<string> artifactPaths = [.. result.Artifacts.Select(artifact => artifact.Path)];
+            await WriteBundleOutcomeAsync(
+                task,
+                success: true,
+                error: null,
+                artifacts: artifactPaths
+            );
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            Log.LogError(
+                "[VideoEncodeJob] Bundle '{Label}' threw: {Message}",
+                task.Label,
+                ex.Message
+            );
+            await WriteBundleOutcomeAsync(task, success: false, error: ex.Message, artifacts: []);
+            return (false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Appends the dashboard-facing <see cref="EncodingHistory"/> row for one
+    /// bundle. Best-effort: a failure here must not turn a completed encode
+    /// into a failed one.
+    /// </summary>
+    private async Task RecordBundleHistoryAsync(
+        MediaContext context,
+        string label,
+        string inputPath,
+        EncodingProfile profile,
+        EncodingResult result
+    )
+    {
+        try
+        {
+            long inputBytes = result.Stats?.SourceBytes ?? 0;
+            long outputBytes = result.Stats?.OutputBytes ?? 0;
+
+            context.EncodingHistory.Add(
+                new()
+                {
+                    InputPath = inputPath,
+                    OutputPath = result.OutputPath,
+                    ProfileId = profile.Id,
+                    ProfileName = profile.Name,
+                    EncoderUsed = result.Metrics?.EncoderUsed ?? string.Empty,
+                    GpuUsed = result.Metrics?.GpuUsed,
+                    DurationSeconds = result.Stats?.DurationSeconds ?? 0,
+                    InputSizeBytes = inputBytes,
+                    OutputSizeBytes = outputBytes,
+                    CompressionRatio = inputBytes > 0 ? (double)outputBytes / inputBytes : 0,
+                    AverageSpeed = result.Metrics?.AverageSpeed ?? 0,
+                    AverageFps = result.Stats?.AvgFps ?? result.Metrics?.AverageFps ?? 0,
+                }
+            );
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(
+                "[VideoEncodeJob] Could not record encoding history for bundle '{Label}': {Message}",
+                label,
+                ex.Message
+            );
+        }
+    }
+
+    /// <summary>
+    /// Upserts the durable <see cref="EncodeTaskOutcome"/> row(s) for
+    /// <paramref name="task"/> — one row per <see cref="DecomposedTask.BundledTaskIds"/>
+    /// entry when the bundle covers more than one original stream-task, else
+    /// one row for <see cref="DecomposedTask.TaskId"/> itself. Upsert, not
+    /// insert-only: a queue-level retry of this same coordinator row must be
+    /// able to overwrite a prior failed attempt's row and actually re-run the
+    /// bundle, rather than finding a permanently "already recorded" failure
+    /// and refusing to try again — there is no longer a separate child row
+    /// with its own independent retry budget to fall back on.
+    /// </summary>
+    private async Task WriteBundleOutcomeAsync(
+        DecomposedTask task,
+        bool success,
+        string? error,
+        IReadOnlyList<string> artifacts
+    )
+    {
+        string[] taskIds = task.BundledTaskIds is { Length: > 0 } bundled ? bundled : [task.TaskId];
+        string? artifactsJson = artifacts.Count > 0 ? string.Join("\n", artifacts) : null;
+
+        try
+        {
+            await using MediaContext outcomeContext = new();
+
+            foreach (string taskId in taskIds)
+            {
+                EncodeTaskOutcome? existing =
+                    await outcomeContext.EncodeTaskOutcomes.FirstOrDefaultAsync(row =>
+                        row.TaskId == taskId
+                    );
+
+                if (existing is not null)
+                {
+                    existing.Success = success;
+                    existing.ErrorMessage = error;
+                    existing.OutputArtifactsJson = artifactsJson;
+                    existing.CompletedAt = DateTime.UtcNow;
+                }
+                else
+                {
+                    outcomeContext.EncodeTaskOutcomes.Add(
+                        new()
+                        {
+                            TaskId = taskId,
+                            ParentJobId = task.ParentJobId,
+                            GroupTag = task.GroupTag,
+                            Success = success,
+                            ErrorMessage = error,
+                            Kind = task.Kind.ToString(),
+                            OutputArtifactsJson = artifactsJson,
+                            CompletedAt = DateTime.UtcNow,
+                        }
+                    );
+                }
+            }
+
+            await outcomeContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(
+                "[VideoEncodeJob] Failed to write outcome row(s) for bundle '{TaskId}': {Message}",
+                task.TaskId,
+                ex.Message
+            );
+        }
+
+        if (!EventBusProvider.IsConfigured)
+            return;
+
+        await EventBusProvider.Current.PublishAsync(
+            new EncodeTaskCompletedEvent
+            {
+                TaskId = task.TaskId,
+                ParentJobId = task.ParentJobId,
+                GroupTag = task.GroupTag,
+                Success = success,
+                Error = error,
+                Kind = task.Kind,
+                OutputArtifacts = artifacts,
+            }
+        );
     }
 
     // ------------------------------------------------------------------
@@ -2359,31 +2578,6 @@ public class VideoEncodeJob
     /// are mutually exclusive — exactly one is non-null (callers already
     /// verified that before reaching this point).
     /// </summary>
-    // ------------------------------------------------------------------
-    // Task-ID parsing helpers
-    // ------------------------------------------------------------------
-
-    private static int ParseOutputIndex(string taskId)
-    {
-        int dashIndex = taskId.LastIndexOf('-');
-        if (dashIndex >= 0 && int.TryParse(taskId.AsSpan(dashIndex + 1), out int index))
-            return index;
-        return 0;
-    }
-
-    private static EncodeTaskKind InferKindFromTaskId(string taskId)
-    {
-        if (taskId.Contains("-audio-"))
-            return EncodeTaskKind.Audio;
-        if (taskId.Contains("-sub-"))
-            return EncodeTaskKind.Subtitle;
-        if (taskId.Contains("-thumbs"))
-            return EncodeTaskKind.Thumbnails;
-        if (taskId.Contains("-video-"))
-            return EncodeTaskKind.Video;
-        return EncodeTaskKind.Video;
-    }
-
     private record FileMetadata
     {
         public bool Success { get; set; }

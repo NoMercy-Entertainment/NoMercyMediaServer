@@ -117,7 +117,7 @@ public class NfsConcurrencyTests
         );
         try
         {
-            byte[] payload = Enumerable.Range(0, 256).Select(n => (byte)n).ToArray();
+            byte[] payload = [.. Enumerable.Range(0, 256).Select(n => (byte)n)];
             for (int i = 0; i < 8; i++)
                 lib.Seed($"/p_{i}.bin", payload);
 
@@ -225,7 +225,7 @@ public class NfsConcurrencyTests
     {
         FaultyLibNfs lib = new();
         lib.SeedDir("/");
-        byte[] payload = Enumerable.Range(0, 64).Select(n => (byte)n).ToArray();
+        byte[] payload = [.. Enumerable.Range(0, 64).Select(n => (byte)n)];
         for (int i = 0; i < 4; i++)
             lib.Seed($"/iso_{i}.bin", payload);
 

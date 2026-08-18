@@ -119,7 +119,7 @@ public sealed class SmbReadStreamTests
         List<byte> collected = [];
         int n;
         while ((n = stream.Read(small, 0, small.Length)) > 0)
-            collected.AddRange(small.AsSpan(0, n).ToArray());
+            collected.AddRange([.. small.AsSpan(0, n)]);
 
         collected
             .Should()

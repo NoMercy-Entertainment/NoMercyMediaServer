@@ -85,14 +85,15 @@ internal sealed class FileWatcherTestQueueContext : IQueueContext
     }
 
     public IReadOnlyList<QueueJobModel> GetReservedJobsOlderThan(DateTime cutoffUtc) =>
-        Jobs.Where(j => j.ReservedAt < cutoffUtc).ToList();
+        [.. Jobs.Where(j => j.ReservedAt < cutoffUtc)];
 
     public IReadOnlyList<QueueJobModel> GetStrandedJobs(byte maxAttempts, byte maxInterruptions) =>
-        Jobs.Where(j =>
+        [
+            .. Jobs.Where(j =>
                 j.ReservedAt == null
                 && (j.Attempts >= maxAttempts || j.Interruptions >= maxInterruptions)
-            )
-            .ToList();
+            ),
+        ];
 
     public bool IsParentFailed(int parentJobId) => false;
 
@@ -511,8 +512,10 @@ public class InboxClassifierCascadeViaEventBusTests : IDisposable
             .Setup(s => s.List("", null, false))
             .Returns([new(childFile, false, 1024, DateTimeOffset.UtcNow)]);
         storageMock
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>((parent, child) => $"{parent}/{child}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
+            .Returns<string, string[]>(
+                (parent, segments) => $"{parent}/{string.Join('/', segments)}"
+            );
         storageMock
             .Setup(s => s.OpenRead(It.IsAny<string>()))
             .Returns(new MemoryStream([0x1A, 0x45, 0xDF, 0xA3, 0x00, 0x00, 0x00, 0x00]));

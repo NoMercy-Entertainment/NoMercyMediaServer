@@ -72,10 +72,10 @@ public class BuiltinPresetsTests
     [Fact]
     public void Ladder_presets_carry_a_reference_video_output()
     {
-        EncodingProfile[] ladders = BuiltinPresets
-            .All()
-            .Where(profile => profile.Ladder is { Mode: LadderMode.Auto })
-            .ToArray();
+        EncodingProfile[] ladders =
+        [
+            .. BuiltinPresets.All().Where(profile => profile.Ladder is { Mode: LadderMode.Auto }),
+        ];
 
         ladders.Should().NotBeEmpty();
 

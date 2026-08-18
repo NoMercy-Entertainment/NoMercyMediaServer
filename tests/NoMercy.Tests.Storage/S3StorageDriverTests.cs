@@ -162,7 +162,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
 
         S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"roundtrip/{Ulid.NewUlid()}.txt";
-        byte[] data = "hello s3"u8.ToArray();
+        byte[] data = [.. "hello s3"u8];
 
         // Write
         await using (Stream w = backend.OpenWrite(path, overwrite: true))
@@ -215,7 +215,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         // Write two files under the prefix
         string fileA = $"{prefix}/a.txt";
         string fileB = $"{prefix}/b.txt";
-        byte[] bytes = "x"u8.ToArray();
+        byte[] bytes = [.. "x"u8];
 
         await using (Stream w = backend.OpenWrite(fileA, overwrite: true))
             await w.WriteAsync(bytes);
@@ -241,7 +241,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         S3StorageDriver backend = fix.BuildS3Driver();
         string src = $"move/{Ulid.NewUlid()}-src.txt";
         string dst = $"move/{Ulid.NewUlid()}-dst.txt";
-        byte[] data = "move me"u8.ToArray();
+        byte[] data = [.. "move me"u8];
 
         await using (Stream w = backend.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
@@ -262,7 +262,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
         S3StorageDriver backend = fix.BuildS3Driver();
         string src = $"copy/{Ulid.NewUlid()}-src.txt";
         string dst = $"copy/{Ulid.NewUlid()}-dst.txt";
-        byte[] data = "copy me"u8.ToArray();
+        byte[] data = [.. "copy me"u8];
 
         await using (Stream w = backend.OpenWrite(src, overwrite: true))
             await w.WriteAsync(data);
@@ -304,7 +304,7 @@ public class S3StorageDriverIntegrationTests(StorageBackendsFixture fix)
 
         S3StorageDriver backend = fix.BuildS3Driver();
         string path = $"nooverwrite/{Ulid.NewUlid()}.txt";
-        byte[] data = "original"u8.ToArray();
+        byte[] data = [.. "original"u8];
 
         await using (Stream w = backend.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
@@ -352,9 +352,10 @@ public class S3EnumerateContractTests
 
         S3StorageDriver driver = BuildDriver(mock, "test-bucket", "media");
 
-        List<string> entries = driver
-            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
-            .ToList();
+        List<string> entries =
+        [
+            .. driver.EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly),
+        ];
 
         entries.Should().Contain("folder/file.mp3");
         entries.Should().Contain("folder");
@@ -397,9 +398,10 @@ public class S3EnumerateContractTests
 
         S3StorageDriver driver = BuildDriver(mock, "test-bucket", "media");
 
-        List<string> entries = driver
-            .EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly)
-            .ToList();
+        List<string> entries =
+        [
+            .. driver.EnumerateFileSystemEntries(string.Empty, "*", SearchOption.TopDirectoryOnly),
+        ];
 
         string dirEntry = entries.Single(e => e == "folder");
         bool exists = driver.DirectoryExists(dirEntry);

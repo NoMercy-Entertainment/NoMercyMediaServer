@@ -117,29 +117,32 @@ public record PersonResponseItemDto
         Gender = person.Gender;
         Link = new($"/person/{Id}", UriKind.Relative);
 
-        ImagesDto = new()
-        {
-            Profiles = person.Images.Select(image => new ImageDto(image)).ToArray(),
-        };
+        ImagesDto = new() { Profiles = [.. person.Images.Select(image => new ImageDto(image))] };
 
         CombinedCredits = new()
         {
-            Cast = person
-                .Casts.Select(cast => new KnownForDto(cast))
-                .OrderByDescending(knownFor => knownFor.Year)
-                .ToArray(),
+            Cast =
+            [
+                .. person
+                    .Casts.Select(cast => new KnownForDto(cast))
+                    .OrderByDescending(knownFor => knownFor.Year),
+            ],
 
-            Crew = person
-                .Crews.Select(crew => new KnownForDto(crew))
-                .OrderByDescending(knownFor => knownFor.Year)
-                .ToArray(),
+            Crew =
+            [
+                .. person
+                    .Crews.Select(crew => new KnownForDto(crew))
+                    .OrderByDescending(knownFor => knownFor.Year),
+            ],
         };
 
-        KnownFor = person
-            .Casts.Select(crew => new KnownForDto(crew))
-            .Concat(person.Crews.Select(crew => new KnownForDto(crew)))
-            .OrderByDescending(knownFor => knownFor.Popularity)
-            .ToArray();
+        KnownFor =
+        [
+            .. person
+                .Casts.Select(crew => new KnownForDto(crew))
+                .Concat(person.Crews.Select(crew => new KnownForDto(crew)))
+                .OrderByDescending(knownFor => knownFor.Popularity),
+        ];
     }
 
     public PersonResponseItemDto(
@@ -174,42 +177,52 @@ public record PersonResponseItemDto
 
         ImagesDto = new()
         {
-            Profiles = tmdbPersonAppends
-                .Images.Profiles.Select(image => new ImageDto(image))
-                .ToArray(),
+            Profiles = [.. tmdbPersonAppends.Images.Profiles.Select(image => new ImageDto(image))],
         };
 
         CombinedCredits = new()
         {
-            Cast = tmdbPersonAppends
+            Cast =
+            [
+                .. tmdbPersonAppends
+                    .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
+                    .Where(knownFor =>
+                        RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult
+                    )
+                    .OrderByDescending(knownFor => knownFor.Year),
+            ],
+
+            Crew =
+            [
+                .. tmdbPersonAppends
+                    .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
+                    .Where(knownFor =>
+                        RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult
+                    )
+                    .OrderByDescending(knownFor => knownFor.Year),
+            ],
+        };
+
+        KnownForDto[] cast =
+        [
+            .. tmdbPersonAppends
                 .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
                 .Where(knownFor =>
                     RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult
                 )
-                .OrderByDescending(knownFor => knownFor.Year)
-                .ToArray(),
+                .DistinctBy(knownFor => knownFor.Id),
+        ];
 
-            Crew = tmdbPersonAppends
+        KnownForDto[] crew =
+        [
+            .. tmdbPersonAppends
                 .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
                 .Where(knownFor =>
                     RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult
                 )
-                .OrderByDescending(knownFor => knownFor.Year)
-                .ToArray(),
-        };
+                .DistinctBy(knownFor => knownFor.Id),
+        ];
 
-        KnownForDto[] cast = tmdbPersonAppends
-            .CombinedCredits.Cast.Select(cast => new KnownForDto(cast, person))
-            .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
-            .DistinctBy(knownFor => knownFor.Id)
-            .ToArray();
-
-        KnownForDto[] crew = tmdbPersonAppends
-            .CombinedCredits.Crew.Select(crew => new KnownForDto(crew, person))
-            .Where(knownFor => RuntimeServerSettings.Current.ShowAdultContent || !knownFor.Adult)
-            .DistinctBy(knownFor => knownFor.Id)
-            .ToArray();
-
-        KnownFor = cast.Concat(crew).OrderByDescending(knownFor => knownFor.VoteCount).ToArray();
+        KnownFor = [.. cast.Concat(crew).OrderByDescending(knownFor => knownFor.VoteCount)];
     }
 }

@@ -93,6 +93,6 @@ public static class AudioPlanBuilder
         // streams all collapse to the same directory + filename. Append the
         // source stream index to colliding plans only — single-stream-per-
         // language sources keep their stable templates.
-        return PlanStageDisambiguation.DisambiguateAudio(audioPlans).ToArray();
+        return [.. PlanStageDisambiguation.DisambiguateAudio(audioPlans)];
     }
 }

@@ -86,12 +86,14 @@ public partial class FileManager
         // in an NFS library would also probe every S3 / WebDAV folder for
         // unrelated libraries — one flaky remote backend then threw on
         // Exists() and killed the whole job (retried up to maxAttempts).
-        Folder[] rootFolders = mediaContext
-            .FolderLibrary.Where(fl => fl.LibraryId == library.Id)
-            .Include(fl => fl.Folder)
-                .ThenInclude(fl => fl.Driver)
-            .Select(f => f.Folder)
-            .ToArray();
+        Folder[] rootFolders =
+        [
+            .. mediaContext
+                .FolderLibrary.Where(fl => fl.LibraryId == library.Id)
+                .Include(fl => fl.Folder)
+                    .ThenInclude(fl => fl.Driver)
+                .Select(f => f.Folder),
+        ];
 
         LibraryRootFolders = rootFolders;
 
@@ -135,7 +137,15 @@ public partial class FileManager
                 );
                 if (match != null)
                 {
-                    path = folderStorage.CombinePath(rootFolder.Path, folderStorage.GetName(match));
+                    // match is the driver-absolute hit EnumerateFileSystemEntries
+                    // returned — OS-separated (backslash on Windows). GetName splits
+                    // on '/' only (Rule 2), so an un-normalized match reads as having
+                    // no separator at all and comes back unchanged, doubling the path
+                    // when combined with rootFolder.Path below.
+                    path = folderStorage.CombinePath(
+                        rootFolder.Path,
+                        folderStorage.GetName(match.Replace('\\', '/'))
+                    );
                     exists = TryExists(folderStorage, path);
                 }
             }

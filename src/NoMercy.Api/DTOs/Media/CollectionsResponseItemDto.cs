@@ -95,14 +95,17 @@ public record CollectionsResponseItemDto
         Poster = collectionMovie.Movie.Poster;
         TitleSort = collectionMovie.Movie.Title.TitleSort(collectionMovie.Movie.ReleaseDate);
         Type = "collectionMovie";
-        Genres = collectionMovie
-            .Movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie))
-            .ToArray();
+        Genres =
+        [
+            .. collectionMovie.Movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie)),
+        ];
         VideoId = collectionMovie.Movie.Video;
-        Videos = collectionMovie
-            .Movie.Media.Where(media => media.Site == "YouTube")
-            .Select(media => new VideoDto(media))
-            .ToArray();
+        Videos =
+        [
+            .. collectionMovie
+                .Movie.Media.Where(media => media.Site == "YouTube")
+                .Select(media => new VideoDto(media)),
+        ];
     }
 
     public CollectionsResponseItemDto(Collection collection)
@@ -136,11 +139,13 @@ public record CollectionsResponseItemDto
             collectionMovie.Movie.VideoFiles.Any(v => v.Folder != null)
         );
 
-        Genres = collection
-            .CollectionMovies.Select(genreTv => genreTv.Movie)
-            .SelectMany(movie => movie.GenreMovies.Select(genreMovie => genreMovie.Genre))
-            .Select(genre => new GenreDto(genre))
-            .ToArray();
+        Genres =
+        [
+            .. collection
+                .CollectionMovies.Select(genreTv => genreTv.Movie)
+                .SelectMany(movie => movie.GenreMovies.Select(genreMovie => genreMovie.Genre))
+                .Select(genre => new GenreDto(genre)),
+        ];
 
         VideoId = collection.CollectionMovies.FirstOrDefault()?.Movie.Video;
     }

@@ -205,7 +205,7 @@ public class HardwareBenchmarkTests
 
         HardwareBenchmark sut = NewBenchmark(hardware.Object);
 
-        List<EncoderInfo> candidates = sut.SelectCandidates().Select(c => c.Encoder).ToList();
+        List<EncoderInfo> candidates = [.. sut.SelectCandidates().Select(c => c.Encoder)];
 
         // Software encoders (no RequiredVendor) must remain.
         candidates.Should().Contain(e => e.FfmpegName == "libx264");
@@ -233,7 +233,7 @@ public class HardwareBenchmarkTests
 
         HardwareBenchmark sut = NewBenchmark(hardware.Object);
 
-        List<string> names = sut.SelectCandidates().Select(c => c.Encoder.FfmpegName).ToList();
+        List<string> names = [.. sut.SelectCandidates().Select(c => c.Encoder.FfmpegName)];
 
         names.Should().Contain("h264_nvenc");
         names.Should().NotContain("h264_amf");
@@ -264,9 +264,10 @@ public class HardwareBenchmarkTests
 
         HardwareBenchmark sut = NewBenchmark(hardware.Object);
 
-        List<CalibrationTarget> nvencH264 = sut.SelectCandidates()
-            .Where(c => c.Encoder.FfmpegName == "h264_nvenc")
-            .ToList();
+        List<CalibrationTarget> nvencH264 =
+        [
+            .. sut.SelectCandidates().Where(c => c.Encoder.FfmpegName == "h264_nvenc"),
+        ];
 
         nvencH264.Should().HaveCount(2);
         nvencH264.Select(c => c.VendorIndex).Should().BeEquivalentTo([0, 1]);
@@ -305,17 +306,15 @@ public class HardwareBenchmarkTests
 
         HardwareBenchmark sut = NewBenchmark(hardware.Object);
 
-        List<CalibrationTarget> targets = sut.SelectCandidates().ToList();
+        List<CalibrationTarget> targets = [.. sut.SelectCandidates()];
 
-        CalibrationTarget[] nvenc = targets
-            .Where(t => t.Encoder.FfmpegName == "h264_nvenc")
-            .ToArray();
+        CalibrationTarget[] nvenc = [.. targets.Where(t => t.Encoder.FfmpegName == "h264_nvenc")];
         nvenc.Should().HaveCount(2);
         // Vendor-relative indexing: Nvidia positions inside the Nvidia-only list,
         // NOT positions inside the global Gpus list.
         nvenc.Select(t => t.VendorIndex).Should().BeEquivalentTo([0, 1]);
 
-        CalibrationTarget[] qsv = targets.Where(t => t.Encoder.FfmpegName == "h264_qsv").ToArray();
+        CalibrationTarget[] qsv = [.. targets.Where(t => t.Encoder.FfmpegName == "h264_qsv")];
         qsv.Should().HaveCount(1);
         qsv[0].VendorIndex.Should().Be(0);
     }
@@ -382,7 +381,7 @@ public class HardwareBenchmarkTests
         // libx264 is in the fast-software-encoder list — gets a 4K probe
         // so the speed index has a real reading instead of extrapolation.
         CalibrationTarget target = SoftwareTarget(MakeSoftwareH264());
-        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+        (int W, int H)[] tiers = [.. HardwareBenchmark.TiersForTarget(target)];
 
         tiers.Should().Contain((3840, 2160));
         tiers.Should().Contain((1920, 1080));
@@ -399,7 +398,7 @@ public class HardwareBenchmarkTests
             FfmpegName = "libaom-av1",
         };
         CalibrationTarget target = new(VideoCodecType.Av1, libaom, Device: null, VendorIndex: 0);
-        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+        (int W, int H)[] tiers = [.. HardwareBenchmark.TiersForTarget(target)];
 
         tiers.Should().NotContain((3840, 2160));
         tiers.Should().Contain((1920, 1080));
@@ -426,7 +425,7 @@ public class HardwareBenchmarkTests
         );
         CalibrationTarget target = HardwareTarget(nvenc, "RTX 4080", vendorIndex: 0);
 
-        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+        (int W, int H)[] tiers = [.. HardwareBenchmark.TiersForTarget(target)];
 
         tiers[0].Should().Be((3840, 2160));
         tiers.Length.Should().Be(4);
@@ -466,7 +465,7 @@ public class HardwareBenchmarkTests
         );
         CalibrationTarget target = new(VideoCodecType.H264, qsv, lowVram, VendorIndex: 0);
 
-        (int W, int H)[] tiers = HardwareBenchmark.TiersForTarget(target).ToArray();
+        (int W, int H)[] tiers = [.. HardwareBenchmark.TiersForTarget(target)];
 
         tiers.Should().NotContain((3840, 2160));
     }

@@ -30,7 +30,7 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
         Require();
         using S3StorageDriver driver = fix.BuildS3Driver();
         string path = $"smoke/{Ulid.NewUlid()}.bin";
-        byte[] data = "hello s3"u8.ToArray();
+        byte[] data = [.. "hello s3"u8];
 
         await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
@@ -47,7 +47,7 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
         Require();
         using WebDavStorageDriver driver = fix.BuildWebDavDriver();
         string path = $"smoke-{Ulid.NewUlid()}.bin";
-        byte[] data = "hello webdav"u8.ToArray();
+        byte[] data = [.. "hello webdav"u8];
 
         await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
@@ -64,7 +64,7 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
         Require();
         using SmbStorageDriver driver = fix.BuildSmbDriver();
         string path = $"smoke-{Ulid.NewUlid()}.bin";
-        byte[] data = "hello smb"u8.ToArray();
+        byte[] data = [.. "hello smb"u8];
 
         await using (Stream w = driver.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
@@ -92,7 +92,7 @@ public sealed class StorageBackendsSmokeTests(StorageBackendsFixture fix)
 
         // Round-trip a fresh file.
         string path = $"/smoke-{Ulid.NewUlid()}.bin";
-        byte[] data = "hello nfs"u8.ToArray();
+        byte[] data = [.. "hello nfs"u8];
         await using (Stream w = nfs.OpenWrite(path, overwrite: true))
             await w.WriteAsync(data);
         await using Stream r = nfs.OpenRead(path);

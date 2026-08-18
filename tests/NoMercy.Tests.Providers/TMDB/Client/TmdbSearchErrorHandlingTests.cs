@@ -187,12 +187,10 @@ public class TmdbSearchErrorHandlingTests : TmdbTestBase
     {
         // Arrange
         using TmdbSearchClient client = new();
-        string[] queries = Enumerable.Range(1, 10).Select(i => $"query{i}").ToArray();
+        string[] queries = [.. Enumerable.Range(1, 10).Select(i => $"query{i}")];
 
         // Act
-        Task<TmdbPaginatedResponse<TmdbMovie>?>[] tasks = queries
-            .Select(q => client.Movie(q))
-            .ToArray();
+        Task<TmdbPaginatedResponse<TmdbMovie>?>[] tasks = [.. queries.Select(q => client.Movie(q))];
         await Task.WhenAll(tasks);
 
         // Assert

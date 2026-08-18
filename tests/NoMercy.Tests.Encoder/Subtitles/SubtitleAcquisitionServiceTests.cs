@@ -857,8 +857,8 @@ public class SubtitleAcquisitionServiceTests : IDisposable
     private static void StubStorage(Mock<IStorage> storage)
     {
         storage
-            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns<string, string>((a, b) => $"{a}/{b}");
+            .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
+            .Returns<string, string[]>((a, b) => $"{a}/{string.Join('/', b)}");
         storage.Setup(s => s.CreateDirectory(It.IsAny<string>()));
         storage
             .Setup(s =>

@@ -29,7 +29,7 @@ namespace NoMercy.Tests.Api.Media;
 [Trait("Category", "MediaLibraries")]
 public class LibraryNavigationTests : IClassFixture<NoMercyApiFactory>
 {
-    private const string Route = "/api/v1/libraries/navigation";
+    private const string Route = "/api/v1/setup/navigation";
 
     private readonly HttpClient _authed;
     private readonly HttpClient _unauthed;

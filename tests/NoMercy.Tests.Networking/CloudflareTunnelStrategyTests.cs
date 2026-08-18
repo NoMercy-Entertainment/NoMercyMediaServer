@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Connectivity.Strategies;
@@ -21,6 +22,31 @@ namespace NoMercy.Tests.Networking;
 [Trait("Category", "Unit")]
 public sealed class CloudflareTunnelStrategyTests
 {
+    /// <summary>
+    /// Records every level a call was logged at. NullLogger cannot answer "did this go out as
+    /// a Warning or a Debug" — the exact question the shutdown-noise fix lives or dies on.
+    /// </summary>
+    private sealed class CapturingLogger : ILogger<CloudflareTunnelStrategy>
+    {
+        public List<LogLevel> Levels { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter
+        )
+        {
+            Levels.Add(logLevel);
+        }
+    }
+
     private static CloudflareTunnelStrategy BuildStrategy(
         ConnectivityStatus status,
         Func<Task>? checkAvailability = null,
@@ -33,6 +59,16 @@ public sealed class CloudflareTunnelStrategyTests
             checkAvailability,
             binaryExists
         );
+    }
+
+    private static (
+        CloudflareTunnelStrategy Strategy,
+        CapturingLogger Logger
+    ) BuildCapturingStrategy(ConnectivityStatus status)
+    {
+        CapturingLogger logger = new();
+        CloudflareTunnelStrategy strategy = new(logger, status);
+        return (strategy, logger);
     }
 
     // ── IsReady (precondition) ───────────────────────────────────────────────
@@ -293,5 +329,70 @@ public sealed class CloudflareTunnelStrategyTests
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             strategy.TryEstablishAsync(CancellationToken.None)
         );
+    }
+
+    // ── Shutdown-noise suppression ───────────────────────────────────────────
+    //
+    // The defect: cloudflared keeps forwarding into a closing origin for a short window
+    // around every stop, so "connection refused" and "process exited" logged at Warning on
+    // every single shutdown — including ones Stoney triggered on purpose. BeginShutdown()
+    // (fired from ApplicationStopping, before Kestrel closes) and StopTunnel() both flip the
+    // same flag; LogProcessLine is the one place that reads it.
+
+    [Fact]
+    public void LogProcessLine_FailureLine_BeforeShutdown_LogsWarning()
+    {
+        (CloudflareTunnelStrategy strategy, CapturingLogger logger) = BuildCapturingStrategy(new());
+
+        strategy.LogProcessLine(
+            "2026-08-10T20:06:05Z ERR  error=\"Unable to reach the origin service.\" connIndex=2 event=1"
+        );
+
+        Assert.Equal([LogLevel.Warning], logger.Levels);
+    }
+
+    [Fact]
+    public void LogProcessLine_FailureLine_AfterBeginShutdown_LogsDebugNotWarning()
+    {
+        (CloudflareTunnelStrategy strategy, CapturingLogger logger) = BuildCapturingStrategy(new());
+
+        strategy.BeginShutdown();
+        strategy.LogProcessLine(
+            "2026-08-10T20:06:05Z ERR  error=\"Unable to reach the origin service.\" connIndex=2 event=1"
+        );
+
+        Assert.Equal([LogLevel.Debug], logger.Levels);
+    }
+
+    [Fact]
+    public void LogProcessLine_ClientCancellationLine_AfterBeginShutdown_StaysDebug()
+    {
+        // Client cancellations were already Debug before shutdown began; BeginShutdown must
+        // not be the only thing keeping them quiet — losing this line would silently widen
+        // scope onto behaviour this change never touched.
+        (CloudflareTunnelStrategy strategy, CapturingLogger logger) = BuildCapturingStrategy(new());
+
+        strategy.LogProcessLine(
+            "2026-08-04T19:00:19Z ERR  error=\"Incoming request ended abruptly: context canceled\" connIndex=2 event=1"
+        );
+
+        Assert.Equal([LogLevel.Debug], logger.Levels);
+    }
+
+    [Fact]
+    public async Task StopTunnel_ViaTeardownAsync_AlsoSetsTheShutdownFlag()
+    {
+        // BeginShutdown is the early hook (fired before Kestrel stops); TeardownAsync/
+        // StopTunnel is the direct path when nothing wired the host lifecycle event. Both
+        // must gate the same way, or a caller that only ever reaches TeardownAsync keeps
+        // getting warnings.
+        (CloudflareTunnelStrategy strategy, CapturingLogger logger) = BuildCapturingStrategy(new());
+
+        await strategy.TeardownAsync();
+        strategy.LogProcessLine(
+            "2026-08-10T20:06:05Z ERR  error=\"Unable to reach the origin service.\" connIndex=2 event=1"
+        );
+
+        Assert.Equal([LogLevel.Debug], logger.Levels);
     }
 }

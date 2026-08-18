@@ -160,11 +160,13 @@ public class Av1ArgumentResolverTests
         // Apple Silicon decodes AV1 but can't encode. Resolver must never
         // find an av1_videotoolbox entry — otherwise ForceHardware on a
         // Mac would silently pick a phantom encoder.
-        EncoderInfo[] av1Encoders = Registry
-            .EnumerateVideoEncoders()
-            .Where(t => t.CodecType == VideoCodecType.Av1)
-            .Select(t => t.Encoder)
-            .ToArray();
+        EncoderInfo[] av1Encoders =
+        [
+            .. Registry
+                .EnumerateVideoEncoders()
+                .Where(t => t.CodecType == VideoCodecType.Av1)
+                .Select(t => t.Encoder),
+        ];
 
         av1Encoders.Should().NotContain(e => e.FfmpegName == "av1_videotoolbox");
         av1Encoders.Should().NotContain(e => e.RequiredVendor == GpuVendor.Apple);

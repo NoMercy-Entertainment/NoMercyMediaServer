@@ -89,7 +89,7 @@ public class BuildStageAttachmentDumpTests
     {
         FfmpegCommand[] commands = await BuildAsync(TextSubtitlePlan(), TextSubtitleStream());
 
-        List<string> args = commands[0].Arguments.ToList();
+        List<string> args = [.. commands[0].Arguments];
 
         int dumpFlag = args.IndexOf("-dump_attachment:3");
         int inputFlag = args.IndexOf("-i");

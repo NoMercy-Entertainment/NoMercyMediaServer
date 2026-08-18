@@ -84,11 +84,13 @@ public class ServerControllerAddFilesTests : IClassFixture<NoMercyApiFactory>, I
     private static List<string> QueryPayloadsContaining(string marker)
     {
         using QueueContext queueCtx = new();
-        return queueCtx
-            .QueueJobs.AsNoTracking()
-            .Where(j => j.Payload.Contains(marker))
-            .Select(j => j.Payload)
-            .ToList();
+        return
+        [
+            .. queueCtx
+                .QueueJobs.AsNoTracking()
+                .Where(j => j.Payload.Contains(marker))
+                .Select(j => j.Payload),
+        ];
     }
 
     private static StringContent JsonBody(object obj) =>

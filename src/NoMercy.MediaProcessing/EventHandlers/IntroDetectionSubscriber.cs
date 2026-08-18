@@ -137,7 +137,8 @@ public class IntroDetectionSubscriber(
         if (encodedEpisodes.Count < MinEpisodes)
         {
             logger.LogDebug(
-                "Season {SeasonId} only has {Count} encoded episodes — skipping (need {Min})", [seasonId, encodedEpisodes.Count, MinEpisodes]
+                "Season {SeasonId} only has {Count} encoded episodes — skipping (need {Min})",
+                [seasonId, encodedEpisodes.Count, MinEpisodes]
             );
             return;
         }
@@ -190,8 +191,8 @@ public class IntroDetectionSubscriber(
         if (fingerprints.Count < MinEpisodes)
             return;
 
-        IReadOnlyList<AudioFingerprint> intros = fingerprints.Values.Select(f => f.Intro).ToList();
-        IReadOnlyList<AudioFingerprint> outros = fingerprints.Values.Select(f => f.Outro).ToList();
+        IReadOnlyList<AudioFingerprint> intros = [.. fingerprints.Values.Select(f => f.Intro)];
+        IReadOnlyList<AudioFingerprint> outros = [.. fingerprints.Values.Select(f => f.Outro)];
 
         IntroMarker? introMarker = detector.DetectIntro(intros);
         IntroMarker? outroMarker = detector.DetectOutro(outros);
@@ -229,7 +230,8 @@ public class IntroDetectionSubscriber(
         }
 
         logger.LogInformation(
-            "Intro detection completed for season {SeasonId}: intro={HasIntro} outro={HasOutro} across {Count} episodes", [seasonId, introMarker is not null, outroMarker is not null, fingerprints.Count]
+            "Intro detection completed for season {SeasonId}: intro={HasIntro} outro={HasOutro} across {Count} episodes",
+            [seasonId, introMarker is not null, outroMarker is not null, fingerprints.Count]
         );
     }
 

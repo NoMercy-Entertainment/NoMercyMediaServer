@@ -81,7 +81,7 @@ public class SelfReschedulingCoordinatorTests : IDisposable
 
         signalled.Should().BeTrue("the coordinator must run before the timeout");
 
-        QueueJob[] remaining = _context.QueueJobs.ToArray();
+        QueueJob[] remaining = [.. _context.QueueJobs];
         remaining.Length.Should().Be(1, "the coordinator rewrote its row, it did not add one");
         remaining[0]
             .Id.Should()
