@@ -88,7 +88,14 @@ public class ReleaseManager(
                 Disambiguation = string.IsNullOrEmpty(releaseAppends.Disambiguation)
                     ? null
                     : releaseAppends.Disambiguation,
-                Year = releaseAppends.DateTime?.Year ?? 0,
+                // A specific pressing's own date is frequently absent — most
+                // reliably on reissues and digital-only additions — even when
+                // the work it belongs to has a well-known release year, so
+                // fall back to the release group's date before giving up.
+                Year =
+                    releaseAppends.DateTime?.Year
+                    ?? releaseAppends.MusicBrainzReleaseGroup?.FirstReleaseDate?.Year
+                    ?? 0,
                 Tracks = releaseAppends.Media.Sum(m => m.TrackCount),
 
                 LibraryId = library.Id,
@@ -159,7 +166,14 @@ public class ReleaseManager(
                 Disambiguation = string.IsNullOrEmpty(releaseAppends.Disambiguation)
                     ? null
                     : releaseAppends.Disambiguation,
-                Year = releaseAppends.DateTime?.Year ?? 0,
+                // A specific pressing's own date is frequently absent — most
+                // reliably on reissues and digital-only additions — even when
+                // the work it belongs to has a well-known release year, so
+                // fall back to the release group's date before giving up.
+                Year =
+                    releaseAppends.DateTime?.Year
+                    ?? releaseAppends.MusicBrainzReleaseGroup?.FirstReleaseDate?.Year
+                    ?? 0,
                 Tracks = releaseAppends.Media.Sum(m => m.TrackCount),
 
                 LibraryId = library.Id,
