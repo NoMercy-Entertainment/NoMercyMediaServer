@@ -20,6 +20,7 @@ using NoMercy.MediaProcessing.Movies;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
+using NoMercy.Providers.TMDB.Models.Networks;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Storage.Factory;
@@ -46,6 +47,9 @@ public class MovieManagerTests
 
         _movieRepositoryMock = new();
         _movieClientMock = new();
+        _movieClientMock
+            .Setup(client => client.CompanyDetails(It.IsAny<int>(), It.IsAny<bool?>()))
+            .ReturnsAsync(new TmdbTmdbNetworkDetails { Id = 1, Name = "Test Studio" });
 
         IStorageDriver storageDriver = new LocalStorageDriver();
         IStorageFactory storageFactory = new StorageFactory(
@@ -56,7 +60,8 @@ public class MovieManagerTests
             _movieRepositoryMock.Object,
             jobDispatcherMock.Object,
             storageFactory,
-            NullLogger<MovieManager>.Instance
+            NullLogger<MovieManager>.Instance,
+            movieClientFactory: _ => _movieClientMock.Object
         );
         _movieAppends = mockDataProvider.MockMovieAppendsResponse()!;
         _library = new() { Id = new(), Title = "Test Library" };
@@ -92,6 +97,8 @@ public class MovieManagerTests
     [Fact]
     public async Task UpdateMovieAsync_ShouldRefreshMovieViaUpsert()
     {
+        _movieClientMock.Setup(client => client.WithAllAppends(false)).ReturnsAsync(_movieAppends);
+
         Movie capturedMovie = null!;
         _movieRepositoryMock
             .Setup(repo => repo.Add(It.IsAny<Movie>()))
