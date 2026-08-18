@@ -163,6 +163,14 @@ public class JobQueue(
                 }
                 else
                 {
+                    // Released with no delay, a retried job was eligible again
+                    // the instant the next worker polled — a transient failure
+                    // (a MusicBrainz 503 under load) burned all 3 attempts back
+                    // to back against a provider that hadn't had time to
+                    // recover, guaranteeing the same outcome every time.
+                    queueJob.AvailableAt = DateTime.UtcNow.AddSeconds(
+                        Math.Min(60, Math.Pow(2, queueJob.Attempts) * 2)
+                    );
                     context.UpdateJob(queueJob);
                 }
 

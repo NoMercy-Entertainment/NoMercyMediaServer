@@ -184,6 +184,12 @@ public class ReservationAvailabilityAndAttemptsBoundaryTests : IDisposable
         Assert.NotNull(attempt1);
         jobQueue.FailJob(attempt1, new InvalidOperationException("fail 1"));
 
+        // A retried job backs off before it's reservable again; fast-forward
+        // past that window so this test can drive the next attempt immediately.
+        QueueJob queued = _context.QueueJobs.Single();
+        queued.AvailableAt = DateTime.UtcNow.AddSeconds(-1);
+        _context.SaveChanges();
+
         QueueJobModel? attempt2 = jobQueue.ReserveJob("budget", null);
         Assert.NotNull(attempt2);
         Assert.Equal(2, attempt2.Attempts);

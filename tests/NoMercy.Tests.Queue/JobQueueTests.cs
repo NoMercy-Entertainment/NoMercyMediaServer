@@ -281,6 +281,43 @@ public class JobQueueTests : IDisposable
     }
 
     [Fact]
+    public void FailJob_WithinMaxAttempts_DelaysAvailableAtIntoTheFuture()
+    {
+        // Arrange — AvailableAt already in the past, as it is for every job
+        // fresh off Enqueue, so an unreserve alone would make it eligible for
+        // the very next worker poll.
+        QueueJob job = new()
+        {
+            Queue = "test-queue",
+            Payload = "test payload",
+            AvailableAt = DateTime.UtcNow.AddMinutes(-5),
+            ReservedAt = DateTime.UtcNow,
+            Attempts = 1,
+        };
+        _context.QueueJobs.Add(job);
+        _context.SaveChanges();
+
+        QueueJobModel jobModel = new()
+        {
+            Id = job.Id,
+            Queue = job.Queue,
+            Payload = job.Payload,
+            AvailableAt = job.AvailableAt,
+            ReservedAt = job.ReservedAt,
+            Attempts = job.Attempts,
+        };
+
+        // Act
+        _jobQueue.FailJob(jobModel, new InvalidOperationException("Test exception"));
+
+        // Assert — a transient failure (a rate-limited provider) now has to
+        // wait out a backoff before the job is reservable again.
+        QueueJob? updatedJob = _context.QueueJobs.FirstOrDefault();
+        Assert.NotNull(updatedJob);
+        Assert.True(updatedJob.AvailableAt > DateTime.UtcNow);
+    }
+
+    [Fact]
     public void FailJob_ExceedsMaxAttempts_MovesToFailedJobs()
     {
         // Arrange
