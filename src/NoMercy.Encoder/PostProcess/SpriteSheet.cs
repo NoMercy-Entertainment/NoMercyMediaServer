@@ -40,6 +40,16 @@ public static partial class SpriteSheet
     [GeneratedRegex(@"^thumbs_(?<width>\d+)x(?<height>\d+)\.webp$", RegexOptions.IgnoreCase)]
     private static partial Regex SpriteFileNameRegex();
 
+    [GeneratedRegex(@"^sprite\.webp$", RegexOptions.IgnoreCase)]
+    private static partial Regex LegacySpriteFileNameRegex();
+
+    /// <summary>
+    /// A sheet from before the tile size went into the filename, which is always
+    /// narrower than the floor and never carries a cue file the clients can read.
+    /// </summary>
+    public static bool IsLegacySheet(string fileName) =>
+        LegacySpriteFileNameRegex().IsMatch(fileName);
+
     /// <summary>
     /// The tile width a sprite sheet was rendered at, read from its filename, or
     /// null when the name is not a sprite sheet.
@@ -68,6 +78,17 @@ public static partial class SpriteSheet
 
         foreach (string fileName in fileNames)
         {
+            // A legacy sheet states no tile size, so nothing here could read one
+            // and every one of them was skipped — the folder then looked like it
+            // held no sheet at all and no rebuild was ever queued. Measured on the
+            // dev library 2026-08-18: 281 of 840 playables carried `sprite.webp`,
+            // no cue file, and no scrub preview on any client.
+            if (IsLegacySheet(fileName))
+            {
+                undersized.Add(fileName);
+                continue;
+            }
+
             int? width = ReadTileWidth(fileName);
             if (width is null)
                 continue;

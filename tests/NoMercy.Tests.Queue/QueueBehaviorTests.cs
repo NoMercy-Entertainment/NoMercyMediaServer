@@ -48,7 +48,7 @@ public class QueueBehaviorTests : IDisposable
     // ── Implicit Retry: fail under maxAttempts keeps job available ──
 
     [Fact]
-    public void FailJob_UnderMaxAttempts_JobRemainsInQueueAndIsReservableAgain()
+    public void FailJob_UnderMaxAttempts_JobRemainsInQueueAndIsReservableAfterBackoff()
     {
         // Arrange — enqueue and reserve a job (Attempts goes to 1)
         QueueJob job = new()
@@ -72,14 +72,23 @@ public class QueueBehaviorTests : IDisposable
         // Act — fail it (Attempts=1 < default maxAttempts=3)
         _jobQueue.FailJob(reserved, new InvalidOperationException("boom"));
 
-        // Assert — job stays in QueueJobs with ReservedAt cleared
+        // Assert — job stays in QueueJobs with ReservedAt cleared, but pushed
+        // into the future so a transient failure can't be retried instantly
+        // against a provider that hasn't recovered.
         QueueJob? stillInQueue = _context.QueueJobs.FirstOrDefault();
         Assert.NotNull(stillInQueue);
         Assert.Null(stillInQueue.ReservedAt);
         Assert.Equal(1, stillInQueue.Attempts);
+        Assert.True(stillInQueue.AvailableAt > DateTime.UtcNow);
         Assert.Equal(0, _context.FailedJobs.Count());
 
-        // Act 2 — reserve again (Attempts goes to 2)
+        // Not yet reservable — the backoff window hasn't elapsed.
+        Assert.Null(_jobQueue.ReserveJob("retry-test", null));
+
+        // Once the backoff has elapsed, it reserves again (Attempts goes to 2).
+        stillInQueue.AvailableAt = DateTime.UtcNow.AddSeconds(-1);
+        _context.SaveChanges();
+
         QueueJobModel? secondReserve = _jobQueue.ReserveJob("retry-test", null);
         Assert.NotNull(secondReserve);
         Assert.Equal(2, secondReserve.Attempts);
@@ -118,6 +127,12 @@ public class QueueBehaviorTests : IDisposable
         Assert.Equal(1, _context.QueueJobs.Count());
         Assert.Equal(0, _context.FailedJobs.Count());
 
+        // A failed retry backs off before it's reservable again; fast-forward
+        // past that window so this test can drive the next attempt immediately.
+        QueueJob queued1 = _context.QueueJobs.Single();
+        queued1.AvailableAt = DateTime.UtcNow.AddSeconds(-1);
+        await _context.SaveChangesAsync();
+
         // Attempt 2: reserve, execute (fail), fail-job
         QueueJobModel? attempt2 = _jobQueue.ReserveJob("retry-loop", null);
         Assert.NotNull(attempt2);
@@ -134,6 +149,10 @@ public class QueueBehaviorTests : IDisposable
         }
         Assert.Equal(1, _context.QueueJobs.Count());
         Assert.Equal(0, _context.FailedJobs.Count());
+
+        QueueJob queued2 = _context.QueueJobs.Single();
+        queued2.AvailableAt = DateTime.UtcNow.AddSeconds(-1);
+        await _context.SaveChangesAsync();
 
         // Attempt 3: reserve, execute (succeed this time), delete
         QueueJobModel? attempt3 = _jobQueue.ReserveJob("retry-loop", null);
@@ -283,6 +302,10 @@ public class QueueBehaviorTests : IDisposable
         jobQueue.FailJob(a1, new("fail 1"));
         Assert.Equal(1, _context.QueueJobs.Count());
         Assert.Equal(0, _context.FailedJobs.Count());
+
+        QueueJob queuedAfterFail1 = _context.QueueJobs.Single();
+        queuedAfterFail1.AvailableAt = DateTime.UtcNow.AddSeconds(-1);
+        await _context.SaveChangesAsync();
 
         // Attempt 2: reserve (Attempts → 2 = maxAttempts), fail → permanent failure
         QueueJobModel? a2 = jobQueue.ReserveJob("lifecycle", null);

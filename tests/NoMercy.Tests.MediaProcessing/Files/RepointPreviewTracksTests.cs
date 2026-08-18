@@ -109,6 +109,38 @@ public class RepointPreviewTracksTests : IDisposable
     }
 
     [Fact]
+    public async Task Registers_the_rebuilt_cue_file_a_legacy_folder_never_had()
+    {
+        // What titles encoded before the tile size went into the name still look
+        // like: a `sprite` sheet and no cue file at all. Repointing the sheet on
+        // its own left nothing naming the VTT the rebuild had just written, and
+        // both clients read the preview from the `thumbnails` entry alone — so
+        // the scrub stayed blank until a full scan happened to re-read the folder.
+        await StoreVideoFileAsync(
+            HostFolder,
+            [
+                new() { File = "/sprite.webp", Kind = "sprite" },
+                new() { File = "/chapters.vtt", Kind = "chapters" },
+            ]
+        );
+
+        await using MediaContext context = new(_options);
+        FileRepository repository = new(context, Driver);
+
+        int repointed = await repository.RepointPreviewTracksAsync(
+            HostFolder,
+            "thumbs_320x180.webp",
+            "thumbs_320x180.vtt"
+        );
+
+        repointed.Should().Be(1);
+
+        VideoTrack[] tracks = await TracksAsStoredAsync();
+        tracks.Single(track => track.Kind == "thumbnails").File.Should().Be("/thumbs_320x180.vtt");
+        tracks.Single(track => track.Kind == "sprite").File.Should().Be("/thumbs_320x180.webp");
+    }
+
+    [Fact]
     public async Task Leaves_every_other_track_alone()
     {
         await StoreVideoFileAsync(HostFolder, TheSheetTheScanFound());

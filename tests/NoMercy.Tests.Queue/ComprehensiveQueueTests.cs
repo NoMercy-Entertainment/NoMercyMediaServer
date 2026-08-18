@@ -1016,6 +1016,12 @@ public class ComprehensiveQueueTests
                 {
                     _jobQueue.FailJob(reserved, ex);
                 }
+
+                // A retried job backs off before it's reservable again; fast-forward
+                // past that window so the next loop iteration can reserve it immediately.
+                foreach (QueueJob queued in _context.QueueJobs)
+                    queued.AvailableAt = DateTime.UtcNow.AddSeconds(-1);
+                await _context.SaveChangesAsync();
             }
 
             // Should be in failed jobs now
@@ -1276,7 +1282,14 @@ public class ComprehensiveQueueTests
 
             _jobQueue.FailJob(reserved, new("attempt 1"));
 
-            // Should still be reservable
+            // A retried job backs off before it's reservable again — not yet.
+            Assert.Null(_jobQueue.ReserveJob("retry-sqlite", null));
+
+            // Once the backoff elapses, it's reservable again.
+            reserved.AvailableAt = DateTime.UtcNow.AddSeconds(-1);
+            _context.UpdateJob(reserved);
+            _context.SaveChanges();
+
             QueueJobModel? secondReserve = _jobQueue.ReserveJob("retry-sqlite", null);
             Assert.NotNull(secondReserve);
         }

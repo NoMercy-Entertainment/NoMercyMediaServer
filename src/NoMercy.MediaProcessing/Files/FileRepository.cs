@@ -883,6 +883,21 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
                 changed = true;
             }
 
+            // A legacy folder holds a `sprite` sheet and no cue file, so there is
+            // no `thumbnails` track to repoint and the rebuild left the clients
+            // with nothing to read — both of them resolve the scrub preview from
+            // the `thumbnails` entry alone. Adding it here is what makes the
+            // rebuilt VTT reachable before the next full scan.
+            if (tracks.All(track => track.Kind != "thumbnails"))
+            {
+                tracks =
+                [
+                    .. tracks,
+                    new VideoTrack { File = $"/{vttFileName}", Kind = "thumbnails" },
+                ];
+                changed = true;
+            }
+
             if (!changed)
                 continue;
 
