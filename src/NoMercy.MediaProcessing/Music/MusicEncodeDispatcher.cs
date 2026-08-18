@@ -134,11 +134,7 @@ public static class MusicEncodeDispatcher
                 ArtistName =
                     release.ArtistCredit.FirstOrDefault()?.MusicBrainzArtist.Name ?? string.Empty,
                 ReleaseName = release.Title,
-                // See NamingContextFor's Year below — same fallback, same reason.
-                Year =
-                    release.DateTime?.Year
-                    ?? release.MusicBrainzReleaseGroup?.FirstReleaseDate?.Year
-                    ?? 0,
+                Year = release.ResolvedYear() ?? 0,
             }
         );
     }
@@ -176,13 +172,7 @@ public static class MusicEncodeDispatcher
         {
             AlbumType = AlbumTypeFor(release),
             AlbumName = release.Title,
-            // A specific pressing's own date is frequently absent — most
-            // reliably on reissues and digital-only additions — even when
-            // the work it belongs to has a well-known release year, so fall
-            // back to the release group's date before the folder ends up
-            // dated [0000].
-            Year =
-                release.DateTime?.Year ?? release.MusicBrainzReleaseGroup?.FirstReleaseDate?.Year,
+            Year = release.ResolvedYear(),
             AlbumArtistId = albumArtist?.MusicBrainzArtist.Id.ToString(),
             AlbumArtistSort =
                 albumArtist?.MusicBrainzArtist.SortName ?? albumArtist?.MusicBrainzArtist.Name,

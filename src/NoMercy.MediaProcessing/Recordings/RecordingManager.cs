@@ -113,7 +113,8 @@ public partial class RecordingManager(
                     Name = musicBrainzTrack.Title,
                     Date =
                         releaseAppends.DateTime
-                        ?? releaseAppends.ReleaseEvents?.FirstOrDefault()?.DateTime,
+                        ?? releaseAppends.ReleaseEvents?.FirstOrDefault()?.DateTime
+                        ?? releaseAppends.MusicBrainzReleaseGroup?.FirstReleaseDate,
                     DiscNumber = musicBrainzMedia.Position,
                     TrackNumber = musicBrainzTrack.Position,
 
