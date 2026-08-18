@@ -87,6 +87,34 @@ public class SpriteSheetTests
     }
 
     [Fact]
+    public void SelectUndersized_ClaimsALegacySheetThatStatesNoTileSize()
+    {
+        // `sprite.webp` is what titles encoded before the tile size went into the
+        // name still carry, and it never has a cue file beside it, so the scrub
+        // preview is blank for the whole title. It reads as no sheet at all
+        // unless this claims it, and then no rebuild is ever queued.
+        IReadOnlyList<string> undersized = SpriteSheet.SelectUndersized(
+            ["sprite.webp", "chapters.vtt"],
+            minimumWidth: 320
+        );
+
+        undersized.Should().ContainSingle().Which.Should().Be("sprite.webp");
+    }
+
+    [Fact]
+    public void SelectUndersized_IsEmptyWhenACurrentSheetSitsBesideALegacyOne()
+    {
+        // Re-rendered already; the legacy file is leftover, not work.
+        SpriteSheet
+            .SelectUndersized(
+                ["sprite.webp", "thumbs_320x180.webp", "thumbs_320x180.vtt"],
+                minimumWidth: 320
+            )
+            .Should()
+            .BeEmpty();
+    }
+
+    [Fact]
     public void MinimumWidth_IsTheDefaultEveryPresetInherits() =>
         new NoMercy.Encoder.Profiles.HlsDerivatives()
             .SpriteVttThumbnailWidth.Should()
