@@ -522,6 +522,9 @@ public static partial class ServiceConfiguration
         services.AddScoped<IEncodingHistoryRepository, EncodingHistoryRepository>();
         services.AddScoped<IEncodingPresetRepository, EncodingPresetRepository>();
         services.AddScoped<IFolderRepository, FolderRepository>();
+        services.AddScoped<IAnimeThemeRepository, AnimeThemeRepository>();
+        services.AddScoped<IAnimeDemographicRepository, AnimeDemographicRepository>();
+        services.AddScoped<IAnimeSeasonRepository, AnimeSeasonRepository>();
         services.AddScoped<IGenreRepository, GenreRepository>();
         services.AddScoped<IHomeRepository, HomeRepository>();
         services.AddScoped<ILanguageRepository, LanguageRepository>();

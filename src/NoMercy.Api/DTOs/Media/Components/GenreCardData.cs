@@ -82,15 +82,19 @@ public record GenreCardData
         HaveItems =
             genre.GenreMovies.Count(gm => gm.Movie.VideoFiles.Any(v => v.Folder != null))
             + genre.GenreTvShows.Count(gt =>
-                gt.Tv.Episodes.Any(e => (
-                    e.VideoFiles.Any(v => v.Folder != null)
-                    || e.Tv.Episodes.Any(o =>
-                        o.SeasonNumber == e.SeasonNumber
-                        && o.VideoFiles.Any(w =>
-                            w is { Folder: not null, LastEpisodeNumber: not null }
-                            && o.EpisodeNumber <= e.EpisodeNumber
-                            && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)))
-                ))
+                gt.Tv.Episodes.Any(e =>
+                    (
+                        e.VideoFiles.Any(v => v.Folder != null)
+                        || e.Tv.Episodes.Any(o =>
+                            o.SeasonNumber == e.SeasonNumber
+                            && o.VideoFiles.Any(w =>
+                                w is { Folder: not null, LastEpisodeNumber: not null }
+                                && o.EpisodeNumber <= e.EpisodeNumber
+                                && e.EpisodeNumber <= (w.LastEpisodeNumber ?? 0)
+                            )
+                        )
+                    )
+                )
             );
     }
 
@@ -114,6 +118,45 @@ public record GenreCardData
         TitleSort = dto.Name.ToTitleCase();
         Type = "genre";
         Link = new($"/genres/{dto.Id}", UriKind.Relative);
+        NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
+        HaveItems = dto.MoviesWithVideo + dto.TvShowsWithVideo;
+    }
+
+    public GenreCardData(AnimeThemeWithCountsDto dto)
+    {
+        Id = dto.Id;
+        Title = dto.Name.ToTitleCase();
+        TitleSort = dto.Name.ToTitleCase();
+        Type = "anime-theme";
+        Link = new($"/anime/themes/{dto.Id}", UriKind.Relative);
+        NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
+        HaveItems = dto.MoviesWithVideo + dto.TvShowsWithVideo;
+    }
+
+    public GenreCardData(AnimeDemographicWithCountsDto dto)
+    {
+        Id = dto.Id;
+        Title = dto.Name.ToTitleCase();
+        TitleSort = dto.Name.ToTitleCase();
+        Type = "anime-demographic";
+        Link = new($"/anime/demographics/{dto.Id}", UriKind.Relative);
+        NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
+        HaveItems = dto.MoviesWithVideo + dto.TvShowsWithVideo;
+    }
+
+    public GenreCardData(AnimeSeasonWithCountsDto dto)
+    {
+        // AnimeSeason has no Translations, so the title is formatted server-side
+        // from Year+Quarter (e.g. "Summer 2020") instead of pulled from a
+        // Translation row. Locale formatting of the quarter word happens
+        // client-side per the spec.
+        string title = $"{dto.Quarter.ToTitleCase()} {dto.Year}";
+        Id = dto.Id;
+        Title = title;
+        TitleSort = title;
+        Year = dto.Year;
+        Type = "anime-season";
+        Link = new($"/anime/seasons/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
         HaveItems = dto.MoviesWithVideo + dto.TvShowsWithVideo;
     }
