@@ -370,4 +370,102 @@ public class AnimeEnrichmentServiceTests
             Times.Once
         );
     }
+
+    // Movie-side mirror of EnrichTvAsync_ThemesAndDemographicsAlreadyStored_CallsNoProviders -
+    // EnrichMovieAsync runs the identical skip check against IMovieRepository
+    // and must be pinned separately, since it is a distinct code path.
+    [Fact]
+    public async Task EnrichMovieAsync_ThemesAndDemographicsAlreadyStored_CallsNoProviders()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("Your Name", 2016, It.IsAny<string[]?>()))
+            .ReturnsAsync("anime");
+
+        Mock<NoMercy.MediaProcessing.Movies.IMovieRepository> movieRepository = new();
+        movieRepository.Setup(r => r.HasAnimeThemesAsync(7)).ReturnsAsync(true);
+        movieRepository.Setup(r => r.HasAnimeDemographicsAsync(7)).ReturnsAsync(true);
+
+        Mock<IAniListMetadataProvider> aniList = new();
+        Mock<IJikanMetadataProvider> jikan = new();
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            aniList.Object,
+            jikan.Object,
+            Mock.Of<IShowRepository>(),
+            movieRepository.Object
+        );
+
+        await service.EnrichMovieAsync(7, "Your Name", 2016, ["JP"]);
+
+        aniList.Verify(
+            p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
+            Times.Never
+        );
+        jikan.Verify(
+            p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
+            Times.Never
+        );
+    }
+
+    // Movie-side mirror of EnrichTvAsync_ThemesStoredDemographicsMissing_QueriesJikanOnlyForDemographics.
+    [Fact]
+    public async Task EnrichMovieAsync_ThemesStoredDemographicsMissing_QueriesJikanOnlyForDemographics()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("Your Name", 2016, It.IsAny<string[]?>()))
+            .ReturnsAsync("anime");
+
+        Mock<NoMercy.MediaProcessing.Movies.IMovieRepository> movieRepository = new();
+        movieRepository.Setup(r => r.HasAnimeThemesAsync(7)).ReturnsAsync(true);
+        movieRepository.Setup(r => r.HasAnimeDemographicsAsync(7)).ReturnsAsync(false);
+        movieRepository.Setup(r => r.ResolveAnimeDemographicIdAsync("Shounen")).ReturnsAsync(702);
+
+        Mock<IAniListMetadataProvider> aniList = new();
+
+        Mock<IJikanMetadataProvider> jikan = new();
+        jikan
+            .Setup(p => p.SearchAsync("Your Name", 2016, It.IsAny<bool?>()))
+            .ReturnsAsync(
+                new JikanAnime
+                {
+                    Titles = [new() { Type = "Default", Title = "Your Name" }],
+                    Demographics = [new() { MalId = 27, Name = "Shounen" }],
+                }
+            );
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            aniList.Object,
+            jikan.Object,
+            Mock.Of<IShowRepository>(),
+            movieRepository.Object
+        );
+
+        await service.EnrichMovieAsync(7, "Your Name", 2016, ["JP"]);
+
+        aniList.Verify(
+            p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
+            Times.Never
+        );
+        jikan.Verify(p => p.SearchAsync("Your Name", 2016, It.IsAny<bool?>()), Times.Once);
+        movieRepository.Verify(
+            r =>
+                r.StoreAnimeThemes(
+                    It.IsAny<IEnumerable<NoMercy.Database.Models.Movies.AnimeThemeMovie>>()
+                ),
+            Times.Never
+        );
+        movieRepository.Verify(
+            r =>
+                r.StoreAnimeDemographics(
+                    It.Is<IEnumerable<NoMercy.Database.Models.Movies.AnimeDemographicMovie>>(
+                        links => links.Any(l => l.MovieId == 7 && l.AnimeDemographicId == 702)
+                    )
+                ),
+            Times.Once
+        );
+    }
 }
