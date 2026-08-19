@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Linq;
 using FluentAssertions;
 using NoMercy.OpticalMedia.Onboarding;
 using Xunit;
@@ -64,5 +65,16 @@ public class DiscOnboardingSessionStoreTests
 
         store.TryGet("D:\\", out DiscOnboardingSession? fetched).Should().BeFalse();
         fetched.Should().BeNull();
+    }
+
+    [Fact]
+    public void All_ReturnsEverySessionAcrossDrives()
+    {
+        DiscOnboardingSessionStore store = new();
+        store.Set(DiscOnboardingSession.Create("D:\\"));
+        store.Set(DiscOnboardingSession.Create("E:\\"));
+
+        store.All.Should().HaveCount(2);
+        store.All.Select(s => s.DrivePath).Should().BeEquivalentTo("D:\\", "E:\\");
     }
 }

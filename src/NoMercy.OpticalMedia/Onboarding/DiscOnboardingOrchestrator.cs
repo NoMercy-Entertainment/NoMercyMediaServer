@@ -201,7 +201,21 @@ public sealed class DiscOnboardingOrchestrator(
         );
         dispatcher.Dispatch(job, job.QueueName, job.Priority);
 
-        session = session.WithJob(job.JobId);
+        // Movie.Id and Tv.Id are the TMDB id in this codebase (see
+        // MovieImportJob/ShowImportJob dispatch sites), so chosen.StableId —
+        // the TMDB numeric id for video candidates — parses straight to it.
+        // Non-numeric StableId (MusicBrainz MBIDs for CD candidates) leaves
+        // ConfirmedTmdbId null; music rips have no post-import completion
+        // match today.
+        int? confirmedTmdbId = int.TryParse(chosen.StableId, out int tmdbId) ? tmdbId : null;
+        string? confirmedMediaType = chosen.Type switch
+        {
+            MediaType.Movie => "movie",
+            MediaType.TvShow => "tv",
+            _ => null,
+        };
+
+        session = session.WithJob(job.JobId, libraryId, confirmedTmdbId, confirmedMediaType);
         await PublishAsync(session, ct);
 
         return session;

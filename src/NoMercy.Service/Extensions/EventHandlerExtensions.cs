@@ -22,6 +22,7 @@ using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Auth;
 using NoMercy.Notifications.Push;
 using NoMercy.Notifications.Transports;
+using NoMercy.OpticalMedia.Onboarding;
 using NoMercy.Storage;
 
 namespace NoMercy.Service.Extensions;
@@ -148,6 +149,16 @@ public static class EventHandlerExtensions
             return new(eventBus, clientMessenger);
         });
 
+        services.AddSingleton<DiscOnboardingCompletionEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            DiscOnboardingSessionStore store = sp.GetRequiredService<DiscOnboardingSessionStore>();
+            IDbContextFactory<MediaContext> contextFactory = sp.GetRequiredService<
+                IDbContextFactory<MediaContext>
+            >();
+            return new(eventBus, store, contextFactory);
+        });
+
         services.AddSingleton<CastEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
@@ -231,6 +242,7 @@ public static class EventHandlerExtensions
         serviceProvider.GetRequiredService<PushNotificationEventHandler>();
         serviceProvider.GetRequiredService<DriveMonitorEventHandler>();
         serviceProvider.GetRequiredService<DiscOnboardingEventHandler>();
+        serviceProvider.GetRequiredService<DiscOnboardingCompletionEventHandler>();
         serviceProvider.GetRequiredService<CastEventHandler>();
         serviceProvider.GetRequiredService<UserPermissionsEventHandler>();
         serviceProvider.GetRequiredService<InboxClassifierEventHandler>();

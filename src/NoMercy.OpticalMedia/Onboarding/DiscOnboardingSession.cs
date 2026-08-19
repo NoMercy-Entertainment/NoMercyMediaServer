@@ -27,7 +27,12 @@ public sealed record DiscOnboardingSession(
     DiscCandidate[] Candidates,
     string? JobId,
     string? FailureReason,
-    DateTimeOffset UpdatedAt
+    DateTimeOffset UpdatedAt,
+    Ulid? LibraryId = null,
+    int? ConfirmedTmdbId = null,
+    string? ConfirmedMediaType = null,
+    string? ResultType = null,
+    string? ResultId = null
 )
 {
     public static DiscOnboardingSession Create(string drivePath) =>
@@ -53,11 +58,26 @@ public sealed record DiscOnboardingSession(
         DiscOnboardingState state
     ) => this with { Candidates = candidates, State = state, UpdatedAt = DateTimeOffset.UtcNow };
 
-    public DiscOnboardingSession WithJob(string jobId) =>
+    /// <summary>
+    /// Records the job dispatched by Confirm plus the confirmed target
+    /// (library + TMDB id/type) so a later <see cref="MediaFilesScannedEvent"/>
+    /// (published once the ripped file is actually imported into the library)
+    /// can be matched back to this session — see
+    /// <c>DiscOnboardingCompletionEventHandler</c>.
+    /// </summary>
+    public DiscOnboardingSession WithJob(
+        string jobId,
+        Ulid? libraryId = null,
+        int? confirmedTmdbId = null,
+        string? confirmedMediaType = null
+    ) =>
         this with
         {
             JobId = jobId,
             State = DiscOnboardingState.Ripping,
+            LibraryId = libraryId ?? LibraryId,
+            ConfirmedTmdbId = confirmedTmdbId ?? ConfirmedTmdbId,
+            ConfirmedMediaType = confirmedMediaType ?? ConfirmedMediaType,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 
@@ -66,6 +86,22 @@ public sealed record DiscOnboardingSession(
         {
             State = DiscOnboardingState.Failed,
             FailureReason = reason,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+
+    /// <summary>
+    /// Terminal success transition: the ripped file has been imported and a
+    /// real library item exists for it. Only ever reached going forward from
+    /// <see cref="DiscOnboardingState.Ripping"/> — an unmatched rip simply
+    /// stays in <see cref="DiscOnboardingState.Ripping"/> forever (no timeout
+    /// mechanism; see the disc-onboarding completion handler for why).
+    /// </summary>
+    public DiscOnboardingSession WithCompletion(string resultType, string resultId) =>
+        this with
+        {
+            State = DiscOnboardingState.Complete,
+            ResultType = resultType,
+            ResultId = resultId,
             UpdatedAt = DateTimeOffset.UtcNow,
         };
 }

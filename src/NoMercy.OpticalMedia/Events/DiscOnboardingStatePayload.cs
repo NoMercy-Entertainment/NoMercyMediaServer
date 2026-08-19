@@ -30,7 +30,9 @@ public sealed record DiscOnboardingStatePayload(
     DiscCandidate[] Candidates,
     string? JobId,
     string? FailureReason,
-    DateTimeOffset UpdatedAt
+    DateTimeOffset UpdatedAt,
+    string? ResultType = null,
+    string? ResultId = null
 )
 {
     public static DiscOnboardingStatePayload From(DiscOnboardingSession session) =>
@@ -41,6 +43,8 @@ public sealed record DiscOnboardingStatePayload(
             Candidates: session.Candidates,
             JobId: session.JobId,
             FailureReason: session.FailureReason,
-            UpdatedAt: session.UpdatedAt
+            UpdatedAt: session.UpdatedAt,
+            ResultType: session.ResultType,
+            ResultId: session.ResultId
         );
 }

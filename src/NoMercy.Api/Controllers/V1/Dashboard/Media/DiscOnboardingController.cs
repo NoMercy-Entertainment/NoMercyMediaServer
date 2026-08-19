@@ -148,6 +148,8 @@ public class DiscOnboardingController(
             job_id = session.JobId,
             failure_reason = session.FailureReason,
             updated_at = session.UpdatedAt,
+            result_type = session.ResultType,
+            result_id = session.ResultId,
         };
 }
 

@@ -124,7 +124,16 @@ public class DiscOnboardingOrchestratorConfirmTests : IDisposable
             ContextFactory
         );
 
-        DiscCandidate chosen = new("tmdb", "27205", "Inception", 2010, null, null, 0.6);
+        DiscCandidate chosen = new(
+            "tmdb",
+            "27205",
+            "Inception",
+            2010,
+            null,
+            null,
+            0.6,
+            Type: MediaType.Movie
+        );
 
         DiscOnboardingSession result = await orchestrator.ConfirmAsync(
             "D:\\",
@@ -137,6 +146,9 @@ public class DiscOnboardingOrchestratorConfirmTests : IDisposable
 
         result.State.Should().Be(DiscOnboardingState.Ripping);
         result.JobId.Should().NotBeNullOrEmpty();
+        result.LibraryId.Should().Be(libraryId);
+        result.ConfirmedTmdbId.Should().Be(27205);
+        result.ConfirmedMediaType.Should().Be("movie");
         dispatchedRequest.Should().NotBeNull();
         dispatchedRequest!.Custom.Should().NotBeNull();
         dispatchedRequest.Custom!.Title.Should().Be("Inception");

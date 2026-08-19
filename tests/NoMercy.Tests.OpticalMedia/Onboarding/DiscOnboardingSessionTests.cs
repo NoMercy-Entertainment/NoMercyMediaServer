@@ -65,4 +65,34 @@ public class DiscOnboardingSessionTests
         next.Candidates.Should().ContainSingle().Which.Title.Should().Be("Inception");
         next.State.Should().Be(DiscOnboardingState.AwaitingConfirm);
     }
+
+    [Fact]
+    public void WithJob_RecordsConfirmedTarget_ForLaterCompletionMatching()
+    {
+        Ulid libraryId = Ulid.NewUlid();
+        DiscOnboardingSession session = DiscOnboardingSession.Create("D:\\");
+
+        DiscOnboardingSession next = session.WithJob("job-1", libraryId, 27205, "movie");
+
+        next.State.Should().Be(DiscOnboardingState.Ripping);
+        next.JobId.Should().Be("job-1");
+        next.LibraryId.Should().Be(libraryId);
+        next.ConfirmedTmdbId.Should().Be(27205);
+        next.ConfirmedMediaType.Should().Be("movie");
+    }
+
+    [Fact]
+    public void WithCompletion_TransitionsToCompleteAndCarriesResultIdentity()
+    {
+        DiscOnboardingSession ripping = DiscOnboardingSession
+            .Create("D:\\")
+            .WithJob("job-1", Ulid.NewUlid(), 27205, "movie");
+
+        DiscOnboardingSession completed = ripping.WithCompletion("movie", "27205");
+
+        completed.State.Should().Be(DiscOnboardingState.Complete);
+        completed.ResultType.Should().Be("movie");
+        completed.ResultId.Should().Be("27205");
+        completed.JobId.Should().Be("job-1", "completion must not lose the job that produced it");
+    }
 }

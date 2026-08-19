@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace NoMercy.OpticalMedia.Onboarding;
 
@@ -31,6 +32,15 @@ public sealed class DiscOnboardingSessionStore
 
     public void Set(DiscOnboardingSession session) =>
         _sessions[Normalise(session.DrivePath)] = session;
+
+    /// <summary>
+    /// Every active session, snapshotted. Used by
+    /// <c>DiscOnboardingCompletionEventHandler</c> to find the (at most one
+    /// per drive) session still <see cref="DiscOnboardingState.Ripping"/> for
+    /// a given library so a <c>MediaFilesScannedEvent</c> can be matched back
+    /// to it.
+    /// </summary>
+    public IReadOnlyCollection<DiscOnboardingSession> All => _sessions.Values.ToArray();
 
     // TODO: unused — needs a call site once session-lifecycle/eject-handling is designed.
     public void Remove(string drivePath) => _sessions.TryRemove(Normalise(drivePath), out _);
