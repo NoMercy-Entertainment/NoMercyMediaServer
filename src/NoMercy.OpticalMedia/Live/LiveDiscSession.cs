@@ -44,17 +44,23 @@ public sealed class LiveDiscSession(
     )
     {
         string inputPath = BuildInputPath(drive, titleIndex);
+        string[] extraArgs = BuildExtraInputArgs(drive, titleIndex);
         logger.LogInformation(
-            "Live disc session for {Drive} title {Title} → {InputPath}",
+            "Live disc session for {Drive} title {Title} → {InputPath} {ExtraArgs}",
             drive.Path,
             titleIndex,
-            inputPath
+            inputPath,
+            string.Join(' ', extraArgs)
         );
 
         // Probe the disc input the same way the encoder probes any other
         // source. The analyzer wraps ffprobe + parses streams + chapters
-        // into a MediaInfo the live runner consumes verbatim.
-        MediaInfo info = await mediaAnalyzer.AnalyzeAsync(inputPath, ct);
+        // into a MediaInfo the live runner consumes verbatim. Disc protocol
+        // URLs (bluray:/dvd:) are not filesystem paths, so this must take the
+        // extraInputArgs overload — the plain overload resolves inputPath
+        // through IStorage.AcquireLocalPath, which is meaningless here, and
+        // has no way to carry -playlist N ahead of -i.
+        MediaInfo info = await mediaAnalyzer.AnalyzeAsync(inputPath, extraArgs, ct);
 
         // ClientCapabilities defaults — the runner only needs format + codec
         // hints, the streaming service refines per-client when it stamps
@@ -77,30 +83,46 @@ public sealed class LiveDiscSession(
             CachedInfo: info,
             Client: client,
             StartPosition: startPosition,
-            PreferredQuality: preferredQuality
+            PreferredQuality: preferredQuality,
+            ExtraInputArgs: extraArgs.Length > 0 ? extraArgs : null
         );
 
         return await liveEncoder.StartAsync(request, ct);
     }
 
     /// <summary>
-    /// Builds the disc-type-specific input URL. Title index is encoded into
-    /// the URL where the protocol supports it (libbluray uses
-    /// <c>?playlist=N</c>); for DVD the demuxer parameter is set via
-    /// command-line flags the encoder layer can't pass through, so we rely
-    /// on libdvdread auto-selecting the longest title (title 0 = auto).
-    /// CD tracks are passed via the libcdio protocol with the track number.
+    /// Builds the disc-type-specific input URL. The title/playlist index is
+    /// never encoded into the URL itself — ffmpeg's bluray: protocol has no
+    /// query-string selector, and DVD/CD have none either. Every disc type
+    /// selects its title via CLI flags instead, from
+    /// <see cref="BuildExtraInputArgs"/>, mirroring the exact pattern
+    /// <c>DiscRipper.cs</c> already uses for the same disc types.
     /// </summary>
     private static string BuildInputPath(DiscDrive drive, int titleIndex)
     {
         string trimmed = drive.Path.TrimEnd('\\', '/');
         return drive.DiscType switch
         {
-            OpticalDiscType.BluRay =>
-                $"bluray:{trimmed}/?playlist={titleIndex.ToString(CultureInfo.InvariantCulture)}",
+            OpticalDiscType.BluRay => $"bluray:{trimmed}/",
             OpticalDiscType.Dvd => $"{trimmed}/",
             OpticalDiscType.Cd => drive.Path,
             _ => trimmed,
+        };
+    }
+
+    /// <summary>
+    /// ffmpeg input flags that must precede "-i" to select the right title —
+    /// same per-type mapping as <c>DiscRipper.BuildRipArgs</c>.
+    /// </summary>
+    private static string[] BuildExtraInputArgs(DiscDrive drive, int titleIndex)
+    {
+        string index = titleIndex.ToString(CultureInfo.InvariantCulture);
+        return drive.DiscType switch
+        {
+            OpticalDiscType.BluRay => ["-playlist", index],
+            OpticalDiscType.Dvd => ["-f", "dvdvideo", "-title", index],
+            OpticalDiscType.Cd => ["-f", "libcdio"],
+            _ => [],
         };
     }
 }

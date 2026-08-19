@@ -40,13 +40,20 @@ public class MediaAnalyzer(IProcessRunner processRunner, IStorage storage, Encod
         CancellationToken ct = default
     )
     {
-        bool isUrl =
+        bool isProtocolInput =
             filePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-            || filePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+            || filePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            || filePath.StartsWith("bluray:", StringComparison.OrdinalIgnoreCase)
+            // extraInputArgs (e.g. "-f dvdvideo"/"-f libcdio") is the caller
+            // telling us this is a disc/device path, not a real file — CD/DVD
+            // input paths carry no distinguishing URL scheme of their own.
+            || extraInputArgs is { Length: > 0 };
 
-        // Non-URL source: keep the scope-validated, remote-staging filesystem path.
-        // Extra input args are only meaningful for the HTTP self-ingest URL.
-        if (!isUrl)
+        // Filesystem source: keep the scope-validated, remote-staging path.
+        // Extra input args are only meaningful for protocol inputs (HTTP
+        // self-ingest URL, or an optical disc protocol) — a real path has no
+        // ffmpeg "-playlist"/"-title" style selector to carry.
+        if (!isProtocolInput)
             return await AnalyzeAsync(filePath, storage, ct);
 
         string[] arguments = [.. FfprobeArgs, .. (extraInputArgs ?? []), filePath];
