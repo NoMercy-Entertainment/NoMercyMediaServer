@@ -16,20 +16,21 @@ using NoMercy.Database.Models.Common;
 namespace NoMercy.MediaProcessing.Shows;
 
 /// <summary>
-/// Reads and writes the one-shot completion flag for
+/// Reads and writes the backfill cursor and completion flag for
 /// <see cref="AnimeEnrichmentBackfillJob"/> in the <see cref="AppDbContext"/>
-/// Configuration table, mirroring <c>PaletteBackfillState</c>'s pattern. Unlike
-/// the palette backfill, this drain has no per-type cursor: a library's anime
-/// count is small enough that a single pass over the anime-typed Tvs/Movies is
-/// fine, and the flag alone is enough to keep the job from re-running on every boot.
+/// Configuration table, mirroring <c>PaletteBackfillState</c>'s pattern: a
+/// per-entity-type cursor lets the drain resume after a restart instead of
+/// re-walking titles it already enriched.
 /// </summary>
 public class AnimeEnrichmentBackfillState
 {
     private const string CompleteKey = "anime_enrichment_backfill_complete";
 
-    public static async Task<bool> IsCompleteAsync(CancellationToken ct)
+    private static string CursorKey(string entityType) =>
+        $"anime_enrichment_backfill_cursor_{entityType}";
+
+    public static async Task<bool> IsCompleteAsync(AppDbContext db, CancellationToken ct)
     {
-        await using AppDbContext db = new();
         string? value = await db
             .Configuration.Where(c => c.Key == CompleteKey)
             .Select(c => c.Value)
@@ -37,17 +38,47 @@ public class AnimeEnrichmentBackfillState
         return value == "true";
     }
 
-    public static async Task SetCompleteAsync(CancellationToken ct)
+    public static async Task SetCompleteAsync(AppDbContext db, CancellationToken ct)
     {
-        await using AppDbContext db = new();
-        Configuration? existing = await db.Configuration.FirstOrDefaultAsync(
-            c => c.Key == CompleteKey,
-            ct
-        );
+        await UpsertConfigAsync(db, CompleteKey, "true", ct);
+    }
+
+    public static async Task<int> GetCursorAsync(
+        AppDbContext db,
+        string entityType,
+        CancellationToken ct
+    )
+    {
+        string key = CursorKey(entityType);
+        string? value = await db
+            .Configuration.Where(c => c.Key == key)
+            .Select(c => c.Value)
+            .FirstOrDefaultAsync(ct);
+        return value is null ? 0 : int.Parse(value);
+    }
+
+    public static async Task SetCursorAsync(
+        AppDbContext db,
+        string entityType,
+        int cursor,
+        CancellationToken ct
+    )
+    {
+        await UpsertConfigAsync(db, CursorKey(entityType), cursor.ToString(), ct);
+    }
+
+    private static async Task UpsertConfigAsync(
+        AppDbContext db,
+        string key,
+        string value,
+        CancellationToken ct
+    )
+    {
+        Configuration? existing = await db.Configuration.FirstOrDefaultAsync(c => c.Key == key, ct);
         if (existing is null)
-            db.Configuration.Add(new() { Key = CompleteKey, Value = "true" });
+            db.Configuration.Add(new() { Key = key, Value = value });
         else
-            existing.Value = "true";
+            existing.Value = value;
 
         await db.SaveChangesAsync(ct);
     }

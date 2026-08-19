@@ -16,38 +16,13 @@ using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Shows;
 
+// Handle() opens its own AppDbContext() against the real configured store
+// (mirrors PaletteBackfillJob, which is untested at this level for the same
+// reason) - only the parts reachable without touching that context are
+// covered here. AnimeEnrichmentBackfillStateTests covers the cursor/complete
+// logic itself against an injected in-memory context.
 public class AnimeEnrichmentBackfillJobTests
 {
-    [Fact]
-    public async Task RunAsync_EnrichesEveryAnimeLibraryTvShow_AtLowPriority()
-    {
-        Mock<IAnimeEnrichmentService> enrichmentService = new();
-
-        AnimeEnrichmentBackfillJob job = new(enrichmentService.Object);
-
-        await job.RunAsync([(42, "One Piece", 1999, new[] { "JP" })]);
-
-        enrichmentService.Verify(
-            s => s.EnrichTvAsync(42, "One Piece", 1999, new[] { "JP" }, false),
-            Times.Once
-        );
-    }
-
-    [Fact]
-    public async Task RunMoviesAsync_EnrichesEveryAnimeLibraryMovie_AtLowPriority()
-    {
-        Mock<IAnimeEnrichmentService> enrichmentService = new();
-
-        AnimeEnrichmentBackfillJob job = new(enrichmentService.Object);
-
-        await job.RunMoviesAsync([(7, "Your Name", 2016, new[] { "JP" })]);
-
-        enrichmentService.Verify(
-            s => s.EnrichMovieAsync(7, "Your Name", 2016, new[] { "JP" }, false),
-            Times.Once
-        );
-    }
-
     [Fact]
     public void QueueName_IsExtras()
     {

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Database;
 using NoMercy.MediaProcessing.Shows;
 using NoMercyQueue;
 
@@ -18,10 +19,10 @@ namespace NoMercy.Service.Workers;
 /// On boot, dispatches a single <see cref="AnimeEnrichmentBackfillJob"/> onto
 /// the low-priority "extras" queue if the one-shot anime enrichment backfill
 /// (libraries imported before AniList/Jikan enrichment shipped) has not yet
-/// completed. Mirrors <see cref="PaletteBackfillStartupService"/>'s one-shot
-/// pattern; unlike the palette backfill this drain is not self-continuing —
-/// the job itself does one full pass over anime-typed Tvs/Movies and sets the
-/// completion flag when done.
+/// completed. Mirrors <see cref="PaletteBackfillStartupService"/>'s pattern:
+/// the job drains in small cursor-tracked batches and re-enqueues itself, so
+/// a restart resumes where the last batch left off instead of redoing the
+/// whole library.
 /// </summary>
 public class AnimeEnrichmentBackfillStartupService(
     ILogger<AnimeEnrichmentBackfillStartupService> logger
@@ -31,7 +32,11 @@ public class AnimeEnrichmentBackfillStartupService(
     {
         try
         {
-            bool complete = await AnimeEnrichmentBackfillState.IsCompleteAsync(cancellationToken);
+            await using AppDbContext appDb = new();
+            bool complete = await AnimeEnrichmentBackfillState.IsCompleteAsync(
+                appDb,
+                cancellationToken
+            );
             if (complete)
             {
                 logger.LogDebug("Anime enrichment backfill already complete — skipping dispatch");

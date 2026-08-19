@@ -26,10 +26,13 @@ namespace NoMercy.MediaProcessing.Shows;
 /// AniList's rate cap) never delays live per-item enrichment during a
 /// concurrent library scan.
 ///
+/// Drains in small, cursor-tracked batches and re-enqueues itself, mirroring
+/// <c>PaletteBackfillJob</c>: a restart resumes at the last completed batch
+/// instead of re-walking every anime title from the start.
+///
 /// Dispatched once, on boot, by <c>AnimeEnrichmentBackfillStartupService</c>
-/// (mirrors <c>PaletteBackfillStartupService</c>'s one-shot pattern) via
-/// the "extras" queue at the lowest priority, and re-checks the completion
-/// flag itself so a redundant dispatch is a no-op.
+/// via the "extras" queue at the lowest priority, and re-checks the
+/// completion flag itself so a redundant dispatch is a no-op.
 /// </summary>
 [Serializable]
 public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
@@ -38,6 +41,8 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
 
     // Lowest priority so live imports and on-demand classification always drain first.
     public int Priority => 0;
+
+    private const int BatchSize = 25;
 
     private IAnimeEnrichmentService? _animeEnrichmentService;
     private IDbContextFactory<MediaContext>? _contextFactory;
@@ -62,20 +67,74 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
         if (_animeEnrichmentService is null || _contextFactory is null)
             return;
 
-        if (await AnimeEnrichmentBackfillState.IsCompleteAsync(CancellationToken.None))
+        await using AppDbContext appDb = new();
+        if (await AnimeEnrichmentBackfillState.IsCompleteAsync(appDb, CancellationToken.None))
             return;
 
         await using MediaContext context = await _contextFactory.CreateDbContextAsync();
 
-        List<TvProjection> tvRows = await context
+        bool tvProcessed = await ProcessTvBatchAsync(appDb, context);
+        bool moviesProcessed = await ProcessMovieBatchAsync(appDb, context);
+
+        if (!tvProcessed && !moviesProcessed)
+        {
+            await AnimeEnrichmentBackfillState.SetCompleteAsync(appDb, CancellationToken.None);
+            return;
+        }
+
+        QueueRunner.Current?.Dispatcher.Dispatch(new AnimeEnrichmentBackfillJob(), "extras", 0);
+    }
+
+    private async Task<bool> ProcessTvBatchAsync(AppDbContext appDb, MediaContext context)
+    {
+        int cursor = await AnimeEnrichmentBackfillState.GetCursorAsync(
+            appDb,
+            "tv",
+            CancellationToken.None
+        );
+
+        List<TvProjection> rows = await context
             .Tvs.AsNoTracking()
-            .Where(tv => tv.Library.Type == "anime")
+            .Where(tv => tv.Library.Type == "anime" && tv.Id > cursor)
+            .OrderBy(tv => tv.Id)
+            .Take(BatchSize)
             .Select(tv => new TvProjection(tv.Id, tv.Title, tv.FirstAirDate, tv.OriginCountry))
             .ToListAsync();
 
-        List<MovieProjection> movieRows = await context
+        if (rows.Count == 0)
+            return false;
+
+        foreach (TvProjection row in rows)
+            await _animeEnrichmentService!.EnrichTvAsync(
+                row.Id,
+                row.Title,
+                row.FirstAirDate.ParseYear(),
+                row.OriginCountry is not null ? [row.OriginCountry] : null,
+                false
+            );
+
+        await AnimeEnrichmentBackfillState.SetCursorAsync(
+            appDb,
+            "tv",
+            rows[^1].Id,
+            CancellationToken.None
+        );
+        return true;
+    }
+
+    private async Task<bool> ProcessMovieBatchAsync(AppDbContext appDb, MediaContext context)
+    {
+        int cursor = await AnimeEnrichmentBackfillState.GetCursorAsync(
+            appDb,
+            "movie",
+            CancellationToken.None
+        );
+
+        List<MovieProjection> rows = await context
             .Movies.AsNoTracking()
-            .Where(movie => movie.Library.Type == "anime")
+            .Where(movie => movie.Library.Type == "anime" && movie.Id > cursor)
+            .OrderBy(movie => movie.Id)
+            .Take(BatchSize)
             .Select(movie => new MovieProjection(
                 movie.Id,
                 movie.Title,
@@ -84,62 +143,25 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
             ))
             .ToListAsync();
 
-        IEnumerable<(int TvId, string Title, int? Year, string[]? OriginCountry)> tvShows =
-            tvRows.Select(row =>
-                (
-                    TvId: row.Id,
-                    row.Title,
-                    Year: (int?)row.FirstAirDate.ParseYear(),
-                    OriginCountry: row.OriginCountry is not null
-                        ? new[] { row.OriginCountry }
-                        : null
-                )
-            );
+        if (rows.Count == 0)
+            return false;
 
-        IEnumerable<(int MovieId, string Title, int? Year, string[]? OriginCountry)> movies =
-            movieRows.Select(row =>
-                (
-                    MovieId: row.Id,
-                    row.Title,
-                    Year: (int?)row.ReleaseDate.ParseYear(),
-                    OriginCountry: row.OriginCountry is not null
-                        ? new[] { row.OriginCountry }
-                        : null
-                )
-            );
-
-        await RunAsync(tvShows);
-        await RunMoviesAsync(movies);
-
-        await AnimeEnrichmentBackfillState.SetCompleteAsync(CancellationToken.None);
-    }
-
-    public async Task RunAsync(
-        IEnumerable<(int TvId, string Title, int? Year, string[]? OriginCountry)> tvShows
-    )
-    {
-        if (_animeEnrichmentService is null)
-            return;
-
-        foreach ((int tvId, string title, int? year, string[]? originCountry) in tvShows)
-            await _animeEnrichmentService.EnrichTvAsync(tvId, title, year, originCountry, false);
-    }
-
-    public async Task RunMoviesAsync(
-        IEnumerable<(int MovieId, string Title, int? Year, string[]? OriginCountry)> movies
-    )
-    {
-        if (_animeEnrichmentService is null)
-            return;
-
-        foreach ((int movieId, string title, int? year, string[]? originCountry) in movies)
-            await _animeEnrichmentService.EnrichMovieAsync(
-                movieId,
-                title,
-                year,
-                originCountry,
+        foreach (MovieProjection row in rows)
+            await _animeEnrichmentService!.EnrichMovieAsync(
+                row.Id,
+                row.Title,
+                row.ReleaseDate.ParseYear(),
+                row.OriginCountry is not null ? [row.OriginCountry] : null,
                 false
             );
+
+        await AnimeEnrichmentBackfillState.SetCursorAsync(
+            appDb,
+            "movie",
+            rows[^1].Id,
+            CancellationToken.None
+        );
+        return true;
     }
 
     private sealed record TvProjection(
