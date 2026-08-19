@@ -34,10 +34,19 @@ public class PluginLoadContextTests
         )!;
         string configDir = Path.GetDirectoryName(testBinDir)!;
         string buildConfig = Path.GetFileName(configDir);
-        string repoRoot = Path.GetFullPath(Path.Combine([testBinDir, "..", "..", "..", "..", ".."]));
-
-        string dllPath = Path.Combine([repoRoot, "tests", "NoMercy.Plugin.Samples.Failures", "bin", buildConfig, "net10.0", "NoMercy.Plugin.Samples.Failures.dll"]
+        string repoRoot = Path.GetFullPath(
+            Path.Combine([testBinDir, "..", "..", "..", "..", ".."])
         );
+
+        string dllPath = Path.Combine([
+            repoRoot,
+            "tests",
+            "NoMercy.Plugin.Samples.Failures",
+            "bin",
+            buildConfig,
+            "net10.0",
+            "NoMercy.Plugin.Samples.Failures.dll",
+        ]);
 
         if (!File.Exists(dllPath))
             throw new FileNotFoundException(
@@ -48,13 +57,21 @@ public class PluginLoadContextTests
     }
 
     [Fact]
-    public void Load_SharedAssemblyName_ReturnsNull_FallsBackToDefaultContext()
+    public void Load_SharedAssemblyName_ResolvesToTheHostsAlreadyLoadedCopy()
     {
+        // The test host has already loaded NoMercy.Plugins.Abstractions to run
+        // this very test, so it must come back as that exact loaded instance —
+        // not a fresh load, and not null. A version the plugin's own
+        // AssemblyName carries (there isn't one here; this call passes a bare
+        // simple name, same as the CLR does for an unversioned reference) must
+        // never gate this: shared means "whatever the host has", regardless of
+        // which build the plugin was compiled against.
         using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
 
         Assembly? resolved = context.InvokeLoad(new AssemblyName("NoMercy.Plugins.Abstractions"));
 
-        resolved.Should().BeNull("shared assemblies must defer to the default AssemblyLoadContext");
+        resolved.Should().NotBeNull("a shared assembly resolves to the host's own loaded copy");
+        resolved!.GetName().Name.Should().Be("NoMercy.Plugins.Abstractions");
     }
 
     [Fact]
@@ -111,7 +128,10 @@ public class PluginLoadContextTests
 
         using ExposedPluginLoadContext context = new(GetFailuresPluginDllPath());
 
-        context.InvokeLoad(new AssemblyName("Newtonsoft.Json")).Should().BeNull();
+        Assembly? resolved = context.InvokeLoad(new AssemblyName("Newtonsoft.Json"));
+
+        resolved.Should().NotBeNull();
+        resolved!.GetName().Name.Should().Be("Newtonsoft.Json");
     }
 
     [Fact]
