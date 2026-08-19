@@ -65,6 +65,19 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
     /// <summary>Required by the queue for deserialization; services are supplied via <see cref="InjectStorageServices"/>.</summary>
     public AnimeEnrichmentBackfillJob() { }
 
+    // Purely a dedup-breaker: the queue drops a Dispatch() whose serialized
+    // payload matches an already-present row (JobQueue.Enqueue's JobExists
+    // check), and this job's own reserved row is STILL PRESENT while Handle()
+    // runs - the worker only deletes it in a finally block after Handle()
+    // returns (QueueWorker.cs). A parameterless AnimeEnrichmentBackfillJob()
+    // therefore always collides with itself on self-redispatch: the insert
+    // silently no-ops, the worker then deletes the old row, and the backfill
+    // dies with zero trace - verified live, reproduced twice. Stamping the
+    // cursor this batch just advanced to makes every redispatch's payload
+    // provably different from the row it is dispatched from inside.
+    public int? DispatchedAfterTvCursor { get; set; }
+    public int? DispatchedAfterMovieCursor { get; set; }
+
     public void InjectStorageServices(IServiceProvider serviceProvider)
     {
         _animeEnrichmentService ??= serviceProvider.GetRequiredService<IAnimeEnrichmentService>();
@@ -82,23 +95,30 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
 
         await using MediaContext context = await _contextFactory.CreateDbContextAsync();
 
-        bool tvProcessed = await ProcessTvBatchAsync(appDb, context);
-        bool moviesProcessed = await ProcessMovieBatchAsync(appDb, context);
+        int? tvCursor = await ProcessTvBatchAsync(appDb, context);
+        int? movieCursor = await ProcessMovieBatchAsync(appDb, context);
 
-        if (!tvProcessed && !moviesProcessed)
+        if (tvCursor is null && movieCursor is null)
         {
             await AnimeEnrichmentBackfillState.SetCompleteAsync(appDb, CancellationToken.None);
             return;
         }
 
         QueueRunner.Current?.Dispatcher.Dispatch(
-            new AnimeEnrichmentBackfillJob(),
+            new AnimeEnrichmentBackfillJob
+            {
+                DispatchedAfterTvCursor = tvCursor,
+                DispatchedAfterMovieCursor = movieCursor,
+            },
             "extras",
             Priority
         );
     }
 
-    private async Task<bool> ProcessTvBatchAsync(AppDbContext appDb, MediaContext context)
+    // Returns the batch's last-processed tv id, or null if the tv sweep is
+    // exhausted (no rows past the cursor) - the return value doubles as this
+    // dispatch's dedup-breaking stamp (see DispatchedAfterTvCursor).
+    private async Task<int?> ProcessTvBatchAsync(AppDbContext appDb, MediaContext context)
     {
         int cursor = await AnimeEnrichmentBackfillState.GetCursorAsync(
             appDb,
@@ -115,7 +135,7 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
             .ToListAsync();
 
         if (rows.Count == 0)
-            return false;
+            return null;
 
         foreach (TvProjection row in rows)
             await _animeEnrichmentService!.EnrichTvAsync(
@@ -132,10 +152,12 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
             rows[^1].Id,
             CancellationToken.None
         );
-        return true;
+        return rows[^1].Id;
     }
 
-    private async Task<bool> ProcessMovieBatchAsync(AppDbContext appDb, MediaContext context)
+    // Returns the batch's last-processed movie id, or null if the movie
+    // sweep is exhausted - see ProcessTvBatchAsync.
+    private async Task<int?> ProcessMovieBatchAsync(AppDbContext appDb, MediaContext context)
     {
         int cursor = await AnimeEnrichmentBackfillState.GetCursorAsync(
             appDb,
@@ -157,7 +179,7 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
             .ToListAsync();
 
         if (rows.Count == 0)
-            return false;
+            return null;
 
         foreach (MovieProjection row in rows)
             await _animeEnrichmentService!.EnrichMovieAsync(
@@ -174,7 +196,7 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
             rows[^1].Id,
             CancellationToken.None
         );
-        return true;
+        return rows[^1].Id;
     }
 
     private sealed record TvProjection(

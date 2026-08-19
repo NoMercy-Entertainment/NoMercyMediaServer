@@ -12,6 +12,7 @@
 using FluentAssertions;
 using Moq;
 using NoMercy.MediaProcessing.Shows;
+using NoMercyQueue;
 using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Shows;
@@ -56,5 +57,41 @@ public class AnimeEnrichmentBackfillJobTests
         Func<Task> act = () => job.Handle();
 
         await act.Should().NotThrowAsync();
+    }
+
+    // JobQueue.Enqueue drops a Dispatch() whose serialized payload matches an
+    // already-present row (its own dedup check), and a self-redispatched
+    // job's OWN row is still present - reserved, not yet deleted - while
+    // Handle() runs (QueueWorker only deletes it in a finally block AFTER
+    // Handle() returns). A parameterless AnimeEnrichmentBackfillJob() always
+    // serializes identically, so self-redispatch always collided with its
+    // own row: the insert silently no-op'd, the worker then deleted the old
+    // row, and the backfill died with zero trace - reproduced live, twice.
+    // DispatchedAfterTvCursor/MovieCursor exist purely to break that
+    // collision: two batches at different cursor positions must serialize to
+    // DIFFERENT payloads, or this bug is back.
+    [Fact]
+    public void SerializedPayload_DiffersAcrossCursorPositions_SoSelfRedispatchIsNeverDroppedAsADuplicate()
+    {
+        AnimeEnrichmentBackfillJob first = new() { DispatchedAfterTvCursor = 100 };
+        AnimeEnrichmentBackfillJob second = new() { DispatchedAfterTvCursor = 125 };
+
+        string firstPayload = SerializationHelper.Serialize(first);
+        string secondPayload = SerializationHelper.Serialize(second);
+
+        firstPayload.Should().NotBe(secondPayload);
+        firstPayload.Should().Contain("100");
+        secondPayload.Should().Contain("125");
+    }
+
+    // Same collision, the movie-cursor axis - both cursors advance
+    // independently (a batch can process only tv, only movies, or both).
+    [Fact]
+    public void SerializedPayload_DiffersAcrossMovieCursorPositions()
+    {
+        AnimeEnrichmentBackfillJob first = new() { DispatchedAfterMovieCursor = 7 };
+        AnimeEnrichmentBackfillJob second = new() { DispatchedAfterMovieCursor = 42 };
+
+        SerializationHelper.Serialize(first).Should().NotBe(SerializationHelper.Serialize(second));
     }
 }
