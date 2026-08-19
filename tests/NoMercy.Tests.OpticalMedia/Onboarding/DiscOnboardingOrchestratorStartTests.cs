@@ -19,6 +19,7 @@ using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Onboarding;
 using NoMercy.OpticalMedia.Sources;
+using NoMercyQueue.Core.Interfaces;
 using Xunit;
 
 namespace NoMercy.Tests.OpticalMedia.Onboarding;
@@ -70,7 +71,8 @@ public class DiscOnboardingOrchestratorStartTests
             sourceFactory,
             identificationService,
             store,
-            eventBus.Object
+            eventBus.Object,
+            Mock.Of<IJobDispatcher>()
         );
 
         DiscOnboardingSession result = await orchestrator.StartAsync(
@@ -104,7 +106,8 @@ public class DiscOnboardingOrchestratorStartTests
             new DiscSourceFactory([source.Object]),
             identificationService,
             new DiscOnboardingSessionStore(),
-            Mock.Of<IEventBus>()
+            Mock.Of<IEventBus>(),
+            Mock.Of<IJobDispatcher>()
         );
 
         DiscOnboardingSession result = await orchestrator.StartAsync(
@@ -129,7 +132,8 @@ public class DiscOnboardingOrchestratorStartTests
             new DiscSourceFactory([source.Object]),
             identificationService,
             new DiscOnboardingSessionStore(),
-            Mock.Of<IEventBus>()
+            Mock.Of<IEventBus>(),
+            Mock.Of<IJobDispatcher>()
         );
 
         DiscOnboardingSession result = await orchestrator.StartAsync(

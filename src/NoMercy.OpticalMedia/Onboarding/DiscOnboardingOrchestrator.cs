@@ -34,7 +34,8 @@ public sealed class DiscOnboardingOrchestrator(
     DiscSourceFactory discSourceFactory,
     DiscIdentificationService identificationService,
     DiscOnboardingSessionStore store,
-    IEventBus eventBus
+    IEventBus eventBus,
+    NoMercyQueue.Core.Interfaces.IJobDispatcher dispatcher
 )
 {
     public async Task<DiscOnboardingSession> StartAsync(
@@ -69,6 +70,66 @@ public sealed class DiscOnboardingOrchestrator(
             identification.Candidates,
             autoConfirms ? DiscOnboardingState.AutoConfirmed : DiscOnboardingState.AwaitingConfirm
         );
+        await PublishAsync(session, ct);
+
+        return session;
+    }
+
+    /// <summary>
+    /// Applies the user's chosen candidate (or the auto-confirmed one),
+    /// builds a <see cref="RipRequest"/> with <see cref="CustomMetadata"/>
+    /// pre-filled from it, and dispatches the existing <see cref="Rip.DiscRipJob"/>.
+    /// Because <see cref="RipRequest.Custom"/> is non-null, DiscRipJob's own
+    /// post-rip identify branch is skipped entirely — the match was already
+    /// made here, before the rip started.
+    /// </summary>
+    public async Task<DiscOnboardingSession> ConfirmAsync(
+        string drivePath,
+        DiscCandidate chosen,
+        int[] selectedTitleIndices,
+        Ulid libraryId,
+        Ulid folderId,
+        CancellationToken ct
+    )
+    {
+        if (!store.TryGet(drivePath, out DiscOnboardingSession? session) || session is null)
+            throw new InvalidOperationException($"No onboarding session for drive {drivePath}");
+
+        CustomMetadata custom = new(
+            Title: chosen.Title,
+            Year: chosen.Year,
+            Type: chosen.Type ?? MediaType.Movie,
+            PosterUrl: chosen.PosterUrl,
+            SeasonNumber: chosen.SeasonNumber,
+            EpisodeStartNumber: chosen.EpisodeNumber
+        );
+
+        RipRequest request = new(
+            DrivePath: drivePath,
+            SelectedTitleIndices: selectedTitleIndices,
+            MetadataId: chosen.StableId,
+            Custom: custom,
+            LibraryId: libraryId,
+            FolderId: folderId,
+            EncodingProfileId: null,
+            AudioTracks: [],
+            Subtitles: []
+        );
+
+        string sanitisedDrive = drivePath
+            .TrimEnd('\\', '/')
+            .Replace(":", "")
+            .Replace(Path.DirectorySeparatorChar, '_');
+        string outputDir = Path.Combine(
+            NoMercy.NmSystem.Information.AppFiles.TranscodePath,
+            "ripper",
+            sanitisedDrive
+        );
+
+        Rip.DiscRipJob job = new(request, outputDir, folderId, libraryId, targetLibraryType: null);
+        dispatcher.Dispatch(job, job.QueueName, job.Priority);
+
+        session = session.WithJob(job.JobId);
         await PublishAsync(session, ct);
 
         return session;
