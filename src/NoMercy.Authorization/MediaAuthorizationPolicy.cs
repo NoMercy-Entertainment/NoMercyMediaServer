@@ -27,4 +27,8 @@ public class MediaAuthorizationPolicy(IUserCache userCache) : IMediaAuthorizatio
 
     public bool IsAllowed(ClaimsPrincipal? principal) =>
         userCache.Users.Any(u => u.Allowed && u.Id == principal.UserId()) || IsOwner(principal);
+
+    public bool IsOpticalAccess(ClaimsPrincipal? principal) =>
+        userCache.Users.Any(u => u.OpticalAccess && u.Id == principal.UserId())
+        || IsModerator(principal);
 }

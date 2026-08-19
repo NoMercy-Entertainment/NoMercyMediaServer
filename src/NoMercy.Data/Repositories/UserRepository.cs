@@ -128,6 +128,7 @@ public class UserRepository(MediaContext context, IDbContextFactory<MediaContext
         Guid targetUserId,
         Guid actingUserId,
         bool allowed,
+        bool opticalAccess,
         bool audioTranscoding,
         bool videoTranscoding,
         bool noTranscoding,
@@ -148,6 +149,7 @@ public class UserRepository(MediaContext context, IDbContextFactory<MediaContext
             user.Manage = manage.Value;
 
         user.Allowed = allowed;
+        user.OpticalAccess = opticalAccess;
         user.AudioTranscoding = audioTranscoding;
         user.VideoTranscoding = videoTranscoding;
         user.NoTranscoding = noTranscoding;

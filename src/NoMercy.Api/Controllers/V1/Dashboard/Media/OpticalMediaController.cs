@@ -38,7 +38,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiController]
 [Tags("Dashboard Optical")]
 [ApiVersion(1.0)]
-[Authorize(Policy = "Moderator")]
+// No class-level policy: read-only endpoints (drives/probe/title/play/stop)
+// accept OpticalAccess — a lighter permission a household member can hold
+// without full library access — while every write/config endpoint below
+// (open/close/process/confirm/rip) is individually Moderator-gated.
+[Authorize]
 [Route("api/v{version:apiVersion}/dashboard/optical")]
 public class OpticalMediaController(
     DiscSourceFactory discSourceFactory,
@@ -56,6 +60,7 @@ public class OpticalMediaController(
     // ── Legacy endpoints (re-pointed to Module A) ──────────────────────────
 
     [HttpGet("drives")]
+    [Authorize(Policy = "OpticalAccess")]
     public IActionResult GetOpticalDrives()
     {
         IEnumerable<object> drives = driveMonitor
@@ -73,6 +78,7 @@ public class OpticalMediaController(
     }
 
     [HttpGet("{drivePath}")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> GetDriveContents(string drivePath, CancellationToken ct)
     {
         DiscDrive? drive = FindDrive(drivePath);
@@ -120,6 +126,7 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/process")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult ProcessMedia(string drivePath)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -133,6 +140,7 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/open")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult OpenDrive(string drivePath)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -147,6 +155,7 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/close")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult CloseDrive(string drivePath)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -161,9 +170,11 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/play/{playlistId}")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> PlayMedia(
         string drivePath,
         string playlistId,
+        [FromBody] PlayMediaRequest? request,
         CancellationToken ct
     )
     {
@@ -186,6 +197,11 @@ public class OpticalMediaController(
         if (!sessionManager.CanStartSession(User.UserId().ToString()))
             return ServiceUnavailableResponse("Maximum concurrent live sessions reached");
 
+        // Absent AudioTracks (older client, or a caller that just wants the
+        // default), fall back to the disc's first audio stream muxed into
+        // the single media playlist — the pre-existing behaviour.
+        AudioTrackSelection[] audioTracks = request?.AudioTracks ?? [];
+
         ILiveSession session;
         try
         {
@@ -194,6 +210,7 @@ public class OpticalMediaController(
                 titleIndex,
                 TimeSpan.Zero,
                 preferredQuality: null,
+                audioTracks,
                 ct
             );
         }
@@ -208,7 +225,16 @@ public class OpticalMediaController(
             session.SessionId
         );
 
-        string playlistUrl = $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
+        // Multiple selected audio tracks were spawned as separate renditions and
+        // stamped onto the runtime by LiveDiscSession — route the client to the
+        // master playlist so it sees every one; a single-track session keeps the
+        // plain media playlist it always used.
+        bool useMaster =
+            liveStreamingService.TryGetRuntime(session.SessionId, out LiveRuntimeSession runtime)
+            && runtime.AudioRenditions.Count > 0;
+        string playlistUrl = useMaster
+            ? $"/api/v1/streaming/live/sessions/{session.SessionId}/master.m3u8"
+            : $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
         LiveQuality quality = session.CurrentQuality;
 
         return Ok(
@@ -223,6 +249,7 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/stop")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> StopMedia(string drivePath, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -250,6 +277,7 @@ public class OpticalMediaController(
     /// between metadata candidates.
     /// </summary>
     [HttpGet("{drivePath}/probe")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> ProbeDisc(string drivePath, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -299,6 +327,7 @@ public class OpticalMediaController(
     /// tracks for a rip.
     /// </summary>
     [HttpGet("{drivePath}/title/{titleIndex:int}")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> ProbeTitle(
         string drivePath,
         int titleIndex,
@@ -334,6 +363,7 @@ public class OpticalMediaController(
     /// can render a candidate picker before the user confirms.
     /// </summary>
     [HttpPost("{drivePath}/resolve")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> ResolveDisc(string drivePath, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -459,6 +489,7 @@ public class OpticalMediaController(
     /// library refresh so the file is picked up by the import pipeline.
     /// </summary>
     [HttpPost("{drivePath}/confirm")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ConfirmDisc(
         string drivePath,
         [FromBody] DiscConfirmRequest request,
@@ -588,6 +619,7 @@ public class OpticalMediaController(
     /// destination folders so the background job never starts in a doomed state.
     /// </summary>
     [HttpPost("{drivePath}/rip")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> RipDisc(
         string drivePath,
         [FromBody] RipRequest request,
@@ -733,6 +765,15 @@ public class OpticalMediaController(
 /// <summary>
 /// Request body for <c>POST /optical/{drivePath}/confirm</c>.
 /// </summary>
+/// <summary>
+/// Request body for <c>POST /optical/{drivePath}/play/{playlistId}</c>. Reuses
+/// the rip endpoint's <see cref="AudioTrackSelection"/> shape so the dashboard
+/// client sends the same <c>{ StreamIndex, Include }</c> pairs it already
+/// builds for <see cref="RipRequest.AudioTracks"/> — no parallel DTO. Omitted
+/// or empty keeps the pre-existing single-default-track behaviour.
+/// </summary>
+public record PlayMediaRequest(AudioTrackSelection[]? AudioTracks = null);
+
 public record DiscConfirmRequest(
     string TmdbId,
     /// <summary>"movie" or "tv"</summary>

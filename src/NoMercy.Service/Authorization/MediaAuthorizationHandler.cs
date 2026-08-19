@@ -44,6 +44,9 @@ public class MediaAuthorizationHandler(
                     case MediaAccessRequirement when policy.IsAllowed(context.User):
                         context.Succeed(requirement);
                         break;
+                    case OpticalAccessRequirement when policy.IsOpticalAccess(context.User):
+                        context.Succeed(requirement);
+                        break;
                 }
             }
             catch (Exception ex)

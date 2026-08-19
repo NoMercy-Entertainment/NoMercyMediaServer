@@ -218,6 +218,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
             targetUserId: id,
             actingUserId: userId,
             allowed: request.Allowed,
+            opticalAccess: request.OpticalAccess,
             audioTranscoding: request.AudioTranscoding,
             videoTranscoding: request.VideoTranscoding,
             noTranscoding: request.NoTranscoding,

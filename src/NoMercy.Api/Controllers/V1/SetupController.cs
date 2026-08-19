@@ -377,6 +377,7 @@ public class SetupController(
                 owner = AuthPolicy.IsOwner(User),
                 manager = AuthPolicy.IsModerator(User),
                 allowed = AuthPolicy.IsAllowed(User),
+                optical_access = AuthPolicy.IsOpticalAccess(User),
             }
         );
     }

@@ -83,6 +83,14 @@ public static partial class ServiceConfiguration
                     policy.RequireAuthenticatedUser();
                     policy.AddRequirements(new MediaAccessRequirement());
                 }
+            )
+            .AddPolicy(
+                "OpticalAccess",
+                policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.AddRequirements(new OpticalAccessRequirement());
+                }
             );
 
         services.AddScoped<IAuthorizationHandler, MediaAuthorizationHandler>();

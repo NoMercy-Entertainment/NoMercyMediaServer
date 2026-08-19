@@ -20,6 +20,7 @@ using NoMercy.Encoder.LiveTranscode;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Live;
+using NoMercy.OpticalMedia.Sources;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
 
@@ -120,6 +121,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int>(),
                     It.IsAny<TimeSpan>(),
                     It.IsAny<string?>(),
+                    It.IsAny<AudioTrackSelection[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )
@@ -174,6 +176,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
                     It.IsAny<int>(),
                     It.IsAny<TimeSpan>(),
                     It.IsAny<string?>(),
+                    It.IsAny<AudioTrackSelection[]>(),
                     It.IsAny<CancellationToken>()
                 )
             )

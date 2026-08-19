@@ -39,6 +39,7 @@ public interface IUserRepository
         Guid targetUserId,
         Guid actingUserId,
         bool allowed,
+        bool opticalAccess,
         bool audioTranscoding,
         bool videoTranscoding,
         bool noTranscoding,

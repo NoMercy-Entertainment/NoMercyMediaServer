@@ -139,6 +139,7 @@ public class RouteContractSnapshotTests : IClassFixture<NoMercyApiFactory>
         "GET api/v{version:apiVersion}/dashboard/optical/onboarding/{drivePath} [DiscOnboarding.GetOnboardingState]",
         "GET api/v{version:apiVersion}/dashboard/optical/{drivePath} [OpticalMedia.GetDriveContents]",
         "GET api/v{version:apiVersion}/dashboard/optical/{drivePath}/probe [OpticalMedia.ProbeDisc]",
+        "GET api/v{version:apiVersion}/dashboard/optical/{drivePath}/title/{titleIndex:int} [OpticalMedia.ProbeTitle]",
         "GET api/v{version:apiVersion}/dashboard/plugins [Plugin.Index]",
         "GET api/v{version:apiVersion}/dashboard/plugins/repositories [PluginRepository.Index]",
         "GET api/v{version:apiVersion}/dashboard/plugins/repositories/available [PluginRepository.Available]",
