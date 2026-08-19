@@ -320,7 +320,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
         return context
             .AnimeThemeTv.UpsertRange(animeThemeTvs.ToArray())
             .On(v => new { v.AnimeThemeId, v.TvId })
-            .WhenMatched((existing, incoming) => existing)
+            .WhenMatched((ts, ti) => new() { AnimeThemeId = ti.AnimeThemeId, TvId = ti.TvId })
             .RunAsync();
     }
 
@@ -329,7 +329,9 @@ public class ShowRepository(MediaContext context) : IShowRepository
         return context
             .AnimeDemographicTv.UpsertRange(animeDemographicTvs.ToArray())
             .On(v => new { v.AnimeDemographicId, v.TvId })
-            .WhenMatched((existing, incoming) => existing)
+            .WhenMatched(
+                (ts, ti) => new() { AnimeDemographicId = ti.AnimeDemographicId, TvId = ti.TvId }
+            )
             .RunAsync();
     }
 
@@ -340,7 +342,7 @@ public class ShowRepository(MediaContext context) : IShowRepository
         await context
             .AnimeSeasonTv.Upsert(new AnimeSeasonTv { AnimeSeasonId = seasonId, TvId = tvId })
             .On(v => new { v.AnimeSeasonId, v.TvId })
-            .WhenMatched((existing, incoming) => existing)
+            .WhenMatched((ts, ti) => new() { AnimeSeasonId = ti.AnimeSeasonId, TvId = ti.TvId })
             .RunAsync();
     }
 

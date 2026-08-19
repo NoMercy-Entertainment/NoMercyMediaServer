@@ -310,7 +310,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
         return context
             .AnimeThemeMovie.UpsertRange(animeThemeMovies.ToArray())
             .On(v => new { v.AnimeThemeId, v.MovieId })
-            .WhenMatched((existing, incoming) => existing)
+            .WhenMatched((ts, ti) => new() { AnimeThemeId = ti.AnimeThemeId, MovieId = ti.MovieId })
             .RunAsync();
     }
 
@@ -319,7 +319,9 @@ public class MovieRepository(MediaContext context) : IMovieRepository
         return context
             .AnimeDemographicMovie.UpsertRange(animeDemographicMovies.ToArray())
             .On(v => new { v.AnimeDemographicId, v.MovieId })
-            .WhenMatched((existing, incoming) => existing)
+            .WhenMatched(
+                (ts, ti) => new() { AnimeDemographicId = ti.AnimeDemographicId, MovieId = ti.MovieId }
+            )
             .RunAsync();
     }
 
@@ -332,7 +334,9 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                 new AnimeSeasonMovie { AnimeSeasonId = seasonId, MovieId = movieId }
             )
             .On(v => new { v.AnimeSeasonId, v.MovieId })
-            .WhenMatched((existing, incoming) => existing)
+            .WhenMatched(
+                (ts, ti) => new() { AnimeSeasonId = ti.AnimeSeasonId, MovieId = ti.MovieId }
+            )
             .RunAsync();
     }
 
