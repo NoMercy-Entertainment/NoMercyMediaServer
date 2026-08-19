@@ -647,6 +647,7 @@ public static partial class ServiceConfiguration
         services.AddHostedService<AutoEncodeSubscriber>();
         services.AddHostedService<IntroDetectionSubscriber>();
         services.AddHostedService<PaletteBackfillStartupService>();
+        services.AddHostedService<AnimeEnrichmentBackfillStartupService>();
         services.AddHostedService<MusicQueryWarmupService>();
         // Singleton, not scoped: the startup service that consumes it is one,
         // and the repair itself holds only a context factory and a logger.
