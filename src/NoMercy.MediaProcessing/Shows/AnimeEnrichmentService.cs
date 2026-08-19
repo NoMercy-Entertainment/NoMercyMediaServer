@@ -68,8 +68,14 @@ public class AnimeEnrichmentService(
 
         if (jikanMatch is not null && jikanMatch.Demographics.Length > 0)
         {
-            IEnumerable<AnimeDemographicTv> demographics = jikanMatch.Demographics.Select(
-                d => new AnimeDemographicTv { AnimeDemographicId = d.MalId, TvId = tvId }
+            IEnumerable<AnimeDemographicTv> demographics = await ResolveDemographicsAsync(
+                jikanMatch,
+                name => showRepository.ResolveAnimeDemographicIdAsync(name),
+                animeDemographicId => new AnimeDemographicTv
+                {
+                    AnimeDemographicId = animeDemographicId,
+                    TvId = tvId,
+                }
             );
             await showRepository.StoreAnimeDemographics(demographics);
         }
@@ -120,8 +126,14 @@ public class AnimeEnrichmentService(
 
         if (jikanMatch is not null && jikanMatch.Demographics.Length > 0)
         {
-            IEnumerable<AnimeDemographicMovie> demographics = jikanMatch.Demographics.Select(
-                d => new AnimeDemographicMovie { AnimeDemographicId = d.MalId, MovieId = movieId }
+            IEnumerable<AnimeDemographicMovie> demographics = await ResolveDemographicsAsync(
+                jikanMatch,
+                name => movieRepository.ResolveAnimeDemographicIdAsync(name),
+                animeDemographicId => new AnimeDemographicMovie
+                {
+                    AnimeDemographicId = animeDemographicId,
+                    MovieId = movieId,
+                }
             );
             await movieRepository.StoreAnimeDemographics(demographics);
         }
@@ -158,6 +170,30 @@ public class AnimeEnrichmentService(
         {
             int animeThemeId = await resolveThemeId(tag.Name);
             links.Add(toLink(animeThemeId));
+        }
+
+        return links;
+    }
+
+    // Jikan demographics carry a MalId that is only stable within MyAnimeList's
+    // own numbering, not the local AnimeDemographics table, so each distinct
+    // demographic name is resolved by name (creating the row on first sight)
+    // before a join row can reference it — mirrors ResolveThemesAsync above.
+    private static async Task<IEnumerable<TLink>> ResolveDemographicsAsync<TLink>(
+        JikanAnime jikanMatch,
+        Func<string, Task<int>> resolveDemographicId,
+        Func<int, TLink> toLink
+    )
+    {
+        List<TLink> links = [];
+        foreach (
+            JikanGenre demographic in jikanMatch.Demographics.Where(d =>
+                !string.IsNullOrWhiteSpace(d.Name)
+            )
+        )
+        {
+            int animeDemographicId = await resolveDemographicId(demographic.Name);
+            links.Add(toLink(animeDemographicId));
         }
 
         return links;

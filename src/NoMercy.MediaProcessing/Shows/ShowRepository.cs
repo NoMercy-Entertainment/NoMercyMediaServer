@@ -359,6 +359,21 @@ public class ShowRepository(MediaContext context) : IShowRepository
         return nextId;
     }
 
+    public async Task<int> ResolveAnimeDemographicIdAsync(string name)
+    {
+        AnimeDemographic? existing = await context
+            .AnimeDemographics.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Name == name);
+        if (existing is not null)
+            return existing.Id;
+
+        int nextId = (await context.AnimeDemographics.MaxAsync(d => (int?)d.Id) ?? 0) + 1;
+        context.AnimeDemographics.Add(new AnimeDemographic { Id = nextId, Name = name });
+        await context.SaveChangesAsync();
+
+        return nextId;
+    }
+
     private async Task<int> ResolveAnimeSeasonIdAsync(int year, string quarter)
     {
         AnimeSeason? existing = await context

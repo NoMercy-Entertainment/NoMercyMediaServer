@@ -97,6 +97,13 @@ public class AnimeEnrichmentServiceTests
         // (creates) a real AnimeTheme row and hands back its database id —
         // this is the real resolve-or-create id, not a GetHashCode() stub.
         showRepository.Setup(r => r.ResolveAnimeThemeIdAsync("Pirates")).ReturnsAsync(501);
+        // "Shounen" has never been seen before either, so the repository
+        // resolves (creates) a real AnimeDemographic row and hands back its
+        // database id — not the raw Jikan MalId (27), which is only stable
+        // within MyAnimeList's own numbering.
+        showRepository
+            .Setup(r => r.ResolveAnimeDemographicIdAsync("Shounen"))
+            .ReturnsAsync(701);
 
         AnimeEnrichmentService service = new(
             classifier.Object,
@@ -109,6 +116,7 @@ public class AnimeEnrichmentServiceTests
         await service.EnrichTvAsync(42, "One Piece", 1999, ["JP"]);
 
         showRepository.Verify(r => r.ResolveAnimeThemeIdAsync("Pirates"), Times.Once);
+        showRepository.Verify(r => r.ResolveAnimeDemographicIdAsync("Shounen"), Times.Once);
         showRepository.Verify(
             r =>
                 r.StoreAnimeThemes(
@@ -122,7 +130,7 @@ public class AnimeEnrichmentServiceTests
             r =>
                 r.StoreAnimeDemographics(
                     It.Is<IEnumerable<NoMercy.Database.Models.TvShows.AnimeDemographicTv>>(links =>
-                        links.Any(l => l.TvId == 42 && l.AnimeDemographicId == 27)
+                        links.Any(l => l.TvId == 42 && l.AnimeDemographicId == 701)
                     )
                 ),
             Times.Once

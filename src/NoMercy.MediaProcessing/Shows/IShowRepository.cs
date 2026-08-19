@@ -40,6 +40,7 @@ public interface IShowRepository
     Task StoreAnimeDemographics(IEnumerable<AnimeDemographicTv> animeDemographicTvs);
     Task StoreAnimeSeason(int tvId, int year, string quarter);
     Task<int> ResolveAnimeThemeIdAsync(string name);
+    Task<int> ResolveAnimeDemographicIdAsync(string name);
 
     Task StoreWatchProviders(List<WatchProvider> watchProviders);
     Task StoreNetworks(IEnumerable<Network> networks);
