@@ -11,6 +11,7 @@
 
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NoMercy.DiscFormat.Disc.Bdmv;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.NmSystem.Dto;
@@ -483,5 +484,131 @@ public class LiveDiscSessionTests
                 ),
             Times.Never
         );
+    }
+
+    // ── MergeAudioLanguages ─────────────────────────────────────────────────
+    // Pure position-matching merge extracted from ApplyMplsAudioLanguages —
+    // exercised directly against an in-memory MplsStream list so these don't
+    // depend on real MPLS bytes, a storage driver, or a disc.
+
+    private static MplsStream MakeMplsStream(string? language) =>
+        new()
+        {
+            CodingType = 0x03,
+            Codec = "ac3",
+            Language = language,
+        };
+
+    private static AudioStreamInfo MakeUnlanguagedAudioStream(int index, string codec = "ac3") =>
+        new(
+            Index: index,
+            Codec: codec,
+            Channels: 6,
+            SampleRate: 48000,
+            BitRateKbps: 448,
+            Language: null,
+            IsDefault: index == 0,
+            IsForced: false
+        );
+
+    [Fact]
+    public void MergeAudioLanguages_PositionMatchesEachStreamToItsMplsSlot()
+    {
+        AudioStreamInfo[] streams = [MakeUnlanguagedAudioStream(0), MakeUnlanguagedAudioStream(1)];
+        MplsStream[] mpls = [MakeMplsStream("eng"), MakeMplsStream("jpn")];
+
+        AudioStreamInfo[] result = LiveDiscSession.MergeAudioLanguages(streams, mpls);
+
+        result.Should().HaveCount(2);
+        result[0].Language.Should().Be("eng");
+        result[1].Language.Should().Be("jpn");
+        // The two results must stay distinguishable, not just present — a
+        // merge that stamped the same language on both would pass a count
+        // check while leaving the player's track switcher just as useless
+        // as the "und"/"Unknown" bug this exists to fix.
+        result[0].Language.Should().NotBe(result[1].Language);
+    }
+
+    [Fact]
+    public void MergeAudioLanguages_TrueHdFollowedByAc3_PairsBothToTheSameMplsSlot()
+    {
+        // ffprobe demuxes a single TrueHD track into two elementary streams —
+        // the TrueHD extension plus its embedded AC3 "compatible core" — so a
+        // disc with 2 logical tracks (TrueHD, then Italian AC3) reports 3
+        // ffprobe streams. The MPLS STN table still lists only 2 slots.
+        AudioStreamInfo[] streams =
+        [
+            MakeUnlanguagedAudioStream(0, "truehd"),
+            MakeUnlanguagedAudioStream(1, "ac3"),
+            MakeUnlanguagedAudioStream(2, "ac3"),
+        ];
+        MplsStream[] mpls = [MakeMplsStream("eng"), MakeMplsStream("ita")];
+
+        AudioStreamInfo[] result = LiveDiscSession.MergeAudioLanguages(streams, mpls);
+
+        result.Should().HaveCount(3);
+        result[0].Language.Should().Be("eng"); // truehd extension
+        result[1].Language.Should().Be("eng"); // paired ac3 core, same slot
+        result[2].Language.Should().Be("ita"); // independent ac3 track
+    }
+
+    [Fact]
+    public void MergeAudioLanguages_FewerMplsSlotsThanStreams_LeavesTrailingStreamsUnlanguaged()
+    {
+        AudioStreamInfo[] streams = [MakeUnlanguagedAudioStream(0), MakeUnlanguagedAudioStream(1)];
+        MplsStream[] mpls = [MakeMplsStream("eng")];
+
+        AudioStreamInfo[] result = LiveDiscSession.MergeAudioLanguages(streams, mpls);
+
+        result[0].Language.Should().Be("eng");
+        result[1].Language.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task StartAsync_BlurayWithNoMplsFile_LeavesProbedLanguagesUntouched()
+    {
+        (
+            LiveDiscSession session,
+            Mock<IMediaAnalyzer> analyzerMock,
+            Mock<ILiveEncoder> encoderMock,
+            _
+        ) = MakeSut();
+
+        MediaInfo probedInfo = MakeMediaInfo(
+            "bluray:D:/",
+            [MakeAudioStream(0, "eng"), MakeAudioStream(1, "ita")]
+        );
+        analyzerMock
+            .Setup(a =>
+                a.AnalyzeAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string[]>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(probedInfo);
+
+        LiveEncodeRequest? capturedRequest = null;
+        encoderMock
+            .Setup(e => e.StartAsync(It.IsAny<LiveEncodeRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LiveEncodeRequest, CancellationToken>((req, _) => capturedRequest = req)
+            .ReturnsAsync(Mock.Of<ILiveSession>(s => s.SessionId == "session-1"));
+
+        DiscDrive drive = new("D:\\", "LABEL", true, OpticalDiscType.BluRay);
+        await session.StartAsync(
+            drive,
+            1,
+            TimeSpan.Zero,
+            null,
+            NoAudioSelection,
+            CancellationToken.None
+        );
+
+        // MakeSut's default IStorageDriver mock returns false from
+        // FileExists() — no mpls on "disc", so ffprobe's own probed
+        // languages (already set on the fixture) must pass through
+        // unenriched rather than being overwritten with nulls.
+        capturedRequest!.CachedInfo.AudioStreams[0].Language.Should().Be("eng");
+        capturedRequest.CachedInfo.AudioStreams[1].Language.Should().Be("ita");
     }
 }

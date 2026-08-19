@@ -232,29 +232,7 @@ public sealed class LiveDiscSession(
             stream.CopyTo(buffer);
             MplsPlaylist playlist = MplsParser.Parse(buffer.ToArray());
 
-            AudioStreamInfo[] merged = new AudioStreamInfo[streams.Count];
-            int mplsIndex = 0;
-            for (int i = 0; i < streams.Count; i++)
-            {
-                string? language =
-                    mplsIndex < playlist.AudioStreams.Count
-                        ? playlist.AudioStreams[mplsIndex].Language
-                        : null;
-                merged[i] = streams[i] with { Language = language };
-
-                bool isTrueHdCorePair =
-                    streams[i].Codec == "truehd"
-                    && i + 1 < streams.Count
-                    && streams[i + 1].Codec == "ac3";
-                if (isTrueHdCorePair)
-                {
-                    i++;
-                    merged[i] = streams[i] with { Language = language };
-                }
-                mplsIndex++;
-            }
-
-            return merged;
+            return MergeAudioLanguages(streams, playlist.AudioStreams);
         }
         catch (Exception ex)
         {
@@ -267,6 +245,40 @@ public sealed class LiveDiscSession(
             );
             return streams;
         }
+    }
+
+    /// <summary>
+    /// Pure position-matching merge, split out from <see cref="ApplyMplsAudioLanguages"/>
+    /// so the TrueHD-pairing logic is unit-testable against an in-memory
+    /// <see cref="MplsStream"/> list without needing real MPLS bytes or a
+    /// fake <see cref="IStorageDriver"/> file.
+    /// </summary>
+    internal static AudioStreamInfo[] MergeAudioLanguages(
+        IReadOnlyList<AudioStreamInfo> streams,
+        IReadOnlyList<MplsStream> mplsAudioStreams
+    )
+    {
+        AudioStreamInfo[] merged = new AudioStreamInfo[streams.Count];
+        int mplsIndex = 0;
+        for (int i = 0; i < streams.Count; i++)
+        {
+            string? language =
+                mplsIndex < mplsAudioStreams.Count ? mplsAudioStreams[mplsIndex].Language : null;
+            merged[i] = streams[i] with { Language = language };
+
+            bool isTrueHdCorePair =
+                streams[i].Codec == "truehd"
+                && i + 1 < streams.Count
+                && streams[i + 1].Codec == "ac3";
+            if (isTrueHdCorePair)
+            {
+                i++;
+                merged[i] = streams[i] with { Language = language };
+            }
+            mplsIndex++;
+        }
+
+        return merged;
     }
 
     /// <summary>
