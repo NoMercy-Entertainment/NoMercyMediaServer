@@ -143,6 +143,8 @@ public class MovieManager(
             ImdbId = movieAppends.ImdbId,
             OriginalTitle = movieAppends.OriginalTitle,
             OriginalLanguage = movieAppends.OriginalLanguage,
+            OriginCountry =
+                movieAppends.OriginCountry.Length > 0 ? movieAppends.OriginCountry[0] : null,
             Overview = movieAppends.Overview ?? fromPlugins?.Overview,
             Popularity = movieAppends.Popularity,
             Poster = movieAppends.PosterPath ?? fromPlugins?.PosterUrl,
@@ -173,7 +175,7 @@ public class MovieManager(
                 movie.Id,
                 movieAppends.Title,
                 movieAppends.ReleaseDate.ParseYear(),
-                movieAppends.ProductionCountries.Select(c => c.Iso31661).ToArray()
+                movieAppends.OriginCountry
             ),
         ]);
 

@@ -73,6 +73,9 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("original_language")]
     public string? OriginalLanguage { get; set; }
 
+    [JsonProperty("origin_country")]
+    public string? OriginCountry { get; set; }
+
     [MaxLength(4096)]
     [JsonProperty("overview")]
     public string? Overview { get; set; }
@@ -187,7 +190,11 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
 
     public string CreateFileName()
     {
-        return string.Concat([Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ").NoMercy"]
-        );
+        return string.Concat([
+            Title.CleanFileName().Shorten(),
+            ".(",
+            ReleaseDate.ParseYear(),
+            ").NoMercy",
+        ]);
     }
 }

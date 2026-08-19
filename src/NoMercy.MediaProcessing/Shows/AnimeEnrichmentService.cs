@@ -139,6 +139,10 @@ public class AnimeEnrichmentService(
         }
     }
 
+    // Gated the same way MediaTypeClassifier.IsAnimeAsync gates its own search
+    // hits: a provider search is a "best guess" match, not a confirmed one, so
+    // every hit must clear TitleMatcher.Matches before it is trusted to write
+    // themes/season/demographics against this show or movie.
     private async Task<(AniListMedia?, JikanAnime?)> FetchAsync(
         string title,
         int? year,
@@ -150,7 +154,27 @@ public class AnimeEnrichmentService(
             year,
             priority
         );
+        if (
+            aniListMatch is not null
+            && !TitleMatcher.Matches(
+                title,
+                [
+                    aniListMatch.Title.Romaji,
+                    aniListMatch.Title.English,
+                    aniListMatch.Title.Native,
+                    .. aniListMatch.Synonyms,
+                ]
+            )
+        )
+            aniListMatch = null;
+
         JikanAnime? jikanMatch = await jikanMetadataProvider.SearchAsync(title, year, priority);
+        if (
+            jikanMatch is not null
+            && !TitleMatcher.Matches(title, jikanMatch.Titles.Select(t => t.Title))
+        )
+            jikanMatch = null;
+
         return (aniListMatch, jikanMatch);
     }
 

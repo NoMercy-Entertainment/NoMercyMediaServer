@@ -352,11 +352,11 @@ public class ShowRepository(MediaContext context) : IShowRepository
         if (existing is not null)
             return existing.Id;
 
-        int nextId = (await context.AnimeThemes.MaxAsync(t => (int?)t.Id) ?? 0) + 1;
-        context.AnimeThemes.Add(new AnimeTheme { Id = nextId, Name = name });
+        AnimeTheme created = new() { Name = name };
+        context.AnimeThemes.Add(created);
         await context.SaveChangesAsync();
 
-        return nextId;
+        return created.Id;
     }
 
     public async Task<int> ResolveAnimeDemographicIdAsync(string name)
@@ -367,11 +367,11 @@ public class ShowRepository(MediaContext context) : IShowRepository
         if (existing is not null)
             return existing.Id;
 
-        int nextId = (await context.AnimeDemographics.MaxAsync(d => (int?)d.Id) ?? 0) + 1;
-        context.AnimeDemographics.Add(new AnimeDemographic { Id = nextId, Name = name });
+        AnimeDemographic created = new() { Name = name };
+        context.AnimeDemographics.Add(created);
         await context.SaveChangesAsync();
 
-        return nextId;
+        return created.Id;
     }
 
     private async Task<int> ResolveAnimeSeasonIdAsync(int year, string quarter)
@@ -382,18 +382,11 @@ public class ShowRepository(MediaContext context) : IShowRepository
         if (existing is not null)
             return existing.Id;
 
-        int nextId = (await context.AnimeSeasons.MaxAsync(s => (int?)s.Id) ?? 0) + 1;
-        context.AnimeSeasons.Add(
-            new AnimeSeason
-            {
-                Id = nextId,
-                Year = year,
-                Quarter = quarter,
-            }
-        );
+        AnimeSeason created = new() { Year = year, Quarter = quarter };
+        context.AnimeSeasons.Add(created);
         await context.SaveChangesAsync();
 
-        return nextId;
+        return created.Id;
     }
 
     public async Task StoreNetworks(IEnumerable<Network> networks)

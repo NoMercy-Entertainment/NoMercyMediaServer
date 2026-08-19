@@ -22,7 +22,6 @@ namespace NoMercy.Database.Models.Common;
 [Index(nameof(Quarter))]
 public class AnimeSeason
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
     public int Id { get; set; }
 

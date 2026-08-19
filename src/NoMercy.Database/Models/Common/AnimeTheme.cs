@@ -21,7 +21,6 @@ namespace NoMercy.Database.Models.Common;
 [Index(nameof(Name))]
 public class AnimeTheme
 {
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
     [JsonProperty("id")]
     public int Id { get; set; }
 

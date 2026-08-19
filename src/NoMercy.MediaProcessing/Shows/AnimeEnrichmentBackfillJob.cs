@@ -76,7 +76,12 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
         List<MovieProjection> movieRows = await context
             .Movies.AsNoTracking()
             .Where(movie => movie.Library.Type == "anime")
-            .Select(movie => new MovieProjection(movie.Id, movie.Title, movie.ReleaseDate))
+            .Select(movie => new MovieProjection(
+                movie.Id,
+                movie.Title,
+                movie.ReleaseDate,
+                movie.OriginCountry
+            ))
             .ToListAsync();
 
         IEnumerable<(int TvId, string Title, int? Year, string[]? OriginCountry)> tvShows =
@@ -97,7 +102,9 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
                     MovieId: row.Id,
                     row.Title,
                     Year: (int?)row.ReleaseDate.ParseYear(),
-                    OriginCountry: (string[]?)null
+                    OriginCountry: row.OriginCountry is not null
+                        ? new[] { row.OriginCountry }
+                        : null
                 )
             );
 
@@ -142,5 +149,10 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
         string? OriginCountry
     );
 
-    private sealed record MovieProjection(int Id, string Title, DateTime? ReleaseDate);
+    private sealed record MovieProjection(
+        int Id,
+        string Title,
+        DateTime? ReleaseDate,
+        string? OriginCountry
+    );
 }
