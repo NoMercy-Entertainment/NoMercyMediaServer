@@ -14,7 +14,6 @@
   <ItemGroup>
     <ProjectReference Include="..\NoMercy.Encoder\NoMercy.Encoder.csproj" />
     <ProjectReference Include="..\NoMercy.MediaProcessing\NoMercy.MediaProcessing.csproj" />
-    <ProjectReference Include="..\..\..\..\packages\nomercy-disc-format\src\Infra\Disc\NoMercy.DiscFormat.Disc.csproj" />
     <ProjectReference Include="..\NoMercy.Events\NoMercy.Events.csproj" />
     <ProjectReference Include="..\NoMercy.NmSystem\NoMercy.NmSystem.csproj" />
     <ProjectReference Include="..\NoMercy.Providers\NoMercy.Providers.csproj" />
