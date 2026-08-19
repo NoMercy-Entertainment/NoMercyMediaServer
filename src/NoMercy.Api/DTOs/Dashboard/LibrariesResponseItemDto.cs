@@ -39,6 +39,9 @@ public record LibrariesResponseItemDto
     [JsonProperty("autoEncodeOnScan")]
     public bool AutoEncodeOnScan { get; set; }
 
+    [JsonProperty("autoConfirmDiscMatches")]
+    public bool AutoConfirmDiscMatches { get; set; }
+
     [JsonProperty("encodePresetId")]
     public Ulid? EncodePresetId { get; set; }
 
@@ -84,6 +87,7 @@ public record LibrariesResponseItemDto
         PerfectSubtitleMatch = library.PerfectSubtitleMatch;
         Realtime = library.Realtime;
         AutoEncodeOnScan = library.AutoEncodeOnScan;
+        AutoConfirmDiscMatches = library.AutoConfirmDiscMatches;
         EncodePresetId = library.EncodePresetId;
         SpecialSeasonName = library.SpecialSeasonName;
         Title = library.Title;

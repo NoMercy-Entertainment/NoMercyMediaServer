@@ -34,6 +34,9 @@ public class LibraryUpdateRequest
     [JsonProperty("autoEncodeOnScan")]
     public bool? AutoEncodeOnScan { get; set; }
 
+    [JsonProperty("autoConfirmDiscMatches")]
+    public bool? AutoConfirmDiscMatches { get; set; }
+
     [JsonProperty("encodePresetId")]
     public Ulid? EncodePresetId { get; set; }
 

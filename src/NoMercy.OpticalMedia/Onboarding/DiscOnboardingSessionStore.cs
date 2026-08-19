@@ -32,6 +32,7 @@ public sealed class DiscOnboardingSessionStore
     public void Set(DiscOnboardingSession session) =>
         _sessions[Normalise(session.DrivePath)] = session;
 
+    // TODO: unused — needs a call site once session-lifecycle/eject-handling is designed.
     public void Remove(string drivePath) => _sessions.TryRemove(Normalise(drivePath), out _);
 
     private static string Normalise(string drivePath) => drivePath.TrimEnd('\\', '/');

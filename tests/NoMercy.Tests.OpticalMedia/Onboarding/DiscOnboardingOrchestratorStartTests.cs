@@ -10,8 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NoMercy.Database;
 using NoMercy.Events;
 using NoMercy.Events.Onboarding;
 using NoMercy.NmSystem.Dto;
@@ -72,7 +74,9 @@ public class DiscOnboardingOrchestratorStartTests
             identificationService,
             store,
             eventBus.Object,
-            Mock.Of<IJobDispatcher>()
+            Mock.Of<IJobDispatcher>(),
+            Mock.Of<IDriveMonitor>(),
+            Mock.Of<IDbContextFactory<MediaContext>>()
         );
 
         DiscOnboardingSession result = await orchestrator.StartAsync(
@@ -107,7 +111,9 @@ public class DiscOnboardingOrchestratorStartTests
             identificationService,
             new DiscOnboardingSessionStore(),
             Mock.Of<IEventBus>(),
-            Mock.Of<IJobDispatcher>()
+            Mock.Of<IJobDispatcher>(),
+            Mock.Of<IDriveMonitor>(),
+            Mock.Of<IDbContextFactory<MediaContext>>()
         );
 
         DiscOnboardingSession result = await orchestrator.StartAsync(
@@ -133,7 +139,9 @@ public class DiscOnboardingOrchestratorStartTests
             identificationService,
             new DiscOnboardingSessionStore(),
             Mock.Of<IEventBus>(),
-            Mock.Of<IJobDispatcher>()
+            Mock.Of<IJobDispatcher>(),
+            Mock.Of<IDriveMonitor>(),
+            Mock.Of<IDbContextFactory<MediaContext>>()
         );
 
         DiscOnboardingSession result = await orchestrator.StartAsync(

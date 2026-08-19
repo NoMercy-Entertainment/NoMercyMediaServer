@@ -188,6 +188,9 @@ public class LibrariesController(
             if (request.AutoEncodeOnScan.HasValue)
                 library.AutoEncodeOnScan = request.AutoEncodeOnScan.Value;
 
+            if (request.AutoConfirmDiscMatches.HasValue)
+                library.AutoConfirmDiscMatches = request.AutoConfirmDiscMatches.Value;
+
             if (request.EncodePresetId.HasValue)
                 library.EncodePresetId = request.EncodePresetId.Value;
 

@@ -9,8 +9,12 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Microsoft.EntityFrameworkCore;
+using NoMercy.Database;
+using NoMercy.Database.Models.Libraries;
 using NoMercy.Events;
 using NoMercy.Events.Onboarding;
+using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Metadata;
 using NoMercy.OpticalMedia.Sources;
@@ -35,7 +39,9 @@ public sealed class DiscOnboardingOrchestrator(
     DiscIdentificationService identificationService,
     DiscOnboardingSessionStore store,
     IEventBus eventBus,
-    NoMercyQueue.Core.Interfaces.IJobDispatcher dispatcher
+    NoMercyQueue.Core.Interfaces.IJobDispatcher dispatcher,
+    IDriveMonitor driveMonitor,
+    IDbContextFactory<MediaContext> contextFactory
 )
 {
     public async Task<DiscOnboardingSession> StartAsync(
@@ -58,21 +64,32 @@ public sealed class DiscOnboardingOrchestrator(
             return session;
         }
 
-        DiscInfo info = await source.ProbeAsync(drive, ct);
-        session = session.WithState(DiscOnboardingState.Identified);
-        await PublishAsync(session, ct);
+        try
+        {
+            DiscInfo info = await source.ProbeAsync(drive, ct);
+            session = session.WithState(DiscOnboardingState.Identified);
+            await PublishAsync(session, ct);
 
-        DiscIdentification identification = await identificationService.IdentifyAsync(info, ct);
+            DiscIdentification identification = await identificationService.IdentifyAsync(info, ct);
 
-        bool autoConfirms = identification.Candidates.Length == 1 && libraryAutoConfirmEnabled;
+            bool autoConfirms = identification.Candidates.Length == 1 && libraryAutoConfirmEnabled;
 
-        session = session.WithCandidates(
-            identification.Candidates,
-            autoConfirms ? DiscOnboardingState.AutoConfirmed : DiscOnboardingState.AwaitingConfirm
-        );
-        await PublishAsync(session, ct);
+            session = session.WithCandidates(
+                identification.Candidates,
+                autoConfirms
+                    ? DiscOnboardingState.AutoConfirmed
+                    : DiscOnboardingState.AwaitingConfirm
+            );
+            await PublishAsync(session, ct);
 
-        return session;
+            return session;
+        }
+        catch (Exception ex)
+        {
+            session = session.WithFailure(ex.Message);
+            await PublishAsync(session, ct);
+            return session;
+        }
     }
 
     /// <summary>
@@ -95,6 +112,54 @@ public sealed class DiscOnboardingOrchestrator(
         if (!store.TryGet(drivePath, out DiscOnboardingSession? session) || session is null)
             throw new InvalidOperationException($"No onboarding session for drive {drivePath}");
 
+        if (
+            session.State
+            is not (DiscOnboardingState.AwaitingConfirm or DiscOnboardingState.AutoConfirmed)
+        )
+            throw new InvalidOperationException(
+                $"Session for drive {drivePath} is in state {session.State}, not awaiting confirmation"
+            );
+
+        DiscDrive? drive = driveMonitor
+            .GetDrives()
+            .FirstOrDefault(d =>
+                d.Path.TrimEnd('\\', '/')
+                    .Equals(drivePath.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
+            );
+        if (drive is null)
+            throw new InvalidOperationException($"No optical drive found at {drivePath}");
+
+        // Re-probe before dispatch: fail fast on DRM the host can't read
+        // (mirrors OpticalMediaController.RipDisc's precheck) and, for CD
+        // discs, source the full track list when the caller sent none.
+        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        DiscInfo? probe = null;
+        if (source is not null)
+        {
+            probe = await source.ProbeAsync(drive, ct);
+            if (probe.Protection is not null)
+                throw new InvalidOperationException(
+                    $"Cannot rip — disc is {probe.Protection.Kind}-protected: {probe.Protection.Message}"
+                );
+        }
+
+        int[] resolvedTitleIndices = selectedTitleIndices;
+        if (
+            drive.DiscType == OpticalDiscType.Cd
+            && resolvedTitleIndices.Length == 0
+            && probe?.AudioTracks is { Length: > 0 }
+        )
+            resolvedTitleIndices = probe.AudioTracks.Select(t => t.Index).ToArray();
+
+        await using MediaContext db = await contextFactory.CreateDbContextAsync(ct);
+        Library? targetLibrary = await db
+            .Libraries.AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == libraryId, ct);
+        if (targetLibrary is null)
+            throw new InvalidOperationException(
+                $"LibraryId {libraryId} does not match any library"
+            );
+
         CustomMetadata custom = new(
             Title: chosen.Title,
             Year: chosen.Year,
@@ -106,14 +171,15 @@ public sealed class DiscOnboardingOrchestrator(
 
         RipRequest request = new(
             DrivePath: drivePath,
-            SelectedTitleIndices: selectedTitleIndices,
+            SelectedTitleIndices: resolvedTitleIndices,
             MetadataId: chosen.StableId,
             Custom: custom,
             LibraryId: libraryId,
             FolderId: folderId,
             EncodingProfileId: null,
             AudioTracks: [],
-            Subtitles: []
+            Subtitles: [],
+            DiscType: drive.DiscType
         );
 
         string sanitisedDrive = drivePath
@@ -126,7 +192,13 @@ public sealed class DiscOnboardingOrchestrator(
             sanitisedDrive
         );
 
-        Rip.DiscRipJob job = new(request, outputDir, folderId, libraryId, targetLibraryType: null);
+        Rip.DiscRipJob job = new(
+            request,
+            outputDir,
+            folderId,
+            libraryId,
+            targetLibraryType: targetLibrary.Type
+        );
         dispatcher.Dispatch(job, job.QueueName, job.Priority);
 
         session = session.WithJob(job.JobId);
