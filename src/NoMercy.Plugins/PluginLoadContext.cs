@@ -46,9 +46,19 @@ public class PluginLoadContext : AssemblyLoadContext
         // plugin asked for.
         if (assemblyName.Name is not null && _sharedAssemblies.Contains(assemblyName.Name))
         {
-            return Default.Assemblies.FirstOrDefault(loaded =>
+            Assembly? alreadyLoaded = Default.Assemblies.FirstOrDefault(loaded =>
                 string.Equals(loaded.GetName().Name, assemblyName.Name, StringComparison.Ordinal)
             );
+            if (alreadyLoaded is not null)
+                return alreadyLoaded;
+
+            // Nothing in the host has needed this shared assembly yet, so it
+            // isn't in Default.Assemblies to find. Load it into the default
+            // context by its bare name (ignoring the plugin's requested
+            // version, same promise as the already-loaded branch above) so
+            // the host ends up with exactly one copy regardless of which
+            // caller — host or plugin — happens to touch it first.
+            return Default.LoadFromAssemblyName(new(assemblyName.Name));
         }
 
         // Framework assemblies → host resolves
