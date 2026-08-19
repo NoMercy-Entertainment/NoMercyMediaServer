@@ -19,6 +19,8 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.People;
 using NoMercy.MediaProcessing.Shows;
+using NoMercy.Providers.AniList;
+using NoMercy.Providers.Jikan;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercy.Storage;
 
@@ -52,7 +54,7 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
             showRepository,
             jobDispatcher,
             StorageFactory,
-            new MediaTypeClassifier(),
+            new MediaTypeClassifier(new AniListMetadataProvider(), new JikanMetadataProvider()),
             LoggerFactory.CreateLogger<ShowManager>()
         );
 

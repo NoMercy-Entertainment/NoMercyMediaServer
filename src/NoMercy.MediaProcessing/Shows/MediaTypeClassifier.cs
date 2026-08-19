@@ -9,12 +9,18 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.KitsuIo;
+using NoMercy.Providers.AniList;
+using NoMercy.Providers.AniList.Models;
+using NoMercy.Providers.Jikan;
+using NoMercy.Providers.Jikan.Models;
 using NoMercy.Providers.TMDB.Models.TV;
 
 namespace NoMercy.MediaProcessing.Shows;
 
-public class MediaTypeClassifier : IMediaTypeClassifier
+public class MediaTypeClassifier(
+    IAniListMetadataProvider aniListMetadataProvider,
+    IJikanMetadataProvider jikanMetadataProvider
+) : IMediaTypeClassifier
 {
     public Task<string?> ClassifyAsync(TmdbTvShowAppends show)
     {
@@ -23,14 +29,13 @@ public class MediaTypeClassifier : IMediaTypeClassifier
 
     public async Task<string?> ClassifyAsync(string name, int? year, string[]? originCountry = null)
     {
-        bool? isAnime = await KitsuIoClient.IsAnime(name, year ?? 0);
+        bool? isAnime = await IsAnimeAsync(name, year ?? 0);
 
-        // Kitsu's community catalogue lists non-Japanese productions that got a
-        // fan-run entry (Avatar: The Last Airbender, The Legend of Korra, The
-        // Dragon Prince all have real Kitsu results), so a title match alone
-        // isn't enough — reproduced live: all three matched by title and would
-        // have been moved into the anime library despite being Western
-        // co-productions. Require a Japanese origin before trusting "true".
+        // Same safety rule the Kitsu-era classifier used: a title match at
+        // a provider is not enough on its own. Always check against TMDB's
+        // origin_country, never a provider's own country field — Jikan has
+        // no reliable country field at all, so a per-provider check would
+        // be unimplementable for the Jikan fallback path.
         if (
             isAnime == true
             && originCountry is not null
@@ -44,5 +49,63 @@ public class MediaTypeClassifier : IMediaTypeClassifier
             false => "tv",
             null => null,
         };
+    }
+
+    private async Task<bool?> IsAnimeAsync(string title, int year)
+    {
+        bool aniListErrored = false;
+        AniListMedia? aniListMatch = null;
+        try
+        {
+            aniListMatch = await aniListMetadataProvider.SearchAsync(
+                title,
+                year == 0 ? null : year
+            );
+        }
+        catch (Exception)
+        {
+            aniListErrored = true;
+        }
+
+        if (aniListMatch is not null)
+        {
+            bool matched = TitleMatcher.Matches(
+                title,
+                [
+                    aniListMatch.Title.Romaji,
+                    aniListMatch.Title.English,
+                    aniListMatch.Title.Native,
+                    .. aniListMatch.Synonyms,
+                ]
+            );
+            if (matched)
+                return true;
+        }
+
+        bool jikanErrored = false;
+        JikanAnime? jikanMatch = null;
+        try
+        {
+            jikanMatch = await jikanMetadataProvider.SearchAsync(title, year == 0 ? null : year);
+        }
+        catch (Exception)
+        {
+            jikanErrored = true;
+        }
+
+        if (jikanMatch is not null)
+        {
+            bool matched = TitleMatcher.Matches(title, jikanMatch.Titles.Select(t => t.Title));
+            if (matched)
+                return true;
+        }
+
+        // A network/parse failure on both providers is "we don't know",
+        // never collapsed to false — a transient failure must not evict an
+        // already-correctly-filed show from its library.
+        if (aniListErrored && jikanErrored)
+            return null;
+
+        return false;
     }
 }

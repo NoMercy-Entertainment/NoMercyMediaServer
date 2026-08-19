@@ -226,15 +226,6 @@ public static partial class ServiceConfiguration
         );
 
         services.AddHttpClient(
-            HttpClientNames.KitsuIo,
-            client =>
-            {
-                client.BaseAddress = new("https://kitsu.io/api/edge/");
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
-            }
-        );
-
-        services.AddHttpClient(
             HttpClientNames.AniList,
             client =>
             {

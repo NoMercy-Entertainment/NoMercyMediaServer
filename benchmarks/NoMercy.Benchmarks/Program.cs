@@ -22,6 +22,8 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Information;
+using NoMercy.Providers.AniList;
+using NoMercy.Providers.Jikan;
 
 namespace NoMercy.Benchmarks;
 
@@ -268,12 +270,13 @@ internal static class Program
             new(
                 "video/tv      GetTvAsync",
                 async () =>
-                    await new TvShowRepository(factory, new MediaTypeClassifier()).GetTvAsync(
-                        userId,
-                        tvId,
-                        language,
-                        country
-                    )
+                    await new TvShowRepository(
+                        factory,
+                        new MediaTypeClassifier(
+                            new AniListMetadataProvider(),
+                            new JikanMetadataProvider()
+                        )
+                    ).GetTvAsync(userId, tvId, language, country)
             ),
             new(
                 "video/movie   GetMovieAsync",
