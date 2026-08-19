@@ -270,4 +270,104 @@ public class AnimeEnrichmentServiceTests
         );
         showRepository.Verify(r => r.StoreAnimeSeason(77, 2015, "UNKNOWN"), Times.Once);
     }
+
+    // Themes and demographics already stored: nothing is missing, so neither
+    // provider should be called at all - re-running enrichment on an
+    // already-complete title must not spend AniList/Jikan quota for no reason.
+    [Fact]
+    public async Task EnrichTvAsync_ThemesAndDemographicsAlreadyStored_CallsNoProviders()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("One Piece", 1999, It.IsAny<string[]?>()))
+            .ReturnsAsync("anime");
+
+        Mock<IShowRepository> showRepository = new();
+        showRepository.Setup(r => r.HasAnimeThemesAsync(42)).ReturnsAsync(true);
+        showRepository.Setup(r => r.HasAnimeDemographicsAsync(42)).ReturnsAsync(true);
+
+        Mock<IAniListMetadataProvider> aniList = new();
+        Mock<IJikanMetadataProvider> jikan = new();
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            aniList.Object,
+            jikan.Object,
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(42, "One Piece", 1999, ["JP"]);
+
+        aniList.Verify(
+            p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
+            Times.Never
+        );
+        jikan.Verify(
+            p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
+            Times.Never
+        );
+    }
+
+    // Themes already stored, demographics still missing: AniList already gave
+    // everything it has, so only Jikan should be queried, and only to fill in
+    // the missing demographic - not to re-derive themes/season it already has.
+    [Fact]
+    public async Task EnrichTvAsync_ThemesStoredDemographicsMissing_QueriesJikanOnlyForDemographics()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("One Piece", 1999, It.IsAny<string[]?>()))
+            .ReturnsAsync("anime");
+
+        Mock<IShowRepository> showRepository = new();
+        showRepository.Setup(r => r.HasAnimeThemesAsync(42)).ReturnsAsync(true);
+        showRepository.Setup(r => r.HasAnimeDemographicsAsync(42)).ReturnsAsync(false);
+        showRepository.Setup(r => r.ResolveAnimeDemographicIdAsync("Shounen")).ReturnsAsync(701);
+
+        Mock<IAniListMetadataProvider> aniList = new();
+
+        Mock<IJikanMetadataProvider> jikan = new();
+        jikan
+            .Setup(p => p.SearchAsync("One Piece", 1999, It.IsAny<bool?>()))
+            .ReturnsAsync(
+                new JikanAnime
+                {
+                    Titles = [new() { Type = "Default", Title = "One Piece" }],
+                    Demographics = [new() { MalId = 27, Name = "Shounen" }],
+                }
+            );
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            aniList.Object,
+            jikan.Object,
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(42, "One Piece", 1999, ["JP"]);
+
+        aniList.Verify(
+            p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
+            Times.Never
+        );
+        jikan.Verify(p => p.SearchAsync("One Piece", 1999, It.IsAny<bool?>()), Times.Once);
+        showRepository.Verify(
+            r =>
+                r.StoreAnimeThemes(
+                    It.IsAny<IEnumerable<NoMercy.Database.Models.TvShows.AnimeThemeTv>>()
+                ),
+            Times.Never
+        );
+        showRepository.Verify(
+            r =>
+                r.StoreAnimeDemographics(
+                    It.Is<IEnumerable<NoMercy.Database.Models.TvShows.AnimeDemographicTv>>(links =>
+                        links.Any(l => l.TvId == 42 && l.AnimeDemographicId == 701)
+                    )
+                ),
+            Times.Once
+        );
+    }
 }

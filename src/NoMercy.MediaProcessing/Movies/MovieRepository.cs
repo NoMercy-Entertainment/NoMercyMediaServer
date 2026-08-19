@@ -320,7 +320,8 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .AnimeDemographicMovie.UpsertRange(animeDemographicMovies.ToArray())
             .On(v => new { v.AnimeDemographicId, v.MovieId })
             .WhenMatched(
-                (ts, ti) => new() { AnimeDemographicId = ti.AnimeDemographicId, MovieId = ti.MovieId }
+                (ts, ti) =>
+                    new() { AnimeDemographicId = ti.AnimeDemographicId, MovieId = ti.MovieId }
             )
             .RunAsync();
     }
@@ -369,6 +370,12 @@ public class MovieRepository(MediaContext context) : IMovieRepository
 
         return created.Id;
     }
+
+    public Task<bool> HasAnimeThemesAsync(int movieId) =>
+        context.AnimeThemeMovie.AsNoTracking().AnyAsync(t => t.MovieId == movieId);
+
+    public Task<bool> HasAnimeDemographicsAsync(int movieId) =>
+        context.AnimeDemographicMovie.AsNoTracking().AnyAsync(d => d.MovieId == movieId);
 
     private async Task<int> ResolveAnimeSeasonIdAsync(int year, string quarter)
     {

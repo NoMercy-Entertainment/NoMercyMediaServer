@@ -376,6 +376,12 @@ public class ShowRepository(MediaContext context) : IShowRepository
         return created.Id;
     }
 
+    public Task<bool> HasAnimeThemesAsync(int tvId) =>
+        context.AnimeThemeTv.AsNoTracking().AnyAsync(t => t.TvId == tvId);
+
+    public Task<bool> HasAnimeDemographicsAsync(int tvId) =>
+        context.AnimeDemographicTv.AsNoTracking().AnyAsync(d => d.TvId == tvId);
+
     private async Task<int> ResolveAnimeSeasonIdAsync(int year, string quarter)
     {
         AnimeSeason? existing = await context
