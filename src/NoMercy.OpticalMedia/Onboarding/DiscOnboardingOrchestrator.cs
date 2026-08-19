@@ -59,6 +59,7 @@ public sealed class DiscOnboardingOrchestrator(
 
         DiscInfo info = await source.ProbeAsync(drive, ct);
         session = session.WithState(DiscOnboardingState.Identified);
+        await PublishAsync(session, ct);
 
         DiscIdentification identification = await identificationService.IdentifyAsync(info, ct);
 
