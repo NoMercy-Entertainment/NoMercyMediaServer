@@ -40,17 +40,21 @@ public class AnimeEnrichmentService(
         bool? priority = false
     )
     {
+        bool hasThemes = await showRepository.HasAnimeThemesAsync(tvId);
+        bool hasDemographics = await showRepository.HasAnimeDemographicsAsync(tvId);
+        if (hasThemes && hasDemographics)
+            return;
+
+        // ClassifyAsync itself calls AniList/Jikan (to decide anime vs not),
+        // so it belongs behind the same already-enriched short-circuit as the
+        // fetches below - a title with recorded themes was, by construction,
+        // classified anime on a prior successful run.
         string? classification = await mediaTypeClassifier.ClassifyAsync(
             title,
             year,
             originCountry
         );
         if (classification != "anime")
-            return;
-
-        bool hasThemes = await showRepository.HasAnimeThemesAsync(tvId);
-        bool hasDemographics = await showRepository.HasAnimeDemographicsAsync(tvId);
-        if (hasThemes && hasDemographics)
             return;
 
         if (!hasThemes)
@@ -152,17 +156,20 @@ public class AnimeEnrichmentService(
         bool? priority = false
     )
     {
+        bool hasThemes = await movieRepository.HasAnimeThemesAsync(movieId);
+        bool hasDemographics = await movieRepository.HasAnimeDemographicsAsync(movieId);
+        if (hasThemes && hasDemographics)
+            return;
+
+        // See EnrichTvAsync: ClassifyAsync itself calls AniList/Jikan, so it
+        // sits behind the same already-enriched short-circuit as the fetches
+        // below.
         string? classification = await mediaTypeClassifier.ClassifyAsync(
             title,
             year,
             originCountry
         );
         if (classification != "anime")
-            return;
-
-        bool hasThemes = await movieRepository.HasAnimeThemesAsync(movieId);
-        bool hasDemographics = await movieRepository.HasAnimeDemographicsAsync(movieId);
-        if (hasThemes && hasDemographics)
             return;
 
         if (!hasThemes)

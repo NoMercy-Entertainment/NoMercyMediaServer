@@ -274,6 +274,8 @@ public class AnimeEnrichmentServiceTests
     // Themes and demographics already stored: nothing is missing, so neither
     // provider should be called at all - re-running enrichment on an
     // already-complete title must not spend AniList/Jikan quota for no reason.
+    // Includes the classifier itself: ClassifyAsync calls AniList/Jikan too,
+    // so it must sit behind the same short-circuit, not run ahead of it.
     [Fact]
     public async Task EnrichTvAsync_ThemesAndDemographicsAlreadyStored_CallsNoProviders()
     {
@@ -299,6 +301,10 @@ public class AnimeEnrichmentServiceTests
 
         await service.EnrichTvAsync(42, "One Piece", 1999, ["JP"]);
 
+        classifier.Verify(
+            c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string[]?>()),
+            Times.Never
+        );
         aniList.Verify(
             p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
             Times.Never
