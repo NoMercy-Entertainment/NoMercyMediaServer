@@ -58,7 +58,7 @@ public class GenresController : BaseController
         List<GenreCardData> genreCards =
         [
             .. genreDtos
-                .Where(g => g.TotalTvShows > 0 || g.TotalMovies > 0)
+                .Where(g => g.TvShowsWithVideo > 0 || g.MoviesWithVideo > 0)
                 .Select(dto => new GenreCardData(dto)),
         ];
 

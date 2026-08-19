@@ -48,7 +48,7 @@ public class AnimeSeasonsController(IAnimeSeasonRepository animeSeasonRepository
         List<GenreCardData> seasonCards =
         [
             .. seasonDtos
-                .Where(s => s.TotalTvShows > 0 || s.TotalMovies > 0)
+                .Where(s => s.TvShowsWithVideo > 0 || s.MoviesWithVideo > 0)
                 .Select(dto => new GenreCardData(dto)),
         ];
 

@@ -50,7 +50,7 @@ public class AnimeThemesController(IAnimeThemeRepository animeThemeRepository) :
         List<GenreCardData> themeCards =
         [
             .. themeDtos
-                .Where(t => t.TotalTvShows > 0 || t.TotalMovies > 0)
+                .Where(t => t.TvShowsWithVideo > 0 || t.MoviesWithVideo > 0)
                 .Select(dto => new GenreCardData(dto)),
         ];
 

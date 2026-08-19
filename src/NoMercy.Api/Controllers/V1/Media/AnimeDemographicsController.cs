@@ -51,7 +51,7 @@ public class AnimeDemographicsController(IAnimeDemographicRepository animeDemogr
         List<GenreCardData> demographicCards =
         [
             .. demographicDtos
-                .Where(d => d.TotalTvShows > 0 || d.TotalMovies > 0)
+                .Where(d => d.TvShowsWithVideo > 0 || d.MoviesWithVideo > 0)
                 .Select(dto => new GenreCardData(dto)),
         ];
 
