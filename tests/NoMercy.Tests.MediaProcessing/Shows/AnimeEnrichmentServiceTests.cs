@@ -137,4 +137,137 @@ public class AnimeEnrichmentServiceTests
         );
         showRepository.Verify(r => r.StoreAnimeSeason(42, 1999, "FALL"), Times.Once);
     }
+
+    // S4: AniList tags include non-theme categories (Cast-*, Technical, ...)
+    // and adult-flagged tags; only Theme-*/Setting-* categories should reach
+    // AnimeTheme, and IsAdult must always be excluded regardless of category.
+    [Fact]
+    public async Task EnrichTvAsync_FiltersOutNonThemeCategoriesAndAdultTags()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("Chainsaw Man", 2022, It.IsAny<string[]?>()))
+            .ReturnsAsync("anime");
+
+        Mock<IAniListMetadataProvider> aniList = new();
+        aniList
+            .Setup(p => p.SearchAsync("Chainsaw Man", 2022, It.IsAny<bool?>()))
+            .ReturnsAsync(
+                new AniListMedia
+                {
+                    Title = new() { Romaji = "Chainsaw Man" },
+                    Tags =
+                    [
+                        new() { Name = "Gore", Category = "Setting-Universe" },
+                        new() { Name = "Denji", Category = "Cast-Main Cast" },
+                        new() { Name = "CGI", Category = "Technical" },
+                        new()
+                        {
+                            Name = "Sexual Content",
+                            Category = "Sexual Content",
+                            IsAdult = true,
+                        },
+                        new()
+                        {
+                            Name = "Not Actually Adult But Flagged",
+                            Category = "Theme-Action",
+                            IsAdult = true,
+                        },
+                    ],
+                }
+            );
+
+        Mock<IJikanMetadataProvider> jikan = new();
+        jikan
+            .Setup(p => p.SearchAsync("Chainsaw Man", 2022, It.IsAny<bool?>()))
+            .ReturnsAsync(
+                new JikanAnime { Titles = [new() { Type = "Default", Title = "Chainsaw Man" }] }
+            );
+
+        Mock<IShowRepository> showRepository = new();
+        showRepository.Setup(r => r.ResolveAnimeThemeIdAsync("Gore")).ReturnsAsync(801);
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            aniList.Object,
+            jikan.Object,
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(99, "Chainsaw Man", 2022, ["JP"]);
+
+        showRepository.Verify(r => r.ResolveAnimeThemeIdAsync("Gore"), Times.Once);
+        showRepository.Verify(r => r.ResolveAnimeThemeIdAsync("Denji"), Times.Never);
+        showRepository.Verify(r => r.ResolveAnimeThemeIdAsync("CGI"), Times.Never);
+        showRepository.Verify(r => r.ResolveAnimeThemeIdAsync("Sexual Content"), Times.Never);
+        showRepository.Verify(
+            r => r.ResolveAnimeThemeIdAsync("Not Actually Adult But Flagged"),
+            Times.Never
+        );
+        showRepository.Verify(
+            r =>
+                r.StoreAnimeThemes(
+                    It.Is<IEnumerable<NoMercy.Database.Models.TvShows.AnimeThemeTv>>(links =>
+                        links.Count() == 1 && links.Any(l => l.TvId == 99 && l.AnimeThemeId == 801)
+                    )
+                ),
+            Times.Once
+        );
+    }
+
+    // S5: when AniList has no match at all, Jikan's Themes field should be
+    // used as a fallback theme source, and a season row should still be
+    // written from Jikan's Year with the "UNKNOWN" quarter sentinel since
+    // Jikan carries no quarter concept and AnimeSeason.Quarter is non-nullable.
+    [Fact]
+    public async Task EnrichTvAsync_NoAniListMatch_FallsBackToJikanThemesAndYearOnlySeason()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("Obscure Anime", 2015, It.IsAny<string[]?>()))
+            .ReturnsAsync("anime");
+
+        Mock<IAniListMetadataProvider> aniList = new();
+        aniList
+            .Setup(p => p.SearchAsync("Obscure Anime", 2015, It.IsAny<bool?>()))
+            .ReturnsAsync((AniListMedia?)null);
+
+        Mock<IJikanMetadataProvider> jikan = new();
+        jikan
+            .Setup(p => p.SearchAsync("Obscure Anime", 2015, It.IsAny<bool?>()))
+            .ReturnsAsync(
+                new JikanAnime
+                {
+                    Titles = [new() { Type = "Default", Title = "Obscure Anime" }],
+                    Themes = [new() { MalId = 12, Name = "Mecha" }],
+                    Year = 2015,
+                }
+            );
+
+        Mock<IShowRepository> showRepository = new();
+        showRepository.Setup(r => r.ResolveAnimeThemeIdAsync("Mecha")).ReturnsAsync(901);
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            aniList.Object,
+            jikan.Object,
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(77, "Obscure Anime", 2015, ["JP"]);
+
+        showRepository.Verify(r => r.ResolveAnimeThemeIdAsync("Mecha"), Times.Once);
+        showRepository.Verify(
+            r =>
+                r.StoreAnimeThemes(
+                    It.Is<IEnumerable<NoMercy.Database.Models.TvShows.AnimeThemeTv>>(links =>
+                        links.Any(l => l.TvId == 77 && l.AnimeThemeId == 901)
+                    )
+                ),
+            Times.Once
+        );
+        showRepository.Verify(r => r.StoreAnimeSeason(77, 2015, "UNKNOWN"), Times.Once);
+    }
 }

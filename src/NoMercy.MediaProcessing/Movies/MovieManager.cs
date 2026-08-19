@@ -171,13 +171,19 @@ public class MovieManager(
             StoreTranslations(movieAppends),
             StoreGenres(movieAppends),
             StoreContentRatings(movieAppends),
-            animeEnrichmentService.EnrichMovieAsync(
-                movie.Id,
-                movieAppends.Title,
-                movieAppends.ReleaseDate.ParseYear(),
-                movieAppends.OriginCountry
-            ),
         ]);
+
+        // Sequential and awaited on purpose, mirroring ShowManager.AddShowAsync:
+        // EnrichMovieAsync ends up doing EF work on the same scoped
+        // MovieRepository.context as the calls above, so it cannot run inside
+        // the same Task.WhenAll without a "second operation on this context"
+        // exception.
+        await animeEnrichmentService.EnrichMovieAsync(
+            movie.Id,
+            movieAppends.Title,
+            movieAppends.ReleaseDate.ParseYear(),
+            movieAppends.OriginCountry
+        );
 
         logger.LogInformation(
             "Movie: {Title}: Added to Library {Title2}",

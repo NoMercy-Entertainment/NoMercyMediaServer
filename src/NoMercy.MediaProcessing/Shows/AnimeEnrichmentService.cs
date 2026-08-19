@@ -27,6 +27,11 @@ public class AnimeEnrichmentService(
     IMovieRepository movieRepository
 ) : IAnimeEnrichmentService
 {
+    // AnimeSeason.Quarter is a non-nullable string; Jikan has no quarter
+    // concept, so this sentinel marks a season row built from Jikan's Year
+    // alone rather than AniList's Season+SeasonYear pair.
+    private const string UnknownQuarter = "UNKNOWN";
+
     public async Task EnrichTvAsync(
         int tvId,
         string title,
@@ -51,11 +56,29 @@ public class AnimeEnrichmentService(
 
         if (aniListMatch is not null)
         {
-            IEnumerable<AnimeThemeTv> themes = await ResolveThemesAsync(
-                aniListMatch,
-                name => showRepository.ResolveAnimeThemeIdAsync(name),
-                animeThemeId => new AnimeThemeTv { AnimeThemeId = animeThemeId, TvId = tvId }
-            );
+            List<AnimeThemeTv> themes =
+            [
+                .. await ResolveThemesAsync(
+                    aniListMatch,
+                    name => showRepository.ResolveAnimeThemeIdAsync(name),
+                    animeThemeId => new AnimeThemeTv { AnimeThemeId = animeThemeId, TvId = tvId }
+                ),
+            ];
+
+            if (themes.Count == 0 && jikanMatch is not null)
+                themes =
+                [
+                    .. await ResolveThemesAsync(
+                        jikanMatch,
+                        name => showRepository.ResolveAnimeThemeIdAsync(name),
+                        animeThemeId => new AnimeThemeTv
+                        {
+                            AnimeThemeId = animeThemeId,
+                            TvId = tvId,
+                        }
+                    ),
+                ];
+
             await showRepository.StoreAnimeThemes(themes);
 
             if (aniListMatch.SeasonYear is not null && aniListMatch.Season is not null)
@@ -64,6 +87,18 @@ public class AnimeEnrichmentService(
                     aniListMatch.SeasonYear.Value,
                     aniListMatch.Season
                 );
+        }
+        else if (jikanMatch is not null)
+        {
+            IEnumerable<AnimeThemeTv> themes = await ResolveThemesAsync(
+                jikanMatch,
+                name => showRepository.ResolveAnimeThemeIdAsync(name),
+                animeThemeId => new AnimeThemeTv { AnimeThemeId = animeThemeId, TvId = tvId }
+            );
+            await showRepository.StoreAnimeThemes(themes);
+
+            if (jikanMatch.Year is not null)
+                await showRepository.StoreAnimeSeason(tvId, jikanMatch.Year.Value, UnknownQuarter);
         }
 
         if (jikanMatch is not null && jikanMatch.Demographics.Length > 0)
@@ -105,8 +140,46 @@ public class AnimeEnrichmentService(
 
         if (aniListMatch is not null)
         {
+            List<AnimeThemeMovie> themes =
+            [
+                .. await ResolveThemesAsync(
+                    aniListMatch,
+                    name => movieRepository.ResolveAnimeThemeIdAsync(name),
+                    animeThemeId => new AnimeThemeMovie
+                    {
+                        AnimeThemeId = animeThemeId,
+                        MovieId = movieId,
+                    }
+                ),
+            ];
+
+            if (themes.Count == 0 && jikanMatch is not null)
+                themes =
+                [
+                    .. await ResolveThemesAsync(
+                        jikanMatch,
+                        name => movieRepository.ResolveAnimeThemeIdAsync(name),
+                        animeThemeId => new AnimeThemeMovie
+                        {
+                            AnimeThemeId = animeThemeId,
+                            MovieId = movieId,
+                        }
+                    ),
+                ];
+
+            await movieRepository.StoreAnimeThemes(themes);
+
+            if (aniListMatch.SeasonYear is not null && aniListMatch.Season is not null)
+                await movieRepository.StoreAnimeSeason(
+                    movieId,
+                    aniListMatch.SeasonYear.Value,
+                    aniListMatch.Season
+                );
+        }
+        else if (jikanMatch is not null)
+        {
             IEnumerable<AnimeThemeMovie> themes = await ResolveThemesAsync(
-                aniListMatch,
+                jikanMatch,
                 name => movieRepository.ResolveAnimeThemeIdAsync(name),
                 animeThemeId => new AnimeThemeMovie
                 {
@@ -116,11 +189,11 @@ public class AnimeEnrichmentService(
             );
             await movieRepository.StoreAnimeThemes(themes);
 
-            if (aniListMatch.SeasonYear is not null && aniListMatch.Season is not null)
+            if (jikanMatch.Year is not null)
                 await movieRepository.StoreAnimeSeason(
                     movieId,
-                    aniListMatch.SeasonYear.Value,
-                    aniListMatch.Season
+                    jikanMatch.Year.Value,
+                    UnknownQuarter
                 );
         }
 
@@ -181,6 +254,10 @@ public class AnimeEnrichmentService(
     // AniList tags carry no stable numeric id (unlike TMDB genres), so each
     // distinct tag name is resolved against the AnimeThemes table by name,
     // creating the row on first sight, before a join row can reference it.
+    // Only genuine theme/setting-category tags are treated as themes — AniList
+    // also carries Cast-*/Technical/Sexual Content tags that are not themes —
+    // and IsAdult is always excluded, mirroring MediaContext's adult-content
+    // query filters elsewhere in this codebase.
     private static async Task<IEnumerable<TLink>> ResolveThemesAsync<TLink>(
         AniListMedia aniListMatch,
         Func<string, Task<int>> resolveThemeId,
@@ -189,10 +266,38 @@ public class AnimeEnrichmentService(
     {
         List<TLink> links = [];
         foreach (
-            AniListMediaTag tag in aniListMatch.Tags.Where(t => !string.IsNullOrWhiteSpace(t.Name))
+            AniListMediaTag tag in aniListMatch.Tags.Where(t =>
+                !string.IsNullOrWhiteSpace(t.Name)
+                && !t.IsAdult
+                && t.Category is not null
+                && (t.Category.StartsWith("Theme") || t.Category.StartsWith("Setting"))
+            )
         )
         {
             int animeThemeId = await resolveThemeId(tag.Name);
+            links.Add(toLink(animeThemeId));
+        }
+
+        return links;
+    }
+
+    // Jikan themes carry a MalId that is only stable within MyAnimeList's own
+    // numbering, not the local AnimeThemes table, so each distinct theme name
+    // is resolved by name (creating the row on first sight) before a join row
+    // can reference it — used only as a fallback when AniList returns no
+    // theme-category tags for a title, mirroring ResolveThemesAsync above.
+    private static async Task<IEnumerable<TLink>> ResolveThemesAsync<TLink>(
+        JikanAnime jikanMatch,
+        Func<string, Task<int>> resolveThemeId,
+        Func<int, TLink> toLink
+    )
+    {
+        List<TLink> links = [];
+        foreach (
+            JikanGenre theme in jikanMatch.Themes.Where(t => !string.IsNullOrWhiteSpace(t.Name))
+        )
+        {
+            int animeThemeId = await resolveThemeId(theme.Name);
             links.Add(toLink(animeThemeId));
         }
 

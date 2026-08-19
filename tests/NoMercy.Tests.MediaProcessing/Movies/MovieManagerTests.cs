@@ -249,4 +249,73 @@ public class MovieManagerTests
             Times.Once
         );
     }
+
+    // Regression for Q3: EnrichMovieAsync used to run inside the same
+    // Task.WhenAll as StoreGenres/StoreTranslations/StoreContentRatings, all
+    // sharing one scoped MovieRepository.context — concurrent SaveChanges on
+    // that context throws "A second operation was started on this context."
+    // This proves EnrichMovieAsync is awaited only after StoreGenres has
+    // already completed, mirroring ShowManager.AddShowAsync's sequencing.
+    [Fact]
+    public async Task AddMovieAsync_AwaitsEnrichMovieAsync_AfterStoreGenresCompletes()
+    {
+        Mock<IAnimeEnrichmentService> animeEnrichmentServiceMock = new();
+        bool storeGenresCompleted = false;
+        bool enrichSawStoreGenresCompleted = false;
+
+        _movieRepositoryMock
+            .Setup(repo => repo.StoreGenres(It.IsAny<IEnumerable<GenreMovie>>()))
+            .Returns(async () =>
+            {
+                await Task.Delay(20);
+                storeGenresCompleted = true;
+            });
+
+        animeEnrichmentServiceMock
+            .Setup(s =>
+                s.EnrichMovieAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<string>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<string[]?>(),
+                    It.IsAny<bool?>()
+                )
+            )
+            .Returns(() =>
+            {
+                enrichSawStoreGenresCompleted = storeGenresCompleted;
+                return Task.CompletedTask;
+            });
+
+        IStorageDriver storageDriver = new LocalStorageDriver();
+        IStorageFactory storageFactory = new StorageFactory(
+            storageDriver,
+            NullLogger<StorageFactory>.Instance
+        );
+        MovieManager movieManager = new(
+            _movieRepositoryMock.Object,
+            new Mock<JobDispatcher>().Object,
+            storageFactory,
+            NullLogger<MovieManager>.Instance,
+            animeEnrichmentServiceMock.Object,
+            movieClientFactory: _ => _movieClientMock.Object
+        );
+
+        _movieClientMock.Setup(client => client.WithAllAppends(false)).ReturnsAsync(_movieAppends);
+
+        await movieManager.Add(_movieId, _library);
+
+        animeEnrichmentServiceMock.Verify(
+            s =>
+                s.EnrichMovieAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<string>(),
+                    It.IsAny<int?>(),
+                    It.IsAny<string[]?>(),
+                    It.IsAny<bool?>()
+                ),
+            Times.Once
+        );
+        Assert.True(enrichSawStoreGenresCompleted);
+    }
 }
