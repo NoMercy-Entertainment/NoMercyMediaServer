@@ -64,6 +64,7 @@ using NoMercy.OpticalMedia.Composition;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Hub;
 using NoMercy.Providers.AniDb.Client;
+using NoMercy.Providers.AniList;
 using NoMercy.Providers.Lyrics;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer;
@@ -180,6 +181,7 @@ public static partial class ServiceConfiguration
 
         services.AddSingleton<IApiKeyStore, ApiKeyStore>();
         services.AddSingleton<IAniDbService, AniDbService>();
+        services.AddSingleton<IAniListMetadataProvider, AniListMetadataProvider>();
         services.AddSingleton<ILyricsAggregator, LyricsAggregator>();
         services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
         services.AddSingleton<IServerRegistrationService, ServerRegistrationService>();

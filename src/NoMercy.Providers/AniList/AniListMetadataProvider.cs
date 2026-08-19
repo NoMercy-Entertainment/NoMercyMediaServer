@@ -1,0 +1,56 @@
+// -----------------------------------------------------------------------------
+//  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
+//
+//  This file is part of NoMercy MediaServer, source-available software (NOT open
+//  source). Personal use and contributions are welcome; distribution, resale,
+//  relicensing, and commercial exploitation are prohibited without explicit
+//  written consent. See LICENSE for full terms. Distributed WITHOUT ANY WARRANTY.
+//
+//  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
+// -----------------------------------------------------------------------------
+
+using NoMercy.Providers.Abstractions;
+using NoMercy.Providers.AniList.Models;
+using NoMercy.Providers.Helpers;
+
+namespace NoMercy.Providers.AniList;
+
+public class AniListMetadataProvider : ExternalApiClient, IAniListMetadataProvider
+{
+    // AniList's public rate limit is currently degraded to ~30 req/min (was 90)
+    // while they rebuild anti-abuse tooling. No config-reading helper exists
+    // anywhere in NoMercy.Providers (every sibling RequestIntervalMs override is
+    // a hardcoded constant, and ExternalApiClient's constructor takes no config
+    // param), so this is exposed as a constructor parameter instead, matching
+    // MusicBrainzBaseClient's protected-constructor pattern.
+    private readonly int _requestIntervalMs;
+
+    public AniListMetadataProvider(int requestIntervalMs = 2000)
+    {
+        _requestIntervalMs = requestIntervalMs;
+    }
+
+    protected override string HttpClientName => HttpClientNames.AniList;
+    protected override Uri BaseUrl => new("https://graphql.anilist.co/");
+
+    protected override int RequestIntervalMs => _requestIntervalMs;
+
+    // Test-only seam: RequestIntervalMs is protected on ExternalApiClient and an
+    // override can't widen that, so tests (NoMercy.Tests.Providers has
+    // InternalsVisibleTo) read the configured interval through this instead.
+    internal int RequestIntervalMsForTesting => RequestIntervalMs;
+
+    protected override int ConcurrentRequests => 1;
+
+    protected override bool ShouldSoftFail(System.Net.HttpStatusCode? status) =>
+        status is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.TooManyRequests;
+
+    public async Task<AniListMedia?> SearchAsync(string title, int? year, bool? priority = false)
+    {
+        return await RequestQueue.Enqueue(
+            () => AniListClient.SearchAsync(Client, title, year),
+            $"anilist-search-{title}-{year}",
+            priority
+        );
+    }
+}
