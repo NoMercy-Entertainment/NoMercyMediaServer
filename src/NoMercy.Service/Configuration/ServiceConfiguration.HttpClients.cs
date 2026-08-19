@@ -244,6 +244,15 @@ public static partial class ServiceConfiguration
         );
 
         services.AddHttpClient(
+            HttpClientNames.Jikan,
+            client =>
+            {
+                client.BaseAddress = new("https://api.jikan.moe/v4/");
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            }
+        );
+
+        services.AddHttpClient(
             HttpClientNames.General,
             client =>
             {

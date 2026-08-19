@@ -65,6 +65,7 @@ using NoMercy.Plugins;
 using NoMercy.Plugins.Hub;
 using NoMercy.Providers.AniDb.Client;
 using NoMercy.Providers.AniList;
+using NoMercy.Providers.Jikan;
 using NoMercy.Providers.Lyrics;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer;
@@ -187,6 +188,13 @@ public static partial class ServiceConfiguration
         );
         services.AddSingleton<IAniListMetadataProvider>(_ => new AniListMetadataProvider(
             aniListRequestIntervalMs
+        ));
+        int jikanRequestIntervalMs = configuration.GetValue(
+            "Providers:Jikan:RequestIntervalMs",
+            350
+        );
+        services.AddSingleton<IJikanMetadataProvider>(_ => new JikanMetadataProvider(
+            jikanRequestIntervalMs
         ));
         services.AddSingleton<ILyricsAggregator, LyricsAggregator>();
         services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
