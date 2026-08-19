@@ -17,7 +17,7 @@ namespace NoMercy.Service.Workers;
 
 /// <summary>
 /// On boot, dispatches a single <see cref="AnimeEnrichmentBackfillJob"/> onto
-/// the low-priority "extras" queue if the one-shot anime enrichment backfill
+/// the "extras" queue if the one-shot anime enrichment backfill
 /// (libraries imported before AniList/Jikan enrichment shipped) has not yet
 /// completed. Mirrors <see cref="PaletteBackfillStartupService"/>'s pattern:
 /// the job drains in small cursor-tracked batches and re-enqueues itself, so
@@ -43,7 +43,13 @@ public class AnimeEnrichmentBackfillStartupService(
                 return;
             }
 
-            QueueRunner.Current?.Dispatcher.Dispatch(new AnimeEnrichmentBackfillJob(), "extras", 0);
+            AnimeEnrichmentBackfillJob job = new();
+            // Priority 1, matching ShowExtrasJob/MovieExtrasJob - not the
+            // queue's absolute floor. See AnimeEnrichmentBackfillJob.Priority:
+            // a floor priority sorts this job strictly behind every other
+            // extras-queue job forever on a live server, since the backlog
+            // never actually empties.
+            QueueRunner.Current?.Dispatcher.Dispatch(job, "extras", job.Priority);
             logger.LogInformation("Anime enrichment backfill job dispatched on startup");
         }
         catch (Exception ex)
