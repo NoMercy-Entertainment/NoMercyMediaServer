@@ -30,6 +30,12 @@ public record GenreCardData
     [JsonProperty("title")]
     public string? Title { get; set; } = string.Empty;
 
+    // The untranslated name a card's icon/colour lookup keys on, so a Dutch
+    // "Actie" card still resolves the same icon as an English "Action" one
+    // instead of falling back to the generic default.
+    [JsonProperty("icon_key")]
+    public string? IconKey { get; set; }
+
     [JsonProperty("titleSort")]
     public string? TitleSort { get; set; }
 
@@ -79,6 +85,7 @@ public record GenreCardData
         Id = genre.Id;
         Title = genre.Name;
         TitleSort = genre.Name;
+        IconKey = genre.Name;
         Type = "genre";
         Link = new($"/genres/{genre.Id}", UriKind.Relative);
         NumberOfItems = genre.GenreMovies.Count + genre.GenreTvShows.Count;
@@ -106,6 +113,7 @@ public record GenreCardData
         Id = musicGenre.Id;
         Title = musicGenre.Name.ToTitleCase();
         TitleSort = musicGenre.Name.TitleSort();
+        IconKey = musicGenre.Name;
         Type = "genre";
         Link = new($"/music/genres/{musicGenre.Id}", UriKind.Relative);
         NumberOfItems = musicGenre.AlbumMusicGenres.Count + musicGenre.ArtistMusicGenres.Count;
@@ -119,6 +127,7 @@ public record GenreCardData
         Id = dto.Id;
         Title = dto.Name.ToTitleCase();
         TitleSort = dto.Name.ToTitleCase();
+        IconKey = dto.CanonicalName;
         Type = "genre";
         Link = new($"/genres/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
@@ -130,6 +139,7 @@ public record GenreCardData
         Id = dto.Id;
         Title = dto.Name.ToTitleCase();
         TitleSort = dto.Name.ToTitleCase();
+        IconKey = dto.Name;
         Type = "anime-theme";
         Link = new($"/anime/themes/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
@@ -141,6 +151,7 @@ public record GenreCardData
         Id = dto.Id;
         Title = dto.Name.ToTitleCase();
         TitleSort = dto.Name.ToTitleCase();
+        IconKey = dto.Name;
         Type = "anime-demographic";
         Link = new($"/anime/demographics/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
