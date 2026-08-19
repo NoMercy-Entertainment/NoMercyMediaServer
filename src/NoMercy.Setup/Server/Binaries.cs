@@ -1420,9 +1420,23 @@ public class Binaries
 
         Asset? selectedAsset = null;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+        )
         {
-            selectedAsset = releaseInfo.Assets.FirstOrDefault(a => a.Name.Contains("windows"));
+            selectedAsset = releaseInfo.Assets.FirstOrDefault(a =>
+                a.Name.Contains("windows") && a.Name.Contains("aarch64")
+            );
+        }
+        else if (
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            && RuntimeInformation.ProcessArchitecture == Architecture.X64
+        )
+        {
+            selectedAsset = releaseInfo.Assets.FirstOrDefault(a =>
+                a.Name.Contains("windows") && a.Name.Contains("x86_64")
+            );
         }
         else if (
             RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
