@@ -487,6 +487,10 @@ namespace NoMercy.Database.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AutoConfirmDiscMatches")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("AutoConfirmDiscMatches");
+
                     b.Property<bool>("AutoEncodeOnScan")
                         .HasColumnType("INTEGER")
                         .HasColumnName("AutoEncodeOnScan");

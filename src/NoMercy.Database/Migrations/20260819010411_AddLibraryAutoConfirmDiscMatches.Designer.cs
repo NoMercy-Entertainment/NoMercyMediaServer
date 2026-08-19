@@ -11,7 +11,7 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    [Migration("20260819005334_AddLibraryAutoConfirmDiscMatches")]
+    [Migration("20260819010411_AddLibraryAutoConfirmDiscMatches")]
     partial class AddLibraryAutoConfirmDiscMatches
     {
         /// <inheritdoc />
