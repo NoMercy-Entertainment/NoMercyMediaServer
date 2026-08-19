@@ -31,16 +31,25 @@ namespace NoMercy.MediaProcessing.Shows;
 /// instead of re-walking every anime title from the start.
 ///
 /// Dispatched once, on boot, by <c>AnimeEnrichmentBackfillStartupService</c>
-/// via the "extras" queue at the lowest priority, and re-checks the
-/// completion flag itself so a redundant dispatch is a no-op.
+/// via the "extras" queue at the same priority as its ShowExtrasJob/
+/// MovieExtrasJob siblings (not the queue's absolute floor - see
+/// <see cref="Priority"/>), and re-checks the completion flag itself so a
+/// redundant dispatch is a no-op.
 /// </summary>
 [Serializable]
 public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
 {
     public string QueueName => "extras";
 
-    // Lowest priority so live imports and on-demand classification always drain first.
-    public int Priority => 0;
+    // Same tier as ShowExtrasJob/MovieExtrasJob (priority 1), not the queue's
+    // absolute floor (0): a floor priority means every self-redispatch below
+    // sorts this job strictly behind EVERY other extras-queue job, including
+    // ones enqueued after it - on a live server the backlog never actually
+    // empties, so priority 0 here means the backfill effectively never runs
+    // again after its first batch. Priority 1 lets it interleave FIFO with
+    // its siblings while still never contending with import/live queues,
+    // which are separate queues entirely.
+    public int Priority => 1;
 
     private const int BatchSize = 25;
 
@@ -82,7 +91,11 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
             return;
         }
 
-        QueueRunner.Current?.Dispatcher.Dispatch(new AnimeEnrichmentBackfillJob(), "extras", 0);
+        QueueRunner.Current?.Dispatcher.Dispatch(
+            new AnimeEnrichmentBackfillJob(),
+            "extras",
+            Priority
+        );
     }
 
     private async Task<bool> ProcessTvBatchAsync(AppDbContext appDb, MediaContext context)

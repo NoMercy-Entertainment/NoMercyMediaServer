@@ -31,12 +31,18 @@ public class AnimeEnrichmentBackfillJobTests
         job.QueueName.Should().Be("extras");
     }
 
+    // Matches ShowExtrasJob/MovieExtrasJob (priority 1), not the queue's
+    // absolute floor: priority 0 sorted this job strictly behind every other
+    // extras-queue job forever, including ones enqueued after it - on a live
+    // server the backlog never actually empties, so the backfill effectively
+    // never got a second turn. Verified live: stuck at the same batch across
+    // three server restarts until manually re-prioritized each time.
     [Fact]
-    public void Priority_IsLowestSoLiveWorkDrainsFirst()
+    public void Priority_MatchesExtrasQueueSiblingsSoItIsNotStarvedForever()
     {
         AnimeEnrichmentBackfillJob job = new(Mock.Of<IAnimeEnrichmentService>());
 
-        job.Priority.Should().Be(0);
+        job.Priority.Should().Be(1);
     }
 
     [Fact]
