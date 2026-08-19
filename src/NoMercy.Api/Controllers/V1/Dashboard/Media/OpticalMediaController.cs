@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
@@ -113,7 +114,7 @@ public class OpticalMediaController(
                 open = false,
                 has_disc = true,
                 disc_type = drive.DiscType.ToString().ToLowerInvariant(),
-                disc = info,
+                disc = ProjectDiscInfo(info),
             }
         );
     }
@@ -284,10 +285,46 @@ public class OpticalMediaController(
                 label = info.DiscTitle ?? info.DiscLabel ?? drive.Label,
                 has_disc = true,
                 disc_type = drive.DiscType.ToString().ToLowerInvariant(),
-                disc = info,
-                candidates = identification.Candidates,
+                disc = ProjectDiscInfo(info),
+                candidates = identification.Candidates.Select(ProjectCandidate),
             }
         );
+    }
+
+    /// <summary>
+    /// Detailed streams + chapters for one title on the disc in the given
+    /// drive. <see cref="ProbeDisc"/> only enumerates titles cheaply (name,
+    /// duration) — this is the per-title call the dashboard needs before it
+    /// can show real chapter counts or let the user pick audio/subtitle
+    /// tracks for a rip.
+    /// </summary>
+    [HttpGet("{drivePath}/title/{titleIndex:int}")]
+    public async Task<IActionResult> ProbeTitle(
+        string drivePath,
+        int titleIndex,
+        CancellationToken ct
+    )
+    {
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
+
+        if (titleIndex < 0)
+            return BadRequestResponse("titleIndex must be a non-negative integer");
+
+        DiscDrive? drive = FindDrive(drivePath);
+        if (drive is null)
+            return NotFoundResponse($"No optical drive found at {drivePath}");
+
+        if (!drive.HasDisc)
+            return BadRequestResponse($"No disc loaded in drive {drivePath}");
+
+        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        if (source is null)
+            return BadRequestResponse($"No reader registered for disc type {drive.DiscType} (yet)");
+
+        DiscTitle title = await source.ProbeTitleAsync(drive, titleIndex, ct);
+
+        return Ok(ProjectTitle(title));
     }
 
     /// <summary>
@@ -321,23 +358,100 @@ public class OpticalMediaController(
                 disc_duration_sec = info.MainTitleDurationSec,
                 needs_manual = identification.NeedsManualAssignment,
                 auto_apply = identification.AutoApply,
-                candidates = identification
-                    .Candidates.Take(5)
-                    .Select(c => new
-                    {
-                        stable_id = c.StableId,
-                        media_type = c.Type?.ToString().ToLowerInvariant(),
-                        title = c.Title,
-                        year = c.Year,
-                        confidence = c.Confidence,
-                        poster_url = c.PosterUrl,
-                        backdrop_url = c.BackdropUrl,
-                        season_number = c.SeasonNumber,
-                        episode_number = c.EpisodeNumber,
-                    }),
+                candidates = identification.Candidates.Take(5).Select(ProjectCandidate),
             }
         );
     }
+
+    // ── Snake_case response projections ───────────────────────────────────
+    // NoMercy.Encoder.Analysis's stream/chapter records (VideoStreamInfo,
+    // AudioStreamInfo, SubtitleStreamInfo, ChapterInfo) are shared with the
+    // encoder pipeline and serialize camelCase by default — reshaping them
+    // globally would change output for unrelated endpoints. These project
+    // only the optical-media API surface to the snake_case shape every other
+    // dashboard endpoint already uses (see GetOpticalDrives above).
+
+    private static object ProjectCandidate(DiscCandidate c) =>
+        new
+        {
+            stable_id = c.StableId,
+            media_type = c.Type?.ToString().ToLowerInvariant(),
+            title = c.Title,
+            year = c.Year,
+            confidence = c.Confidence,
+            poster_url = c.PosterUrl,
+            backdrop_url = c.BackdropUrl,
+            season_number = c.SeasonNumber,
+            episode_number = c.EpisodeNumber,
+        };
+
+    private static object ProjectChapter(ChapterInfo c, int index) =>
+        new
+        {
+            number = index + 1,
+            timestamp = c.Start.ToString(@"hh\:mm\:ss"),
+            title = c.Title,
+        };
+
+    private static object ProjectTitle(DiscTitle t) =>
+        new
+        {
+            index = t.Index,
+            name = t.Name,
+            duration = t.Duration.ToString(@"hh\:mm\:ss"),
+            video_streams = t.VideoStreams.Select(v => new
+            {
+                codec = v.Codec,
+                width = v.Width,
+                height = v.Height,
+                frame_rate = v.FrameRate,
+                bit_rate = v.BitRateKbps,
+            }),
+            audio_streams = t.AudioStreams.Select(a => new
+            {
+                codec = a.Codec,
+                channels = a.Channels,
+                sample_rate = a.SampleRate,
+                language = a.Language,
+            }),
+            subtitles = t.Subtitles.Select(s => new
+            {
+                codec = s.Codec,
+                language = s.Language,
+                forced = s.IsForced,
+            }),
+            chapters = t.Chapters.Select(ProjectChapter),
+            estimated_size_bytes = t.EstimatedSizeBytes,
+            is_main_feature = t.IsMainFeature,
+        };
+
+    private static object ProjectDiscInfo(DiscInfo info) =>
+        new
+        {
+            type = info.Type.ToString().ToLowerInvariant(),
+            disc_label = info.DiscLabel,
+            disc_title = info.DiscTitle,
+            titles = info.Titles.Select(ProjectTitle),
+            audio_tracks = info.AudioTracks?.Select(t => new
+            {
+                index = t.Index,
+                title = t.Title,
+                artist = t.Artist,
+                duration = t.Duration.ToString(@"hh\:mm\:ss"),
+                sample_rate = t.SampleRate,
+                channels = t.Channels,
+            }),
+            total_duration = info.TotalDuration.ToString(@"hh\:mm\:ss"),
+            protection = info.Protection is null
+                ? null
+                : new
+                {
+                    kind = info.Protection.Kind,
+                    volume_id = info.Protection.VolumeId,
+                    message = info.Protection.Message,
+                },
+            main_title_duration_sec = info.MainTitleDurationSec,
+        };
 
     /// <summary>
     /// Applies the user's chosen TMDB match to the rip output. Renames/moves
