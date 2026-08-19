@@ -20,6 +20,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Plugins.Hooks;
@@ -38,6 +39,7 @@ public class MovieManager(
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
     ILogger<MovieManager> logger,
+    IAnimeEnrichmentService animeEnrichmentService,
     IPluginMetadataResolver? pluginMetadata = null,
     Func<int, ITmdbMovieClient>? movieClientFactory = null
 ) : BaseManager, IMovieManager
@@ -167,6 +169,12 @@ public class MovieManager(
             StoreTranslations(movieAppends),
             StoreGenres(movieAppends),
             StoreContentRatings(movieAppends),
+            animeEnrichmentService.EnrichMovieAsync(
+                movie.Id,
+                movieAppends.Title,
+                movieAppends.ReleaseDate.ParseYear(),
+                movieAppends.ProductionCountries.Select(c => c.Iso31661).ToArray()
+            ),
         ]);
 
         logger.LogInformation(

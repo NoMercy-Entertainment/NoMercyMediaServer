@@ -36,6 +36,7 @@ public class ShowManager(
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
     IMediaTypeClassifier mediaTypeClassifier,
+    IAnimeEnrichmentService animeEnrichmentService,
     ILogger<ShowManager> logger
 ) : BaseManager, IShowManager
 {
@@ -170,6 +171,12 @@ public class ShowManager(
         logger.LogDebug("Show {Title}: Linked to Library {Title2}", [show.Title, library.Title]);
 
         await StoreGenres(showAppends);
+        await animeEnrichmentService.EnrichTvAsync(
+            show.Id,
+            showAppends.Name ?? string.Empty,
+            showAppends.FirstAirDate.ParseYear(),
+            showAppends.OriginCountry
+        );
         await StoreContentRatings(showAppends);
         await StoreTranslations(showAppends);
 

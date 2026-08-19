@@ -36,6 +36,11 @@ public interface IShowRepository
     Task LinkKeywordsToTv(IEnumerable<KeywordTv> keywordTvs);
     Task StoreGenres(IEnumerable<GenreTv> genreTvs);
 
+    Task StoreAnimeThemes(IEnumerable<AnimeThemeTv> animeThemeTvs);
+    Task StoreAnimeDemographics(IEnumerable<AnimeDemographicTv> animeDemographicTvs);
+    Task StoreAnimeSeason(int tvId, int year, string quarter);
+    Task<int> ResolveAnimeThemeIdAsync(string name);
+
     Task StoreWatchProviders(List<WatchProvider> watchProviders);
     Task StoreNetworks(IEnumerable<Network> networks);
     Task StoreNetworkTvs(IEnumerable<NetworkTv> networkTvs);

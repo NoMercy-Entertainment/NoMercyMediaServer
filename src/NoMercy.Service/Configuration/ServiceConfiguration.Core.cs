@@ -553,6 +553,7 @@ public static partial class ServiceConfiguration
         // registration would be a captive dependency there.
         services.AddSingleton<IMediaTypeClassifier, MediaTypeClassifier>();
         services.AddScoped<IAnimeClassificationAuditService, AnimeClassificationAuditService>();
+        services.AddScoped<IAnimeEnrichmentService, AnimeEnrichmentService>();
         services.AddScoped<SeasonManager>();
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();

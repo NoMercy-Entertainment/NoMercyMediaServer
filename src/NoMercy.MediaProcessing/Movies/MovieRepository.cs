@@ -304,6 +304,74 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .RunAsync();
     }
 
+    public Task StoreAnimeThemes(IEnumerable<AnimeThemeMovie> animeThemeMovies)
+    {
+        return context
+            .AnimeThemeMovie.UpsertRange(animeThemeMovies.ToArray())
+            .On(v => new { v.AnimeThemeId, v.MovieId })
+            .WhenMatched((existing, incoming) => existing)
+            .RunAsync();
+    }
+
+    public Task StoreAnimeDemographics(IEnumerable<AnimeDemographicMovie> animeDemographicMovies)
+    {
+        return context
+            .AnimeDemographicMovie.UpsertRange(animeDemographicMovies.ToArray())
+            .On(v => new { v.AnimeDemographicId, v.MovieId })
+            .WhenMatched((existing, incoming) => existing)
+            .RunAsync();
+    }
+
+    public async Task StoreAnimeSeason(int movieId, int year, string quarter)
+    {
+        int seasonId = await ResolveAnimeSeasonIdAsync(year, quarter);
+
+        await context
+            .AnimeSeasonMovie.Upsert(
+                new AnimeSeasonMovie { AnimeSeasonId = seasonId, MovieId = movieId }
+            )
+            .On(v => new { v.AnimeSeasonId, v.MovieId })
+            .WhenMatched((existing, incoming) => existing)
+            .RunAsync();
+    }
+
+    public async Task<int> ResolveAnimeThemeIdAsync(string name)
+    {
+        AnimeTheme? existing = await context
+            .AnimeThemes.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Name == name);
+        if (existing is not null)
+            return existing.Id;
+
+        int nextId = (await context.AnimeThemes.MaxAsync(t => (int?)t.Id) ?? 0) + 1;
+        context.AnimeThemes.Add(new AnimeTheme { Id = nextId, Name = name });
+        await context.SaveChangesAsync();
+
+        return nextId;
+    }
+
+    private async Task<int> ResolveAnimeSeasonIdAsync(int year, string quarter)
+    {
+        AnimeSeason? existing = await context
+            .AnimeSeasons.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Year == year && s.Quarter == quarter);
+        if (existing is not null)
+            return existing.Id;
+
+        int nextId = (await context.AnimeSeasons.MaxAsync(s => (int?)s.Id) ?? 0) + 1;
+        context.AnimeSeasons.Add(
+            new AnimeSeason
+            {
+                Id = nextId,
+                Year = year,
+                Quarter = quarter,
+            }
+        );
+        await context.SaveChangesAsync();
+
+        return nextId;
+    }
+
     public Task StoreCompanies(List<Company> companies)
     {
         return context

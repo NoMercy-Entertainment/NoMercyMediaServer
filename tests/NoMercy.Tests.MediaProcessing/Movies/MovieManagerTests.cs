@@ -17,6 +17,7 @@ using NoMercy.Database.Models.Media;
 using NoMercy.Database.Models.Movies;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Movies;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Information;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.Movies;
@@ -61,6 +62,7 @@ public class MovieManagerTests
             jobDispatcherMock.Object,
             storageFactory,
             NullLogger<MovieManager>.Instance,
+            Mock.Of<IAnimeEnrichmentService>(),
             movieClientFactory: _ => _movieClientMock.Object
         );
         _movieAppends = mockDataProvider.MockMovieAppendsResponse()!;

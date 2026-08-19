@@ -50,11 +50,23 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         JobDispatcher jobDispatcher = new();
 
         ShowRepository showRepository = new(context);
+        MediaTypeClassifier mediaTypeClassifier = new(
+            new AniListMetadataProvider(),
+            new JikanMetadataProvider()
+        );
+        AnimeEnrichmentService animeEnrichmentService = new(
+            mediaTypeClassifier,
+            new AniListMetadataProvider(),
+            new JikanMetadataProvider(),
+            showRepository,
+            new NoMercy.MediaProcessing.Movies.MovieRepository(context)
+        );
         ShowManager showManager = new(
             showRepository,
             jobDispatcher,
             StorageFactory,
-            new MediaTypeClassifier(new AniListMetadataProvider(), new JikanMetadataProvider()),
+            mediaTypeClassifier,
+            animeEnrichmentService,
             LoggerFactory.CreateLogger<ShowManager>()
         );
 

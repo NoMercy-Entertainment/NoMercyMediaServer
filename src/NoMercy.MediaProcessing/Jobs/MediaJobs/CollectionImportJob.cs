@@ -21,6 +21,9 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Collections;
 using NoMercy.MediaProcessing.Movies;
+using NoMercy.MediaProcessing.Shows;
+using NoMercy.Providers.AniList;
+using NoMercy.Providers.Jikan;
 using NoMercy.Providers.TMDB.Models.Collections;
 using NoMercy.Storage;
 
@@ -50,11 +53,19 @@ public class CollectionImportJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         MovieRepository movieRepository = new(context);
+        AnimeEnrichmentService animeEnrichmentService = new(
+            new MediaTypeClassifier(new AniListMetadataProvider(), new JikanMetadataProvider()),
+            new AniListMetadataProvider(),
+            new JikanMetadataProvider(),
+            new ShowRepository(context),
+            movieRepository
+        );
         MovieManager movieManager = new(
             movieRepository,
             jobDispatcher,
             StorageFactory,
             LoggerFactory.CreateLogger<MovieManager>(),
+            animeEnrichmentService,
             PluginMetadata
         );
 

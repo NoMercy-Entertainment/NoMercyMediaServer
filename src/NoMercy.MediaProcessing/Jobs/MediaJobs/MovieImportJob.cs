@@ -22,6 +22,9 @@ using NoMercy.Events.Library;
 using NoMercy.Events.Media;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Movies;
+using NoMercy.MediaProcessing.Shows;
+using NoMercy.Providers.AniList;
+using NoMercy.Providers.Jikan;
 using NoMercy.Providers.TMDB.Models.Movies;
 using NoMercy.Storage;
 
@@ -49,13 +52,21 @@ public class MovieImportJob : AbstractMediaJob
     {
         await using MediaContext context = new();
         JobDispatcher jobDispatcher = new();
-        
+
         MovieRepository movieRepository = new(context);
+        AnimeEnrichmentService animeEnrichmentService = new(
+            new MediaTypeClassifier(new AniListMetadataProvider(), new JikanMetadataProvider()),
+            new AniListMetadataProvider(),
+            new JikanMetadataProvider(),
+            new ShowRepository(context),
+            movieRepository
+        );
         MovieManager movieManager = new(
             movieRepository,
             jobDispatcher,
             StorageFactory,
             LoggerFactory.CreateLogger<MovieManager>(),
+            animeEnrichmentService,
             PluginMetadata
         );
 
@@ -68,7 +79,9 @@ public class MovieImportJob : AbstractMediaJob
         if (movieLibrary is null)
         {
             Log.LogInformation(
-                "MovieImportJob: library {LibraryId} not found, skipping movie {Id}", LibraryId, Id
+                "MovieImportJob: library {LibraryId} not found, skipping movie {Id}",
+                LibraryId,
+                Id
             );
             return;
         }
