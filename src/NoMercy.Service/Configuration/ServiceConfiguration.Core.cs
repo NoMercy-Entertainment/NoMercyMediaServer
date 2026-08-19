@@ -181,7 +181,13 @@ public static partial class ServiceConfiguration
 
         services.AddSingleton<IApiKeyStore, ApiKeyStore>();
         services.AddSingleton<IAniDbService, AniDbService>();
-        services.AddSingleton<IAniListMetadataProvider, AniListMetadataProvider>();
+        int aniListRequestIntervalMs = configuration.GetValue(
+            "Providers:AniList:RequestIntervalMs",
+            2000
+        );
+        services.AddSingleton<IAniListMetadataProvider>(_ => new AniListMetadataProvider(
+            aniListRequestIntervalMs
+        ));
         services.AddSingleton<ILyricsAggregator, LyricsAggregator>();
         services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
         services.AddSingleton<IServerRegistrationService, ServerRegistrationService>();

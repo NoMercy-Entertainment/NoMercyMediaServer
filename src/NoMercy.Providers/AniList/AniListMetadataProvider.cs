@@ -18,11 +18,10 @@ namespace NoMercy.Providers.AniList;
 public class AniListMetadataProvider : ExternalApiClient, IAniListMetadataProvider
 {
     // AniList's public rate limit is currently degraded to ~30 req/min (was 90)
-    // while they rebuild anti-abuse tooling. No config-reading helper exists
-    // anywhere in NoMercy.Providers (every sibling RequestIntervalMs override is
-    // a hardcoded constant, and ExternalApiClient's constructor takes no config
-    // param), so this is exposed as a constructor parameter instead, matching
-    // MusicBrainzBaseClient's protected-constructor pattern.
+    // while they rebuild anti-abuse tooling. Exposed as a constructor parameter,
+    // configured from "Providers:AniList:RequestIntervalMs" via IConfiguration
+    // in ServiceConfiguration.Core.cs, so the interval is changeable without a
+    // code change.
     private readonly int _requestIntervalMs;
 
     public AniListMetadataProvider(int requestIntervalMs = 2000)
