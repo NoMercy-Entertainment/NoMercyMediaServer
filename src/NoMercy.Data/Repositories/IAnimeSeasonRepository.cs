@@ -19,4 +19,18 @@ public interface IAnimeSeasonRepository
         int page,
         CancellationToken ct = default
     );
+
+    Task<(
+        AnimeSeasonDetailDto? Season,
+        List<HomeMovieCardDto> Movies,
+        List<HomeTvCardDto> TvShows
+    )> GetSeasonCardsAsync(
+        Guid userId,
+        int id,
+        string language,
+        string country,
+        int take,
+        int page,
+        CancellationToken ct = default
+    );
 }

@@ -151,10 +151,12 @@ public record GenreCardData
     {
         // AnimeSeason has no Translations. Year/Quarter are exposed raw so the
         // client locale-formats the season label instead of getting an
-        // editorially-translated English string baked in server-side.
+        // editorially-translated English string baked in server-side. Title is
+        // a locale-independent non-null fallback, not a display string.
         // TitleSort stays a chronological sort key, not a display string.
         Id = dto.Id;
-        TitleSort = $"{dto.Year:D4}-{dto.Quarter}";
+        Title = $"{dto.Year:D4}-{dto.Quarter}";
+        TitleSort = $"{dto.Year:D4}-{QuarterSortIndex(dto.Quarter):D1}";
         Year = dto.Year;
         Quarter = dto.Quarter;
         Type = "anime-season";
@@ -162,4 +164,15 @@ public record GenreCardData
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
         HaveItems = dto.MoviesWithVideo + dto.TvShowsWithVideo;
     }
+
+    // Matches AniList's own seasonal ordering: Winter -> Spring -> Summer -> Fall.
+    private static int QuarterSortIndex(string? quarter) =>
+        quarter switch
+        {
+            "WINTER" => 1,
+            "SPRING" => 2,
+            "SUMMER" => 3,
+            "FALL" => 4,
+            _ => 5,
+        };
 }

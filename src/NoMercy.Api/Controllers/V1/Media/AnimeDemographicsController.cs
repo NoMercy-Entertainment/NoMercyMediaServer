@@ -62,4 +62,48 @@ public class AnimeDemographicsController(IAnimeDemographicRepository animeDemogr
 
         return Ok(ComponentResponse.From(response));
     }
+
+    [HttpGet]
+    [Route("{demographicId}")]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page"])]
+    public async Task<IActionResult> Demographic(
+        int demographicId,
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
+    {
+        Guid userId = User.UserId();
+
+        string language = Language();
+        string country = Country();
+
+        (
+            AnimeDemographicDetailDto? demographicDetail,
+            List<HomeMovieCardDto> movies,
+            List<HomeTvCardDto> tvShows
+        ) = await animeDemographicRepository.GetDemographicCardsAsync(
+            userId,
+            demographicId,
+            language,
+            country,
+            request.Take,
+            request.Page,
+            ct
+        );
+
+        if (demographicDetail is null || (movies.Count == 0 && tvShows.Count == 0))
+            return NotFoundResponse("Anime demographic not found");
+
+        IOrderedEnumerable<CardData> concat = movies
+            .Select(movie => new CardData(movie, country))
+            .Concat(tvShows.Select(tv => new CardData(tv, country)))
+            .OrderBy(card => card.TitleSort);
+
+        ComponentEnvelope response = Component
+            .Grid()
+            .WithId("anime-demographic-items")
+            .WithItems(concat.Select(card => Component.Card().WithData(card)));
+
+        return Ok(ComponentResponse.From(response));
+    }
 }

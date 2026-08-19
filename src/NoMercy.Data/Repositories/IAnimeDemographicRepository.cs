@@ -20,4 +20,18 @@ public interface IAnimeDemographicRepository
         int page,
         CancellationToken ct = default
     );
+
+    Task<(
+        AnimeDemographicDetailDto? Demographic,
+        List<HomeMovieCardDto> Movies,
+        List<HomeTvCardDto> TvShows
+    )> GetDemographicCardsAsync(
+        Guid userId,
+        int id,
+        string language,
+        string country,
+        int take,
+        int page,
+        CancellationToken ct = default
+    );
 }

@@ -31,11 +31,9 @@ public class MediaTypeClassifier(
     {
         bool? isAnime = await IsAnimeAsync(name, year ?? 0);
 
-        // Same safety rule the Kitsu-era classifier used: a title match at
-        // a provider is not enough on its own. Always check against TMDB's
-        // origin_country, never a provider's own country field — Jikan has
-        // no reliable country field at all, so a per-provider check would
-        // be unimplementable for the Jikan fallback path.
+        // Same safety rule the Kitsu-era classifier used: a title match alone
+        // is not enough. Origin check uses TMDB's origin_country only — Jikan
+        // has no reliable country field.
         if (
             isAnime == true
             && originCountry is not null

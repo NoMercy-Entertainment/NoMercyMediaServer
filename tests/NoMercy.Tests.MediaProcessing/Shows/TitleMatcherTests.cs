@@ -41,10 +41,7 @@ public class TitleMatcherTests
     [Fact]
     public void Matches_CurlyApostropheInCandidate_StillMatches()
     {
-        bool result = TitleMatcher.Matches(
-            "Nichijou: My Ordinary Life",
-            ["Nichijou - My Ordinary Life"]
-        );
+        bool result = TitleMatcher.Matches("Journey's End", ["Journey’s End"]);
 
         result.Should().BeTrue();
     }

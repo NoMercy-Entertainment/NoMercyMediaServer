@@ -132,6 +132,15 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("genre")]
     public ICollection<GenreMovie> GenreMovies { get; set; } = [];
 
+    [JsonProperty("anime_themes")]
+    public ICollection<AnimeThemeMovie> AnimeThemeMovies { get; set; } = [];
+
+    [JsonProperty("anime_demographics")]
+    public ICollection<AnimeDemographicMovie> AnimeDemographicMovies { get; set; } = [];
+
+    [JsonProperty("anime_seasons")]
+    public ICollection<AnimeSeasonMovie> AnimeSeasonMovies { get; set; } = [];
+
     [JsonProperty("keywords")]
     public ICollection<KeywordMovie> KeywordMovies { get; set; } = [];
 

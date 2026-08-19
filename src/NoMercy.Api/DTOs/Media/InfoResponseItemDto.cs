@@ -96,6 +96,15 @@ public record InfoResponseItemDto
     [JsonProperty("genres")]
     public IEnumerable<GenreDto> Genres { get; set; } = [];
 
+    [JsonProperty("themes")]
+    public IEnumerable<AnimeThemeDto> Themes { get; set; } = [];
+
+    [JsonProperty("demographic")]
+    public IEnumerable<AnimeDemographicDto> Demographic { get; set; } = [];
+
+    [JsonProperty("season")]
+    public IEnumerable<AnimeSeasonDto> Season { get; set; } = [];
+
     [JsonProperty("keywords")]
     public IEnumerable<string> Keywords { get; set; } = [];
 
@@ -216,6 +225,18 @@ public record InfoResponseItemDto
             .Select(media => new ImageDto(media));
 
         Genres = movie.GenreMovies.Select(genreMovie => new GenreDto(genreMovie));
+
+        Themes = movie.AnimeThemeMovies.Select(animeThemeMovie => new AnimeThemeDto(
+            animeThemeMovie
+        ));
+
+        Demographic = movie.AnimeDemographicMovies.Select(
+            animeDemographicMovie => new AnimeDemographicDto(animeDemographicMovie)
+        );
+
+        Season = movie.AnimeSeasonMovies.Select(animeSeasonMovie => new AnimeSeasonDto(
+            animeSeasonMovie
+        ));
 
         PeopleDto[] cast = [.. movie.Cast.Select(cast => new PeopleDto(cast))];
 
@@ -425,6 +446,14 @@ public record InfoResponseItemDto
             .Select(media => new ImageDto(media));
 
         Genres = tv.GenreTvs.Select(genreTv => new GenreDto(genreTv));
+
+        Themes = tv.AnimeThemeTvs.Select(animeThemeTv => new AnimeThemeDto(animeThemeTv));
+
+        Demographic = tv.AnimeDemographicTvs.Select(animeDemographicTv => new AnimeDemographicDto(
+            animeDemographicTv
+        ));
+
+        Season = tv.AnimeSeasonTvs.Select(animeSeasonTv => new AnimeSeasonDto(animeSeasonTv));
 
         ExternalIds = new() { ImdbId = tv.ImdbId, TvdbId = tv.TvdbId };
 

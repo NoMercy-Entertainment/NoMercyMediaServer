@@ -59,4 +59,48 @@ public class AnimeSeasonsController(IAnimeSeasonRepository animeSeasonRepository
 
         return Ok(ComponentResponse.From(response));
     }
+
+    [HttpGet]
+    [Route("{seasonId}")]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page"])]
+    public async Task<IActionResult> Season(
+        int seasonId,
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
+    {
+        Guid userId = User.UserId();
+
+        string language = Language();
+        string country = Country();
+
+        (
+            AnimeSeasonDetailDto? seasonDetail,
+            List<HomeMovieCardDto> movies,
+            List<HomeTvCardDto> tvShows
+        ) = await animeSeasonRepository.GetSeasonCardsAsync(
+            userId,
+            seasonId,
+            language,
+            country,
+            request.Take,
+            request.Page,
+            ct
+        );
+
+        if (seasonDetail is null || (movies.Count == 0 && tvShows.Count == 0))
+            return NotFoundResponse("Anime season not found");
+
+        IOrderedEnumerable<CardData> concat = movies
+            .Select(movie => new CardData(movie, country))
+            .Concat(tvShows.Select(tv => new CardData(tv, country)))
+            .OrderBy(card => card.TitleSort);
+
+        ComponentEnvelope response = Component
+            .Grid()
+            .WithId("anime-season-items")
+            .WithItems(concat.Select(card => Component.Card().WithData(card)));
+
+        return Ok(ComponentResponse.From(response));
+    }
 }

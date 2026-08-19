@@ -145,6 +145,15 @@ public class Tv : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("genres")]
     public ICollection<GenreTv> GenreTvs { get; set; } = [];
 
+    [JsonProperty("anime_themes")]
+    public ICollection<AnimeThemeTv> AnimeThemeTvs { get; set; } = [];
+
+    [JsonProperty("anime_demographics")]
+    public ICollection<AnimeDemographicTv> AnimeDemographicTvs { get; set; } = [];
+
+    [JsonProperty("anime_seasons")]
+    public ICollection<AnimeSeasonTv> AnimeSeasonTvs { get; set; } = [];
+
     [JsonProperty("keywords")]
     public ICollection<KeywordTv> KeywordTvs { get; set; } = [];
 

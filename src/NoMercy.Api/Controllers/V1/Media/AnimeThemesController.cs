@@ -61,4 +61,48 @@ public class AnimeThemesController(IAnimeThemeRepository animeThemeRepository) :
 
         return Ok(ComponentResponse.From(response));
     }
+
+    [HttpGet]
+    [Route("{themeId}")]
+    [ResponseCache(Duration = 300, VaryByQueryKeys = ["take", "page"])]
+    public async Task<IActionResult> Theme(
+        int themeId,
+        [FromQuery] PageRequestDto request,
+        CancellationToken ct = default
+    )
+    {
+        Guid userId = User.UserId();
+
+        string language = Language();
+        string country = Country();
+
+        (
+            AnimeThemeDetailDto? themeDetail,
+            List<HomeMovieCardDto> movies,
+            List<HomeTvCardDto> tvShows
+        ) = await animeThemeRepository.GetThemeCardsAsync(
+            userId,
+            themeId,
+            language,
+            country,
+            request.Take,
+            request.Page,
+            ct
+        );
+
+        if (themeDetail is null || (movies.Count == 0 && tvShows.Count == 0))
+            return NotFoundResponse("Anime theme not found");
+
+        IOrderedEnumerable<CardData> concat = movies
+            .Select(movie => new CardData(movie, country))
+            .Concat(tvShows.Select(tv => new CardData(tv, country)))
+            .OrderBy(card => card.TitleSort);
+
+        ComponentEnvelope response = Component
+            .Grid()
+            .WithId("anime-theme-items")
+            .WithItems(concat.Select(card => Component.Card().WithData(card)));
+
+        return Ok(ComponentResponse.From(response));
+    }
 }

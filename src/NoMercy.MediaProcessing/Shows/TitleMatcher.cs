@@ -30,7 +30,15 @@ public static partial class TitleMatcher
 
     private static string Normalize(string title) =>
         CollapseWhitespace()
-            .Replace(title.Replace('-', ' ').Replace('.', ' ').Replace(':', ' '), " ")
+            .Replace(
+                title
+                    .Replace('-', ' ')
+                    .Replace('.', ' ')
+                    .Replace(':', ' ')
+                    .Replace("’", string.Empty)
+                    .Replace("'", string.Empty),
+                " "
+            )
             .Trim();
 
     private static string[] WordsFor(string title) =>

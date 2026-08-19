@@ -20,4 +20,18 @@ public interface IAnimeThemeRepository
         int page,
         CancellationToken ct = default
     );
+
+    Task<(
+        AnimeThemeDetailDto? Theme,
+        List<HomeMovieCardDto> Movies,
+        List<HomeTvCardDto> TvShows
+    )> GetThemeCardsAsync(
+        Guid userId,
+        int id,
+        string language,
+        string country,
+        int take,
+        int page,
+        CancellationToken ct = default
+    );
 }

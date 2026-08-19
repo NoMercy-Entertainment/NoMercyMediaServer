@@ -978,7 +978,7 @@ public class LibrariesController(
 
     /// <summary>
     /// Read-only diagnostic: re-runs every existing Tv row through the
-    /// shared Kitsu-backed classifier and reports rows whose classification
+    /// shared AniList/Jikan-backed classifier and reports rows whose classification
     /// disagrees with the Type of the Library they are currently filed
     /// under. Detection only — does not move files or rewrite any row.
     /// </summary>

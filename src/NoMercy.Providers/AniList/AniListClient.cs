@@ -34,12 +34,7 @@ public static class AniListClient
         }
         """;
 
-    public static async Task<AniListMedia?> SearchAsync(
-        HttpClient client,
-        string title,
-        int? year,
-        bool? priority = false
-    )
+    public static async Task<AniListMedia?> SearchAsync(HttpClient client, string title, int? year)
     {
         object payload = new
         {
