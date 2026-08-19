@@ -13,6 +13,8 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
+using NoMercy.DiscFormat.Disc.Bdmv;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.NmSystem.Dto;
@@ -209,10 +211,127 @@ public sealed partial class BlurayDiscSource(
                 IsMainFeature: false
             );
 
-        return single with
+        DiscTitle result = single with { Index = titleIndex };
+        return ApplyMplsLanguages(result, drive.Path, titleIndex);
+    }
+
+    /// <summary>
+    /// ffprobe's bluray: protocol never populates stream language tags — that
+    /// mapping lives in the playlist's own STN table (BDMV/PLAYLIST/NNNNN.mpls),
+    /// not in the elementary stream headers ffprobe reads. The playlist's index
+    /// IS the mpls filename number (see <see cref="ParsePlaylists"/>, which reads
+    /// it from the same "playlist NNNNN.mpls" libbluray dump), so title index and
+    /// mpls file number always match. Audio/subtitle streams are language-matched
+    /// by position: the STN table order is what ffprobe's own stream order is
+    /// derived from for a bluray: playlist read.
+    /// </summary>
+    private DiscTitle ApplyMplsLanguages(DiscTitle title, string drivePath, int titleIndex)
+    {
+        if (title.AudioStreams.Length == 0 && title.Subtitles.Length == 0)
+            return title;
+
+        try
         {
-            Index = titleIndex,
-        };
+            string trimmed = drivePath.TrimEnd('\\', '/');
+            string mplsPath = Path.Combine(
+                trimmed,
+                "BDMV",
+                "PLAYLIST",
+                $"{titleIndex:D5}.mpls"
+            );
+
+            if (!storageDriver.FileExists(mplsPath))
+                return title;
+
+            using Stream stream = storageDriver.OpenRead(mplsPath);
+            using MemoryStream buffer = new();
+            stream.CopyTo(buffer);
+            MplsPlaylist playlist = MplsParser.Parse(buffer.ToArray());
+
+            AudioStreamInfo[] audioStreams = MergeAudioLanguages(
+                title.AudioStreams,
+                playlist.AudioStreams
+            );
+            SubtitleStreamInfo[] subtitles = MergeLanguages(
+                title.Subtitles,
+                playlist.SubtitleStreams,
+                (subtitle, language) => subtitle with { Language = language }
+            );
+
+            return title with { AudioStreams = audioStreams, Subtitles = subtitles };
+        }
+        catch (Exception ex)
+        {
+            // Language enrichment is best-effort — a malformed or unreadable
+            // mpls must never fail the title probe itself.
+            logger.LogInformation(
+                ex,
+                "Could not read mpls languages for {Drive} title {Title}: {Message}",
+                drivePath,
+                titleIndex,
+                ex.Message
+            );
+            return title;
+        }
+    }
+
+    private static TStream[] MergeLanguages<TStream>(
+        TStream[] streams,
+        IReadOnlyList<MplsStream> mplsStreams,
+        Func<TStream, string?, TStream> withLanguage
+    )
+    {
+        if (streams.Length != mplsStreams.Count)
+            return streams;
+
+        TStream[] merged = new TStream[streams.Length];
+        for (int i = 0; i < streams.Length; i++)
+        {
+            merged[i] = withLanguage(streams[i], mplsStreams[i].Language);
+        }
+
+        return merged;
+    }
+
+    /// <summary>
+    /// Audio needs its own merge: a TrueHD track is one entry in the mpls STN
+    /// table, but ffprobe demuxes it as two elementary streams back to back —
+    /// the TrueHD extension and its embedded AC3 "compatible core" — so a
+    /// disc with N logical audio tracks, one of them TrueHD, reports N+1
+    /// ffprobe streams. Every other coding type is a 1:1 stream, so a TrueHD
+    /// stream immediately followed by an AC3 stream consumes one mpls slot
+    /// for the pair; everything else advances the mpls index normally.
+    /// </summary>
+    private static AudioStreamInfo[] MergeAudioLanguages(
+        AudioStreamInfo[] streams,
+        IReadOnlyList<MplsStream> mplsStreams
+    )
+    {
+        if (streams.Length == 0)
+            return streams;
+
+        AudioStreamInfo[] merged = new AudioStreamInfo[streams.Length];
+        int mplsIndex = 0;
+        for (int i = 0; i < streams.Length; i++)
+        {
+            string? language =
+                mplsIndex < mplsStreams.Count ? mplsStreams[mplsIndex].Language : null;
+            merged[i] = streams[i] with { Language = language };
+
+            bool isTrueHdCorePair =
+                streams[i].Codec == "truehd"
+                && i + 1 < streams.Length
+                && streams[i + 1].Codec == "ac3";
+            if (isTrueHdCorePair)
+            {
+                i++;
+                merged[i] = streams[i] with { Language = language };
+            }
+
+            mplsIndex++;
+        }
+
+        return merged;
     }
 
     private async Task<DiscInfo> ScanWithPlaylistAsync(
