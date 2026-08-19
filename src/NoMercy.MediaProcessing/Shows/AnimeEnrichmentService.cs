@@ -45,6 +45,29 @@ public class AnimeEnrichmentService(
         if (hasThemes && hasDemographics)
             return;
 
+        try
+        {
+            await EnrichTvCoreAsync(tvId, title, year, originCountry, hasThemes, priority);
+        }
+        catch (Exception)
+        {
+            // AniList/Jikan are best-effort enrichment, not core import data - a
+            // provider outage (mirrors MediaTypeClassifier.IsAnimeAsync's own
+            // per-provider try/catch) must never abort ShowManager's import or
+            // stall the backfill job's cursor. hasThemes/hasDemographics stay
+            // false, so the next pass retries automatically.
+        }
+    }
+
+    private async Task EnrichTvCoreAsync(
+        int tvId,
+        string title,
+        int? year,
+        string[]? originCountry,
+        bool hasThemes,
+        bool? priority
+    )
+    {
         // ClassifyAsync itself calls AniList/Jikan (to decide anime vs not),
         // so it belongs behind the same already-enriched short-circuit as the
         // fetches below - a title with recorded themes was, by construction,
@@ -161,6 +184,26 @@ public class AnimeEnrichmentService(
         if (hasThemes && hasDemographics)
             return;
 
+        try
+        {
+            await EnrichMovieCoreAsync(movieId, title, year, originCountry, hasThemes, priority);
+        }
+        catch (Exception)
+        {
+            // See EnrichTvAsync/EnrichTvCoreAsync: a provider outage must never
+            // abort MovieManager's import or stall the backfill job's cursor.
+        }
+    }
+
+    private async Task EnrichMovieCoreAsync(
+        int movieId,
+        string title,
+        int? year,
+        string[]? originCountry,
+        bool hasThemes,
+        bool? priority
+    )
+    {
         // See EnrichTvAsync: ClassifyAsync itself calls AniList/Jikan, so it
         // sits behind the same already-enriched short-circuit as the fetches
         // below.

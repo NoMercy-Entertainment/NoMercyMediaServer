@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Net;
 using FluentAssertions;
 using Moq;
 using NoMercy.MediaProcessing.Shows;
@@ -473,5 +474,60 @@ public class AnimeEnrichmentServiceTests
                 ),
             Times.Once
         );
+    }
+
+    // A provider outage (Jikan/AniList throwing, e.g. a 502/503/504 that
+    // exhausted the request queue's own retries) is a live scenario, not a
+    // hypothetical: it must not propagate out of EnrichTvAsync, since
+    // ShowManager.AddShowAsync awaits this call directly with no try/catch of
+    // its own and would otherwise abort mid-import (content ratings and
+    // translations never stored) on a transient upstream failure.
+    [Fact]
+    public async Task EnrichTvAsync_ClassifierThrows_DoesNotPropagate()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("One Piece", 1999, It.IsAny<string[]?>()))
+            .ThrowsAsync(new HttpRequestException("504", null, HttpStatusCode.GatewayTimeout));
+
+        Mock<IShowRepository> showRepository = new();
+        showRepository.Setup(r => r.HasAnimeThemesAsync(42)).ReturnsAsync(false);
+        showRepository.Setup(r => r.HasAnimeDemographicsAsync(42)).ReturnsAsync(false);
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            Mock.Of<IAniListMetadataProvider>(),
+            Mock.Of<IJikanMetadataProvider>(),
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(42, "One Piece", 1999, ["JP"]);
+    }
+
+    // Movie-side mirror of EnrichTvAsync_ClassifierThrows_DoesNotPropagate:
+    // MovieManager.AddMovieAsync also awaits EnrichMovieAsync with no
+    // try/catch of its own.
+    [Fact]
+    public async Task EnrichMovieAsync_ClassifierThrows_DoesNotPropagate()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("Your Name", 2016, It.IsAny<string[]?>()))
+            .ThrowsAsync(new HttpRequestException("504", null, HttpStatusCode.GatewayTimeout));
+
+        Mock<NoMercy.MediaProcessing.Movies.IMovieRepository> movieRepository = new();
+        movieRepository.Setup(r => r.HasAnimeThemesAsync(7)).ReturnsAsync(false);
+        movieRepository.Setup(r => r.HasAnimeDemographicsAsync(7)).ReturnsAsync(false);
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            Mock.Of<IAniListMetadataProvider>(),
+            Mock.Of<IJikanMetadataProvider>(),
+            Mock.Of<IShowRepository>(),
+            movieRepository.Object
+        );
+
+        await service.EnrichMovieAsync(7, "Your Name", 2016, ["JP"]);
     }
 }
