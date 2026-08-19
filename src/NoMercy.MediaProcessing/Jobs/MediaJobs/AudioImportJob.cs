@@ -53,7 +53,12 @@ public class AudioImportJob : AbstractMusicFolderJob
         : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
 
     public override string QueueName => "import";
-    public override int Priority => 6;
+
+    // Was 6 (above Movie/ShowImportJob's 5): with the "import" queue's
+    // priority-DESC ordering, that let a large audio backlog systematically
+    // starve video imports indefinitely rather than interleaving with them
+    // by creation order. Parity with Movie/ShowImportJob restores fairness.
+    public override int Priority => 5;
 
     private MediaFolderExtend? _rootFolder;
 
