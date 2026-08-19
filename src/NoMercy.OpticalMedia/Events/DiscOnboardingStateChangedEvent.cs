@@ -9,6 +9,9 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+// Lives in NoMercy.OpticalMedia (not NoMercy.Events) because OpticalMedia
+// already references Events; the reverse would cycle. Namespace stays
+// NoMercy.Events.Onboarding for consumer consistency with DriveMonitor.
 namespace NoMercy.Events.Onboarding;
 
 public sealed class DiscOnboardingStateChangedEvent : EventBase
