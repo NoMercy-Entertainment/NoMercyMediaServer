@@ -18,6 +18,13 @@ public record AniListMedia
     [JsonProperty("id")]
     public int Id { get; set; }
 
+    // AniList's own cross-reference to MyAnimeList - lets a Jikan lookup go
+    // straight to /anime/{id}, which stays reliable even when Jikan's own
+    // /anime search endpoint is hard-down (verified live: search 504s on
+    // every query while by-id lookups return 200 for the same titles).
+    [JsonProperty("idMal")]
+    public int? IdMal { get; set; }
+
     [JsonProperty("title")]
     public AniListTitle Title { get; set; } = new();
 

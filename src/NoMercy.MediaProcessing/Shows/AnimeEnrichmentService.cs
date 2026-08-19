@@ -156,9 +156,11 @@ public class AnimeEnrichmentService(
             return;
         }
 
-        // Themes/season are already stored - AniList has nothing left to give,
-        // so only Jikan is worth calling, and only for the missing demographic.
-        JikanAnime? demographicOnlyMatch = await FetchJikanAsync(title, year, priority);
+        // Themes/season are already stored - AniList's tags/themes have
+        // nothing left to give, so only its idMal cross-reference is worth
+        // asking for, to route Jikan through the reliable by-id lookup.
+        int? malId = await ResolveMalIdAsync(title, year, priority);
+        JikanAnime? demographicOnlyMatch = await FetchJikanAsync(title, year, priority, malId);
         await StoreDemographicsIfPresentAsync(
             demographicOnlyMatch,
             name => showRepository.ResolveAnimeDemographicIdAsync(name),
@@ -295,9 +297,11 @@ public class AnimeEnrichmentService(
             return;
         }
 
-        // Themes/season are already stored - AniList has nothing left to give,
-        // so only Jikan is worth calling, and only for the missing demographic.
-        JikanAnime? demographicOnlyMatch = await FetchJikanAsync(title, year, priority);
+        // Themes/season are already stored - AniList's tags/themes have
+        // nothing left to give, so only its idMal cross-reference is worth
+        // asking for, to route Jikan through the reliable by-id lookup.
+        int? malId = await ResolveMalIdAsync(title, year, priority);
+        JikanAnime? demographicOnlyMatch = await FetchJikanAsync(title, year, priority, malId);
         await StoreDemographicsIfPresentAsync(
             demographicOnlyMatch,
             name => movieRepository.ResolveAnimeDemographicIdAsync(name),
@@ -339,7 +343,7 @@ public class AnimeEnrichmentService(
         )
             aniListMatch = null;
 
-        JikanAnime? jikanMatch = await FetchJikanAsync(title, year, priority);
+        JikanAnime? jikanMatch = await FetchJikanAsync(title, year, priority, aniListMatch?.IdMal);
 
         return (aniListMatch, jikanMatch);
     }
@@ -347,9 +351,23 @@ public class AnimeEnrichmentService(
     // Split out of FetchAsync so a title with themes/season already stored can
     // ask Jikan alone for the still-missing demographic, instead of re-querying
     // AniList for tags it already gave us on a prior successful run.
-    private async Task<JikanAnime?> FetchJikanAsync(string title, int? year, bool? priority)
+    //
+    // Prefers GetByIdAsync over SearchAsync whenever a MAL id is available:
+    // Jikan's /anime search endpoint is a known-unreliable path
+    // (jikan-me/jikan-rest#610) that hard-fails independently of MAL's own
+    // uptime, while /anime/{id} keeps working - verified live, search 504s on
+    // every query while by-id lookups return real data for the same titles.
+    private async Task<JikanAnime?> FetchJikanAsync(
+        string title,
+        int? year,
+        bool? priority,
+        int? malId = null
+    )
     {
-        JikanAnime? jikanMatch = await jikanMetadataProvider.SearchAsync(title, year, priority);
+        JikanAnime? jikanMatch = malId is not null
+            ? await jikanMetadataProvider.GetByIdAsync(malId.Value, priority)
+            : await jikanMetadataProvider.SearchAsync(title, year, priority);
+
         if (
             jikanMatch is not null
             && !TitleMatcher.Matches(title, jikanMatch.Titles.Select(t => t.Title))
@@ -357,6 +375,35 @@ public class AnimeEnrichmentService(
             jikanMatch = null;
 
         return jikanMatch;
+    }
+
+    // The demographics-only retry (themes already stored) deliberately makes
+    // no further use of AniList's own data - only its idMal cross-reference,
+    // so FetchJikanAsync can route through the reliable Jikan by-id lookup
+    // instead of the broken search endpoint. This is a narrower ask than the
+    // full AniList fetch above: it discards everything except the id.
+    private async Task<int?> ResolveMalIdAsync(string title, int? year, bool? priority)
+    {
+        AniListMedia? aniListMatch = await aniListMetadataProvider.SearchAsync(
+            title,
+            year,
+            priority
+        );
+        if (
+            aniListMatch is null
+            || !TitleMatcher.Matches(
+                title,
+                [
+                    aniListMatch.Title.Romaji,
+                    aniListMatch.Title.English,
+                    aniListMatch.Title.Native,
+                    .. aniListMatch.Synonyms,
+                ]
+            )
+        )
+            return null;
+
+        return aniListMatch.IdMal;
     }
 
     // Demographics has no AniList fallback - Jikan is the only source - so this

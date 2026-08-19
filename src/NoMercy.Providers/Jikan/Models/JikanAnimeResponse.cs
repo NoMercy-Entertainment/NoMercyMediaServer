@@ -9,15 +9,15 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Providers.Jikan.Models;
+using Newtonsoft.Json;
 
-namespace NoMercy.Providers.Jikan;
+namespace NoMercy.Providers.Jikan.Models;
 
-public interface IJikanMetadataProvider
+// Jikan's /anime/{id} shape: a single object under "data", unlike the search
+// endpoint's array - kept as its own type rather than reusing
+// JikanSearchResponse so the two response shapes can't be confused.
+public record JikanAnimeResponse
 {
-    Task<JikanAnime?> SearchAsync(string title, int? year, bool? priority = false);
-
-    // Bypasses the unreliable /anime search endpoint (see JikanClient.GetByIdAsync)
-    // for callers that already have a MAL id, e.g. from AniList's idMal.
-    Task<JikanAnime?> GetByIdAsync(int malId, bool? priority = false);
+    [JsonProperty("data")]
+    public JikanAnime? Data { get; set; }
 }

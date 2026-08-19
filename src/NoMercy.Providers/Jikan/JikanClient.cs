@@ -32,4 +32,23 @@ public static class JikanClient
 
         return parsed?.Data.FirstOrDefault();
     }
+
+    // /anime search is a known-unreliable Jikan endpoint (jikan-me/jikan-rest#610):
+    // it hard-fails with a 504 "MyAnimeList may be down" even while MAL itself
+    // and Jikan's own /anime/{id} lookup both respond normally - verified live,
+    // 8/8 search calls 504 in ~40ms (too fast to be a real MAL round-trip,
+    // reads as a short-circuited/cached failure) while /anime/{id} returns 200.
+    // Call this instead of SearchAsync whenever a MAL id is already known (from
+    // AniList's idMal cross-reference), since it hits a path that actually works.
+    public static async Task<JikanAnime?> GetByIdAsync(HttpClient client, int malId)
+    {
+        using HttpResponseMessage response = await client.GetAsync($"anime/{malId}");
+        if (!response.IsSuccessStatusCode)
+            return null;
+
+        string body = await response.Content.ReadAsStringAsync();
+        JikanAnimeResponse? parsed = JsonConvert.DeserializeObject<JikanAnimeResponse>(body);
+
+        return parsed?.Data;
+    }
 }

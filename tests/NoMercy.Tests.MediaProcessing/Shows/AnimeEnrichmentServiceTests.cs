@@ -316,11 +316,13 @@ public class AnimeEnrichmentServiceTests
         );
     }
 
-    // Themes already stored, demographics still missing: AniList already gave
-    // everything it has, so only Jikan should be queried, and only to fill in
-    // the missing demographic - not to re-derive themes/season it already has.
+    // Themes already stored, demographics still missing: AniList's tags have
+    // nothing left to give, but its idMal cross-reference is still asked for
+    // so Jikan can be queried by id - not by the unreliable search endpoint
+    // (jikan-me/jikan-rest#610) - and not to re-derive themes/season it
+    // already has.
     [Fact]
-    public async Task EnrichTvAsync_ThemesStoredDemographicsMissing_QueriesJikanOnlyForDemographics()
+    public async Task EnrichTvAsync_ThemesStoredDemographicsMissing_QueriesJikanByIdForDemographics()
     {
         Mock<IMediaTypeClassifier> classifier = new();
         classifier
@@ -333,10 +335,19 @@ public class AnimeEnrichmentServiceTests
         showRepository.Setup(r => r.ResolveAnimeDemographicIdAsync("Shounen")).ReturnsAsync(701);
 
         Mock<IAniListMetadataProvider> aniList = new();
+        aniList
+            .Setup(p => p.SearchAsync("One Piece", 1999, It.IsAny<bool?>()))
+            .ReturnsAsync(
+                new AniListMedia
+                {
+                    IdMal = 21,
+                    Title = new() { Romaji = "One Piece" },
+                }
+            );
 
         Mock<IJikanMetadataProvider> jikan = new();
         jikan
-            .Setup(p => p.SearchAsync("One Piece", 1999, It.IsAny<bool?>()))
+            .Setup(p => p.GetByIdAsync(21, It.IsAny<bool?>()))
             .ReturnsAsync(
                 new JikanAnime
                 {
@@ -355,11 +366,12 @@ public class AnimeEnrichmentServiceTests
 
         await service.EnrichTvAsync(42, "One Piece", 1999, ["JP"]);
 
-        aniList.Verify(
+        aniList.Verify(p => p.SearchAsync("One Piece", 1999, It.IsAny<bool?>()), Times.Once);
+        jikan.Verify(p => p.GetByIdAsync(21, It.IsAny<bool?>()), Times.Once);
+        jikan.Verify(
             p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
             Times.Never
         );
-        jikan.Verify(p => p.SearchAsync("One Piece", 1999, It.IsAny<bool?>()), Times.Once);
         showRepository.Verify(
             r =>
                 r.StoreAnimeThemes(
@@ -416,9 +428,9 @@ public class AnimeEnrichmentServiceTests
         );
     }
 
-    // Movie-side mirror of EnrichTvAsync_ThemesStoredDemographicsMissing_QueriesJikanOnlyForDemographics.
+    // Movie-side mirror of EnrichTvAsync_ThemesStoredDemographicsMissing_QueriesJikanByIdForDemographics.
     [Fact]
-    public async Task EnrichMovieAsync_ThemesStoredDemographicsMissing_QueriesJikanOnlyForDemographics()
+    public async Task EnrichMovieAsync_ThemesStoredDemographicsMissing_QueriesJikanByIdForDemographics()
     {
         Mock<IMediaTypeClassifier> classifier = new();
         classifier
@@ -431,10 +443,19 @@ public class AnimeEnrichmentServiceTests
         movieRepository.Setup(r => r.ResolveAnimeDemographicIdAsync("Shounen")).ReturnsAsync(702);
 
         Mock<IAniListMetadataProvider> aniList = new();
+        aniList
+            .Setup(p => p.SearchAsync("Your Name", 2016, It.IsAny<bool?>()))
+            .ReturnsAsync(
+                new AniListMedia
+                {
+                    IdMal = 32281,
+                    Title = new() { Romaji = "Your Name" },
+                }
+            );
 
         Mock<IJikanMetadataProvider> jikan = new();
         jikan
-            .Setup(p => p.SearchAsync("Your Name", 2016, It.IsAny<bool?>()))
+            .Setup(p => p.GetByIdAsync(32281, It.IsAny<bool?>()))
             .ReturnsAsync(
                 new JikanAnime
                 {
@@ -453,11 +474,12 @@ public class AnimeEnrichmentServiceTests
 
         await service.EnrichMovieAsync(7, "Your Name", 2016, ["JP"]);
 
-        aniList.Verify(
+        aniList.Verify(p => p.SearchAsync("Your Name", 2016, It.IsAny<bool?>()), Times.Once);
+        jikan.Verify(p => p.GetByIdAsync(32281, It.IsAny<bool?>()), Times.Once);
+        jikan.Verify(
             p => p.SearchAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<bool?>()),
             Times.Never
         );
-        jikan.Verify(p => p.SearchAsync("Your Name", 2016, It.IsAny<bool?>()), Times.Once);
         movieRepository.Verify(
             r =>
                 r.StoreAnimeThemes(

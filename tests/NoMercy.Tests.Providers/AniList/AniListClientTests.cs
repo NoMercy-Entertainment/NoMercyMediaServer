@@ -28,6 +28,7 @@ public class AniListClientTests
               "media": [
                 {
                   "id": 21,
+                  "idMal": 99999,
                   "title": { "romaji": "One Piece", "english": "One Piece", "native": "ワンピース" },
                   "synonyms": ["OP"],
                   "countryOfOrigin": "JP",
@@ -68,7 +69,12 @@ public class AniListClientTests
         AniListMedia? result = await AniListClient.SearchAsync(httpClient, "One Piece", 1999);
 
         result.Should().NotBeNull();
-        result!.CountryOfOrigin.Should().Be("JP");
+        result!.Id.Should().Be(21);
+        // Distinct from Id on purpose - a mapping bug that reads "id" for both
+        // AniList's own id and the MAL cross-reference would still pass every
+        // other assertion here.
+        result.IdMal.Should().Be(99999);
+        result.CountryOfOrigin.Should().Be("JP");
         result.Genres.Should().Contain("Action");
         result.Tags.Should().Contain(tag => tag.Name == "Pirates");
     }

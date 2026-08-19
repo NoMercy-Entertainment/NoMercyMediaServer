@@ -51,4 +51,13 @@ public class JikanMetadataProvider : ExternalApiClient, IJikanMetadataProvider
             priority
         );
     }
+
+    public async Task<JikanAnime?> GetByIdAsync(int malId, bool? priority = false)
+    {
+        return await RequestQueue.Enqueue(
+            () => JikanClient.GetByIdAsync(Client, malId),
+            $"jikan-anime-{malId}",
+            priority
+        );
+    }
 }

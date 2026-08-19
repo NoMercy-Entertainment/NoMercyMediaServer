@@ -22,6 +22,7 @@ public static class AniListClient
           Page(page: 1, perPage: 5) {
             media(search: $search, seasonYear: $seasonYear, type: ANIME) {
               id
+              idMal
               title { romaji english native }
               synonyms
               countryOfOrigin
