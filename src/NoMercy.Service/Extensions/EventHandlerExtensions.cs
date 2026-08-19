@@ -141,6 +141,13 @@ public static class EventHandlerExtensions
             return new(eventBus, clientMessenger);
         });
 
+        services.AddSingleton<DiscOnboardingEventHandler>(sp =>
+        {
+            IEventBus eventBus = sp.GetRequiredService<IEventBus>();
+            IClientMessenger clientMessenger = sp.GetRequiredService<IClientMessenger>();
+            return new(eventBus, clientMessenger);
+        });
+
         services.AddSingleton<CastEventHandler>(sp =>
         {
             IEventBus eventBus = sp.GetRequiredService<IEventBus>();
@@ -223,6 +230,7 @@ public static class EventHandlerExtensions
         serviceProvider.GetRequiredService<SignalRNotificationEventHandler>();
         serviceProvider.GetRequiredService<PushNotificationEventHandler>();
         serviceProvider.GetRequiredService<DriveMonitorEventHandler>();
+        serviceProvider.GetRequiredService<DiscOnboardingEventHandler>();
         serviceProvider.GetRequiredService<CastEventHandler>();
         serviceProvider.GetRequiredService<UserPermissionsEventHandler>();
         serviceProvider.GetRequiredService<InboxClassifierEventHandler>();

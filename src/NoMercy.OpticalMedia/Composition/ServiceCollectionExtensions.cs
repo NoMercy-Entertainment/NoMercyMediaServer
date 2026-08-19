@@ -52,6 +52,8 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<IDriveMonitor, DriveMonitor>();
         services.TryAddSingleton<DriveLockRegistry>();
+        services.TryAddSingleton<Onboarding.DiscOnboardingSessionStore>();
+        services.TryAddSingleton<Onboarding.DiscOnboardingOrchestrator>();
 
         services.TryAddTransient<IDiscRipper, DiscRipper>();
         services.TryAddTransient<IAudioMetadataWriter, TagLibAudioMetadataWriter>();
