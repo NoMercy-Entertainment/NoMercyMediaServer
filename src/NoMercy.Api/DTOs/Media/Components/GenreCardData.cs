@@ -45,6 +45,9 @@ public record GenreCardData
     [JsonProperty("year")]
     public int? Year { get; set; }
 
+    [JsonProperty("quarter")]
+    public string? Quarter { get; set; }
+
     [JsonProperty("type")]
     public string? Type { get; set; }
 
@@ -146,15 +149,14 @@ public record GenreCardData
 
     public GenreCardData(AnimeSeasonWithCountsDto dto)
     {
-        // AnimeSeason has no Translations, so the title is formatted server-side
-        // from Year+Quarter (e.g. "Summer 2020") instead of pulled from a
-        // Translation row. Locale formatting of the quarter word happens
-        // client-side per the spec.
-        string title = $"{dto.Quarter.ToTitleCase()} {dto.Year}";
+        // AnimeSeason has no Translations. Year/Quarter are exposed raw so the
+        // client locale-formats the season label instead of getting an
+        // editorially-translated English string baked in server-side.
+        // TitleSort stays a chronological sort key, not a display string.
         Id = dto.Id;
-        Title = title;
-        TitleSort = title;
+        TitleSort = $"{dto.Year:D4}-{dto.Quarter}";
         Year = dto.Year;
+        Quarter = dto.Quarter;
         Type = "anime-season";
         Link = new($"/anime/seasons/{dto.Id}", UriKind.Relative);
         NumberOfItems = dto.TotalMovies + dto.TotalTvShows;
