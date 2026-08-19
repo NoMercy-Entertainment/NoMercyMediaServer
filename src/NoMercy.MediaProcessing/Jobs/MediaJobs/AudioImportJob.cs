@@ -522,6 +522,16 @@ public class AudioImportJob : AbstractMusicFolderJob
             if (!resolvedFileByTrackId.TryGetValue(musicBrainzTrack.Id, out MediaFile? mediaFile))
                 continue;
 
+            if (musicBrainzTrack.Recording.Id == Guid.Empty)
+            {
+                Log.LogWarning(
+                    "AudioImportJob: track {Track} in release {ReleaseId} has no recording id; skipping recording lookup",
+                    musicBrainzTrack.Title,
+                    release.Id
+                );
+                continue;
+            }
+
             MusicBrainzRecordingAppends? musicBrainzRecording =
                 await musicBrainzRecordingClient.WithAllAppends(musicBrainzTrack.Recording.Id);
             if (musicBrainzRecording is null)
