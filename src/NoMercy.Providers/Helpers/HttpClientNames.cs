@@ -30,5 +30,6 @@ public static class HttpClientNames
     public const string Tadb = "Tadb";
     public const string NoMercyImage = "NoMercyImage";
     public const string KitsuIo = "KitsuIo";
+    public const string AniList = "AniList";
     public const string General = "General";
 }

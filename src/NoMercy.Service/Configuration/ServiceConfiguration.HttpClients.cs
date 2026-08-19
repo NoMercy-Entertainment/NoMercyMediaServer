@@ -235,6 +235,15 @@ public static partial class ServiceConfiguration
         );
 
         services.AddHttpClient(
+            HttpClientNames.AniList,
+            client =>
+            {
+                client.BaseAddress = new("https://graphql.anilist.co/");
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            }
+        );
+
+        services.AddHttpClient(
             HttpClientNames.General,
             client =>
             {
