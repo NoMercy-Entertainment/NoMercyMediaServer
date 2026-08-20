@@ -867,6 +867,16 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
                 );
         }
 
+        // The "opus" fixture is itself only generated when libopus is available
+        // (see InitializeAsync); a Copy-policy audio output has no audioEncoder
+        // to gate on above, so this case needs its own skip when the fixture
+        // never got made.
+        if (inputFileKey == "opus")
+            Skip.If(
+                string.IsNullOrEmpty(_opusInputFile),
+                $"case '{caseName}': Opus source fixture unavailable, libopus absent from this ffmpeg build"
+            );
+
         string inputPath = inputFileKey switch
         {
             "surround" => _surroundInputFile,
