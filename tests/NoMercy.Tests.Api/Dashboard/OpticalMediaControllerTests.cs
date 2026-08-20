@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.NmSystem.Dto;
@@ -44,8 +45,11 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
 
     // ── helpers ────────────────────────────────────────────────────────────
 
-    private static DiscDrive MakeDrive(string path, bool hasDisc = true) =>
-        new(path, "TEST DISC", hasDisc, OpticalDiscType.BluRay);
+    private static DiscDrive MakeDrive(
+        string path,
+        bool hasDisc = true,
+        OpticalDiscType discType = OpticalDiscType.BluRay
+    ) => new(path, "TEST DISC", hasDisc, discType);
 
     private static LiveQuality MakeQuality() =>
         new(
@@ -366,5 +370,195 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
         );
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    // ── ProbeTitle — real chapters, honest naming, duration-ranked kind ──
+
+    private HttpClient BuildProbeClient(
+        Mock<IDriveMonitor> driveMonitorMock,
+        Mock<IDiscSource> discSourceMock
+    )
+    {
+        return _factory
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureTestServices(services =>
+                {
+                    services.RemoveAll<IDriveMonitor>();
+                    services.AddSingleton(driveMonitorMock.Object);
+
+                    services.RemoveAll<IDiscSource>();
+                    services.AddSingleton(discSourceMock.Object);
+                    services.RemoveAll<DiscSourceFactory>();
+                    services.AddSingleton(new DiscSourceFactory([discSourceMock.Object]));
+                });
+            })
+            .CreateClient()
+            .AsAuthenticated();
+    }
+
+    private static DiscTitle MakeTitle(
+        int index,
+        TimeSpan duration,
+        ChapterInfo[]? chapters = null
+    ) =>
+        new(
+            Index: index,
+            Name: $"Title {index}",
+            Duration: duration,
+            VideoStreams: [],
+            AudioStreams: [],
+            Subtitles: [],
+            Chapters: chapters ?? [],
+            EstimatedSizeBytes: 0,
+            IsMainFeature: false
+        );
+
+    [Fact]
+    public async Task ProbeTitle_ReturnsRealChapterMarksFromDisc()
+    {
+        ChapterInfo[] marks =
+        [
+            new(TimeSpan.Zero, TimeSpan.FromSeconds(620), "Chapter 1"),
+            new(TimeSpan.FromSeconds(620), TimeSpan.FromSeconds(1310), "Chapter 2"),
+            new(TimeSpan.FromSeconds(1310), TimeSpan.FromSeconds(2000), "Chapter 3"),
+        ];
+        DiscTitle title = MakeTitle(0, TimeSpan.FromSeconds(2000), marks);
+
+        // DVD (not Blu-ray): the chapters helper skips the .mpls
+        // disc-content-catalog lookup for non-Blu-ray discs and wires the
+        // per-title probe's own real chapter marks directly — exercising
+        // that path here avoids needing a real .mpls fixture on disk while
+        // still proving the real chapter data reaches the response.
+        Mock<IDriveMonitor> driveMonitorMock = new();
+        driveMonitorMock
+            .Setup(m => m.GetDrives())
+            .Returns([MakeDrive(@"D:\", discType: OpticalDiscType.Dvd)]);
+
+        Mock<IDiscSource> discSourceMock = new();
+        discSourceMock.Setup(s => s.Type).Returns(OpticalDiscType.Dvd);
+        discSourceMock
+            .Setup(s => s.ProbeTitleAsync(It.IsAny<DiscDrive>(), 0, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(title);
+        discSourceMock
+            .Setup(s => s.ProbeAsync(It.IsAny<DiscDrive>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DiscInfo(OpticalDiscType.Dvd, "TEST", [title], null, title.Duration));
+
+        HttpClient client = BuildProbeClient(driveMonitorMock, discSourceMock);
+
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/v1/dashboard/optical/D%3A%5C/title/0"
+        );
+        string body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        JsonDocument json = JsonDocument.Parse(body);
+
+        // The pre-existing `chapters` key keeps its old {number,timestamp,title}
+        // shape unchanged — nomercy-app-web reads it today, so this endpoint
+        // must not reshape or drop it (compat-gate BREAKS-OLD-CLIENTS finding).
+        JsonElement oldChapters = json.RootElement.GetProperty("chapters");
+        oldChapters.GetArrayLength().Should().Be(3);
+        oldChapters[1].GetProperty("title").GetString().Should().Be("Chapter 2");
+
+        JsonElement chapterMarks = json.RootElement.GetProperty("chapter_marks");
+        chapterMarks.GetArrayLength().Should().Be(3);
+        chapterMarks[1].GetProperty("time_seconds").GetDouble().Should().Be(620);
+    }
+
+    [Fact]
+    public async Task ProbeTitle_NameUnchanged_KindIsDurationBased()
+    {
+        DiscTitle mainFeature = MakeTitle(0, TimeSpan.FromSeconds(7200));
+        DiscTitle extra = MakeTitle(1, TimeSpan.FromSeconds(1200));
+        DiscInfo discInfo = new(
+            OpticalDiscType.Dvd,
+            "TEST",
+            [mainFeature, extra, MakeTitle(2, TimeSpan.FromSeconds(600))],
+            null,
+            TimeSpan.FromSeconds(9000)
+        );
+
+        Mock<IDriveMonitor> driveMonitorMock = new();
+        driveMonitorMock
+            .Setup(m => m.GetDrives())
+            .Returns([MakeDrive(@"D:\", discType: OpticalDiscType.Dvd)]);
+
+        Mock<IDiscSource> discSourceMock = new();
+        discSourceMock.Setup(s => s.Type).Returns(OpticalDiscType.Dvd);
+        discSourceMock
+            .Setup(s => s.ProbeAsync(It.IsAny<DiscDrive>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(discInfo);
+        discSourceMock
+            .Setup(s => s.ProbeTitleAsync(It.IsAny<DiscDrive>(), 0, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mainFeature);
+        discSourceMock
+            .Setup(s => s.ProbeTitleAsync(It.IsAny<DiscDrive>(), 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(extra);
+
+        HttpClient client = BuildProbeClient(driveMonitorMock, discSourceMock);
+
+        HttpResponseMessage mainResponse = await client.GetAsync(
+            "/api/v1/dashboard/optical/D%3A%5C/title/0"
+        );
+        HttpResponseMessage extraResponse = await client.GetAsync(
+            "/api/v1/dashboard/optical/D%3A%5C/title/1"
+        );
+
+        string mainBody = await mainResponse.Content.ReadAsStringAsync();
+        string extraBody = await extraResponse.Content.ReadAsStringAsync();
+        mainResponse.StatusCode.Should().Be(HttpStatusCode.OK, mainBody);
+        extraResponse.StatusCode.Should().Be(HttpStatusCode.OK, extraBody);
+
+        JsonDocument mainJson = JsonDocument.Parse(mainBody);
+        JsonDocument extraJson = JsonDocument.Parse(extraBody);
+
+        // `name` keeps returning the disc title's existing value unchanged —
+        // nomercy-app-web's DiscTitleInfo type reads this key today.
+        mainJson.RootElement.GetProperty("name").GetString().Should().Be(mainFeature.Name);
+        mainJson.RootElement.GetProperty("kind").GetString().Should().Be("main_feature");
+        extraJson.RootElement.GetProperty("name").GetString().Should().Be(extra.Name);
+        extraJson.RootElement.GetProperty("kind").GetString().Should().Be("extra");
+    }
+
+    // ── ProbeDisc — disc identity surfaced, best-effort ────────────────────
+
+    [Fact]
+    public async Task ProbeDisc_IncludesDiscIdentityField()
+    {
+        DiscTitle title = MakeTitle(0, TimeSpan.FromSeconds(3600));
+        DiscInfo discInfo = new(
+            OpticalDiscType.BluRay,
+            "TEST",
+            [title],
+            null,
+            title.Duration
+        );
+
+        Mock<IDriveMonitor> driveMonitorMock = new();
+        driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\")]);
+
+        Mock<IDiscSource> discSourceMock = new();
+        discSourceMock.Setup(s => s.Type).Returns(OpticalDiscType.BluRay);
+        discSourceMock
+            .Setup(s => s.ProbeAsync(It.IsAny<DiscDrive>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(discInfo);
+
+        HttpClient client = BuildProbeClient(driveMonitorMock, discSourceMock);
+
+        HttpResponseMessage response = await client.GetAsync(
+            "/api/v1/dashboard/optical/D%3A%5C/probe"
+        );
+        string body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        JsonDocument json = JsonDocument.Parse(body);
+        json.RootElement.TryGetProperty("disc_identity", out JsonElement discIdentity)
+            .Should()
+            .BeTrue();
+        // No real optical drive is present in the test host, so identity
+        // resolution fails and degrades to null rather than throwing —
+        // the field's presence is what this test proves.
+        discIdentity.ValueKind.Should().Be(JsonValueKind.Null);
     }
 }

@@ -17,6 +17,9 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.DiscFormat.Abstractions.Disc;
+using NoMercy.DiscFormat.Composition;
+using NoMercy.DiscFormat.Disc.Bdmv;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Events;
@@ -54,7 +57,8 @@ public class OpticalMediaController(
     ILiveDiscSession liveDiscSession,
     ILiveStreamingService liveStreamingService,
     ISessionManager sessionManager,
-    IDiscSessionRegistry discSessionRegistry
+    IDiscSessionRegistry discSessionRegistry,
+    DiscIdentityDispatcher discIdentityDispatcher
 ) : BaseController
 {
     // ── Legacy endpoints (re-pointed to Module A) ──────────────────────────
@@ -305,6 +309,7 @@ public class OpticalMediaController(
 
         DiscInfo info = await source.ProbeAsync(drive, ct);
         DiscIdentification identification = await identificationService.IdentifyAsync(info, ct);
+        string? discIdentity = TryComputeDiscIdentity(drive, info);
 
         return Ok(
             new
@@ -315,6 +320,7 @@ public class OpticalMediaController(
                 disc_type = drive.DiscType.ToString().ToLowerInvariant(),
                 disc = ProjectDiscInfo(info),
                 candidates = identification.Candidates.Select(ProjectCandidate),
+                disc_identity = discIdentity,
             }
         );
     }
@@ -353,7 +359,26 @@ public class OpticalMediaController(
 
         DiscTitle title = await source.ProbeTitleAsync(drive, titleIndex, ct);
 
-        return Ok(ProjectTitle(title));
+        // "main_feature" vs "extra" is a duration ranking across every title
+        // on the disc, so it needs the cheap whole-disc probe alongside the
+        // detailed single-title one — the cheap probe already has every
+        // title's duration without re-reading streams for each of them.
+        DiscInfo discInfo = await source.ProbeAsync(drive, ct);
+        double maxDuration =
+            discInfo.Titles.Length > 0
+                ? discInfo.Titles.Max(t => t.Duration.TotalSeconds)
+                : title.Duration.TotalSeconds;
+        string kind =
+            title.Duration.TotalSeconds >= maxDuration ? "main_feature" : "extra";
+
+        IReadOnlyList<double> chapterSeconds = ReadCatalogChapterSeconds(
+            drive,
+            drive.DiscType,
+            titleIndex,
+            title
+        );
+
+        return Ok(ProjectTitle(title, chapterSeconds, kind));
     }
 
     /// <summary>
@@ -423,6 +448,14 @@ public class OpticalMediaController(
             title = c.Title,
         };
 
+    /// <summary>
+    /// Projects a title for the <c>/probe</c> disc-level listing, where no
+    /// disc-content-catalog chapter marks or cross-title duration ranking
+    /// have been computed (that only happens for the single title
+    /// <see cref="ProbeTitle"/> fetches in detail). Kept separate from the
+    /// per-title overload below so <c>/probe</c> stays the cheap call it's
+    /// documented as.
+    /// </summary>
     private static object ProjectTitle(DiscTitle t) =>
         new
         {
@@ -453,6 +486,60 @@ public class OpticalMediaController(
             chapters = t.Chapters.Select(ProjectChapter),
             estimated_size_bytes = t.EstimatedSizeBytes,
             is_main_feature = t.IsMainFeature,
+        };
+
+    /// <summary>
+    /// Projects the detailed single-title probe. Adds two new fields on top
+    /// of the existing shape — <c>chapter_marks</c> (the disc's real
+    /// chapter-mark seconds, from <see cref="DiscContentCatalog"/> on
+    /// Blu-ray or the analyzer's own chapter marks elsewhere) and
+    /// <c>kind</c> (the disc-wide duration ranking computed by the caller).
+    /// The existing <c>chapters</c> key keeps its original
+    /// <c>{number,timestamp,title}</c> shape and <c>name</c> keeps returning
+    /// <see cref="DiscTitle.Name"/> unchanged — compat-gate confirmed
+    /// nomercy-app-web reads both today (<c>ChapterInfo</c>/
+    /// <c>DiscTitleInfo</c> in <c>src/types/api/dashboard/ripper.ts</c>), so
+    /// reshaping or nulling them here would break that live client. The
+    /// "no disc format carries a real title name" fact from Task 1 is
+    /// therefore not surfaced as always-null on this shared key; a future
+    /// slice can add it under its own field name if a client needs it.
+    /// </summary>
+    private static object ProjectTitle(
+        DiscTitle t,
+        IReadOnlyList<double> chapterSeconds,
+        string kind
+    ) =>
+        new
+        {
+            index = t.Index,
+            name = t.Name,
+            duration = t.Duration.ToString(@"hh\:mm\:ss"),
+            video_streams = t.VideoStreams.Select(v => new
+            {
+                codec = v.Codec,
+                width = v.Width,
+                height = v.Height,
+                frame_rate = v.FrameRate,
+                bit_rate = v.BitRateKbps,
+            }),
+            audio_streams = t.AudioStreams.Select(a => new
+            {
+                codec = a.Codec,
+                channels = a.Channels,
+                sample_rate = a.SampleRate,
+                language = a.Language,
+            }),
+            subtitles = t.Subtitles.Select(s => new
+            {
+                codec = s.Codec,
+                language = s.Language,
+                forced = s.IsForced,
+            }),
+            chapters = t.Chapters.Select(ProjectChapter),
+            chapter_marks = chapterSeconds.Select(seconds => new { time_seconds = seconds }),
+            estimated_size_bytes = t.EstimatedSizeBytes,
+            is_main_feature = t.IsMainFeature,
+            kind,
         };
 
     private static object ProjectDiscInfo(DiscInfo info) =>
@@ -724,6 +811,126 @@ public class OpticalMediaController(
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Real chapter-mark seconds for one title, sourced from
+    /// <see cref="DiscContentCatalog"/> — the vendored parser that reads a
+    /// Blu-ray playlist's own entry marks, never estimated or driven. Only
+    /// Blu-ray carries an .mpls to build the catalog from; DVD/CD titles
+    /// fall back to whatever chapter marks the per-title stream probe
+    /// already found (real ffprobe chapters, just not catalog-sourced) so
+    /// the field is never silently empty on formats Task 1 didn't cover.
+    /// </summary>
+    private IReadOnlyList<double> ReadCatalogChapterSeconds(
+        DiscDrive drive,
+        OpticalDiscType discType,
+        int titleIndex,
+        DiscTitle title
+    )
+    {
+        if (discType != OpticalDiscType.BluRay)
+            return [.. title.Chapters.Select(c => c.Start.TotalSeconds)];
+
+        try
+        {
+            string trimmed = drive.Path.TrimEnd('\\', '/');
+            string mplsPath = Path.Combine(trimmed, "BDMV", "PLAYLIST", $"{titleIndex:D5}.mpls");
+
+            if (!localStorageDriver.FileExists(mplsPath))
+                return [.. title.Chapters.Select(c => c.Start.TotalSeconds)];
+
+            using Stream stream = localStorageDriver.OpenRead(mplsPath);
+            using MemoryStream buffer = new();
+            stream.CopyTo(buffer);
+            MplsPlaylist playlist = MplsParser.Parse(buffer.ToArray());
+
+            IReadOnlyList<DiscContentTitle> catalog = DiscContentCatalog.Build(
+                new Dictionary<int, MplsPlaylist> { [titleIndex] = playlist }
+            );
+            DiscContentTitle? catalogued = catalog.FirstOrDefault(c => c.Playlist == titleIndex);
+
+            return catalogued is null || catalogued.ChapterTimes.Count == 0
+                ? [.. title.Chapters.Select(c => c.Start.TotalSeconds)]
+                : catalogued.ChapterTimes;
+        }
+        catch
+        {
+            // Catalog enrichment is best-effort, same as the existing mpls
+            // language merge in BlurayDiscSource — a malformed/unreadable
+            // mpls must never fail the title probe.
+            return [.. title.Chapters.Select(c => c.Start.TotalSeconds)];
+        }
+    }
+
+    /// <summary>
+    /// Disc structural identity via <see cref="DiscIdentityDispatcher"/>, for
+    /// disc kinds the dispatcher has a reader for. Best-effort — an
+    /// unsupported disc kind (CD) or a read failure (locked drive, missing
+    /// IFO/BDMV structure) yields null rather than failing the probe.
+    /// </summary>
+    private string? TryComputeDiscIdentity(DiscDrive drive, DiscInfo info)
+    {
+        try
+        {
+            DiscKind kind = drive.DiscType switch
+            {
+                OpticalDiscType.BluRay => DiscKind.Hdmv,
+                OpticalDiscType.Dvd => DiscKind.Dvd,
+                _ => throw new NotSupportedException(
+                    $"no identity reader for disc type {drive.DiscType}"
+                ),
+            };
+
+            string discTitle = info.DiscTitle ?? info.DiscLabel ?? drive.Label ?? string.Empty;
+
+            DiscTranspileRequest request =
+                kind == DiscKind.Dvd
+                    ? new DiscTranspileRequest
+                    {
+                        Kind = kind,
+                        DiscTitle = discTitle,
+                        IfoFiles = ReadDvdIfoFiles(drive.Path),
+                    }
+                    : new DiscTranspileRequest
+                    {
+                        Kind = kind,
+                        DiscTitle = discTitle,
+                        DevicePath = drive.Path,
+                    };
+
+            return discIdentityDispatcher.Read(request).Id;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private IReadOnlyDictionary<string, byte[]> ReadDvdIfoFiles(string drivePath)
+    {
+        string trimmed = drivePath.TrimEnd('\\', '/');
+        string videoTsDir = Path.Combine(trimmed, "VIDEO_TS");
+
+        if (!localStorageDriver.DirectoryExists(videoTsDir))
+            return new Dictionary<string, byte[]>();
+
+        Dictionary<string, byte[]> files = new(StringComparer.OrdinalIgnoreCase);
+        foreach (
+            string path in localStorageDriver.EnumerateFileSystemEntries(
+                videoTsDir,
+                "*.IFO",
+                SearchOption.TopDirectoryOnly
+            )
+        )
+        {
+            using Stream stream = localStorageDriver.OpenRead(path);
+            using MemoryStream buffer = new();
+            stream.CopyTo(buffer);
+            files[Path.GetFileName(path)] = buffer.ToArray();
+        }
+
+        return files;
+    }
 
     private DiscDrive? FindDrive(string drivePath) =>
         driveMonitor

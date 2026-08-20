@@ -13,6 +13,11 @@ using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using NoMercy.DiscFormat.Abstractions.Disc;
+using NoMercy.DiscFormat.Composition;
+using NoMercy.DiscFormat.Dvd.Identity;
+using NoMercy.DiscFormat.LibBluray;
+using NoMercy.DiscFormat.LibBluray.Identity;
 using NoMercy.Encoder.Audio;
 using NoMercy.OpticalMedia.Audio;
 using NoMercy.OpticalMedia.Capabilities;
@@ -83,6 +88,17 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<FfmpegBluRayCapability>();
         services.AddHostedService<BluRayCapabilityStartupService>();
+
+        // Disc identity — contract-based DI, one reader per disc kind (same
+        // dispatch shape as ITocReader/IDiscIdentifier above). The Blu-ray
+        // reader needs a fresh ILibBluray per read (it Opens/Disposes one
+        // native handle per call), so it takes a factory rather than a
+        // shared instance.
+        services.TryAddTransient<IDiscIdentityReader, DvdIdentityReader>();
+        services.TryAddTransient<IDiscIdentityReader>(_ => new BlurayIdentityReader(
+            () => new LibBlurayClient()
+        ));
+        services.TryAddTransient<DiscIdentityDispatcher>();
 
         return services;
     }
