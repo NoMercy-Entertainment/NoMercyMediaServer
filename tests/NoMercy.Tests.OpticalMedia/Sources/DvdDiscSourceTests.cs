@@ -590,6 +590,111 @@ public class DvdDiscSourceEndToEndTests
         discWalkCallCount.Should().Be(3, "the second call should hit the cached disc walk");
     }
 
+    /// <summary>
+    /// The sequential test above cannot see the check-then-act race: two
+    /// concurrent <c>ProbeTitleAsync</c> calls for the same drive (the real
+    /// shape — <c>OpticalMediaController</c> serializes nothing, and a UI
+    /// fires several title probes at once) could both observe a cache miss
+    /// and both start a full disc walk. Here both calls are genuinely in
+    /// flight — neither can reach the cache lookup until the other has
+    /// arrived — so only a cache that atomically coalesces misses keeps the
+    /// walk count at one.
+    /// </summary>
+    [Fact]
+    public async Task ProbeTitleAsync_TwoConcurrentCallsForSameDrive_RunOnlyOneDiscWalk()
+    {
+        string detailJson = """
+            {
+              "format": { "duration": "300" },
+              "streams": [ { "index": 0, "codec_type": "audio", "codec_name": "ac3", "channels": 2 } ]
+            }
+            """;
+        int discWalkCallCount = 0;
+        int detailProbesEntered = 0;
+        TaskCompletionSource bothCallersInFlight = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(
+                async (string _, string[] _, string? _, CancellationToken _) =>
+                {
+                    // Each ProbeTitleAsync runs exactly one detail probe before
+                    // it reaches the cached disc walk — release both at once so
+                    // they hit the cache lookup together.
+                    if (Interlocked.Increment(ref detailProbesEntered) == 2)
+                        bothCallersInFlight.SetResult();
+                    await bothCallersInFlight.Task;
+                    return new ProcessResult(0, detailJson, "", TimeSpan.Zero);
+                }
+            );
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(
+                async (string _, string[] args, string? _, CancellationToken _) =>
+                {
+                    Interlocked.Increment(ref discWalkCallCount);
+                    // Hold the walk open so a racing caller has every chance to
+                    // observe the miss and start a second walk if the cache
+                    // does not coalesce.
+                    await Task.Yield();
+                    string titleArg = args[Array.IndexOf(args, "-title") + 1];
+                    return titleArg switch
+                    {
+                        "1" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"300"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        "2" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"5400"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        _ => new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero),
+                    };
+                }
+            );
+
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
+
+        Task<DiscTitle> first = Task.Run(() =>
+            sut.ProbeTitleAsync(drive, 1, CancellationToken.None)
+        );
+        Task<DiscTitle> second = Task.Run(() =>
+            sut.ProbeTitleAsync(drive, 2, CancellationToken.None)
+        );
+
+        DiscTitle[] titles = await Task.WhenAll(first, second);
+
+        titles.Should().HaveCount(2);
+        discWalkCallCount
+            .Should()
+            .Be(
+                3,
+                "one disc walk is titles 1, 2 and the boundary at 3 — concurrent misses must coalesce onto that single walk, not run 6 spawns"
+            );
+    }
+
     [Fact]
     public async Task ProbeTitleAsync_FfprobeFails_ReturnsEmptySkeletonTitle()
     {

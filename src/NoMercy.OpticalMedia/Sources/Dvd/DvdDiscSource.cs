@@ -39,42 +39,68 @@ public sealed class DvdDiscSource(
     public OpticalDiscType Type => OpticalDiscType.Dvd;
 
     /// <summary>
-    /// Short-lived, instance-scoped cache of the last <see cref="ProbeUncachedAsync"/>
-    /// result per drive path. <see cref="ProbeTitleAsync"/> calls
+    /// Short-lived cache of the last <see cref="ProbeUncachedAsync"/> result
+    /// per drive path. <see cref="ProbeTitleAsync"/> calls
     /// <see cref="ProbeAsync"/> once per title to rank <c>IsMainFeature</c>
     /// against the full disc; without this, a retail DVD with N titles turns
-    /// one disc-probe session into N sequential full-disc walks (each up to
-    /// <see cref="MaxTitleProbes"/> ffprobe subprocess spawns). Deliberately
-    /// NOT a static/shared cache — this instance is created per DI resolve,
-    /// so the cache can't leak across unrelated drive paths in tests. TTL is
-    /// short enough that a disc swap between sessions isn't served stale
-    /// data, but long enough to cover one burst of per-title probe calls.
+    /// one disc-probe session into N full-disc walks (each up to
+    /// <see cref="MaxTitleProbes"/> ffprobe subprocess spawns).
+    ///
+    /// Lifetime, stated correctly: although <c>DvdDiscSource</c> is registered
+    /// <c>AddTransient</c>, <c>DiscSourceFactory</c> is registered
+    /// <c>TryAddSingleton</c> and resolves every <c>IDiscSource</c> exactly
+    /// once in its own constructor, holding them for the process lifetime. So
+    /// this instance is a captive singleton in practice and this cache lives
+    /// for the whole process, NOT for "one probe session". The TTL below is
+    /// the sole bound on staleness — a disc swap is only ever masked for that
+    /// window, and nothing else recycles the entry.
     /// </summary>
-    private readonly ConcurrentDictionary<
-        string,
-        (Task<DiscInfo> Task, DateTime ExpiresAtUtc)
-    > _probeCache = new();
+    private readonly ConcurrentDictionary<string, ProbeCacheEntry> _probeCache = new();
 
     private static readonly TimeSpan ProbeCacheTtl = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// The probe is held as a <see cref="Lazy{T}"/> so the dictionary's own
+    /// atomicity guarantees exactly one disc walk per key: concurrent callers
+    /// that all miss coalesce onto whichever entry <c>GetOrAdd</c> published,
+    /// and only that entry's <c>Lazy</c> is ever forced. A class, not a
+    /// record: the expiry swap below relies on reference equality to detect
+    /// "still the entry I observed".
+    /// </summary>
+    private sealed class ProbeCacheEntry(Lazy<Task<DiscInfo>> probe, DateTime expiresAtUtc)
+    {
+        public Lazy<Task<DiscInfo>> Probe { get; } = probe;
+        public DateTime ExpiresAtUtc { get; } = expiresAtUtc;
+    }
+
     public Task<DiscInfo> ProbeAsync(DiscDrive drive, CancellationToken ct)
     {
-        DateTime now = DateTime.UtcNow;
-        if (
-            _probeCache.TryGetValue(
-                drive.Path,
-                out (Task<DiscInfo> Task, DateTime ExpiresAtUtc) cached
-            )
-            && cached.ExpiresAtUtc > now
-        )
+        while (true)
         {
-            return cached.Task;
-        }
+            ProbeCacheEntry entry = _probeCache.GetOrAdd(
+                drive.Path,
+                _ => NewProbeCacheEntry(drive, ct)
+            );
 
-        Task<DiscInfo> probeTask = ProbeUncachedAsync(drive, ct);
-        _probeCache[drive.Path] = (probeTask, now + ProbeCacheTtl);
-        return probeTask;
+            if (entry.ExpiresAtUtc > DateTime.UtcNow)
+                return entry.Probe.Value;
+
+            // Expired. TryUpdate swaps only if the expired entry every racing
+            // caller observed is still the published one, so exactly one of
+            // them installs the replacement; the losers loop and pick up the
+            // winner's entry. Building a losing candidate costs nothing —
+            // an unforced Lazy never starts a walk.
+            ProbeCacheEntry replacement = NewProbeCacheEntry(drive, ct);
+            if (_probeCache.TryUpdate(drive.Path, replacement, entry))
+                return replacement.Probe.Value;
+        }
     }
+
+    private ProbeCacheEntry NewProbeCacheEntry(DiscDrive drive, CancellationToken ct) =>
+        new(
+            new(() => ProbeUncachedAsync(drive, ct), LazyThreadSafetyMode.ExecutionAndPublication),
+            DateTime.UtcNow + ProbeCacheTtl
+        );
 
     private async Task<DiscInfo> ProbeUncachedAsync(DiscDrive drive, CancellationToken ct)
     {
