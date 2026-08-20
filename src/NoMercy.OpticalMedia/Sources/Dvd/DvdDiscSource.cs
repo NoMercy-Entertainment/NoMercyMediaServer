@@ -223,7 +223,11 @@ public sealed class DvdDiscSource(
             // title out and re-stamp the index.
             DiscInfo info = Bluray.DiscScanner.Parse(result.StdOut, OpticalDiscType.Dvd);
             DiscTitle? single = info.Titles.FirstOrDefault();
-            return single is null ? empty : single with { Index = titleIndex };
+            if (single is null)
+                return empty;
+
+            DiscTitle stamped = single with { Index = titleIndex };
+            return await StampIsMainFeatureAsync(stamped, drive, ct);
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
@@ -241,6 +245,25 @@ public sealed class DvdDiscSource(
             );
             return empty;
         }
+    }
+
+    /// <summary>
+    /// A single-title ffprobe response has no visibility into sibling
+    /// titles, so <see cref="Bluray.DiscScanner.Parse"/> can't answer "is
+    /// this the main feature" on its own — that needs a disc-wide duration
+    /// ranking. Reuses <see cref="ProbeAsync"/>'s format-only title walk
+    /// (no stream/chapter re-parse) to look up this title's rank instead
+    /// of hardcoding a flag.
+    /// </summary>
+    private async Task<DiscTitle> StampIsMainFeatureAsync(
+        DiscTitle title,
+        DiscDrive drive,
+        CancellationToken ct
+    )
+    {
+        DiscInfo discInfo = await ProbeAsync(drive, ct);
+        DiscTitle? match = discInfo.Titles.FirstOrDefault(t => t.Index == title.Index);
+        return match is null ? title : title with { IsMainFeature = match.IsMainFeature };
     }
 
     /// <summary>

@@ -386,6 +386,136 @@ public class DvdDiscSourceEndToEndTests
         title.AudioStreams.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// Regression test for the real bug: ProbeTitleAsync reused Bluray's
+    /// DiscScanner.Parse for its single-title JSON, which used to hardcode
+    /// IsMainFeature: true unconditionally — every real per-title DVD probe
+    /// reported "main_feature" regardless of which title was requested.
+    /// ProbeTitleAsync now re-ranks the requested title against every other
+    /// title's duration (via ProbeAsync's format-only title walk) before
+    /// returning it.
+    /// </summary>
+    [Fact]
+    public async Task ProbeTitleAsync_RequestedTitleIsNotTheLongestOnDisc_IsMainFeatureIsFalse()
+    {
+        string detailJson = """
+            {
+              "format": { "duration": "300" },
+              "streams": [ { "index": 0, "codec_type": "audio", "codec_name": "ac3", "channels": 2 } ]
+            }
+            """;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, detailJson, "", TimeSpan.Zero));
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                (string _, string[] args, string? _, CancellationToken _) =>
+                {
+                    string titleArg = args[Array.IndexOf(args, "-title") + 1];
+                    return titleArg switch
+                    {
+                        "1" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"300"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        "2" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"5400"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        _ => new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero),
+                    };
+                }
+            );
+
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
+
+        // Title 1 is 5 minutes; title 2 (5400s) is the disc's real longest title.
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 1, CancellationToken.None);
+
+        title.IsMainFeature.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProbeTitleAsync_RequestedTitleIsTheLongestOnDisc_IsMainFeatureIsTrue()
+    {
+        string detailJson = """
+            {
+              "format": { "duration": "5400" },
+              "streams": [ { "index": 0, "codec_type": "audio", "codec_name": "ac3", "channels": 2 } ]
+            }
+            """;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, detailJson, "", TimeSpan.Zero));
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                (string _, string[] args, string? _, CancellationToken _) =>
+                {
+                    string titleArg = args[Array.IndexOf(args, "-title") + 1];
+                    return titleArg switch
+                    {
+                        "1" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"300"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        "2" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"5400"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        _ => new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero),
+                    };
+                }
+            );
+
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
+
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 2, CancellationToken.None);
+
+        title.IsMainFeature.Should().BeTrue();
+    }
+
     [Fact]
     public async Task ProbeTitleAsync_FfprobeFails_ReturnsEmptySkeletonTitle()
     {

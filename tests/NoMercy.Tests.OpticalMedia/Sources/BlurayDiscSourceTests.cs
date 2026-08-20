@@ -608,6 +608,108 @@ public class BlurayDiscSourceEndToEndTests
         title.VideoStreams.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// Regression test for the real bug: DiscScanner.Parse's single-title
+    /// path used to hardcode IsMainFeature: true unconditionally, so every
+    /// real per-title probe on a Blu-ray disc reported "main_feature"
+    /// regardless of which playlist was requested. ProbeTitleAsync now
+    /// re-ranks the requested title against every other playlist's runtime
+    /// (via ProbeAsync's cheap stderr-dump probe) before returning it.
+    /// </summary>
+    [Fact]
+    public async Task ProbeTitleAsync_RequestedTitleIsNotTheLongestPlaylist_IsMainFeatureIsFalse()
+    {
+        string json = """
+            {
+              "format": { "duration": "1800" },
+              "streams": [ { "index": 0, "codec_type": "video", "codec_name": "h264" } ]
+            }
+            """;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-playlist")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, json, "", TimeSpan.Zero));
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-playlist")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                new ProcessResult(
+                    0,
+                    "",
+                    "playlist 00090.mpls (00:30:00)\nplaylist 00100.mpls (02:15:00)",
+                    TimeSpan.Zero
+                )
+            );
+
+        BlurayDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.BluRay);
+
+        // Requested playlist 90 is 30 minutes; playlist 100 (02:15:00) is
+        // the disc's real longest title.
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 90, CancellationToken.None);
+
+        title.IsMainFeature.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProbeTitleAsync_RequestedTitleIsTheLongestPlaylist_IsMainFeatureIsTrue()
+    {
+        string json = """
+            {
+              "format": { "duration": "8100" },
+              "streams": [ { "index": 0, "codec_type": "video", "codec_name": "h264" } ]
+            }
+            """;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-playlist")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, json, "", TimeSpan.Zero));
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-playlist")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                new ProcessResult(
+                    0,
+                    "",
+                    "playlist 00090.mpls (00:30:00)\nplaylist 00100.mpls (02:15:00)",
+                    TimeSpan.Zero
+                )
+            );
+
+        BlurayDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.BluRay);
+
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 100, CancellationToken.None);
+
+        title.IsMainFeature.Should().BeTrue();
+    }
+
     [Fact]
     public async Task ProbeTitleAsync_FfprobeFails_ReturnsEmptySkeletonTitle()
     {

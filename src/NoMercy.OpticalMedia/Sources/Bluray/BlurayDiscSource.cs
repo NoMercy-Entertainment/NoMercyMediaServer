@@ -212,7 +212,28 @@ public sealed partial class BlurayDiscSource(
             );
 
         DiscTitle result = single with { Index = titleIndex };
+        result = await StampIsMainFeatureAsync(result, drive, ct);
         return ApplyMplsLanguages(result, drive.Path, titleIndex);
+    }
+
+    /// <summary>
+    /// A single-playlist ffprobe response has no visibility into sibling
+    /// playlists, so <see cref="DiscScanner.Parse"/> can't answer "is this
+    /// the main feature" on its own — that needs a disc-wide duration
+    /// ranking. Reuses <see cref="ProbeAsync"/>, which is already a cheap,
+    /// thin <c>-v info</c> stderr-dump probe (no per-title stream re-parse),
+    /// to look up this title's rank instead of hardcoding a flag or
+    /// re-reading every title's full metadata.
+    /// </summary>
+    private async Task<DiscTitle> StampIsMainFeatureAsync(
+        DiscTitle title,
+        DiscDrive drive,
+        CancellationToken ct
+    )
+    {
+        DiscInfo discInfo = await ProbeAsync(drive, ct);
+        DiscTitle? match = discInfo.Titles.FirstOrDefault(t => t.Index == title.Index);
+        return match is null ? title : title with { IsMainFeature = match.IsMainFeature };
     }
 
     /// <summary>
@@ -233,12 +254,7 @@ public sealed partial class BlurayDiscSource(
         try
         {
             string trimmed = drivePath.TrimEnd('\\', '/');
-            string mplsPath = Path.Combine(
-                trimmed,
-                "BDMV",
-                "PLAYLIST",
-                $"{titleIndex:D5}.mpls"
-            );
+            string mplsPath = Path.Combine(trimmed, "BDMV", "PLAYLIST", $"{titleIndex:D5}.mpls");
 
             if (!storageDriver.FileExists(mplsPath))
                 return title;
@@ -258,7 +274,11 @@ public sealed partial class BlurayDiscSource(
                 (subtitle, language) => subtitle with { Language = language }
             );
 
-            return title with { AudioStreams = audioStreams, Subtitles = subtitles };
+            return title with
+            {
+                AudioStreams = audioStreams,
+                Subtitles = subtitles,
+            };
         }
         catch (Exception ex)
         {
