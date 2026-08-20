@@ -516,6 +516,80 @@ public class DvdDiscSourceEndToEndTests
         title.IsMainFeature.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Regression test for the memoization fix: <see cref="DvdDiscSource.ProbeTitleAsync"/>
+    /// calls <see cref="DvdDiscSource.ProbeAsync"/> internally to rank
+    /// <c>IsMainFeature</c>, which walks every title on the disc. Two
+    /// <c>ProbeTitleAsync</c> calls against the same drive within the cache
+    /// window must reuse one disc walk rather than spawning a fresh
+    /// full-disc probe (up to <c>MaxTitleProbes</c> subprocesses) per call.
+    /// </summary>
+    [Fact]
+    public async Task ProbeTitleAsync_CalledTwiceForSameDrive_ReusesOneDiscWalk()
+    {
+        string detailJson = """
+            {
+              "format": { "duration": "300" },
+              "streams": [ { "index": 0, "codec_type": "audio", "codec_name": "ac3", "channels": 2 } ]
+            }
+            """;
+        int discWalkCallCount = 0;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, detailJson, "", TimeSpan.Zero));
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                (string _, string[] args, string? _, CancellationToken _) =>
+                {
+                    Interlocked.Increment(ref discWalkCallCount);
+                    string titleArg = args[Array.IndexOf(args, "-title") + 1];
+                    return titleArg switch
+                    {
+                        "1" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"300"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        "2" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"5400"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        _ => new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero),
+                    };
+                }
+            );
+
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
+
+        await sut.ProbeTitleAsync(drive, 1, CancellationToken.None);
+        await sut.ProbeTitleAsync(drive, 2, CancellationToken.None);
+
+        // Full disc walk is titles 1, 2, then the "not found" boundary at 3
+        // — 3 subprocess spawns for one walk. If the second ProbeTitleAsync
+        // triggered a fresh walk this would be 6.
+        discWalkCallCount.Should().Be(3, "the second call should hit the cached disc walk");
+    }
+
     [Fact]
     public async Task ProbeTitleAsync_FfprobeFails_ReturnsEmptySkeletonTitle()
     {

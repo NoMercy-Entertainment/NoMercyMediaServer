@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -37,7 +38,45 @@ public sealed class DvdDiscSource(
 {
     public OpticalDiscType Type => OpticalDiscType.Dvd;
 
-    public async Task<DiscInfo> ProbeAsync(DiscDrive drive, CancellationToken ct)
+    /// <summary>
+    /// Short-lived, instance-scoped cache of the last <see cref="ProbeUncachedAsync"/>
+    /// result per drive path. <see cref="ProbeTitleAsync"/> calls
+    /// <see cref="ProbeAsync"/> once per title to rank <c>IsMainFeature</c>
+    /// against the full disc; without this, a retail DVD with N titles turns
+    /// one disc-probe session into N sequential full-disc walks (each up to
+    /// <see cref="MaxTitleProbes"/> ffprobe subprocess spawns). Deliberately
+    /// NOT a static/shared cache — this instance is created per DI resolve,
+    /// so the cache can't leak across unrelated drive paths in tests. TTL is
+    /// short enough that a disc swap between sessions isn't served stale
+    /// data, but long enough to cover one burst of per-title probe calls.
+    /// </summary>
+    private readonly ConcurrentDictionary<
+        string,
+        (Task<DiscInfo> Task, DateTime ExpiresAtUtc)
+    > _probeCache = new();
+
+    private static readonly TimeSpan ProbeCacheTtl = TimeSpan.FromSeconds(5);
+
+    public Task<DiscInfo> ProbeAsync(DiscDrive drive, CancellationToken ct)
+    {
+        DateTime now = DateTime.UtcNow;
+        if (
+            _probeCache.TryGetValue(
+                drive.Path,
+                out (Task<DiscInfo> Task, DateTime ExpiresAtUtc) cached
+            )
+            && cached.ExpiresAtUtc > now
+        )
+        {
+            return cached.Task;
+        }
+
+        Task<DiscInfo> probeTask = ProbeUncachedAsync(drive, ct);
+        _probeCache[drive.Path] = (probeTask, now + ProbeCacheTtl);
+        return probeTask;
+    }
+
+    private async Task<DiscInfo> ProbeUncachedAsync(DiscDrive drive, CancellationToken ct)
     {
         string drivePath = ToDvdPath(drive.Path);
 
