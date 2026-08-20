@@ -368,8 +368,7 @@ public class OpticalMediaController(
             discInfo.Titles.Length > 0
                 ? discInfo.Titles.Max(t => t.Duration.TotalSeconds)
                 : title.Duration.TotalSeconds;
-        string kind =
-            title.Duration.TotalSeconds >= maxDuration ? "main_feature" : "extra";
+        string kind = title.Duration.TotalSeconds >= maxDuration ? "main_feature" : "extra";
 
         IReadOnlyList<double> chapterSeconds = ReadCatalogChapterSeconds(
             drive,
@@ -853,11 +852,25 @@ public class OpticalMediaController(
                 ? [.. title.Chapters.Select(c => c.Start.TotalSeconds)]
                 : catalogued.ChapterTimes;
         }
-        catch
+        // Catalog enrichment is best-effort, same as the existing mpls
+        // language merge in BlurayDiscSource — a malformed/unreadable mpls
+        // must never fail the title probe. Bounded to the failure modes
+        // MplsParser/BigEndianReader and the storage read can genuinely
+        // produce for a truncated/corrupt/unreadable playlist file:
+        // InvalidDataException (bad MPLS signature), IndexOutOfRangeException
+        // and ArgumentOutOfRangeException (BigEndianReader/Span reads past
+        // the end of a truncated buffer), and IOException/
+        // UnauthorizedAccessException from the storage-driver file read.
+        // OperationCanceledException and anything else propagate.
+        catch (Exception ex)
+            when (ex
+                    is InvalidDataException
+                        or IndexOutOfRangeException
+                        or ArgumentOutOfRangeException
+                        or IOException
+                        or UnauthorizedAccessException
+            )
         {
-            // Catalog enrichment is best-effort, same as the existing mpls
-            // language merge in BlurayDiscSource — a malformed/unreadable
-            // mpls must never fail the title probe.
             return [.. title.Chapters.Select(c => c.Start.TotalSeconds)];
         }
     }
@@ -870,37 +883,56 @@ public class OpticalMediaController(
     /// </summary>
     private string? TryComputeDiscIdentity(DiscDrive drive, DiscInfo info)
     {
+        // No identity reader exists for this disc kind (e.g. CD) — an
+        // expected, non-exceptional case, not a failure to swallow.
+        DiscKind? kind = drive.DiscType switch
+        {
+            OpticalDiscType.BluRay => DiscKind.Hdmv,
+            OpticalDiscType.Dvd => DiscKind.Dvd,
+            _ => null,
+        };
+
+        if (kind is null)
+            return null;
+
         try
         {
-            DiscKind kind = drive.DiscType switch
-            {
-                OpticalDiscType.BluRay => DiscKind.Hdmv,
-                OpticalDiscType.Dvd => DiscKind.Dvd,
-                _ => throw new NotSupportedException(
-                    $"no identity reader for disc type {drive.DiscType}"
-                ),
-            };
-
             string discTitle = info.DiscTitle ?? info.DiscLabel ?? drive.Label ?? string.Empty;
 
             DiscTranspileRequest request =
                 kind == DiscKind.Dvd
                     ? new DiscTranspileRequest
                     {
-                        Kind = kind,
+                        Kind = kind.Value,
                         DiscTitle = discTitle,
                         IfoFiles = ReadDvdIfoFiles(drive.Path),
                     }
                     : new DiscTranspileRequest
                     {
-                        Kind = kind,
+                        Kind = kind.Value,
                         DiscTitle = discTitle,
                         DevicePath = drive.Path,
                     };
 
             return discIdentityDispatcher.Read(request).Id;
         }
-        catch
+        // Best-effort, mirroring ReadCatalogChapterSeconds — an unreadable
+        // drive or missing/malformed IFO/BDMV structure must never fail the
+        // disc probe. Bounded to what the readers and libbluray genuinely
+        // throw for those cases: InvalidOperationException (DvdIdentityReader
+        // /BlurayIdentityReader/LibBlurayClient's own "no data"/native-open
+        // failures) and NotSupportedException (dispatcher has no reader
+        // registered for this kind, e.g. Blu-ray support absent on this
+        // host), plus IOException/UnauthorizedAccessException from reading
+        // the DVD's IFO files off the storage driver. OperationCanceledException
+        // and anything else propagate.
+        catch (Exception ex)
+            when (ex
+                    is InvalidOperationException
+                        or NotSupportedException
+                        or IOException
+                        or UnauthorizedAccessException
+            )
         {
             return null;
         }
