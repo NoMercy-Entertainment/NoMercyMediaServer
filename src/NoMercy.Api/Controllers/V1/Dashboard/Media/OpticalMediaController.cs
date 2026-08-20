@@ -918,13 +918,17 @@ public class OpticalMediaController(
         // /BlurayIdentityReader/LibBlurayClient's own "no data"/native-open
         // failures) and NotSupportedException (dispatcher has no reader
         // registered for this kind, e.g. Blu-ray support absent on this
-        // host), plus IOException/UnauthorizedAccessException from reading
-        // the DVD's IFO files off the storage driver. OperationCanceledException
+        // host), DllNotFoundException/EntryPointNotFoundException when the
+        // libbluray native library itself isn't installed on this host,
+        // plus IOException/UnauthorizedAccessException from reading the
+        // DVD's IFO files off the storage driver. OperationCanceledException
         // and anything else propagate.
         catch (Exception ex)
             when (ex
                     is InvalidOperationException
                         or NotSupportedException
+                        or DllNotFoundException
+                        or EntryPointNotFoundException
                         or IOException
                         or UnauthorizedAccessException
             )
