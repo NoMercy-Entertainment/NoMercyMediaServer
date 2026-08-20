@@ -21,7 +21,7 @@ which clones only `nomercy-media-server` in isolation. Confirmed broken in
 practice: CI failed with `The type or namespace name 'DiscFormat' does not
 exist` the first time this dependency shipped.
 
-These six files are fully self-contained (no further `NoMercy.*`
+These seven files are fully self-contained (no further `NoMercy.*`
 dependencies beyond each other), so vendoring them is a clean copy, not a
 partial one.
 

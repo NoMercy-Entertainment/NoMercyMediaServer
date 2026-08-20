@@ -15,10 +15,13 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
+using NoMercy.DiscFormat.Abstractions.Disc;
+using NoMercy.DiscFormat.Composition;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.NmSystem.Dto;
+using NoMercy.OpticalMedia.Composition;
 using NoMercy.OpticalMedia.Drives;
 using NoMercy.OpticalMedia.Live;
 using NoMercy.OpticalMedia.Sources;
@@ -400,7 +403,8 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     private static DiscTitle MakeTitle(
         int index,
         TimeSpan duration,
-        ChapterInfo[]? chapters = null
+        ChapterInfo[]? chapters = null,
+        bool isMainFeature = false
     ) =>
         new(
             Index: index,
@@ -411,7 +415,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
             Subtitles: [],
             Chapters: chapters ?? [],
             EstimatedSizeBytes: 0,
-            IsMainFeature: false
+            IsMainFeature: isMainFeature
         );
 
     [Fact]
@@ -467,17 +471,10 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task ProbeTitle_NameUnchanged_KindIsDurationBased()
+    public async Task ProbeTitle_NameUnchanged_KindMatchesIsMainFeature()
     {
-        DiscTitle mainFeature = MakeTitle(0, TimeSpan.FromSeconds(7200));
-        DiscTitle extra = MakeTitle(1, TimeSpan.FromSeconds(1200));
-        DiscInfo discInfo = new(
-            OpticalDiscType.Dvd,
-            "TEST",
-            [mainFeature, extra, MakeTitle(2, TimeSpan.FromSeconds(600))],
-            null,
-            TimeSpan.FromSeconds(9000)
-        );
+        DiscTitle mainFeature = MakeTitle(0, TimeSpan.FromSeconds(7200), isMainFeature: true);
+        DiscTitle extra = MakeTitle(1, TimeSpan.FromSeconds(1200), isMainFeature: false);
 
         Mock<IDriveMonitor> driveMonitorMock = new();
         driveMonitorMock
@@ -486,9 +483,6 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
 
         Mock<IDiscSource> discSourceMock = new();
         discSourceMock.Setup(s => s.Type).Returns(OpticalDiscType.Dvd);
-        discSourceMock
-            .Setup(s => s.ProbeAsync(It.IsAny<DiscDrive>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(discInfo);
         discSourceMock
             .Setup(s => s.ProbeTitleAsync(It.IsAny<DiscDrive>(), 0, It.IsAny<CancellationToken>()))
             .ReturnsAsync(mainFeature);
@@ -527,13 +521,7 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
     public async Task ProbeDisc_IncludesDiscIdentityField()
     {
         DiscTitle title = MakeTitle(0, TimeSpan.FromSeconds(3600));
-        DiscInfo discInfo = new(
-            OpticalDiscType.BluRay,
-            "TEST",
-            [title],
-            null,
-            title.Duration
-        );
+        DiscInfo discInfo = new(OpticalDiscType.BluRay, "TEST", [title], null, title.Duration);
 
         Mock<IDriveMonitor> driveMonitorMock = new();
         driveMonitorMock.Setup(m => m.GetDrives()).Returns([MakeDrive(@"D:\")]);
@@ -556,9 +544,42 @@ public class OpticalMediaControllerTests : IClassFixture<NoMercyApiFactory>
         json.RootElement.TryGetProperty("disc_identity", out JsonElement discIdentity)
             .Should()
             .BeTrue();
-        // No real optical drive is present in the test host, so identity
-        // resolution fails and degrades to null rather than throwing —
-        // the field's presence is what this test proves.
-        discIdentity.ValueKind.Should().Be(JsonValueKind.Null);
+        // Best-effort field: whether "D:\" resolves to a real, openable
+        // optical device on the host running this test varies (a locked or
+        // absent drive degrades to null; a real one yields a hash), so this
+        // only proves the field is always present in the response shape.
+        // Whether the DI registration that produces a non-null value
+        // actually works is covered by
+        // AddNoMercyOpticalMedia_RegistersBothDiscIdentityReaders below.
+        discIdentity.ValueKind.Should().BeOneOf(JsonValueKind.Null, JsonValueKind.String);
+    }
+
+    // ── Disc identity DI registration — both readers actually resolve ──────
+    // The above ProbeDisc test would pass whether the Blu-ray reader is
+    // registered or not (it degrades to null either way), so it can't catch
+    // a broken DI registration. This resolves the real production
+    // AddNoMercyOpticalMedia() composition and asserts both readers are
+    // reachable through the dispatcher for their disc kind — it would have
+    // failed before the ServiceCollectionExtensions TryAddTransient ->
+    // AddTransient fix (TryAddTransient silently dropped the Blu-ray
+    // registration once the DVD one existed) and passes after.
+    [Fact]
+    public void AddNoMercyOpticalMedia_RegistersBothDiscIdentityReaders()
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddNoMercyOpticalMedia();
+
+        ServiceProvider provider = services.BuildServiceProvider();
+
+        IReadOnlyList<IDiscIdentityReader> readers = provider
+            .GetServices<IDiscIdentityReader>()
+            .ToList();
+
+        readers.Any(r => r.CanHandle(DiscKind.Hdmv)).Should().BeTrue();
+        readers.Any(r => r.CanHandle(DiscKind.Dvd)).Should().BeTrue();
+
+        DiscIdentityDispatcher dispatcher = provider.GetRequiredService<DiscIdentityDispatcher>();
+        dispatcher.Should().NotBeNull();
     }
 }

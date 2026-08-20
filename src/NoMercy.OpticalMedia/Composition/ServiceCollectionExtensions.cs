@@ -94,9 +94,9 @@ public static class ServiceCollectionExtensions
         // reader needs a fresh ILibBluray per read (it Opens/Disposes one
         // native handle per call), so it takes a factory rather than a
         // shared instance.
-        services.TryAddTransient<IDiscIdentityReader, DvdIdentityReader>();
-        services.TryAddTransient<IDiscIdentityReader>(_ => new BlurayIdentityReader(
-            () => new LibBlurayClient()
+        services.AddTransient<IDiscIdentityReader, DvdIdentityReader>();
+        services.AddTransient<IDiscIdentityReader>(_ => new BlurayIdentityReader(() =>
+            new LibBlurayClient()
         ));
         services.TryAddTransient<DiscIdentityDispatcher>();
 

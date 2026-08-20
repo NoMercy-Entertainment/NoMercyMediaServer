@@ -359,16 +359,11 @@ public class OpticalMediaController(
 
         DiscTitle title = await source.ProbeTitleAsync(drive, titleIndex, ct);
 
-        // "main_feature" vs "extra" is a duration ranking across every title
-        // on the disc, so it needs the cheap whole-disc probe alongside the
-        // detailed single-title one — the cheap probe already has every
-        // title's duration without re-reading streams for each of them.
-        DiscInfo discInfo = await source.ProbeAsync(drive, ct);
-        double maxDuration =
-            discInfo.Titles.Length > 0
-                ? discInfo.Titles.Max(t => t.Duration.TotalSeconds)
-                : title.Duration.TotalSeconds;
-        string kind = title.Duration.TotalSeconds >= maxDuration ? "main_feature" : "extra";
+        // "main_feature" vs "extra" now mirrors the pre-existing
+        // is_main_feature field on the same title object instead of a
+        // separate duration ranking, so the two fields can never disagree
+        // in one response — no whole-disc re-probe needed per title.
+        string kind = title.IsMainFeature ? "main_feature" : "extra";
 
         IReadOnlyList<double> chapterSeconds = ReadCatalogChapterSeconds(
             drive,
