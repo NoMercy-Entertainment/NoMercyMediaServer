@@ -7,8 +7,8 @@ Thank you for your interest in contributing to NoMercy MediaServer! This documen
 | Branch | Purpose | CI |
 |--------|---------|-----|
 | `wip` | Work in progress, not ready | None |
-| `dev` | Push here to release | Full pipeline |
-| `main` | Releases only | Automated |
+| `dev` | Integration branch; push here to trigger a release | Full pipeline |
+| `master` | Release mirror of `dev`, byte-identical after every release; never built directly | Automated |
 
 **Maintainers**: Push to `dev` when ready to release, `wip` when saving work.
 
@@ -38,13 +38,12 @@ git remote add upstream https://github.com/NoMercy-Entertainment/nomercy-media-s
 Always create a new branch for your changes:
 
 ```bash
-git checkout -b feature/your-feature-name
+git checkout -b feat/your-feature-name
 ```
 
 Use descriptive branch names:
-- `feature/add-dark-mode` - for new features
+- `feat/add-dark-mode` - for new features
 - `fix/video-encoding-bug` - for bug fixes
-- `refactor/cleanup-api` - for refactoring
 
 ## Development
 
@@ -73,13 +72,13 @@ dotnet run --project src/NoMercy.Service
 
 ## Commit Messages
 
-Write clear, descriptive commit messages that explain what changed. No special format required.
+Use Conventional Commits, `type(scope): description`.
 
 Examples:
 ```
-Add AV1 encoding support
-Fix null reference in playlist endpoint
-Update API documentation
+feat(encoder): add AV1 encoding support
+fix(api): fix null reference in playlist endpoint
+docs: update API documentation
 ```
 
 ## Submitting Changes
@@ -101,9 +100,9 @@ When your PR is merged to `dev`:
 
 1. Automated tests run
 2. Version is automatically incremented
-3. Changes are squash-merged to `main` with a changelog
-4. A new release is created with built executables
-5. `dev` is synced back to `main`
+3. `dev`'s tree is made byte-identical to `master` with a changelog commit
+4. A new release is created with built executables, targeting `master`
+5. `master` is never built directly; it exists only as the release mirror
 
 Your contribution will appear in the release notes!
 
