@@ -24,22 +24,51 @@ public class PluginLoadContext : AssemblyLoadContext
         : base(isCollectible: true)
     {
         _resolver = new(pluginPath);
-        _pluginDir = Path.GetDirectoryName(pluginPath)
-                     ?? throw new InvalidOperationException("Plugin directory could not be determined.");
+        _pluginDir =
+            Path.GetDirectoryName(pluginPath)
+            ?? throw new InvalidOperationException("Plugin directory could not be determined.");
 
         _sharedAssemblies = sharedAssemblies ?? PluginHostOptions.DefaultSharedAssemblies;
     }
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        // Shared assemblies → host resolves
+        // Shared assemblies → the host's own copy, by name. Returning null here
+        // used to mean "let the default context's own resolution handle it", but
+        // that resolution still matches by full AssemblyName including version —
+        // so a plugin built against a newer host release than this one is
+        // running (e.g. its manifest names NoMercy.Plugins.Abstractions 0.1.472
+        // while this process loaded 0.1.404) failed to load at all, even though
+        // the plugin declared itself ABI-compatible. A shared name is a promise
+        // the plugin runs against whatever the host already has loaded, not a
+        // specific build of it, so resolve it explicitly against the assemblies
+        // already loaded into the default context and ignore the version the
+        // plugin asked for.
         if (assemblyName.Name is not null && _sharedAssemblies.Contains(assemblyName.Name))
-            return null;
+        {
+            Assembly? alreadyLoaded = Default.Assemblies.FirstOrDefault(loaded =>
+                string.Equals(loaded.GetName().Name, assemblyName.Name, StringComparison.Ordinal)
+            );
+            if (alreadyLoaded is not null)
+                return alreadyLoaded;
+
+            // Nothing in the host has needed this shared assembly yet, so it
+            // isn't in Default.Assemblies to find. Load it into the default
+            // context by its bare name (ignoring the plugin's requested
+            // version, same promise as the already-loaded branch above) so
+            // the host ends up with exactly one copy regardless of which
+            // caller — host or plugin — happens to touch it first.
+            return Default.LoadFromAssemblyName(new(assemblyName.Name));
+        }
 
         // Framework assemblies → host resolves
-        if (assemblyName.Name is not null &&
-            (assemblyName.Name.StartsWith("System.", StringComparison.Ordinal) ||
-             assemblyName.Name == "System.Private.CoreLib"))
+        if (
+            assemblyName.Name is not null
+            && (
+                assemblyName.Name.StartsWith("System.", StringComparison.Ordinal)
+                || assemblyName.Name == "System.Private.CoreLib"
+            )
+        )
         {
             return null;
         }

@@ -34,6 +34,14 @@ public interface IMovieRepository
     Task LinkKeywordsToMovie(IEnumerable<KeywordMovie> keywordMovies);
     Task StoreGenres(IEnumerable<GenreMovie> genreMovies);
 
+    Task StoreAnimeThemes(IEnumerable<AnimeThemeMovie> animeThemeMovies);
+    Task StoreAnimeDemographics(IEnumerable<AnimeDemographicMovie> animeDemographicMovies);
+    Task StoreAnimeSeason(int movieId, int year, string quarter);
+    Task<int> ResolveAnimeThemeIdAsync(string name);
+    Task<int> ResolveAnimeDemographicIdAsync(string name);
+    Task<bool> HasAnimeThemesAsync(int movieId);
+    Task<bool> HasAnimeDemographicsAsync(int movieId);
+
     Task StoreWatchProviders(List<WatchProvider> watchProviders);
     Task StoreCompanies(List<Company> companies);
 

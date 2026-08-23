@@ -27,6 +27,12 @@ public class GenreWithCountsDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
+
+    // The untranslated genre name, e.g. "Action" even when Name is "Actie".
+    // Client-side icon/colour lookups switch on this literal English name, so
+    // it has to survive alongside the localized Name a translated response
+    // replaces it with.
+    public string CanonicalName { get; set; } = string.Empty;
     public int TotalMovies { get; set; }
     public int TotalTvShows { get; set; }
     public int MoviesWithVideo { get; set; }
@@ -457,6 +463,7 @@ public class GenreRepository(MediaContext context) : IGenreRepository
             {
                 Id = genre.Id,
                 Name = genre.TranslatedName ?? genre.Name,
+                CanonicalName = genre.Name,
                 TotalMovies = movieTotals.GetValueOrDefault(genre.Id),
                 TotalTvShows = tvTotals.GetValueOrDefault(genre.Id),
                 MoviesWithVideo = movieWithVideo.GetValueOrDefault(genre.Id),

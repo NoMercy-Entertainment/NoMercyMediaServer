@@ -45,6 +45,10 @@ public class Library : Timestamps
     [JsonProperty("auto_encode_on_scan")]
     public bool AutoEncodeOnScan { get; set; }
 
+    [Column("AutoConfirmDiscMatches")]
+    [JsonProperty("auto_confirm_disc_matches")]
+    public bool AutoConfirmDiscMatches { get; set; }
+
     [Column("EncodePresetId")]
     [JsonProperty("encode_preset_id")]
     public Ulid? EncodePresetId { get; set; }

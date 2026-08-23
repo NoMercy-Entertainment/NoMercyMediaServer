@@ -17,6 +17,10 @@ using Microsoft.EntityFrameworkCore;
 using NoMercy.Authorization;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
+using NoMercy.DiscFormat.Abstractions.Disc;
+using NoMercy.DiscFormat.Composition;
+using NoMercy.DiscFormat.Disc.Bdmv;
+using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.Events;
 using NoMercy.Events.FileWatcher;
@@ -37,7 +41,11 @@ namespace NoMercy.Api.Controllers.V1.Dashboard.Media;
 [ApiController]
 [Tags("Dashboard Optical")]
 [ApiVersion(1.0)]
-[Authorize(Policy = "Moderator")]
+// No class-level policy: read-only endpoints (drives/probe/title/play/stop)
+// accept OpticalAccess — a lighter permission a household member can hold
+// without full library access — while every write/config endpoint below
+// (open/close/process/confirm/rip) is individually Moderator-gated.
+[Authorize]
 [Route("api/v{version:apiVersion}/dashboard/optical")]
 public class OpticalMediaController(
     DiscSourceFactory discSourceFactory,
@@ -49,12 +57,14 @@ public class OpticalMediaController(
     ILiveDiscSession liveDiscSession,
     ILiveStreamingService liveStreamingService,
     ISessionManager sessionManager,
-    IDiscSessionRegistry discSessionRegistry
+    IDiscSessionRegistry discSessionRegistry,
+    DiscIdentityDispatcher discIdentityDispatcher
 ) : BaseController
 {
     // ── Legacy endpoints (re-pointed to Module A) ──────────────────────────
 
     [HttpGet("drives")]
+    [Authorize(Policy = "OpticalAccess")]
     public IActionResult GetOpticalDrives()
     {
         IEnumerable<object> drives = driveMonitor
@@ -72,6 +82,7 @@ public class OpticalMediaController(
     }
 
     [HttpGet("{drivePath}")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> GetDriveContents(string drivePath, CancellationToken ct)
     {
         DiscDrive? drive = FindDrive(drivePath);
@@ -113,12 +124,13 @@ public class OpticalMediaController(
                 open = false,
                 has_disc = true,
                 disc_type = drive.DiscType.ToString().ToLowerInvariant(),
-                disc = info,
+                disc = ProjectDiscInfo(info),
             }
         );
     }
 
     [HttpPost("{drivePath}/process")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult ProcessMedia(string drivePath)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -132,6 +144,7 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/open")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult OpenDrive(string drivePath)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -146,6 +159,7 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/close")]
+    [Authorize(Policy = "Moderator")]
     public IActionResult CloseDrive(string drivePath)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -160,9 +174,11 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/play/{playlistId}")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> PlayMedia(
         string drivePath,
         string playlistId,
+        [FromBody] PlayMediaRequest? request,
         CancellationToken ct
     )
     {
@@ -185,6 +201,11 @@ public class OpticalMediaController(
         if (!sessionManager.CanStartSession(User.UserId().ToString()))
             return ServiceUnavailableResponse("Maximum concurrent live sessions reached");
 
+        // Absent AudioTracks (older client, or a caller that just wants the
+        // default), fall back to the disc's first audio stream muxed into
+        // the single media playlist — the pre-existing behaviour.
+        AudioTrackSelection[] audioTracks = request?.AudioTracks ?? [];
+
         ILiveSession session;
         try
         {
@@ -193,6 +214,7 @@ public class OpticalMediaController(
                 titleIndex,
                 TimeSpan.Zero,
                 preferredQuality: null,
+                audioTracks,
                 ct
             );
         }
@@ -207,7 +229,16 @@ public class OpticalMediaController(
             session.SessionId
         );
 
-        string playlistUrl = $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
+        // Multiple selected audio tracks were spawned as separate renditions and
+        // stamped onto the runtime by LiveDiscSession — route the client to the
+        // master playlist so it sees every one; a single-track session keeps the
+        // plain media playlist it always used.
+        bool useMaster =
+            liveStreamingService.TryGetRuntime(session.SessionId, out LiveRuntimeSession runtime)
+            && runtime.AudioRenditions.Count > 0;
+        string playlistUrl = useMaster
+            ? $"/api/v1/streaming/live/sessions/{session.SessionId}/master.m3u8"
+            : $"/api/v1/streaming/live/sessions/{session.SessionId}/playlist.m3u8";
         LiveQuality quality = session.CurrentQuality;
 
         return Ok(
@@ -222,6 +253,7 @@ public class OpticalMediaController(
     }
 
     [HttpPost("{drivePath}/stop")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> StopMedia(string drivePath, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -249,6 +281,7 @@ public class OpticalMediaController(
     /// between metadata candidates.
     /// </summary>
     [HttpGet("{drivePath}/probe")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> ProbeDisc(string drivePath, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -276,6 +309,7 @@ public class OpticalMediaController(
 
         DiscInfo info = await source.ProbeAsync(drive, ct);
         DiscIdentification identification = await identificationService.IdentifyAsync(info, ct);
+        string? discIdentity = TryComputeDiscIdentity(drive, info);
 
         return Ok(
             new
@@ -284,10 +318,61 @@ public class OpticalMediaController(
                 label = info.DiscTitle ?? info.DiscLabel ?? drive.Label,
                 has_disc = true,
                 disc_type = drive.DiscType.ToString().ToLowerInvariant(),
-                disc = info,
-                candidates = identification.Candidates,
+                disc = ProjectDiscInfo(info),
+                candidates = identification.Candidates.Select(ProjectCandidate),
+                disc_identity = discIdentity,
             }
         );
+    }
+
+    /// <summary>
+    /// Detailed streams + chapters for one title on the disc in the given
+    /// drive. <see cref="ProbeDisc"/> only enumerates titles cheaply (name,
+    /// duration) — this is the per-title call the dashboard needs before it
+    /// can show real chapter counts or let the user pick audio/subtitle
+    /// tracks for a rip.
+    /// </summary>
+    [HttpGet("{drivePath}/title/{titleIndex:int}")]
+    [Authorize(Policy = "OpticalAccess")]
+    public async Task<IActionResult> ProbeTitle(
+        string drivePath,
+        int titleIndex,
+        CancellationToken ct
+    )
+    {
+        if (string.IsNullOrWhiteSpace(drivePath))
+            return BadRequestResponse("Drive path is required");
+
+        if (titleIndex < 0)
+            return BadRequestResponse("titleIndex must be a non-negative integer");
+
+        DiscDrive? drive = FindDrive(drivePath);
+        if (drive is null)
+            return NotFoundResponse($"No optical drive found at {drivePath}");
+
+        if (!drive.HasDisc)
+            return BadRequestResponse($"No disc loaded in drive {drivePath}");
+
+        IDiscSource? source = discSourceFactory.CreateFor(drive.DiscType);
+        if (source is null)
+            return BadRequestResponse($"No reader registered for disc type {drive.DiscType} (yet)");
+
+        DiscTitle title = await source.ProbeTitleAsync(drive, titleIndex, ct);
+
+        // "main_feature" vs "extra" now mirrors the pre-existing
+        // is_main_feature field on the same title object instead of a
+        // separate duration ranking, so the two fields can never disagree
+        // in one response — no whole-disc re-probe needed per title.
+        string kind = title.IsMainFeature ? "main_feature" : "extra";
+
+        IReadOnlyList<double> chapterSeconds = ReadCatalogChapterSeconds(
+            drive,
+            drive.DiscType,
+            titleIndex,
+            title
+        );
+
+        return Ok(ProjectTitle(title, chapterSeconds, kind));
     }
 
     /// <summary>
@@ -297,6 +382,7 @@ public class OpticalMediaController(
     /// can render a candidate picker before the user confirms.
     /// </summary>
     [HttpPost("{drivePath}/resolve")]
+    [Authorize(Policy = "OpticalAccess")]
     public async Task<IActionResult> ResolveDisc(string drivePath, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(drivePath))
@@ -321,23 +407,162 @@ public class OpticalMediaController(
                 disc_duration_sec = info.MainTitleDurationSec,
                 needs_manual = identification.NeedsManualAssignment,
                 auto_apply = identification.AutoApply,
-                candidates = identification
-                    .Candidates.Take(5)
-                    .Select(c => new
-                    {
-                        stable_id = c.StableId,
-                        media_type = c.Type?.ToString().ToLowerInvariant(),
-                        title = c.Title,
-                        year = c.Year,
-                        confidence = c.Confidence,
-                        poster_url = c.PosterUrl,
-                        backdrop_url = c.BackdropUrl,
-                        season_number = c.SeasonNumber,
-                        episode_number = c.EpisodeNumber,
-                    }),
+                candidates = identification.Candidates.Take(5).Select(ProjectCandidate),
             }
         );
     }
+
+    // ── Snake_case response projections ───────────────────────────────────
+    // NoMercy.Encoder.Analysis's stream/chapter records (VideoStreamInfo,
+    // AudioStreamInfo, SubtitleStreamInfo, ChapterInfo) are shared with the
+    // encoder pipeline and serialize camelCase by default — reshaping them
+    // globally would change output for unrelated endpoints. These project
+    // only the optical-media API surface to the snake_case shape every other
+    // dashboard endpoint already uses (see GetOpticalDrives above).
+
+    private static object ProjectCandidate(DiscCandidate c) =>
+        new
+        {
+            stable_id = c.StableId,
+            media_type = c.Type?.ToString().ToLowerInvariant(),
+            title = c.Title,
+            year = c.Year,
+            confidence = c.Confidence,
+            poster_url = c.PosterUrl,
+            backdrop_url = c.BackdropUrl,
+            season_number = c.SeasonNumber,
+            episode_number = c.EpisodeNumber,
+        };
+
+    private static object ProjectChapter(ChapterInfo c, int index) =>
+        new
+        {
+            number = index + 1,
+            timestamp = c.Start.ToString(@"hh\:mm\:ss"),
+            title = c.Title,
+        };
+
+    /// <summary>
+    /// Projects a title for the <c>/probe</c> disc-level listing, where no
+    /// disc-content-catalog chapter marks or cross-title duration ranking
+    /// have been computed (that only happens for the single title
+    /// <see cref="ProbeTitle"/> fetches in detail). Kept separate from the
+    /// per-title overload below so <c>/probe</c> stays the cheap call it's
+    /// documented as.
+    /// </summary>
+    private static object ProjectTitle(DiscTitle t) =>
+        new
+        {
+            index = t.Index,
+            name = t.Name,
+            duration = t.Duration.ToString(@"hh\:mm\:ss"),
+            video_streams = t.VideoStreams.Select(v => new
+            {
+                codec = v.Codec,
+                width = v.Width,
+                height = v.Height,
+                frame_rate = v.FrameRate,
+                bit_rate = v.BitRateKbps,
+            }),
+            audio_streams = t.AudioStreams.Select(a => new
+            {
+                codec = a.Codec,
+                channels = a.Channels,
+                sample_rate = a.SampleRate,
+                language = a.Language,
+            }),
+            subtitles = t.Subtitles.Select(s => new
+            {
+                codec = s.Codec,
+                language = s.Language,
+                forced = s.IsForced,
+            }),
+            chapters = t.Chapters.Select(ProjectChapter),
+            estimated_size_bytes = t.EstimatedSizeBytes,
+            is_main_feature = t.IsMainFeature,
+        };
+
+    /// <summary>
+    /// Projects the detailed single-title probe. Adds two new fields on top
+    /// of the existing shape — <c>chapter_marks</c> (the disc's real
+    /// chapter-mark seconds, from <see cref="DiscContentCatalog"/> on
+    /// Blu-ray or the analyzer's own chapter marks elsewhere) and
+    /// <c>kind</c> (the disc-wide duration ranking computed by the caller).
+    /// The existing <c>chapters</c> key keeps its original
+    /// <c>{number,timestamp,title}</c> shape and <c>name</c> keeps returning
+    /// <see cref="DiscTitle.Name"/> unchanged — compat-gate confirmed
+    /// nomercy-app-web reads both today (<c>ChapterInfo</c>/
+    /// <c>DiscTitleInfo</c> in <c>src/types/api/dashboard/ripper.ts</c>), so
+    /// reshaping or nulling them here would break that live client. The
+    /// "no disc format carries a real title name" fact from Task 1 is
+    /// therefore not surfaced as always-null on this shared key; a future
+    /// slice can add it under its own field name if a client needs it.
+    /// </summary>
+    private static object ProjectTitle(
+        DiscTitle t,
+        IReadOnlyList<double> chapterSeconds,
+        string kind
+    ) =>
+        new
+        {
+            index = t.Index,
+            name = t.Name,
+            duration = t.Duration.ToString(@"hh\:mm\:ss"),
+            video_streams = t.VideoStreams.Select(v => new
+            {
+                codec = v.Codec,
+                width = v.Width,
+                height = v.Height,
+                frame_rate = v.FrameRate,
+                bit_rate = v.BitRateKbps,
+            }),
+            audio_streams = t.AudioStreams.Select(a => new
+            {
+                codec = a.Codec,
+                channels = a.Channels,
+                sample_rate = a.SampleRate,
+                language = a.Language,
+            }),
+            subtitles = t.Subtitles.Select(s => new
+            {
+                codec = s.Codec,
+                language = s.Language,
+                forced = s.IsForced,
+            }),
+            chapters = t.Chapters.Select(ProjectChapter),
+            chapter_marks = chapterSeconds.Select(seconds => new { time_seconds = seconds }),
+            estimated_size_bytes = t.EstimatedSizeBytes,
+            is_main_feature = t.IsMainFeature,
+            kind,
+        };
+
+    private static object ProjectDiscInfo(DiscInfo info) =>
+        new
+        {
+            type = info.Type.ToString().ToLowerInvariant(),
+            disc_label = info.DiscLabel,
+            disc_title = info.DiscTitle,
+            titles = info.Titles.Select(ProjectTitle),
+            audio_tracks = info.AudioTracks?.Select(t => new
+            {
+                index = t.Index,
+                title = t.Title,
+                artist = t.Artist,
+                duration = t.Duration.ToString(@"hh\:mm\:ss"),
+                sample_rate = t.SampleRate,
+                channels = t.Channels,
+            }),
+            total_duration = info.TotalDuration.ToString(@"hh\:mm\:ss"),
+            protection = info.Protection is null
+                ? null
+                : new
+                {
+                    kind = info.Protection.Kind,
+                    volume_id = info.Protection.VolumeId,
+                    message = info.Protection.Message,
+                },
+            main_title_duration_sec = info.MainTitleDurationSec,
+        };
 
     /// <summary>
     /// Applies the user's chosen TMDB match to the rip output. Renames/moves
@@ -345,6 +570,7 @@ public class OpticalMediaController(
     /// library refresh so the file is picked up by the import pipeline.
     /// </summary>
     [HttpPost("{drivePath}/confirm")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> ConfirmDisc(
         string drivePath,
         [FromBody] DiscConfirmRequest request,
@@ -474,6 +700,7 @@ public class OpticalMediaController(
     /// destination folders so the background job never starts in a doomed state.
     /// </summary>
     [HttpPost("{drivePath}/rip")]
+    [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> RipDisc(
         string drivePath,
         [FromBody] RipRequest request,
@@ -579,6 +806,163 @@ public class OpticalMediaController(
 
     // ── Helpers ────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Real chapter-mark seconds for one title, sourced from
+    /// <see cref="DiscContentCatalog"/> — the vendored parser that reads a
+    /// Blu-ray playlist's own entry marks, never estimated or driven. Only
+    /// Blu-ray carries an .mpls to build the catalog from; DVD/CD titles
+    /// fall back to whatever chapter marks the per-title stream probe
+    /// already found (real ffprobe chapters, just not catalog-sourced) so
+    /// the field is never silently empty on formats Task 1 didn't cover.
+    /// </summary>
+    private IReadOnlyList<double> ReadCatalogChapterSeconds(
+        DiscDrive drive,
+        OpticalDiscType discType,
+        int titleIndex,
+        DiscTitle title
+    )
+    {
+        if (discType != OpticalDiscType.BluRay)
+            return [.. title.Chapters.Select(c => c.Start.TotalSeconds)];
+
+        try
+        {
+            string trimmed = drive.Path.TrimEnd('\\', '/');
+            string mplsPath = Path.Combine(trimmed, "BDMV", "PLAYLIST", $"{titleIndex:D5}.mpls");
+
+            if (!localStorageDriver.FileExists(mplsPath))
+                return [.. title.Chapters.Select(c => c.Start.TotalSeconds)];
+
+            using Stream stream = localStorageDriver.OpenRead(mplsPath);
+            using MemoryStream buffer = new();
+            stream.CopyTo(buffer);
+            MplsPlaylist playlist = MplsParser.Parse(buffer.ToArray());
+
+            IReadOnlyList<DiscContentTitle> catalog = DiscContentCatalog.Build(
+                new Dictionary<int, MplsPlaylist> { [titleIndex] = playlist }
+            );
+            DiscContentTitle? catalogued = catalog.FirstOrDefault(c => c.Playlist == titleIndex);
+
+            return catalogued is null || catalogued.ChapterTimes.Count == 0
+                ? [.. title.Chapters.Select(c => c.Start.TotalSeconds)]
+                : catalogued.ChapterTimes;
+        }
+        // Catalog enrichment is best-effort, same as the existing mpls
+        // language merge in BlurayDiscSource — a malformed/unreadable mpls
+        // must never fail the title probe. Bounded to the failure modes
+        // MplsParser/BigEndianReader and the storage read can genuinely
+        // produce for a truncated/corrupt/unreadable playlist file:
+        // InvalidDataException (bad MPLS signature), IndexOutOfRangeException
+        // and ArgumentOutOfRangeException (BigEndianReader/Span reads past
+        // the end of a truncated buffer), and IOException/
+        // UnauthorizedAccessException from the storage-driver file read.
+        // OperationCanceledException and anything else propagate.
+        catch (Exception ex)
+            when (ex
+                    is InvalidDataException
+                        or IndexOutOfRangeException
+                        or ArgumentOutOfRangeException
+                        or IOException
+                        or UnauthorizedAccessException
+            )
+        {
+            return [.. title.Chapters.Select(c => c.Start.TotalSeconds)];
+        }
+    }
+
+    /// <summary>
+    /// Disc structural identity via <see cref="DiscIdentityDispatcher"/>, for
+    /// disc kinds the dispatcher has a reader for. Best-effort — an
+    /// unsupported disc kind (CD) or a read failure (locked drive, missing
+    /// IFO/BDMV structure) yields null rather than failing the probe.
+    /// </summary>
+    private string? TryComputeDiscIdentity(DiscDrive drive, DiscInfo info)
+    {
+        // No identity reader exists for this disc kind (e.g. CD) — an
+        // expected, non-exceptional case, not a failure to swallow.
+        DiscKind? kind = drive.DiscType switch
+        {
+            OpticalDiscType.BluRay => DiscKind.Hdmv,
+            OpticalDiscType.Dvd => DiscKind.Dvd,
+            _ => null,
+        };
+
+        if (kind is null)
+            return null;
+
+        try
+        {
+            string discTitle = info.DiscTitle ?? info.DiscLabel ?? drive.Label ?? string.Empty;
+
+            DiscTranspileRequest request =
+                kind == DiscKind.Dvd
+                    ? new DiscTranspileRequest
+                    {
+                        Kind = kind.Value,
+                        DiscTitle = discTitle,
+                        IfoFiles = ReadDvdIfoFiles(drive.Path),
+                    }
+                    : new DiscTranspileRequest
+                    {
+                        Kind = kind.Value,
+                        DiscTitle = discTitle,
+                        DevicePath = drive.Path,
+                    };
+
+            return discIdentityDispatcher.Read(request).Id;
+        }
+        // Best-effort, mirroring ReadCatalogChapterSeconds — an unreadable
+        // drive or missing/malformed IFO/BDMV structure must never fail the
+        // disc probe. Bounded to what the readers and libbluray genuinely
+        // throw for those cases: InvalidOperationException (DvdIdentityReader
+        // /BlurayIdentityReader/LibBlurayClient's own "no data"/native-open
+        // failures) and NotSupportedException (dispatcher has no reader
+        // registered for this kind, e.g. Blu-ray support absent on this
+        // host), DllNotFoundException/EntryPointNotFoundException when the
+        // libbluray native library itself isn't installed on this host,
+        // plus IOException/UnauthorizedAccessException from reading the
+        // DVD's IFO files off the storage driver. OperationCanceledException
+        // and anything else propagate.
+        catch (Exception ex)
+            when (ex
+                    is InvalidOperationException
+                        or NotSupportedException
+                        or DllNotFoundException
+                        or EntryPointNotFoundException
+                        or IOException
+                        or UnauthorizedAccessException
+            )
+        {
+            return null;
+        }
+    }
+
+    private IReadOnlyDictionary<string, byte[]> ReadDvdIfoFiles(string drivePath)
+    {
+        string trimmed = drivePath.TrimEnd('\\', '/');
+        string videoTsDir = Path.Combine(trimmed, "VIDEO_TS");
+
+        if (!localStorageDriver.DirectoryExists(videoTsDir))
+            return new Dictionary<string, byte[]>();
+
+        Dictionary<string, byte[]> files = new(StringComparer.OrdinalIgnoreCase);
+        foreach (
+            string path in localStorageDriver.EnumerateFileSystemEntries(
+                videoTsDir,
+                "*.IFO",
+                SearchOption.TopDirectoryOnly
+            )
+        )
+        {
+            using Stream stream = localStorageDriver.OpenRead(path);
+            using MemoryStream buffer = new();
+            stream.CopyTo(buffer);
+            files[Path.GetFileName(path)] = buffer.ToArray();
+        }
+
+        return files;
+    }
+
     private DiscDrive? FindDrive(string drivePath) =>
         driveMonitor
             .GetDrives()
@@ -619,6 +1003,15 @@ public class OpticalMediaController(
 /// <summary>
 /// Request body for <c>POST /optical/{drivePath}/confirm</c>.
 /// </summary>
+/// <summary>
+/// Request body for <c>POST /optical/{drivePath}/play/{playlistId}</c>. Reuses
+/// the rip endpoint's <see cref="AudioTrackSelection"/> shape so the dashboard
+/// client sends the same <c>{ StreamIndex, Include }</c> pairs it already
+/// builds for <see cref="RipRequest.AudioTracks"/> — no parallel DTO. Omitted
+/// or empty keeps the pre-existing single-default-track behaviour.
+/// </summary>
+public record PlayMediaRequest(AudioTrackSelection[]? AudioTracks = null);
+
 public record DiscConfirmRequest(
     string TmdbId,
     /// <summary>"movie" or "tv"</summary>

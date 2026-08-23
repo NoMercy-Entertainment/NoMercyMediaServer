@@ -53,7 +53,12 @@ public class AudioImportJob : AbstractMusicFolderJob
         : base(storageFactory, storageDriver, audioFingerprinter, loggerFactory) { }
 
     public override string QueueName => "import";
-    public override int Priority => 6;
+
+    // Was 6 (above Movie/ShowImportJob's 5): with the "import" queue's
+    // priority-DESC ordering, that let a large audio backlog systematically
+    // starve video imports indefinitely rather than interleaving with them
+    // by creation order. Parity with Movie/ShowImportJob restores fairness.
+    public override int Priority => 5;
 
     private MediaFolderExtend? _rootFolder;
 
@@ -517,6 +522,16 @@ public class AudioImportJob : AbstractMusicFolderJob
             if (!resolvedFileByTrackId.TryGetValue(musicBrainzTrack.Id, out MediaFile? mediaFile))
                 continue;
 
+            if (musicBrainzTrack.Recording.Id == Guid.Empty)
+            {
+                Log.LogWarning(
+                    "AudioImportJob: track {Track} in release {ReleaseId} has no recording id; skipping recording lookup",
+                    musicBrainzTrack.Title,
+                    release.Id
+                );
+                continue;
+            }
+
             MusicBrainzRecordingAppends? musicBrainzRecording =
                 await musicBrainzRecordingClient.WithAllAppends(musicBrainzTrack.Recording.Id);
             if (musicBrainzRecording is null)
@@ -533,21 +548,39 @@ public class AudioImportJob : AbstractMusicFolderJob
                 coverPalette
             );
 
-            Log.LogInformation(
-                "AudioImportJob: encoding {Track} from {File}",
-                musicBrainzTrack.Title,
-                mediaFile.Path
-            );
+            // Same per-library opt-in AutoEncodeSubscriber already enforces for
+            // video — a preset assignment is "the preset to use when I encode",
+            // not "re-encode everything the moment it is scanned". Without this
+            // gate music had no opt-out at all: every import, including an
+            // already-playable MP3, was unconditionally transcoded through
+            // ffmpeg regardless of the library's own auto-encode setting.
+            if (!albumLibrary.AutoEncodeOnScan)
+            {
+                Log.LogDebug(
+                    "Auto-encode-on-scan is off for library {LibraryId}; {Track} from {File} stored, encode skipped",
+                    albumLibrary.Id,
+                    musicBrainzTrack.Title,
+                    mediaFile.Path
+                );
+            }
+            else
+            {
+                Log.LogInformation(
+                    "AudioImportJob: encoding {Track} from {File}",
+                    musicBrainzTrack.Title,
+                    mediaFile.Path
+                );
 
-            await MusicEncodeDispatcher.Dispatch(
-                StorageFactory,
-                albumLibrary,
-                folderLibrary,
-                release,
-                musicBrainzTrack,
-                mediaFile,
-                InputFolder
-            );
+                await MusicEncodeDispatcher.Dispatch(
+                    StorageFactory,
+                    albumLibrary,
+                    folderLibrary,
+                    release,
+                    musicBrainzTrack,
+                    mediaFile,
+                    InputFolder
+                );
+            }
 
             foreach (MusicBrainzArtistCredit artistCredit in musicBrainzRecording.ArtistCredit)
             {

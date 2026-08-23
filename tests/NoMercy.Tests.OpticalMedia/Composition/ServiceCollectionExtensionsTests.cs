@@ -64,6 +64,7 @@ public class ServiceCollectionExtensionsTests
         services.AddSingleton(Mock.Of<IStorageDriver>());
         services.AddSingleton(Mock.Of<IMediaAnalyzer>());
         services.AddSingleton(Mock.Of<ILiveEncoder>());
+        services.AddSingleton(Mock.Of<ILiveStreamingService>());
 
         services.AddNoMercyOpticalMedia();
         return services.BuildServiceProvider();

@@ -27,6 +27,8 @@ using NoMercy.MediaProcessing.Episodes;
 using NoMercy.MediaProcessing.Seasons;
 using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem;
+using NoMercy.Providers.AniList;
+using NoMercy.Providers.Jikan;
 using NoMercy.Providers.TMDB.Models.Season;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercy.Storage;
@@ -59,11 +61,23 @@ public class ShowImportJob : AbstractMediaJob
         JobDispatcher jobDispatcher = new();
 
         ShowRepository showRepository = new(context);
+        MediaTypeClassifier mediaTypeClassifier = new(
+            new AniListMetadataProvider(),
+            new JikanMetadataProvider()
+        );
+        AnimeEnrichmentService animeEnrichmentService = new(
+            mediaTypeClassifier,
+            new AniListMetadataProvider(),
+            new JikanMetadataProvider(),
+            showRepository,
+            new NoMercy.MediaProcessing.Movies.MovieRepository(context)
+        );
         ShowManager showManager = new(
             showRepository,
             jobDispatcher,
             StorageFactory,
-            new MediaTypeClassifier(),
+            mediaTypeClassifier,
+            animeEnrichmentService,
             LoggerFactory.CreateLogger<ShowManager>()
         );
 

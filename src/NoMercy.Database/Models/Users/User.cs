@@ -20,6 +20,7 @@ namespace NoMercy.Database.Models.Users;
 [Index(nameof(Allowed))]
 [Index(nameof(Owner))]
 [Index(nameof(Manage))]
+[Index(nameof(OpticalAccess))]
 [PrimaryKey(nameof(Id))]
 public class User : Timestamps
 {
@@ -41,6 +42,16 @@ public class User : Timestamps
 
     [JsonProperty("allowed")]
     public bool Allowed { get; set; }
+
+    /// <summary>
+    /// Read-only physical optical drive access: probing discs, browsing
+    /// titles, and watching live — never ripping, ejecting, or changing
+    /// server configuration. Distinct from <see cref="Allowed"/> (full
+    /// library access) since a household member might get one without
+    /// the other.
+    /// </summary>
+    [JsonProperty("optical_access")]
+    public bool OpticalAccess { get; set; }
 
     [JsonProperty("audio_transcoding")]
     public bool AudioTranscoding { get; set; }

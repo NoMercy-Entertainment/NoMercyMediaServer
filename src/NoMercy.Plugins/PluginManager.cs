@@ -192,7 +192,43 @@ public class PluginManager : IPluginManager, IDisposable
         }
 
         string destPath = _storage.CombinePath(pluginDir, Path.GetFileName(fullPath));
-        _driver.CopyFile(fullPath, destPath, overwrite: true);
+
+        // The destination may be a running plugin's own assembly: on Windows a
+        // loaded ALC keeps its file open, so the copy below fails with an
+        // IOException/UnauthorizedAccessException rather than a missing-file
+        // error. That used to reach the caller as a raw 422 stack trace. The
+        // archive install path already treats "still loaded" as the expected
+        // outcome of updating a running plugin rather than a failure; this
+        // mirrors it for a bare-assembly install by staging the copy and
+        // letting the next boot's ApplyPendingUpdates() apply it, instead of
+        // erroring the request.
+        try
+        {
+            _driver.CopyFile(fullPath, destPath, overwrite: true);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            string staging = _storage.CombinePath(_pluginsPath, PendingUpdatesFolder, pluginName);
+
+            if (_driver.DirectoryExists(staging))
+            {
+                _driver.DeleteDirectory(staging, recursive: true);
+            }
+
+            _driver.CreateDirectory(staging);
+            _driver.CopyFile(
+                fullPath,
+                _storage.CombinePath(staging, Path.GetFileName(fullPath)),
+                overwrite: true
+            );
+
+            _logger.LogInformation(
+                "Plugin update for {Folder} is staged: its assembly is still loaded, so it is applied on the next start.",
+                pluginName
+            );
+
+            throw new PluginUpdatePendingRestartException(pluginName);
+        }
 
         await LoadPluginAssemblyAsync(destPath, ct);
     }

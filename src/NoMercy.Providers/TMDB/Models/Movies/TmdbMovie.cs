@@ -36,4 +36,7 @@ public class TmdbMovie : TmdbBase
 
     [JsonProperty("video")]
     public bool? Video { get; set; }
+
+    [JsonProperty("origin_country")]
+    public string[] OriginCountry { get; set; } = [];
 }

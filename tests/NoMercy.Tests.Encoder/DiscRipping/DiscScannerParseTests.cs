@@ -71,7 +71,10 @@ public class DiscScannerParseTests
         info.Titles.Should().HaveCount(1);
 
         DiscTitle title = info.Titles[0];
-        title.IsMainFeature.Should().BeTrue();
+        // A lone title has no siblings to rank against, so Parse defaults this
+        // to false; the caller (a per-title probe against a real drive) is
+        // responsible for re-stamping it once it can compare durations.
+        title.IsMainFeature.Should().BeFalse();
         title.VideoStreams.Should().HaveCount(1);
         title.VideoStreams[0].Codec.Should().Be("hevc");
         title.VideoStreams[0].Width.Should().Be(1920);

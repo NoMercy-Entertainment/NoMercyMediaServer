@@ -78,8 +78,7 @@ public static partial class PicardNaming
             MusicAlbumType.Classical => $"{ClassicalFolder}/{year} {album}",
             MusicAlbumType.Soundtrack => $"{SoundtrackFolder}/{year} {album}",
             MusicAlbumType.Other => $"{OtherFolder}/{year} {album}",
-            MusicAlbumType.Single =>
-                $"{Initial(context.AlbumArtistSort)}/{Fallback(context.AlbumArtistSort, UnknownArtistFolder)}/{SinglesFolder}",
+            MusicAlbumType.Single => SingleArtistPath(context),
             _ => StandardPath(context, year, album),
         };
     }
@@ -105,8 +104,20 @@ public static partial class PicardNaming
         )
             return $"{UnknownArtistFolder}/{year} {album}";
 
-        string artist = Fallback(context.AlbumArtistSort, UnknownArtistFolder);
+        string artist = Fallback(
+            context.AlbumArtistPrimary ?? context.AlbumArtistSort,
+            UnknownArtistFolder
+        );
         return $"{Initial(artist)}/{artist}/{year} {album}";
+    }
+
+    private static string SingleArtistPath(MusicNamingContext context)
+    {
+        string artist = Fallback(
+            context.AlbumArtistPrimary ?? context.AlbumArtistSort,
+            UnknownArtistFolder
+        );
+        return $"{Initial(artist)}/{artist}/{SinglesFolder}";
     }
 
     public static string BuildFileName(MusicNamingContext context)

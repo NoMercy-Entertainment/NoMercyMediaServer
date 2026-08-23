@@ -13,6 +13,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NoMercy.Api.DTOs.Common;
 using NoMercy.Api.DTOs.Dashboard;
 using NoMercy.Api.DTOs.Media;
@@ -152,6 +153,44 @@ public class SetupController(
                     routeType: "library"
                 )
             );
+
+            // Only surfaced once the user actually has anime — these tables stay
+            // empty for a library with no anime, and there is no point offering
+            // a browse entry that always renders an empty grid.
+            bool hasAnime =
+                await context.AnimeThemeTv.AsNoTracking().AnyAsync(ct)
+                || await context.AnimeThemeMovie.AsNoTracking().AnyAsync(ct);
+
+            if (hasAnime)
+            {
+                entries.Add(
+                    Page(
+                        id: "anime-themes",
+                        label: "library.base.anime_themes",
+                        icon: "witchHat",
+                        link: "/anime/themes",
+                        routeType: "library"
+                    )
+                );
+                entries.Add(
+                    Page(
+                        id: "anime-demographics",
+                        label: "library.base.anime_demographics",
+                        icon: "user",
+                        link: "/anime/demographics",
+                        routeType: "library"
+                    )
+                );
+                entries.Add(
+                    Page(
+                        id: "anime-seasons",
+                        label: "library.base.anime_seasons",
+                        icon: "collection1",
+                        link: "/anime/seasons",
+                        routeType: "library"
+                    )
+                );
+            }
         }
 
         entries.AddRange(PluginEntries(PluginKind.Library, PluginKind.Video));
@@ -338,6 +377,7 @@ public class SetupController(
                 owner = AuthPolicy.IsOwner(User),
                 manager = AuthPolicy.IsModerator(User),
                 allowed = AuthPolicy.IsAllowed(User),
+                optical_access = AuthPolicy.IsOpticalAccess(User),
             }
         );
     }

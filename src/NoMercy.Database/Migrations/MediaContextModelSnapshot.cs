@@ -17,6 +17,65 @@ namespace NoMercy.Database.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.7");
 
+            modelBuilder.Entity("NoMercy.Database.Models.Common.AnimeDemographic", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("AnimeDemographics");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Common.AnimeSeason", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Quarter")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Quarter");
+
+                    b.HasIndex("Year");
+
+                    b.ToTable("AnimeSeasons");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Common.AnimeTheme", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("AnimeThemes");
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Common.Certification", b =>
                 {
                     b.Property<int>("Id")
@@ -486,6 +545,10 @@ namespace NoMercy.Database.Migrations
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("AutoConfirmDiscMatches")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("AutoConfirmDiscMatches");
 
                     b.Property<bool>("AutoEncodeOnScan")
                         .HasColumnType("INTEGER")
@@ -1258,6 +1321,12 @@ namespace NoMercy.Database.Migrations
                     b.Property<Guid?>("AlbumId")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("AnimeDemographicId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("AnimeThemeId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("ArtistId")
                         .HasColumnType("TEXT");
 
@@ -1336,6 +1405,10 @@ namespace NoMercy.Database.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AlbumId");
+
+                    b.HasIndex("AnimeDemographicId");
+
+                    b.HasIndex("AnimeThemeId");
 
                     b.HasIndex("ArtistId");
 
@@ -1521,6 +1594,57 @@ namespace NoMercy.Database.Migrations
                         {
                             t.HasTrigger("update_VideoFiles_updated_at");
                         });
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Movies.AnimeDemographicMovie", b =>
+                {
+                    b.Property<int>("AnimeDemographicId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AnimeDemographicId", "MovieId");
+
+                    b.HasIndex("AnimeDemographicId");
+
+                    b.HasIndex("MovieId");
+
+                    b.ToTable("AnimeDemographicMovie");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Movies.AnimeSeasonMovie", b =>
+                {
+                    b.Property<int>("AnimeSeasonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AnimeSeasonId", "MovieId");
+
+                    b.HasIndex("AnimeSeasonId");
+
+                    b.HasIndex("MovieId");
+
+                    b.ToTable("AnimeSeasonMovie");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Movies.AnimeThemeMovie", b =>
+                {
+                    b.Property<int>("AnimeThemeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MovieId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AnimeThemeId", "MovieId");
+
+                    b.HasIndex("AnimeThemeId");
+
+                    b.HasIndex("MovieId");
+
+                    b.ToTable("AnimeThemeMovie");
                 });
 
             modelBuilder.Entity("NoMercy.Database.Models.Movies.CertificationMovie", b =>
@@ -1783,6 +1907,10 @@ namespace NoMercy.Database.Migrations
 
                     b.Property<string>("LibraryId")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginCountry")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalLanguage")
@@ -3419,6 +3547,57 @@ namespace NoMercy.Database.Migrations
                     b.ToTable("Drivers");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.TvShows.AnimeDemographicTv", b =>
+                {
+                    b.Property<int>("AnimeDemographicId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TvId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AnimeDemographicId", "TvId");
+
+                    b.HasIndex("AnimeDemographicId");
+
+                    b.HasIndex("TvId");
+
+                    b.ToTable("AnimeDemographicTv");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.TvShows.AnimeSeasonTv", b =>
+                {
+                    b.Property<int>("AnimeSeasonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TvId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AnimeSeasonId", "TvId");
+
+                    b.HasIndex("AnimeSeasonId");
+
+                    b.HasIndex("TvId");
+
+                    b.ToTable("AnimeSeasonTv");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.TvShows.AnimeThemeTv", b =>
+                {
+                    b.Property<int>("AnimeThemeId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TvId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AnimeThemeId", "TvId");
+
+                    b.HasIndex("AnimeThemeId");
+
+                    b.HasIndex("TvId");
+
+                    b.ToTable("AnimeThemeTv");
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.TvShows.CertificationTv", b =>
                 {
                     b.Property<int>("CertificationId")
@@ -4460,6 +4639,9 @@ namespace NoMercy.Database.Migrations
                     b.Property<bool>("NoTranscoding")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("OpticalAccess")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("Owner")
                         .HasColumnType("INTEGER");
 
@@ -4482,6 +4664,8 @@ namespace NoMercy.Database.Migrations
                     b.HasIndex("Manage");
 
                     b.HasIndex("Name");
+
+                    b.HasIndex("OpticalAccess");
 
                     b.HasIndex("Owner");
 
@@ -4869,6 +5053,16 @@ namespace NoMercy.Database.Migrations
                         .HasForeignKey("AlbumId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NoMercy.Database.Models.Common.AnimeDemographic", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("AnimeDemographicId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NoMercy.Database.Models.Common.AnimeTheme", null)
+                        .WithMany("Translations")
+                        .HasForeignKey("AnimeThemeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NoMercy.Database.Models.Music.Artist", "Artist")
                         .WithMany("Translations")
                         .HasForeignKey("ArtistId")
@@ -4955,6 +5149,63 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("Episode");
 
                     b.Navigation("Metadata");
+
+                    b.Navigation("Movie");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Movies.AnimeDemographicMovie", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Common.AnimeDemographic", "AnimeDemographic")
+                        .WithMany("AnimeDemographicMovies")
+                        .HasForeignKey("AnimeDemographicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
+                        .WithMany("AnimeDemographicMovies")
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnimeDemographic");
+
+                    b.Navigation("Movie");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Movies.AnimeSeasonMovie", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Common.AnimeSeason", "AnimeSeason")
+                        .WithMany("AnimeSeasonMovies")
+                        .HasForeignKey("AnimeSeasonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
+                        .WithMany("AnimeSeasonMovies")
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnimeSeason");
+
+                    b.Navigation("Movie");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Movies.AnimeThemeMovie", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Common.AnimeTheme", "AnimeTheme")
+                        .WithMany("AnimeThemeMovies")
+                        .HasForeignKey("AnimeThemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.Movies.Movie", "Movie")
+                        .WithMany("AnimeThemeMovies")
+                        .HasForeignKey("MovieId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnimeTheme");
 
                     b.Navigation("Movie");
                 });
@@ -5796,6 +6047,63 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.TvShows.AnimeDemographicTv", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Common.AnimeDemographic", "AnimeDemographic")
+                        .WithMany("AnimeDemographicTvShows")
+                        .HasForeignKey("AnimeDemographicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
+                        .WithMany("AnimeDemographicTvs")
+                        .HasForeignKey("TvId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnimeDemographic");
+
+                    b.Navigation("Tv");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.TvShows.AnimeSeasonTv", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Common.AnimeSeason", "AnimeSeason")
+                        .WithMany("AnimeSeasonTvShows")
+                        .HasForeignKey("AnimeSeasonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
+                        .WithMany("AnimeSeasonTvs")
+                        .HasForeignKey("TvId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnimeSeason");
+
+                    b.Navigation("Tv");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.TvShows.AnimeThemeTv", b =>
+                {
+                    b.HasOne("NoMercy.Database.Models.Common.AnimeTheme", "AnimeTheme")
+                        .WithMany("AnimeThemeTvShows")
+                        .HasForeignKey("AnimeThemeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NoMercy.Database.Models.TvShows.Tv", "Tv")
+                        .WithMany("AnimeThemeTvs")
+                        .HasForeignKey("TvId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AnimeTheme");
+
+                    b.Navigation("Tv");
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.TvShows.CertificationTv", b =>
                 {
                     b.HasOne("NoMercy.Database.Models.Common.Certification", "Certification")
@@ -6201,6 +6509,31 @@ namespace NoMercy.Database.Migrations
                     b.Navigation("VideoFile");
                 });
 
+            modelBuilder.Entity("NoMercy.Database.Models.Common.AnimeDemographic", b =>
+                {
+                    b.Navigation("AnimeDemographicMovies");
+
+                    b.Navigation("AnimeDemographicTvShows");
+
+                    b.Navigation("Translations");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Common.AnimeSeason", b =>
+                {
+                    b.Navigation("AnimeSeasonMovies");
+
+                    b.Navigation("AnimeSeasonTvShows");
+                });
+
+            modelBuilder.Entity("NoMercy.Database.Models.Common.AnimeTheme", b =>
+                {
+                    b.Navigation("AnimeThemeMovies");
+
+                    b.Navigation("AnimeThemeTvShows");
+
+                    b.Navigation("Translations");
+                });
+
             modelBuilder.Entity("NoMercy.Database.Models.Common.Company", b =>
                 {
                     b.Navigation("CompanyMovie");
@@ -6273,6 +6606,12 @@ namespace NoMercy.Database.Migrations
             modelBuilder.Entity("NoMercy.Database.Models.Movies.Movie", b =>
                 {
                     b.Navigation("AlternativeTitles");
+
+                    b.Navigation("AnimeDemographicMovies");
+
+                    b.Navigation("AnimeSeasonMovies");
+
+                    b.Navigation("AnimeThemeMovies");
 
                     b.Navigation("Cast");
 
@@ -6476,6 +6815,12 @@ namespace NoMercy.Database.Migrations
             modelBuilder.Entity("NoMercy.Database.Models.TvShows.Tv", b =>
                 {
                     b.Navigation("AlternativeTitles");
+
+                    b.Navigation("AnimeDemographicTvs");
+
+                    b.Navigation("AnimeSeasonTvs");
+
+                    b.Navigation("AnimeThemeTvs");
 
                     b.Navigation("Cast");
 

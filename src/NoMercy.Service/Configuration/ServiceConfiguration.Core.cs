@@ -64,6 +64,8 @@ using NoMercy.OpticalMedia.Composition;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Hub;
 using NoMercy.Providers.AniDb.Client;
+using NoMercy.Providers.AniList;
+using NoMercy.Providers.Jikan;
 using NoMercy.Providers.Lyrics;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Queue.MediaServer;
@@ -180,6 +182,20 @@ public static partial class ServiceConfiguration
 
         services.AddSingleton<IApiKeyStore, ApiKeyStore>();
         services.AddSingleton<IAniDbService, AniDbService>();
+        int aniListRequestIntervalMs = configuration.GetValue(
+            "Providers:AniList:RequestIntervalMs",
+            2000
+        );
+        services.AddSingleton<IAniListMetadataProvider>(_ => new AniListMetadataProvider(
+            aniListRequestIntervalMs
+        ));
+        int jikanRequestIntervalMs = configuration.GetValue(
+            "Providers:Jikan:RequestIntervalMs",
+            350
+        );
+        services.AddSingleton<IJikanMetadataProvider>(_ => new JikanMetadataProvider(
+            jikanRequestIntervalMs
+        ));
         services.AddSingleton<ILyricsAggregator, LyricsAggregator>();
         services.AddSingleton<IApiKeyLoader, ApiKeyLoader>();
         services.AddSingleton<IServerRegistrationService, ServerRegistrationService>();
@@ -506,6 +522,9 @@ public static partial class ServiceConfiguration
         services.AddScoped<IEncodingHistoryRepository, EncodingHistoryRepository>();
         services.AddScoped<IEncodingPresetRepository, EncodingPresetRepository>();
         services.AddScoped<IFolderRepository, FolderRepository>();
+        services.AddScoped<IAnimeThemeRepository, AnimeThemeRepository>();
+        services.AddScoped<IAnimeDemographicRepository, AnimeDemographicRepository>();
+        services.AddScoped<IAnimeSeasonRepository, AnimeSeasonRepository>();
         services.AddScoped<IGenreRepository, GenreRepository>();
         services.AddScoped<IHomeRepository, HomeRepository>();
         services.AddScoped<ILanguageRepository, LanguageRepository>();
@@ -532,11 +551,12 @@ public static partial class ServiceConfiguration
         services.AddScoped<MovieManager>();
         services.AddScoped<CollectionManager>();
         services.AddScoped<ShowManager>();
-        // Singleton: stateless (delegates to the static KitsuIoClient) and
-        // consumed by the singleton InboxClassifier — a Scoped registration
-        // would be a captive dependency there.
+        // Singleton: stateless (delegates to the singleton AniList/Jikan
+        // providers) and consumed by the singleton InboxClassifier — a Scoped
+        // registration would be a captive dependency there.
         services.AddSingleton<IMediaTypeClassifier, MediaTypeClassifier>();
         services.AddScoped<IAnimeClassificationAuditService, AnimeClassificationAuditService>();
+        services.AddScoped<IAnimeEnrichmentService, AnimeEnrichmentService>();
         services.AddScoped<SeasonManager>();
         services.AddScoped<EpisodeManager>();
         services.AddScoped<PersonManager>();
@@ -630,6 +650,7 @@ public static partial class ServiceConfiguration
         services.AddHostedService<AutoEncodeSubscriber>();
         services.AddHostedService<IntroDetectionSubscriber>();
         services.AddHostedService<PaletteBackfillStartupService>();
+        services.AddHostedService<AnimeEnrichmentBackfillStartupService>();
         services.AddHostedService<MusicQueryWarmupService>();
         // Singleton, not scoped: the startup service that consumes it is one,
         // and the repair itself holds only a context factory and a logger.

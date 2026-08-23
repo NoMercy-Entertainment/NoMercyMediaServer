@@ -4,6 +4,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>NoMercy.OpticalMedia</RootNamespace>
     <AssemblyName>NoMercy.OpticalMedia</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +27,28 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="TagLibSharp" />
-    <PackageReference Include="System.Management" Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))" />
+    <PackageReference
+      Include="System.Management"
+      Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))"
+    />
+  </ItemGroup>
+
+  <!-- Vendored libbluray native binaries for DiscFormat/Infra/LibBluray/BlurayIdentityReader
+       (identity-hash reads only, no BD-J/JVM path). Copied into a native/ subfolder for
+       LibBlurayResolver, and flat into the output root so libbluray's own dlopen calls for
+       libaacs/libbdplus and their deps resolve from the same directory. -->
+  <ItemGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">
+    <None
+      Include="$(MSBuildThisFileDirectory)Sources\DiscFormat\Infra\LibBluray\native-bin\*.dll"
+      CopyToOutputDirectory="PreserveNewest"
+      TargetPath="native\%(Filename)%(Extension)"
+      Visible="false"
+    />
+    <None
+      Include="$(MSBuildThisFileDirectory)Sources\DiscFormat\Infra\LibBluray\native-bin\*.dll"
+      CopyToOutputDirectory="PreserveNewest"
+      TargetPath="%(Filename)%(Extension)"
+      Visible="false"
+    />
   </ItemGroup>
 </Project>

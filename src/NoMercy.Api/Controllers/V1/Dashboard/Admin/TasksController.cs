@@ -1120,14 +1120,17 @@ public class TasksController(
             counts.FirstOrDefault(row => row.Kind == "maintenance")?.Pending ?? 0;
 
         return Ok(
-            new
+            new DataResponseDto<object>
             {
-                paused,
-                pending = videoPending + maintenancePending + albums,
-                running = counts.Sum(row => row.Running),
-                video = videoPending,
-                music = albums,
-                maintenance = maintenancePending,
+                Data = new
+                {
+                    paused,
+                    pending = videoPending + maintenancePending + albums,
+                    running = counts.Sum(row => row.Running),
+                    video = videoPending,
+                    music = albums,
+                    maintenance = maintenancePending,
+                },
             }
         );
     }

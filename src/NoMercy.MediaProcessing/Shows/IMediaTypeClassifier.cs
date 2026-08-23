@@ -29,8 +29,8 @@ public interface IMediaTypeClassifier
 
     /// <summary>
     /// <paramref name="originCountry"/> is optional context, not a required
-    /// argument — pass it whenever it's on hand (it guards against Kitsu's
-    /// community catalogue listing non-Japanese co-productions, e.g. Avatar: The
+    /// argument — pass it whenever it's on hand (it guards against AniList/Jikan
+    /// listing non-Japanese co-productions, e.g. Avatar: The
     /// Last Airbender, that a title match alone would misread as confirmed anime).
     /// Omit it only where it is genuinely unavailable, e.g. classifying a raw
     /// filename before any provider metadata exists.

@@ -22,4 +22,12 @@ public interface IMediaAuthorizationPolicy
     bool IsOwner(ClaimsPrincipal? principal);
     bool IsModerator(ClaimsPrincipal? principal);
     bool IsAllowed(ClaimsPrincipal? principal);
+
+    /// <summary>
+    /// Read-only optical-drive access — probing discs, browsing titles,
+    /// watching live. A household member can hold this without full
+    /// library access (<see cref="IsAllowed"/>), and moderators/the owner
+    /// always have it implicitly.
+    /// </summary>
+    bool IsOpticalAccess(ClaimsPrincipal? principal);
 }

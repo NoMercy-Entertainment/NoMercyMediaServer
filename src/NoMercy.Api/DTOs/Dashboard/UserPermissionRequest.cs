@@ -28,6 +28,9 @@ public record UserPermissionRequest
     [JsonProperty("allowed")]
     public bool Allowed { get; set; }
 
+    [JsonProperty("optical_access")]
+    public bool OpticalAccess { get; set; }
+
     [JsonProperty("audio_transcoding")]
     public bool AudioTranscoding { get; set; }
 
@@ -51,6 +54,7 @@ public record UserPermissionRequest
         Manage = user.Manage;
         Owner = user.Owner;
         Allowed = user.Allowed;
+        OpticalAccess = user.OpticalAccess;
         AudioTranscoding = user.AudioTranscoding;
         VideoTranscoding = user.VideoTranscoding;
         NoTranscoding = user.NoTranscoding;

@@ -12,7 +12,7 @@
 namespace NoMercy.MediaProcessing.Shows;
 
 /// <summary>
-/// A Tv row whose Kitsu-classified media type disagrees with the Type of the
+/// A Tv row whose AniList/Jikan-classified media type disagrees with the Type of the
 /// Library it is currently filed under.
 /// </summary>
 public sealed record AnimeClassificationMismatch(
@@ -24,7 +24,7 @@ public sealed record AnimeClassificationMismatch(
 
 /// <summary>
 /// Detects existing Tv rows that were filed under the wrong library type by
-/// re-running every show through the shared, Kitsu-backed
+/// re-running every show through the shared, AniList/Jikan-backed
 /// <see cref="IMediaTypeClassifier"/>. Detection and reporting only — does
 /// not move files or rewrite any row.
 /// </summary>

@@ -118,10 +118,13 @@ public class DiscScanner(
     }
 
     /// <summary>
-    /// Parses the ffprobe JSON envelope. For a Blu-ray, ffprobe's default
-    /// output is the "longest" title only — the scanner reports just that
-    /// one title for now. Multi-title enumeration requires libbluray's
-    /// playlist dump, which is a separate tool-chain step; a V2 can add it.
+    /// Parses the ffprobe JSON envelope for a single title/playlist probe.
+    /// A lone title has no visibility into its siblings' durations, so
+    /// <see cref="DiscTitle.IsMainFeature"/> always comes back <c>false</c>
+    /// here — the caller (a per-title probe against a real drive) is
+    /// responsible for ranking it against the disc's other titles and
+    /// re-stamping the field, the same way <c>BlurayDiscSource</c> and
+    /// <c>DvdDiscSource</c> already do.
     /// </summary>
     internal static DiscInfo Parse(string json, OpticalDiscType discType)
     {
@@ -212,7 +215,7 @@ public class DiscScanner(
             Subtitles: subtitles.ToArray(),
             Chapters: chapters.ToArray(),
             EstimatedSizeBytes: 0,
-            IsMainFeature: true
+            IsMainFeature: false
         );
 
         return new(discType, discLabel, [singleTitle], null, duration);

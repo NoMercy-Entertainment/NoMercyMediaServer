@@ -59,7 +59,7 @@ public sealed partial class InboxClassifier
     // starts with a bracket group AND has an absolute episode number as
     // " - NNN " (1-4 digits, for long-running shows like One Piece that
     // exceed 999 episodes). This signals "episodic", not "anime" — the
-    // anime/tv split itself is decided by IMediaTypeClassifier (Kitsu),
+    // anime/tv split itself is decided by IMediaTypeClassifier (AniList/Jikan),
     // never by bracket-guessing, since normally-named anime files with no
     // fansub bracket were routing to the wrong library.
     private static readonly Regex FansubAbsoluteEpPattern = new(
@@ -252,14 +252,14 @@ public sealed partial class InboxClassifier
 
         // The structural signals only tell us the file is episodic
         // ("tv-shaped"); whether it belongs in the anime or tv library is
-        // decided by the shared Kitsu-backed classifier, never by filename
+        // decided by the shared AniList/Jikan-backed classifier, never by filename
         // shape alone (e.g. a fansub bracket), so a normally-named anime
         // file with no bracket still lands in the right library.
         if (structuralType == "tv")
         {
             // A null verdict is an inconclusive lookup, not a "confirmed not
-            // anime" — keep the structural "tv" guess rather than let a Kitsu
-            // hiccup silently stand in for a real answer.
+            // anime" — keep the structural "tv" guess rather than let an
+            // AniList/Jikan hiccup silently stand in for a real answer.
             structuralType =
                 await _mediaTypeClassifier.ClassifyAsync(title, year) ?? structuralType;
         }

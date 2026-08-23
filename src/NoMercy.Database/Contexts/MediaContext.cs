@@ -232,6 +232,17 @@ public class MediaContext : DbContext
             .Entity<GenreMovie>()
             .HasQueryFilter(genreMovie => ShowAdultContent || !genreMovie.Movie.Adult);
         modelBuilder
+            .Entity<AnimeThemeMovie>()
+            .HasQueryFilter(animeThemeMovie => ShowAdultContent || !animeThemeMovie.Movie.Adult);
+        modelBuilder
+            .Entity<AnimeDemographicMovie>()
+            .HasQueryFilter(animeDemographicMovie =>
+                ShowAdultContent || !animeDemographicMovie.Movie.Adult
+            );
+        modelBuilder
+            .Entity<AnimeSeasonMovie>()
+            .HasQueryFilter(animeSeasonMovie => ShowAdultContent || !animeSeasonMovie.Movie.Adult);
+        modelBuilder
             .Entity<KeywordMovie>()
             .HasQueryFilter(keywordMovie => ShowAdultContent || !keywordMovie.Movie.Adult);
         modelBuilder
@@ -264,6 +275,43 @@ public class MediaContext : DbContext
             .HasOne(gm => gm.Movie)
             .WithMany(m => m.GenreMovies)
             .HasForeignKey(gm => gm.MovieId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder
+            .Entity<AnimeThemeMovie>()
+            .HasOne(atm => atm.AnimeTheme)
+            .WithMany(t => t.AnimeThemeMovies)
+            .HasForeignKey(atm => atm.AnimeThemeId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<AnimeThemeTv>()
+            .HasOne(att => att.AnimeTheme)
+            .WithMany(t => t.AnimeThemeTvShows)
+            .HasForeignKey(att => att.AnimeThemeId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<AnimeDemographicMovie>()
+            .HasOne(adm => adm.AnimeDemographic)
+            .WithMany(d => d.AnimeDemographicMovies)
+            .HasForeignKey(adm => adm.AnimeDemographicId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<AnimeDemographicTv>()
+            .HasOne(adt => adt.AnimeDemographic)
+            .WithMany(d => d.AnimeDemographicTvShows)
+            .HasForeignKey(adt => adt.AnimeDemographicId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<AnimeSeasonMovie>()
+            .HasOne(asm => asm.AnimeSeason)
+            .WithMany(s => s.AnimeSeasonMovies)
+            .HasForeignKey(asm => asm.AnimeSeasonId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<AnimeSeasonTv>()
+            .HasOne(ast => ast.AnimeSeason)
+            .WithMany(s => s.AnimeSeasonTvShows)
+            .HasForeignKey(ast => ast.AnimeSeasonId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder
@@ -409,6 +457,15 @@ public class MediaContext : DbContext
     public virtual DbSet<GenreMovie> GenreMovie { get; init; }
     public virtual DbSet<GenreTv> GenreTv { get; init; }
     public virtual DbSet<Genre> Genres { get; init; }
+    public virtual DbSet<AnimeTheme> AnimeThemes { get; init; }
+    public virtual DbSet<AnimeThemeMovie> AnimeThemeMovie { get; init; }
+    public virtual DbSet<AnimeThemeTv> AnimeThemeTv { get; init; }
+    public virtual DbSet<AnimeDemographic> AnimeDemographics { get; init; }
+    public virtual DbSet<AnimeDemographicMovie> AnimeDemographicMovie { get; init; }
+    public virtual DbSet<AnimeDemographicTv> AnimeDemographicTv { get; init; }
+    public virtual DbSet<AnimeSeason> AnimeSeasons { get; init; }
+    public virtual DbSet<AnimeSeasonMovie> AnimeSeasonMovie { get; init; }
+    public virtual DbSet<AnimeSeasonTv> AnimeSeasonTv { get; init; }
     public virtual DbSet<GuestStar> GuestStars { get; init; }
     public virtual DbSet<Image> Images { get; init; }
     public virtual DbSet<WatchProvider> WatchProviders { get; init; }

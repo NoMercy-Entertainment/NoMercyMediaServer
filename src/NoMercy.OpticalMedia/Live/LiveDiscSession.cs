@@ -11,11 +11,14 @@
 
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using NoMercy.DiscFormat.Disc.Bdmv;
 using NoMercy.Encoder.Analysis;
 using NoMercy.Encoder.Codecs;
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.NmSystem.Dto;
 using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Sources;
+using NoMercy.Storage;
 
 namespace NoMercy.OpticalMedia.Live;
 
@@ -32,6 +35,8 @@ namespace NoMercy.OpticalMedia.Live;
 public sealed class LiveDiscSession(
     IMediaAnalyzer mediaAnalyzer,
     ILiveEncoder liveEncoder,
+    ILiveStreamingService streamingService,
+    IStorageDriver storageDriver,
     ILogger<LiveDiscSession> logger
 ) : ILiveDiscSession
 {
@@ -40,21 +45,45 @@ public sealed class LiveDiscSession(
         int titleIndex,
         TimeSpan startPosition,
         string? preferredQuality,
+        AudioTrackSelection[] audioTracks,
         CancellationToken ct
     )
     {
         string inputPath = BuildInputPath(drive, titleIndex);
+        string[] extraArgs = BuildExtraInputArgs(drive, titleIndex);
         logger.LogInformation(
-            "Live disc session for {Drive} title {Title} → {InputPath}",
+            "Live disc session for {Drive} title {Title} → {InputPath} {ExtraArgs}",
             drive.Path,
             titleIndex,
-            inputPath
+            inputPath,
+            string.Join(' ', extraArgs)
         );
 
         // Probe the disc input the same way the encoder probes any other
         // source. The analyzer wraps ffprobe + parses streams + chapters
-        // into a MediaInfo the live runner consumes verbatim.
-        MediaInfo info = await mediaAnalyzer.AnalyzeAsync(inputPath, ct);
+        // into a MediaInfo the live runner consumes verbatim. Disc protocol
+        // URLs (bluray:/dvd:) are not filesystem paths, so this must take the
+        // extraInputArgs overload — the plain overload resolves inputPath
+        // through IStorage.AcquireLocalPath, which is meaningless here, and
+        // has no way to carry -playlist N ahead of -i.
+        MediaInfo info = await mediaAnalyzer.AnalyzeAsync(inputPath, extraArgs, ct);
+
+        // ffprobe's bluray: protocol never populates stream language tags —
+        // the same gap BlurayDiscSource.ApplyMplsLanguages works around for
+        // the probe/rip path by reading the playlist's own STN table
+        // instead. Without this, every live audio rendition below is
+        // stamped "und" and the player's track switcher shows indistinguishable
+        // "Unknown" entries.
+        if (drive.DiscType == OpticalDiscType.BluRay && info.AudioStreams.Count > 0)
+        {
+            IReadOnlyList<AudioStreamInfo> enriched = ApplyMplsAudioLanguages(
+                info.AudioStreams,
+                drive.Path,
+                titleIndex
+            );
+            if (!ReferenceEquals(enriched, info.AudioStreams))
+                info = info with { AudioStreams = enriched };
+        }
 
         // ClientCapabilities defaults — the runner only needs format + codec
         // hints, the streaming service refines per-client when it stamps
@@ -72,35 +101,219 @@ public sealed class LiveDiscSession(
             MaxAudioChannels: 2
         );
 
+        // Included stream indices, de-duplicated and stable-ordered so the first
+        // one the caller listed is the one the master marks DEFAULT=YES — mirrors
+        // how the rip endpoint reads the same AudioTrackSelection[] shape.
+        int[] selected = audioTracks
+            .Where(a => a.Include)
+            .Select(a => a.StreamIndex)
+            .Distinct()
+            .ToArray();
+
         LiveEncodeRequest request = new(
             InputPath: inputPath,
             CachedInfo: info,
             Client: client,
             StartPosition: startPosition,
-            PreferredQuality: preferredQuality
+            PreferredQuality: preferredQuality,
+            ExtraInputArgs: extraArgs.Length > 0 ? extraArgs : null,
+            AudioStreamIndex: selected.Length == 1 ? selected[0] : 0,
+            // Two or more selected tracks: video carries no audio of its own —
+            // each selected track gets its own AAC rendition child below, the
+            // same split LiveTranscodeService uses for a raw multi-audio file.
+            VideoOnly: selected.Length > 1
         );
 
-        return await liveEncoder.StartAsync(request, ct);
+        ILiveSession session = await liveEncoder.StartAsync(request, ct);
+
+        if (selected.Length > 1)
+        {
+            List<LiveAudioRendition> renditions = await StartAudioRenditionsAsync(
+                session.SessionId,
+                request,
+                info,
+                selected,
+                ct
+            );
+
+            if (renditions.Count > 0)
+                streamingService.StampAudioRenditions(session.SessionId, renditions);
+        }
+
+        return session;
+    }
+
+    // Spawns one audio-only child rendition per selected disc audio stream so
+    // the live master playlist can expose every one the user picked, the same
+    // way LiveTranscodeService.StartAudioChildrenAsync does for a raw
+    // multi-audio file. A child that fails to start is skipped rather than
+    // sinking the whole session — the viewer still gets video plus whichever
+    // tracks did start.
+    private async Task<List<LiveAudioRendition>> StartAudioRenditionsAsync(
+        string parentSessionId,
+        LiveEncodeRequest baseRequest,
+        MediaInfo info,
+        int[] selectedStreamIndices,
+        CancellationToken ct
+    )
+    {
+        List<LiveAudioRendition> renditions = [];
+        List<string> childSessionIds = [];
+
+        for (int position = 0; position < selectedStreamIndices.Length; position++)
+        {
+            int streamIndex = selectedStreamIndices[position];
+            LiveEncodeRequest childRequest = baseRequest with { AudioStreamIndex = streamIndex };
+
+            ILiveSession child;
+            try
+            {
+                child = await liveEncoder.StartAudioRenditionAsync(childRequest, ct);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(
+                    ex,
+                    "Failed to start live disc audio child for stream 0:a:{Index} of session {SessionId}",
+                    streamIndex,
+                    parentSessionId
+                );
+                continue;
+            }
+
+            childSessionIds.Add(child.SessionId);
+            string? language = info.AudioStreams.ElementAtOrDefault(streamIndex)?.Language;
+            renditions.Add(
+                new LiveAudioRendition(
+                    Language: string.IsNullOrWhiteSpace(language) ? "und" : language,
+                    Uri: $"/api/v1/streaming/live/sessions/{child.SessionId}/playlist.m3u8",
+                    IsDefault: position == 0
+                )
+            );
+        }
+
+        streamingService.StampChildAudioSessions(parentSessionId, childSessionIds);
+        return renditions;
     }
 
     /// <summary>
-    /// Builds the disc-type-specific input URL. Title index is encoded into
-    /// the URL where the protocol supports it (libbluray uses
-    /// <c>?playlist=N</c>); for DVD the demuxer parameter is set via
-    /// command-line flags the encoder layer can't pass through, so we rely
-    /// on libdvdread auto-selecting the longest title (title 0 = auto).
-    /// CD tracks are passed via the libcdio protocol with the track number.
+    /// Reads BDMV/PLAYLIST/&lt;titleIndex&gt;.mpls and stamps each audio
+    /// stream's language from the playlist's own STN table, position-matched
+    /// against ffprobe's stream order. Mirrors
+    /// <see cref="Sources.Bluray.BlurayDiscSource"/>'s own merge (including
+    /// the TrueHD-dual-stream pairing — ffprobe demuxes a TrueHD track's
+    /// embedded AC3 "compatible core" as its own stream, one mpls slot for
+    /// the pair) rather than sharing code with it: the two call sites use
+    /// different <c>AudioStreamInfo</c> record types
+    /// (<see cref="NoMercy.Encoder.Analysis.AudioStreamInfo"/> here vs.
+    /// <see cref="Sources.Bluray.AudioStreamInfo"/> there), so there is
+    /// nothing generic to factor out without an interface neither side
+    /// otherwise needs.
+    /// </summary>
+    private IReadOnlyList<AudioStreamInfo> ApplyMplsAudioLanguages(
+        IReadOnlyList<AudioStreamInfo> streams,
+        string drivePath,
+        int titleIndex
+    )
+    {
+        try
+        {
+            string trimmed = drivePath.TrimEnd('\\', '/');
+            string mplsPath = Path.Combine(trimmed, "BDMV", "PLAYLIST", $"{titleIndex:D5}.mpls");
+
+            // No mpls to read — return the original reference unchanged
+            // rather than an equal-but-new array, so a caller comparing by
+            // reference can tell nothing was enriched.
+            if (!storageDriver.FileExists(mplsPath))
+                return streams;
+
+            using Stream stream = storageDriver.OpenRead(mplsPath);
+            using MemoryStream buffer = new();
+            stream.CopyTo(buffer);
+            MplsPlaylist playlist = MplsParser.Parse(buffer.ToArray());
+
+            return MergeAudioLanguages(streams, playlist.AudioStreams);
+        }
+        catch (Exception ex)
+        {
+            logger.LogInformation(
+                ex,
+                "Could not read mpls languages for {Drive} title {Title}: {Message}",
+                drivePath,
+                titleIndex,
+                ex.Message
+            );
+            return streams;
+        }
+    }
+
+    /// <summary>
+    /// Pure position-matching merge, split out from <see cref="ApplyMplsAudioLanguages"/>
+    /// so the TrueHD-pairing logic is unit-testable against an in-memory
+    /// <see cref="MplsStream"/> list without needing real MPLS bytes or a
+    /// fake <see cref="IStorageDriver"/> file.
+    /// </summary>
+    internal static AudioStreamInfo[] MergeAudioLanguages(
+        IReadOnlyList<AudioStreamInfo> streams,
+        IReadOnlyList<MplsStream> mplsAudioStreams
+    )
+    {
+        AudioStreamInfo[] merged = new AudioStreamInfo[streams.Count];
+        int mplsIndex = 0;
+        for (int i = 0; i < streams.Count; i++)
+        {
+            string? language =
+                mplsIndex < mplsAudioStreams.Count ? mplsAudioStreams[mplsIndex].Language : null;
+            merged[i] = streams[i] with { Language = language };
+
+            bool isTrueHdCorePair =
+                streams[i].Codec == "truehd"
+                && i + 1 < streams.Count
+                && streams[i + 1].Codec == "ac3";
+            if (isTrueHdCorePair)
+            {
+                i++;
+                merged[i] = streams[i] with { Language = language };
+            }
+            mplsIndex++;
+        }
+
+        return merged;
+    }
+
+    /// <summary>
+    /// Builds the disc-type-specific input URL. The title/playlist index is
+    /// never encoded into the URL itself — ffmpeg's bluray: protocol has no
+    /// query-string selector, and DVD/CD have none either. Every disc type
+    /// selects its title via CLI flags instead, from
+    /// <see cref="BuildExtraInputArgs"/>, mirroring the exact pattern
+    /// <c>DiscRipper.cs</c> already uses for the same disc types.
     /// </summary>
     private static string BuildInputPath(DiscDrive drive, int titleIndex)
     {
         string trimmed = drive.Path.TrimEnd('\\', '/');
         return drive.DiscType switch
         {
-            OpticalDiscType.BluRay =>
-                $"bluray:{trimmed}/?playlist={titleIndex.ToString(CultureInfo.InvariantCulture)}",
+            OpticalDiscType.BluRay => $"bluray:{trimmed}/",
             OpticalDiscType.Dvd => $"{trimmed}/",
             OpticalDiscType.Cd => drive.Path,
             _ => trimmed,
+        };
+    }
+
+    /// <summary>
+    /// ffmpeg input flags that must precede "-i" to select the right title —
+    /// same per-type mapping as <c>DiscRipper.BuildRipArgs</c>.
+    /// </summary>
+    private static string[] BuildExtraInputArgs(DiscDrive drive, int titleIndex)
+    {
+        string index = titleIndex.ToString(CultureInfo.InvariantCulture);
+        return drive.DiscType switch
+        {
+            OpticalDiscType.BluRay => ["-playlist", index],
+            OpticalDiscType.Dvd => ["-f", "dvdvideo", "-title", index],
+            OpticalDiscType.Cd => ["-f", "libcdio"],
+            _ => [],
         };
     }
 }

@@ -347,6 +347,23 @@ public partial class MusicLogic : IAsyncDisposable
             return;
         }
 
+        // Same per-library opt-in AutoEncodeSubscriber already enforces for video —
+        // a preset assignment is "the preset to use when I encode", not "re-encode
+        // everything the moment it is scanned". Without this gate music had no
+        // opt-out at all: every import, including an already-playable MP3, was
+        // unconditionally transcoded through ffmpeg regardless of the library's
+        // own auto-encode setting.
+        if (!Library.AutoEncodeOnScan)
+        {
+            _logger.LogDebug(
+                "Auto-encode-on-scan is off for library {LibraryId}; {Track} from {File} stored, encode skipped",
+                Library.Id,
+                track.Title,
+                file.Path
+            );
+            return;
+        }
+
         await MusicEncodeDispatcher.Dispatch(
             _storageFactory,
             Library,

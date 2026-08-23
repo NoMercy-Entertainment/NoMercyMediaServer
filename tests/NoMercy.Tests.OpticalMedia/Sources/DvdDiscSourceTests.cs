@@ -386,6 +386,315 @@ public class DvdDiscSourceEndToEndTests
         title.AudioStreams.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// Regression test for the real bug: ProbeTitleAsync reused Bluray's
+    /// DiscScanner.Parse for its single-title JSON, which used to hardcode
+    /// IsMainFeature: true unconditionally — every real per-title DVD probe
+    /// reported "main_feature" regardless of which title was requested.
+    /// ProbeTitleAsync now re-ranks the requested title against every other
+    /// title's duration (via ProbeAsync's format-only title walk) before
+    /// returning it.
+    /// </summary>
+    [Fact]
+    public async Task ProbeTitleAsync_RequestedTitleIsNotTheLongestOnDisc_IsMainFeatureIsFalse()
+    {
+        string detailJson = """
+            {
+              "format": { "duration": "300" },
+              "streams": [ { "index": 0, "codec_type": "audio", "codec_name": "ac3", "channels": 2 } ]
+            }
+            """;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, detailJson, "", TimeSpan.Zero));
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                (string _, string[] args, string? _, CancellationToken _) =>
+                {
+                    string titleArg = args[Array.IndexOf(args, "-title") + 1];
+                    return titleArg switch
+                    {
+                        "1" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"300"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        "2" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"5400"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        _ => new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero),
+                    };
+                }
+            );
+
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
+
+        // Title 1 is 5 minutes; title 2 (5400s) is the disc's real longest title.
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 1, CancellationToken.None);
+
+        title.IsMainFeature.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ProbeTitleAsync_RequestedTitleIsTheLongestOnDisc_IsMainFeatureIsTrue()
+    {
+        string detailJson = """
+            {
+              "format": { "duration": "5400" },
+              "streams": [ { "index": 0, "codec_type": "audio", "codec_name": "ac3", "channels": 2 } ]
+            }
+            """;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, detailJson, "", TimeSpan.Zero));
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                (string _, string[] args, string? _, CancellationToken _) =>
+                {
+                    string titleArg = args[Array.IndexOf(args, "-title") + 1];
+                    return titleArg switch
+                    {
+                        "1" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"300"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        "2" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"5400"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        _ => new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero),
+                    };
+                }
+            );
+
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
+
+        DiscTitle title = await sut.ProbeTitleAsync(drive, 2, CancellationToken.None);
+
+        title.IsMainFeature.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Regression test for the memoization fix: <see cref="DvdDiscSource.ProbeTitleAsync"/>
+    /// calls <see cref="DvdDiscSource.ProbeAsync"/> internally to rank
+    /// <c>IsMainFeature</c>, which walks every title on the disc. Two
+    /// <c>ProbeTitleAsync</c> calls against the same drive within the cache
+    /// window must reuse one disc walk rather than spawning a fresh
+    /// full-disc probe (up to <c>MaxTitleProbes</c> subprocesses) per call.
+    /// </summary>
+    [Fact]
+    public async Task ProbeTitleAsync_CalledTwiceForSameDrive_ReusesOneDiscWalk()
+    {
+        string detailJson = """
+            {
+              "format": { "duration": "300" },
+              "streams": [ { "index": 0, "codec_type": "audio", "codec_name": "ac3", "channels": 2 } ]
+            }
+            """;
+        int discWalkCallCount = 0;
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(new ProcessResult(0, detailJson, "", TimeSpan.Zero));
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .ReturnsAsync(
+                (string _, string[] args, string? _, CancellationToken _) =>
+                {
+                    Interlocked.Increment(ref discWalkCallCount);
+                    string titleArg = args[Array.IndexOf(args, "-title") + 1];
+                    return titleArg switch
+                    {
+                        "1" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"300"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        "2" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"5400"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        _ => new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero),
+                    };
+                }
+            );
+
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
+
+        await sut.ProbeTitleAsync(drive, 1, CancellationToken.None);
+        await sut.ProbeTitleAsync(drive, 2, CancellationToken.None);
+
+        // Full disc walk is titles 1, 2, then the "not found" boundary at 3
+        // — 3 subprocess spawns for one walk. If the second ProbeTitleAsync
+        // triggered a fresh walk this would be 6.
+        discWalkCallCount.Should().Be(3, "the second call should hit the cached disc walk");
+    }
+
+    /// <summary>
+    /// The sequential test above cannot see the check-then-act race: two
+    /// concurrent <c>ProbeTitleAsync</c> calls for the same drive (the real
+    /// shape — <c>OpticalMediaController</c> serializes nothing, and a UI
+    /// fires several title probes at once) could both observe a cache miss
+    /// and both start a full disc walk. Here both calls are genuinely in
+    /// flight — neither can reach the cache lookup until the other has
+    /// arrived — so only a cache that atomically coalesces misses keeps the
+    /// walk count at one.
+    /// </summary>
+    [Fact]
+    public async Task ProbeTitleAsync_TwoConcurrentCallsForSameDrive_RunOnlyOneDiscWalk()
+    {
+        string detailJson = """
+            {
+              "format": { "duration": "300" },
+              "streams": [ { "index": 0, "codec_type": "audio", "codec_name": "ac3", "channels": 2 } ]
+            }
+            """;
+        int discWalkCallCount = 0;
+        int detailProbesEntered = 0;
+        TaskCompletionSource bothCallersInFlight = new(
+            TaskCreationOptions.RunContinuationsAsynchronously
+        );
+
+        Mock<IProcessRunner> runner = new();
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(
+                async (string _, string[] _, string? _, CancellationToken _) =>
+                {
+                    // Each ProbeTitleAsync runs exactly one detail probe before
+                    // it reaches the cached disc walk — release both at once so
+                    // they hit the cache lookup together.
+                    if (Interlocked.Increment(ref detailProbesEntered) == 2)
+                        bothCallersInFlight.SetResult();
+                    await bothCallersInFlight.Task;
+                    return new ProcessResult(0, detailJson, "", TimeSpan.Zero);
+                }
+            );
+        runner
+            .Setup(r =>
+                r.RunAsync(
+                    It.IsAny<string>(),
+                    It.Is<string[]>(a => !a.Contains("-show_streams")),
+                    It.IsAny<string?>(),
+                    It.IsAny<CancellationToken>()
+                )
+            )
+            .Returns(
+                async (string _, string[] args, string? _, CancellationToken _) =>
+                {
+                    Interlocked.Increment(ref discWalkCallCount);
+                    // Hold the walk open so a racing caller has every chance to
+                    // observe the miss and start a second walk if the cache
+                    // does not coalesce.
+                    await Task.Yield();
+                    string titleArg = args[Array.IndexOf(args, "-title") + 1];
+                    return titleArg switch
+                    {
+                        "1" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"300"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        "2" => new ProcessResult(
+                            0,
+                            """{"format":{"duration":"5400"}}""",
+                            "",
+                            TimeSpan.Zero
+                        ),
+                        _ => new ProcessResult(1, "", "Title 3 not found", TimeSpan.Zero),
+                    };
+                }
+            );
+
+        DvdDiscSource sut = MakeSut(runner.Object);
+        DiscDrive drive = new("D:\\", "MOVIE", true, OpticalDiscType.Dvd);
+
+        Task<DiscTitle> first = Task.Run(() =>
+            sut.ProbeTitleAsync(drive, 1, CancellationToken.None)
+        );
+        Task<DiscTitle> second = Task.Run(() =>
+            sut.ProbeTitleAsync(drive, 2, CancellationToken.None)
+        );
+
+        DiscTitle[] titles = await Task.WhenAll(first, second);
+
+        titles.Should().HaveCount(2);
+        discWalkCallCount
+            .Should()
+            .Be(
+                3,
+                "one disc walk is titles 1, 2 and the boundary at 3 — concurrent misses must coalesce onto that single walk, not run 6 spawns"
+            );
+    }
+
     [Fact]
     public async Task ProbeTitleAsync_FfprobeFails_ReturnsEmptySkeletonTitle()
     {

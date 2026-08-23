@@ -226,11 +226,20 @@ public static partial class ServiceConfiguration
         );
 
         services.AddHttpClient(
-            HttpClientNames.KitsuIo,
+            HttpClientNames.AniList,
             client =>
             {
-                client.BaseAddress = new("https://kitsu.io/api/edge/");
-                client.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
+                client.BaseAddress = new("https://graphql.anilist.co/");
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            }
+        );
+
+        services.AddHttpClient(
+            HttpClientNames.Jikan,
+            client =>
+            {
+                client.BaseAddress = new("https://api.jikan.moe/v4/");
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
             }
         );
 

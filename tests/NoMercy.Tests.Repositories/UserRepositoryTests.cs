@@ -59,6 +59,7 @@ public class UserRepositoryTests : IDisposable
             targetUserId: SeedConstants.UserId,
             actingUserId: ActingUserId,
             allowed: true,
+            opticalAccess: false,
             audioTranscoding: false,
             videoTranscoding: false,
             noTranscoding: false,

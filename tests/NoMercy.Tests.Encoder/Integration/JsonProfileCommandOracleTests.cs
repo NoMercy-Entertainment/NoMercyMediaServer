@@ -155,35 +155,6 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
         if (subExit != 0)
             throw new InvalidOperationException("JSON oracle subtitle clip generation failed.");
 
-        // H.264 video + Opus stereo audio — proves a Copy-policy audio output
-        // carries a codec HlsFmp4 didn't support before this slice (Opus)
-        // through a real stream-copy remux, not a re-encode.
-        _opusInputFile = Path.Combine(_testDir, "src_opus.mkv");
-        int opusExit = await RunFfmpegAsync([
-            "-y",
-            "-f",
-            "lavfi",
-            "-i",
-            "testsrc2=size=320x180:rate=25:duration=12",
-            "-f",
-            "lavfi",
-            "-i",
-            "sine=frequency=440:duration=12:sample_rate=48000",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "ultrafast",
-            "-pix_fmt",
-            "yuv420p",
-            "-c:a",
-            "libopus",
-            "-b:a",
-            "96k",
-            _opusInputFile,
-        ]);
-        if (opusExit != 0)
-            throw new InvalidOperationException("JSON oracle Opus clip generation failed.");
-
         // Audio-only source for FLAC/AAC/MP3 container profiles that have no video.
         _audioOnlyInputFile = Path.Combine(_testDir, "src_audio.flac");
         int audioExit = await RunFfmpegAsync([
@@ -200,6 +171,42 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
             throw new InvalidOperationException("JSON oracle audio-only clip generation failed.");
 
         _availableEncoders = await ProbeAvailableEncodersAsync();
+
+        // H.264 video + Opus stereo audio — proves a Copy-policy audio output
+        // carries a codec HlsFmp4 didn't support before this slice (Opus)
+        // through a real stream-copy remux, not a re-encode.
+        // Generating this fixture itself needs the "libopus" encoder; if this
+        // ffmpeg build lacks it, leave _opusInputFile empty — the per-case
+        // Skip.IfNot(_availableEncoders.Contains("libopus"), ...) checks already
+        // skip every Opus test case instead of failing the whole fixture.
+        if (_availableEncoders.Contains("libopus"))
+        {
+            _opusInputFile = Path.Combine(_testDir, "src_opus.mkv");
+            int opusExit = await RunFfmpegAsync([
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=320x180:rate=25:duration=12",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=12:sample_rate=48000",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "ultrafast",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:a",
+                "libopus",
+                "-b:a",
+                "96k",
+                _opusInputFile,
+            ]);
+            if (opusExit != 0)
+                throw new InvalidOperationException("JSON oracle Opus clip generation failed.");
+        }
 
         ServiceCollection services = new();
         services.AddLogging();
@@ -859,6 +866,16 @@ public class JsonProfileCommandOracleTests : IAsyncLifetime
                     $"case '{caseName}': audio encoder '{audioEncoder}' absent from this ffmpeg build"
                 );
         }
+
+        // The "opus" fixture is itself only generated when libopus is available
+        // (see InitializeAsync); a Copy-policy audio output has no audioEncoder
+        // to gate on above, so this case needs its own skip when the fixture
+        // never got made.
+        if (inputFileKey == "opus")
+            Skip.If(
+                string.IsNullOrEmpty(_opusInputFile),
+                $"case '{caseName}': Opus source fixture unavailable, libopus absent from this ffmpeg build"
+            );
 
         string inputPath = inputFileKey switch
         {

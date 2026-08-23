@@ -194,9 +194,25 @@ public class PicardNamingTests
     [Fact]
     public void An_artist_starting_with_a_digit_files_under_hash()
     {
-        MusicNamingContext context = JoshuaTree() with { AlbumArtistSort = "2Pac" };
+        MusicNamingContext context = JoshuaTree() with
+        {
+            AlbumArtistSort = "2Pac",
+            AlbumArtistPrimary = "2Pac",
+        };
 
         Assert.StartsWith("#/2Pac/", PicardNaming.BuildPath(context));
+    }
+
+    [Fact]
+    public void The_artist_folder_uses_the_display_name_not_the_sort_name()
+    {
+        MusicNamingContext context = JoshuaTree() with
+        {
+            AlbumArtistSort = "Springsteen, Bruce",
+            AlbumArtistPrimary = "Bruce Springsteen",
+        };
+
+        Assert.StartsWith("B/Bruce Springsteen/", PicardNaming.BuildPath(context));
     }
 
     [Fact]

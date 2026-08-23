@@ -224,5 +224,8 @@ public sealed class MediaAuthorizationHandlerTests
 
         public bool IsAllowed(ClaimsPrincipal? principal) =>
             throw new InvalidOperationException("policy check exploded");
+
+        public bool IsOpticalAccess(ClaimsPrincipal? principal) =>
+            throw new InvalidOperationException("policy check exploded");
     }
 }

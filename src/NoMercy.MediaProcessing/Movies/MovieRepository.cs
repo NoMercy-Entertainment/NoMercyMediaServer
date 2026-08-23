@@ -38,6 +38,7 @@ public class MovieRepository(MediaContext context) : IMovieRepository
                         Homepage = ti.Homepage,
                         ImdbId = ti.ImdbId,
                         OriginalLanguage = ti.OriginalLanguage,
+                        OriginCountry = ti.OriginCountry,
                         Overview = ti.Overview,
                         Popularity = ti.Popularity,
                         Poster = ti.Poster,
@@ -302,6 +303,93 @@ public class MovieRepository(MediaContext context) : IMovieRepository
             .On(v => new { v.GenreId, v.MovieId })
             .WhenMatched((ts, ti) => new() { GenreId = ti.GenreId, MovieId = ti.MovieId })
             .RunAsync();
+    }
+
+    public Task StoreAnimeThemes(IEnumerable<AnimeThemeMovie> animeThemeMovies)
+    {
+        return context
+            .AnimeThemeMovie.UpsertRange(animeThemeMovies.ToArray())
+            .On(v => new { v.AnimeThemeId, v.MovieId })
+            .WhenMatched((ts, ti) => new() { AnimeThemeId = ti.AnimeThemeId, MovieId = ti.MovieId })
+            .RunAsync();
+    }
+
+    public Task StoreAnimeDemographics(IEnumerable<AnimeDemographicMovie> animeDemographicMovies)
+    {
+        return context
+            .AnimeDemographicMovie.UpsertRange(animeDemographicMovies.ToArray())
+            .On(v => new { v.AnimeDemographicId, v.MovieId })
+            .WhenMatched(
+                (ts, ti) =>
+                    new() { AnimeDemographicId = ti.AnimeDemographicId, MovieId = ti.MovieId }
+            )
+            .RunAsync();
+    }
+
+    public async Task StoreAnimeSeason(int movieId, int year, string quarter)
+    {
+        int seasonId = await ResolveAnimeSeasonIdAsync(year, quarter);
+
+        await context
+            .AnimeSeasonMovie.Upsert(
+                new AnimeSeasonMovie { AnimeSeasonId = seasonId, MovieId = movieId }
+            )
+            .On(v => new { v.AnimeSeasonId, v.MovieId })
+            .WhenMatched(
+                (ts, ti) => new() { AnimeSeasonId = ti.AnimeSeasonId, MovieId = ti.MovieId }
+            )
+            .RunAsync();
+    }
+
+    public async Task<int> ResolveAnimeThemeIdAsync(string name)
+    {
+        AnimeTheme? existing = await context
+            .AnimeThemes.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Name == name);
+        if (existing is not null)
+            return existing.Id;
+
+        AnimeTheme created = new() { Name = name };
+        context.AnimeThemes.Add(created);
+        await context.SaveChangesAsync();
+
+        return created.Id;
+    }
+
+    public async Task<int> ResolveAnimeDemographicIdAsync(string name)
+    {
+        AnimeDemographic? existing = await context
+            .AnimeDemographics.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Name == name);
+        if (existing is not null)
+            return existing.Id;
+
+        AnimeDemographic created = new() { Name = name };
+        context.AnimeDemographics.Add(created);
+        await context.SaveChangesAsync();
+
+        return created.Id;
+    }
+
+    public Task<bool> HasAnimeThemesAsync(int movieId) =>
+        context.AnimeThemeMovie.AsNoTracking().AnyAsync(t => t.MovieId == movieId);
+
+    public Task<bool> HasAnimeDemographicsAsync(int movieId) =>
+        context.AnimeDemographicMovie.AsNoTracking().AnyAsync(d => d.MovieId == movieId);
+
+    private async Task<int> ResolveAnimeSeasonIdAsync(int year, string quarter)
+    {
+        AnimeSeason? existing = await context
+            .AnimeSeasons.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Year == year && s.Quarter == quarter);
+        if (existing is not null)
+            return existing.Id;
+
+        AnimeSeason created = new() { Year = year, Quarter = quarter };
+        context.AnimeSeasons.Add(created);
+        await context.SaveChangesAsync();
+
+        return created.Id;
     }
 
     public Task StoreCompanies(List<Company> companies)

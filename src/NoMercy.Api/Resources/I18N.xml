@@ -872,4 +872,16 @@
     <Key>Failed job has been queued for retry</Key>
     <Value lang="nl">Failed job has been queued for retry</Value>
   </Entry>
+  <Entry>
+    <Key>Live session not found</Key>
+    <Value lang="nl">Live session not found</Value>
+  </Entry>
+  <Entry>
+    <Key>Image folder not found</Key>
+    <Value lang="nl">Image folder not found</Value>
+  </Entry>
+  <Entry>
+    <Key>Maximum concurrent live sessions reached</Key>
+    <Value lang="nl">Maximum concurrent live sessions reached</Value>
+  </Entry>
 </I18N>

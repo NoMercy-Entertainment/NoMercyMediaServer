@@ -11,6 +11,7 @@
 
 using NoMercy.Encoder.LiveTranscode;
 using NoMercy.OpticalMedia.Drives;
+using NoMercy.OpticalMedia.Sources;
 
 namespace NoMercy.OpticalMedia.Live;
 
@@ -22,11 +23,23 @@ namespace NoMercy.OpticalMedia.Live;
 /// </summary>
 public interface ILiveDiscSession
 {
+    /// <param name="audioTracks">
+    /// Disc audio streams to expose in the live master playlist, using the same
+    /// <see cref="AudioTrackSelection"/> shape the rip endpoint already takes
+    /// (<c>StreamIndex</c> = the disc's ffmpeg audio stream index, <c>Include</c>
+    /// = whether to expose it). Zero or one included track keeps the existing
+    /// single-track muxed behaviour (backwards compatible for callers that pass
+    /// an empty array). Two or more spawns one video-only session plus one
+    /// audio-only rendition per included track, the same pattern
+    /// LiveTranscodeService already uses for raw multi-audio file sources —
+    /// the first included track is the default.
+    /// </param>
     Task<ILiveSession> StartAsync(
         DiscDrive drive,
         int titleIndex,
         TimeSpan startPosition,
         string? preferredQuality,
+        AudioTrackSelection[] audioTracks,
         CancellationToken ct
     );
 }

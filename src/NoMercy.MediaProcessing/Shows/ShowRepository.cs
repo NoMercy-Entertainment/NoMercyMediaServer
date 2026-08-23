@@ -315,6 +315,88 @@ public class ShowRepository(MediaContext context) : IShowRepository
             .RunAsync();
     }
 
+    public Task StoreAnimeThemes(IEnumerable<AnimeThemeTv> animeThemeTvs)
+    {
+        return context
+            .AnimeThemeTv.UpsertRange(animeThemeTvs.ToArray())
+            .On(v => new { v.AnimeThemeId, v.TvId })
+            .WhenMatched((ts, ti) => new() { AnimeThemeId = ti.AnimeThemeId, TvId = ti.TvId })
+            .RunAsync();
+    }
+
+    public Task StoreAnimeDemographics(IEnumerable<AnimeDemographicTv> animeDemographicTvs)
+    {
+        return context
+            .AnimeDemographicTv.UpsertRange(animeDemographicTvs.ToArray())
+            .On(v => new { v.AnimeDemographicId, v.TvId })
+            .WhenMatched(
+                (ts, ti) => new() { AnimeDemographicId = ti.AnimeDemographicId, TvId = ti.TvId }
+            )
+            .RunAsync();
+    }
+
+    public async Task StoreAnimeSeason(int tvId, int year, string quarter)
+    {
+        int seasonId = await ResolveAnimeSeasonIdAsync(year, quarter);
+
+        await context
+            .AnimeSeasonTv.Upsert(new AnimeSeasonTv { AnimeSeasonId = seasonId, TvId = tvId })
+            .On(v => new { v.AnimeSeasonId, v.TvId })
+            .WhenMatched((ts, ti) => new() { AnimeSeasonId = ti.AnimeSeasonId, TvId = ti.TvId })
+            .RunAsync();
+    }
+
+    public async Task<int> ResolveAnimeThemeIdAsync(string name)
+    {
+        AnimeTheme? existing = await context
+            .AnimeThemes.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Name == name);
+        if (existing is not null)
+            return existing.Id;
+
+        AnimeTheme created = new() { Name = name };
+        context.AnimeThemes.Add(created);
+        await context.SaveChangesAsync();
+
+        return created.Id;
+    }
+
+    public async Task<int> ResolveAnimeDemographicIdAsync(string name)
+    {
+        AnimeDemographic? existing = await context
+            .AnimeDemographics.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Name == name);
+        if (existing is not null)
+            return existing.Id;
+
+        AnimeDemographic created = new() { Name = name };
+        context.AnimeDemographics.Add(created);
+        await context.SaveChangesAsync();
+
+        return created.Id;
+    }
+
+    public Task<bool> HasAnimeThemesAsync(int tvId) =>
+        context.AnimeThemeTv.AsNoTracking().AnyAsync(t => t.TvId == tvId);
+
+    public Task<bool> HasAnimeDemographicsAsync(int tvId) =>
+        context.AnimeDemographicTv.AsNoTracking().AnyAsync(d => d.TvId == tvId);
+
+    private async Task<int> ResolveAnimeSeasonIdAsync(int year, string quarter)
+    {
+        AnimeSeason? existing = await context
+            .AnimeSeasons.AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Year == year && s.Quarter == quarter);
+        if (existing is not null)
+            return existing.Id;
+
+        AnimeSeason created = new() { Year = year, Quarter = quarter };
+        context.AnimeSeasons.Add(created);
+        await context.SaveChangesAsync();
+
+        return created.Id;
+    }
+
     public async Task StoreNetworks(IEnumerable<Network> networks)
     {
         await context

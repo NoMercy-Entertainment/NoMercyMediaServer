@@ -312,13 +312,20 @@ public class DiscScannerTests
     }
 
     [Fact]
-    public void Parse_SetsIsMainFeatureToTrue()
+    public void Parse_SingleTitleHasNoSiblingsToRankAgainst_IsMainFeatureDefaultsFalse()
     {
+        // A lone ffprobe response for one title/playlist can't know whether
+        // it's the disc's longest title — that requires comparing against
+        // every other title's duration, which only the caller (holding the
+        // whole disc's playlist/title list) can do. Hardcoding true here
+        // previously made every real single-title probe (Blu-ray and DVD
+        // alike) report "main_feature" regardless of which title was asked
+        // for; the caller now re-stamps the real flag after ranking.
         string json = """{"format": {"duration": "3600"}}""";
 
         DiscInfo result = DiscScanner.Parse(json, OpticalDiscType.BluRay);
 
-        result.Titles[0].IsMainFeature.Should().BeTrue();
+        result.Titles[0].IsMainFeature.Should().BeFalse();
     }
 
     [Fact]

@@ -73,6 +73,9 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
     [JsonProperty("original_language")]
     public string? OriginalLanguage { get; set; }
 
+    [JsonProperty("origin_country")]
+    public string? OriginCountry { get; set; }
+
     [MaxLength(4096)]
     [JsonProperty("overview")]
     public string? Overview { get; set; }
@@ -128,6 +131,15 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
 
     [JsonProperty("genre")]
     public ICollection<GenreMovie> GenreMovies { get; set; } = [];
+
+    [JsonProperty("anime_themes")]
+    public ICollection<AnimeThemeMovie> AnimeThemeMovies { get; set; } = [];
+
+    [JsonProperty("anime_demographics")]
+    public ICollection<AnimeDemographicMovie> AnimeDemographicMovies { get; set; } = [];
+
+    [JsonProperty("anime_seasons")]
+    public ICollection<AnimeSeasonMovie> AnimeSeasonMovies { get; set; } = [];
 
     [JsonProperty("keywords")]
     public ICollection<KeywordMovie> KeywordMovies { get; set; } = [];
@@ -187,7 +199,11 @@ public class Movie : ColorPaletteTimeStamps, IHasLibrary
 
     public string CreateFileName()
     {
-        return string.Concat([Title.CleanFileName().Shorten(), ".(", ReleaseDate.ParseYear(), ").NoMercy"]
-        );
+        return string.Concat([
+            Title.CleanFileName().Shorten(),
+            ".(",
+            ReleaseDate.ParseYear(),
+            ").NoMercy",
+        ]);
     }
 }

@@ -20,3 +20,10 @@ public sealed class ModeratorRequirement : IAuthorizationRequirement;
 
 /// <summary>Requires the caller to have media access (Allowed permission) or be the owner.</summary>
 public sealed class MediaAccessRequirement : IAuthorizationRequirement;
+
+/// <summary>
+/// Requires the caller to have read-only optical-drive access (OpticalAccess
+/// permission) — probing discs, browsing titles, watching live — or to
+/// already hold a higher permission that implies it (moderator, owner).
+/// </summary>
+public sealed class OpticalAccessRequirement : IAuthorizationRequirement;

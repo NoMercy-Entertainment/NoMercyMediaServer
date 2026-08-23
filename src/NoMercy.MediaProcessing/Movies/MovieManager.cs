@@ -20,6 +20,7 @@ using NoMercy.Database.Models.Movies;
 using NoMercy.MediaProcessing.Common;
 using NoMercy.MediaProcessing.Jobs;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem;
 using NoMercy.NmSystem.Extensions;
 using NoMercy.Plugins.Hooks;
@@ -38,6 +39,7 @@ public class MovieManager(
     JobDispatcher jobDispatcher,
     IStorageFactory storageFactory,
     ILogger<MovieManager> logger,
+    IAnimeEnrichmentService animeEnrichmentService,
     IPluginMetadataResolver? pluginMetadata = null,
     Func<int, ITmdbMovieClient>? movieClientFactory = null
 ) : BaseManager, IMovieManager
@@ -141,6 +143,8 @@ public class MovieManager(
             ImdbId = movieAppends.ImdbId,
             OriginalTitle = movieAppends.OriginalTitle,
             OriginalLanguage = movieAppends.OriginalLanguage,
+            OriginCountry =
+                movieAppends.OriginCountry.Length > 0 ? movieAppends.OriginCountry[0] : null,
             Overview = movieAppends.Overview ?? fromPlugins?.Overview,
             Popularity = movieAppends.Popularity,
             Poster = movieAppends.PosterPath ?? fromPlugins?.PosterUrl,
@@ -168,6 +172,18 @@ public class MovieManager(
             StoreGenres(movieAppends),
             StoreContentRatings(movieAppends),
         ]);
+
+        // Sequential and awaited on purpose, mirroring ShowManager.AddShowAsync:
+        // EnrichMovieAsync ends up doing EF work on the same scoped
+        // MovieRepository.context as the calls above, so it cannot run inside
+        // the same Task.WhenAll without a "second operation on this context"
+        // exception.
+        await animeEnrichmentService.EnrichMovieAsync(
+            movie.Id,
+            movieAppends.Title,
+            movieAppends.ReleaseDate.ParseYear(),
+            movieAppends.OriginCountry
+        );
 
         logger.LogInformation(
             "Movie: {Title}: Added to Library {Title2}",

@@ -49,7 +49,7 @@ public class AnimeClassificationAuditService(
                 row.OriginCountry is not null ? [row.OriginCountry] : null
             );
 
-            // An inconclusive lookup (provider failure, e.g. Kitsu rate-limiting a
+            // An inconclusive lookup (provider failure, e.g. AniList rate-limiting a
             // run over hundreds of shows) is not a verdict — reporting it as a
             // mismatch would flood the audit with false positives on every show the
             // lookup happened to fail for.

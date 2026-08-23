@@ -19,6 +19,8 @@ using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.People;
 using NoMercy.MediaProcessing.Shows;
+using NoMercy.Providers.AniList;
+using NoMercy.Providers.Jikan;
 using NoMercy.Providers.TMDB.Models.TV;
 using NoMercy.Storage;
 
@@ -48,11 +50,23 @@ public class ShowExtrasJob : AbstractMediaExraDataJob<TmdbTvShowAppends>
         JobDispatcher jobDispatcher = new();
 
         ShowRepository showRepository = new(context);
+        MediaTypeClassifier mediaTypeClassifier = new(
+            new AniListMetadataProvider(),
+            new JikanMetadataProvider()
+        );
+        AnimeEnrichmentService animeEnrichmentService = new(
+            mediaTypeClassifier,
+            new AniListMetadataProvider(),
+            new JikanMetadataProvider(),
+            showRepository,
+            new NoMercy.MediaProcessing.Movies.MovieRepository(context)
+        );
         ShowManager showManager = new(
             showRepository,
             jobDispatcher,
             StorageFactory,
-            new MediaTypeClassifier(),
+            mediaTypeClassifier,
+            animeEnrichmentService,
             LoggerFactory.CreateLogger<ShowManager>()
         );
 

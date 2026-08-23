@@ -24,8 +24,8 @@ using NoMercy.Database.Models.TvShows;
 using NoMercy.Events;
 using NoMercy.Events.Library;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.MediaProcessing.Shows;
 using NoMercy.NmSystem.Extensions;
-using NoMercy.Providers.KitsuIo;
 using NoMercy.Providers.TMDB.Client;
 using NoMercy.Providers.TMDB.Models.TV;
 using IJobDispatcher = NoMercy.MediaProcessing.Jobs.IJobDispatcher;
@@ -43,6 +43,7 @@ public class TvShowsController(
     IJobDispatcher jobDispatcher,
     ITvShowMetadataProvider tvShowMetadataProvider,
     IEventBus eventBus,
+    IMediaTypeClassifier mediaTypeClassifier,
     ILogger<TvShowsController> logger
 ) : BaseController
 {
@@ -277,26 +278,17 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool? isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
+            string? mediaType = await mediaTypeClassifier.ClassifyAsync(
+                show.Name,
+                show.FirstAirDate.ParseYear(),
+                show.OriginCountry
+            );
 
-            // Require Japanese origin to avoid false positives on western co-productions
-            if (
-                isAnime == true
-                && !show.OriginCountry.Any(c =>
-                    string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
-                )
-            )
-                isAnime = false;
-
-            // null means the Kitsu lookup was inconclusive, not "confirmed not
-            // anime" — skip reclassification and keep the show where it already is
-            // rather than bounce it on a lookup failure.
-            Library? tvLibrary = isAnime is not null
-                ? await libraryRepository.GetLibraryByTypeAsync(
-                    isAnime.Value ? "anime" : "tv",
-                    "tv",
-                    ct
-                )
+            // null means the classification lookup was inconclusive, not "confirmed
+            // not anime" — skip reclassification and keep the show where it already
+            // is rather than bounce it on a lookup failure.
+            Library? tvLibrary = mediaType is not null
+                ? await libraryRepository.GetLibraryByTypeAsync(mediaType, "tv", ct)
                 : null;
 
             targetLibraryId = tvLibrary?.Id ?? tv.Library.Id;
@@ -338,24 +330,16 @@ public class TvShowsController(
             if (show == null)
                 return NotFoundResponse("Tv show not found");
 
-            bool? isAnime = await KitsuIoClient.IsAnime(show.Name, show.FirstAirDate.ParseYear());
-
-            if (
-                isAnime == true
-                && !show.OriginCountry.Any(c =>
-                    string.Equals(c, "JP", StringComparison.OrdinalIgnoreCase)
-                )
-            )
-                isAnime = false;
+            string? mediaType = await mediaTypeClassifier.ClassifyAsync(
+                show.Name,
+                show.FirstAirDate.ParseYear(),
+                show.OriginCountry
+            );
 
             // No existing placement to fall back to for a brand-new show, so an
             // inconclusive lookup defaults to "tv" the same way a confirmed "not
             // anime" already does.
-            library = await libraryRepository.GetLibraryByTypeAsync(
-                isAnime == true ? "anime" : "tv",
-                "tv",
-                ct
-            );
+            library = await libraryRepository.GetLibraryByTypeAsync(mediaType ?? "tv", "tv", ct);
 
             if (library is null)
                 return UnprocessableEntityResponse("No Tv library found");

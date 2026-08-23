@@ -127,7 +127,8 @@ public class HttpClientProviderTests : IDisposable
             HttpClientNames.MusixMatch,
             HttpClientNames.Tadb,
             HttpClientNames.NoMercyImage,
-            HttpClientNames.KitsuIo,
+            HttpClientNames.AniList,
+            HttpClientNames.Jikan,
             HttpClientNames.General,
         ];
 
@@ -154,7 +155,8 @@ public class HttpClientProviderTests : IDisposable
             HttpClientNames.MusixMatch,
             HttpClientNames.Tadb,
             HttpClientNames.NoMercyImage,
-            HttpClientNames.KitsuIo,
+            HttpClientNames.AniList,
+            HttpClientNames.Jikan,
             HttpClientNames.General,
         ];
 

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -37,7 +38,71 @@ public sealed class DvdDiscSource(
 {
     public OpticalDiscType Type => OpticalDiscType.Dvd;
 
-    public async Task<DiscInfo> ProbeAsync(DiscDrive drive, CancellationToken ct)
+    /// <summary>
+    /// Short-lived cache of the last <see cref="ProbeUncachedAsync"/> result
+    /// per drive path. <see cref="ProbeTitleAsync"/> calls
+    /// <see cref="ProbeAsync"/> once per title to rank <c>IsMainFeature</c>
+    /// against the full disc; without this, a retail DVD with N titles turns
+    /// one disc-probe session into N full-disc walks (each up to
+    /// <see cref="MaxTitleProbes"/> ffprobe subprocess spawns).
+    ///
+    /// Lifetime, stated correctly: although <c>DvdDiscSource</c> is registered
+    /// <c>AddTransient</c>, <c>DiscSourceFactory</c> is registered
+    /// <c>TryAddSingleton</c> and resolves every <c>IDiscSource</c> exactly
+    /// once in its own constructor, holding them for the process lifetime. So
+    /// this instance is a captive singleton in practice and this cache lives
+    /// for the whole process, NOT for "one probe session". The TTL below is
+    /// the sole bound on staleness — a disc swap is only ever masked for that
+    /// window, and nothing else recycles the entry.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, ProbeCacheEntry> _probeCache = new();
+
+    private static readonly TimeSpan ProbeCacheTtl = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// The probe is held as a <see cref="Lazy{T}"/> so the dictionary's own
+    /// atomicity guarantees exactly one disc walk per key: concurrent callers
+    /// that all miss coalesce onto whichever entry <c>GetOrAdd</c> published,
+    /// and only that entry's <c>Lazy</c> is ever forced. A class, not a
+    /// record: the expiry swap below relies on reference equality to detect
+    /// "still the entry I observed".
+    /// </summary>
+    private sealed class ProbeCacheEntry(Lazy<Task<DiscInfo>> probe, DateTime expiresAtUtc)
+    {
+        public Lazy<Task<DiscInfo>> Probe { get; } = probe;
+        public DateTime ExpiresAtUtc { get; } = expiresAtUtc;
+    }
+
+    public Task<DiscInfo> ProbeAsync(DiscDrive drive, CancellationToken ct)
+    {
+        while (true)
+        {
+            ProbeCacheEntry entry = _probeCache.GetOrAdd(
+                drive.Path,
+                _ => NewProbeCacheEntry(drive, ct)
+            );
+
+            if (entry.ExpiresAtUtc > DateTime.UtcNow)
+                return entry.Probe.Value;
+
+            // Expired. TryUpdate swaps only if the expired entry every racing
+            // caller observed is still the published one, so exactly one of
+            // them installs the replacement; the losers loop and pick up the
+            // winner's entry. Building a losing candidate costs nothing —
+            // an unforced Lazy never starts a walk.
+            ProbeCacheEntry replacement = NewProbeCacheEntry(drive, ct);
+            if (_probeCache.TryUpdate(drive.Path, replacement, entry))
+                return replacement.Probe.Value;
+        }
+    }
+
+    private ProbeCacheEntry NewProbeCacheEntry(DiscDrive drive, CancellationToken ct) =>
+        new(
+            new(() => ProbeUncachedAsync(drive, ct), LazyThreadSafetyMode.ExecutionAndPublication),
+            DateTime.UtcNow + ProbeCacheTtl
+        );
+
+    private async Task<DiscInfo> ProbeUncachedAsync(DiscDrive drive, CancellationToken ct)
     {
         string drivePath = ToDvdPath(drive.Path);
 
@@ -223,7 +288,11 @@ public sealed class DvdDiscSource(
             // title out and re-stamp the index.
             DiscInfo info = Bluray.DiscScanner.Parse(result.StdOut, OpticalDiscType.Dvd);
             DiscTitle? single = info.Titles.FirstOrDefault();
-            return single is null ? empty : single with { Index = titleIndex };
+            if (single is null)
+                return empty;
+
+            DiscTitle stamped = single with { Index = titleIndex };
+            return await StampIsMainFeatureAsync(stamped, drive, ct);
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
@@ -241,6 +310,25 @@ public sealed class DvdDiscSource(
             );
             return empty;
         }
+    }
+
+    /// <summary>
+    /// A single-title ffprobe response has no visibility into sibling
+    /// titles, so <see cref="Bluray.DiscScanner.Parse"/> can't answer "is
+    /// this the main feature" on its own — that needs a disc-wide duration
+    /// ranking. Reuses <see cref="ProbeAsync"/>'s format-only title walk
+    /// (no stream/chapter re-parse) to look up this title's rank instead
+    /// of hardcoding a flag.
+    /// </summary>
+    private async Task<DiscTitle> StampIsMainFeatureAsync(
+        DiscTitle title,
+        DiscDrive drive,
+        CancellationToken ct
+    )
+    {
+        DiscInfo discInfo = await ProbeAsync(drive, ct);
+        DiscTitle? match = discInfo.Titles.FirstOrDefault(t => t.Index == title.Index);
+        return match is null ? title : title with { IsMainFeature = match.IsMainFeature };
     }
 
     /// <summary>
