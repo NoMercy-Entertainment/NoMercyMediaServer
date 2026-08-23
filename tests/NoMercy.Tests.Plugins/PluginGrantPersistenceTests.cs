@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using FluentAssertions;
+using Microsoft.AspNetCore.DataProtection;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Plugins.Capabilities;
@@ -160,6 +161,51 @@ public class PluginGrantPersistenceTests : IDisposable
             .Holds(PluginId, PluginGrantKind.NetworkHost, "tracker.example")
             .Should()
             .BeTrue();
+    }
+
+    /// <summary>
+    /// The third record in the same file. A plugin storing a token after the
+    /// owner granted it a host would have taken the grant with it.
+    /// </summary>
+    [Fact]
+    public async Task A_stored_secret_does_not_wipe_consent_or_grants()
+    {
+        IPluginConfiguration configuration = Configuration();
+
+        new ConfigPluginConsentStore(configuration).Add(PluginId);
+        new ConfigPluginGrantStore(configuration).Grant(
+            PluginId,
+            PluginGrantKind.NetworkHost,
+            "tracker.example"
+        );
+
+        await new PluginSecretStore(
+            PluginId,
+            new EphemeralDataProtectionProvider(),
+            configuration
+        ).SetAsync("api-key", "s3cret");
+
+        IPluginConfiguration reread = Configuration();
+
+        new ConfigPluginConsentStore(reread).Contains(PluginId).Should().BeTrue();
+        new ConfigPluginGrantStore(reread)
+            .Holds(PluginId, PluginGrantKind.NetworkHost, "tracker.example")
+            .Should()
+            .BeTrue();
+
+        // And the secret itself round-trips, so the merge is not simply
+        // dropping the newest writer's keys.
+        (
+            await new PluginSecretStore(
+                PluginId,
+                new EphemeralDataProtectionProvider(),
+                reread
+            ).KeysAsync()
+        )
+            .Should()
+            .ContainSingle()
+            .Which.Should()
+            .Be("api-key");
     }
 
     [Fact]
