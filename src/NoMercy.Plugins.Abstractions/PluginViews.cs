@@ -488,8 +488,53 @@ public static class PluginViews
         if (column.Cell == PluginTableCellType.Badge && value is not null)
             return Badge(id, value.ToString() ?? string.Empty);
 
+        if (
+            column.Cell == PluginTableCellType.Actions
+            && value is IEnumerable<PluginTableAction> controls
+        )
+            return ActionCell(id, controls);
+
         return Leaf(id, value?.ToString() ?? string.Empty);
     }
+
+    /// <summary>
+    /// The buttons one row offers. A row carries a single action - the row
+    /// itself - so a row needing both a pause and a destructive cancel had to be
+    /// drawn a second time as a list of buttons under the table.
+    /// </summary>
+    private static PluginComponent ActionCell(string id, IEnumerable<PluginTableAction> controls) =>
+        new()
+        {
+            Id = id,
+            Component = PluginComponentType.Container,
+            Props = new()
+            {
+                ["variant"] = "ghost",
+                ["box"] = new Dictionary<string, object?>
+                {
+                    ["direction"] = "row",
+                    ["align"] = "center",
+                    ["gap"] = new Dictionary<string, object?> { ["all"] = "2" },
+                },
+            },
+            Items =
+            [
+                .. controls.Select(
+                    (PluginTableAction control, int index) =>
+                        control.Action is null
+                            // A button that does nothing is a label that looks
+                            // pressable, and the index keeps every id its own.
+                            ? Leaf($"{id}-{index}", control.Label)
+                            : Button(
+                                $"{id}-{index}",
+                                control.Label,
+                                control.Action,
+                                control.Icon,
+                                control.Variant
+                            )
+                ),
+            ],
+        };
 
     public static PluginComponent Row(
         string id,
