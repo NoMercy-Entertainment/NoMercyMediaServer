@@ -31,6 +31,13 @@ public static class PluginTableCellType
     /// <summary>A duration in seconds, formatted by the client.</summary>
     public const string Duration = "duration";
 
+    /// <summary>
+    /// A list of <see cref="PluginTableAction"/>, drawn as buttons in the cell.
+    /// A row carries one action - the row itself - so a row that needs both a
+    /// pause and a destructive cancel had nowhere to put the second one.
+    /// </summary>
+    public const string Actions = "actions";
+
     public static IReadOnlySet<string> All { get; } =
         new HashSet<string>(StringComparer.Ordinal)
         {
@@ -40,5 +47,6 @@ public static class PluginTableCellType
             Bytes,
             Rate,
             Duration,
+            Actions,
         };
 }

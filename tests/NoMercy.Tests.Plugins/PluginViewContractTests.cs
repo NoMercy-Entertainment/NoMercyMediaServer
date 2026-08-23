@@ -191,6 +191,69 @@ public class PluginViewContractTests
     }
 
     [Fact]
+    public void ATableRow_CanCarryMoreThanOneActionInAColumn()
+    {
+        // A row carries one action - the row itself - so pause and cancel per
+        // row forced the plugin to draw the same rows again as a list of
+        // buttons underneath.
+        PluginComponent table = PluginViews.Table(
+            "downloads",
+            [
+                new() { Key = "name", Label = "Name" },
+                new()
+                {
+                    Key = "controls",
+                    Label = "",
+                    Cell = PluginTableCellType.Actions,
+                },
+            ],
+            [
+                PluginViews.Row(
+                    "t1",
+                    new Dictionary<string, object?>
+                    {
+                        ["name"] = "ubuntu.iso",
+                        ["controls"] = new List<PluginTableAction>
+                        {
+                            new()
+                            {
+                                Label = "Pause",
+                                Action = PluginActionIntent.CallPlugin(
+                                    "pause",
+                                    new { hash = "abc" }
+                                ),
+                            },
+                            new()
+                            {
+                                Label = "Cancel",
+                                Variant = "danger",
+                                Action = PluginActionIntent.CallPlugin(
+                                    "cancel",
+                                    new { hash = "abc" }
+                                ),
+                            },
+                        },
+                    }
+                ),
+            ]
+        );
+
+        PluginComponent cell = table.Items[1].Items[1].Items[0];
+
+        cell.Items.Should().HaveCount(2);
+        cell.Items.Select(item => item.Component).Should().AllBe(PluginComponentType.Button);
+
+        // Which button is which, not merely that there are two: one id shared
+        // by both would press the same thing whichever the person aimed at.
+        cell.Items.Select(item => item.Id).Should().OnlyHaveUniqueItems();
+        cell.Items[0].Props["ariaLabel"].Should().Be("Pause");
+        cell.Items[1].Props["ariaLabel"].Should().Be("Cancel");
+        cell.Items[1].Props["variant"].Should().Be("danger");
+        cell.Items[0].Action!.Payload["method"].Should().Be("pause");
+        cell.Items[1].Action!.Payload["method"].Should().Be("cancel");
+    }
+
+    [Fact]
     public void ADestructiveButton_ShipsItsConfirmationInTheContract()
     {
         // If the prompt is not on the wire, every client reimplements it and

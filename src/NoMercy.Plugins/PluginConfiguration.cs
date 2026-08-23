@@ -11,6 +11,7 @@
 
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using NoMercy.Plugins.Abstractions;
 using NoMercy.Storage;
 
@@ -122,7 +123,7 @@ public class PluginConfiguration : IPluginConfiguration
                 _storage.CreateDirectory(directory);
             }
 
-            string json = JsonSerializer.Serialize(configuration, JsonOptions);
+            string json = Merge(ReadExisting(), configuration);
             _storage.Write(_configFilePath, Encoding.UTF8.GetBytes(json));
         }
         finally
@@ -145,12 +146,59 @@ public class PluginConfiguration : IPluginConfiguration
                 _storage.CreateDirectory(directory);
             }
 
-            string json = JsonSerializer.Serialize(configuration, JsonOptions);
+            string json = Merge(ReadExisting(), configuration);
             await _storage.WriteAllTextAsync(_configFilePath, json, ct);
         }
         finally
         {
             _lock.Release();
+        }
+    }
+
+    private string? ReadExisting() =>
+        _storage.Exists(_configFilePath)
+            ? Encoding.UTF8.GetString(_storage.Read(_configFilePath))
+            : null;
+
+    /// <summary>
+    /// One file, several records: consent, grants and secrets are all written
+    /// here by different types, and serializing one of them over the whole file
+    /// dropped the others. Consenting to a plugin wiped its grants, so the host
+    /// it had just been allowed came straight back as a request the owner had
+    /// already answered.
+    /// <para>
+    /// Keys the incoming record declares win; every other key is left as it was.
+    /// A file this cannot parse is replaced rather than merged into - the same
+    /// answer <see cref="TryDeserialize{T}"/> gives a malformed file.
+    /// </para>
+    /// </summary>
+    private static string Merge<T>(string? existing, T configuration)
+        where T : class
+    {
+        string json = JsonSerializer.Serialize(configuration, JsonOptions);
+
+        if (string.IsNullOrWhiteSpace(existing))
+            return json;
+
+        try
+        {
+            if (
+                JsonNode.Parse(existing) is not JsonObject document
+                || JsonNode.Parse(json) is not JsonObject incoming
+            )
+                return json;
+
+            foreach (KeyValuePair<string, JsonNode?> property in incoming.ToList())
+            {
+                incoming.Remove(property.Key);
+                document[property.Key] = property.Value;
+            }
+
+            return document.ToJsonString(JsonOptions);
+        }
+        catch (JsonException)
+        {
+            return json;
         }
     }
 
