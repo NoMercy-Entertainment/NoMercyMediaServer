@@ -1,5 +1,7 @@
 # Distributed Encoding
 
+> Suspended: distributed/remote encoding workers are out of scope for this round, see audit/ALIGNMENT.md (D5). The protocol and this guide stay in the tree; there is no scheduled work to make it reliable.
+
 NoMercy MediaServer supports splitting encode jobs across multiple machines —
 one **coordinator** (your normal server) dispatching tasks to one or more
 **remote workers** (extra boxes with spare CPU/GPU). When no workers are

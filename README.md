@@ -1,5 +1,5 @@
 > [!CAUTION]
-> **Work in progress — use with caution.** This repository is under active development and not yet stable.
+> **Under active development — expect breaking changes before 1.0.** Install instructions below are current and supported; review the release notes before upgrading.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/NoMercy-Entertainment/nomercy-media-server/master/assets/icons/logo.png" style="width: auto;">
@@ -25,7 +25,7 @@
 - **Automatic Encoding** — Convert your media files into various formats effortlessly
 - **Media Management** — Organize and curate your library with rich metadata
 - **Remote Streaming** — Access your collection from anywhere via [app.nomercy.tv](https://app.nomercy.tv)
-- **Server Switching** — Separate watch histories and profiles across multiple servers
+- **NoMercy Connect** — Cross-client playback control and hand-off; separate watch histories and profiles across multiple servers
 - **Trusted SSL** — Built-in certificate for secure internal and external access
 - **No DRM** — Your files always stay on your storage, accessible regardless of account status
 
@@ -186,13 +186,17 @@ Forward port `7626` on your router to access your server from outside your home 
 | Flag | Short | Description |
 |:--|:--|:--|
 | `--loglevel` | `-l` | Log level (`Verbose`, `Debug`, `Information`, `Warning`, `Error`, `Fatal`) |
-| `--seed` | | Seed database with sample data |
+| `--dev` | `-d` | Run the server in development mode |
 | `--internal-port` | `-i` | Internal port (default: `7626`) |
 | `--external-port` | `-x` | External port (default: `7626`) |
 | `--internal-ip` | | Internal IP address override |
 | `--external-ip` | | External IP address override |
 | `--pipe-name` | | Named pipe (Windows) or Unix socket name for IPC |
 | `--service` | | Run as a platform service (Windows SCM, systemd, launchd) |
+
+The server also listens on `InternalServerPort + 1` (default `7627`) on loopback only — an HTTP-only health check endpoint used by the Docker `HEALTHCHECK`, not reachable from outside the host.
+
+All ongoing configuration (libraries, users, encoding profiles, connectivity mode) lives in the dashboard, served through the web app after setup. Startup flags and environment variables are bootstrap-only — they set the values needed to reach that first setup page, not a substitute for it.
 
 ---
 

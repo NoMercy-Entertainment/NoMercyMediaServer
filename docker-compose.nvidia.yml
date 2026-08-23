@@ -49,7 +49,6 @@ services:
       # - NOMERCY_EXTERNAL_PORT=7626           # External port (if different from internal)
       # - NOMERCY_LOG_LEVEL=Information        # Verbose, Debug, Information, Warning, Error, Fatal
       # - NOMERCY_DEV=true                     # Development mode
-      # - NOMERCY_SEED=true                    # Seed database with sample data
       # NVIDIA environment
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility

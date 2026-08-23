@@ -17,12 +17,11 @@ dotnet build
 dotnet run --project src/NoMercy.Service
 
 # Run with custom options
-dotnet run --project src/NoMercy.Service --dev --seed --loglevel=Debug
+dotnet run --project src/NoMercy.Service --dev --loglevel=Debug
 ```
 
 ### Startup Options
 - `--dev` (`-d`): Development mode
-- `--seed`: Seed database with sample data
 - `--loglevel` (`-l`): Set logging level (Verbose, Debug, Information, Warning, Error, Fatal)
 - `--internal-port` (`-i`) / `--external-port` (`-x`): Custom port configuration
 - `--internal-ip` / `--external-ip`: IP address overrides

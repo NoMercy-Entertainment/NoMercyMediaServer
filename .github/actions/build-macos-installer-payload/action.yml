@@ -50,11 +50,19 @@ runs:
           /p:PublishSingleFile=false /p:DebugType=None /p:DebugSymbols=false \
           --output ./installer-payload
 
+    - name: Verify app repo token
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.app-repo-token }}" ]; then
+          echo "::error::app-repo-token is empty. The nomercy-app-web gh-pages checkout needs a valid PAT (org secret PAT); github.token cannot read that private repo."
+          exit 1
+        fi
+
     - name: Pull App Files
       uses: actions/checkout@v5
       with:
         repository: NoMercy-Entertainment/nomercy-app-web
-        token: ${{ inputs.app-repo-token || github.token }}
+        token: ${{ inputs.app-repo-token }}
         path: ./src/NoMercy.App/Resources/wwwroot
         fetch-depth: 1
         fetch-tags: false
