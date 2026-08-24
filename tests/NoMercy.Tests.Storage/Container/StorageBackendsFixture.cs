@@ -308,6 +308,13 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     /// </summary>
     public NfsStorageDriver? TryBuildNfsDriver(int version = 4)
     {
+        // No backends container, no export to mount. Without this the driver
+        // still constructs wherever libnfs happens to be installed, and the
+        // mount fails against a host that was never started - a failure that
+        // reads like a broken driver instead of an absent fixture.
+        if (!Available)
+            return null;
+
         try
         {
             NfsDriverConfig config = NfsDriverConfig.For(NfsHost, NfsExport, version: version);
