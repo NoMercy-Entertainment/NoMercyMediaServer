@@ -205,10 +205,15 @@ public class QueueEngineEndToEndTests : IDisposable
         QueueWorker worker = new(_jobQueue, "exhaust-retries");
         Task workerTask = worker.StartAsync(cts.Token);
 
+        // Recording the failure and removing the queue row are two writes, so
+        // waiting on the first one alone leaves the second in flight and the
+        // QueueJobs assertion below racing it. Waiting for both is still a
+        // real wait: if the row is never removed the deadline expires and the
+        // assertion fails, which is what it is there for.
         DateTime deadline = DateTime.UtcNow.AddSeconds(15);
         while (DateTime.UtcNow < deadline)
         {
-            if (_context.FailedJobs.Count() > 0)
+            if (_context.FailedJobs.Count() > 0 && _context.QueueJobs.Count() == 0)
                 break;
             await Task.Delay(50, CancellationToken.None);
         }
