@@ -23,7 +23,7 @@ public interface IShowRepository
 {
     Task AddAsync(Tv show);
     Task Remove(int id);
-    Task LinkToLibrary(Library library, Tv show);
+    Task LinkToLibrary(Library library, Tv show, string? addedBy = null);
     Task<Library?> GetLibraryByTypeAsync(string type);
     Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
     Task StoreTranslations(IEnumerable<Translation> translations);

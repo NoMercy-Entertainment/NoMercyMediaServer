@@ -356,7 +356,14 @@ public class TvShowRepository(
             return;
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<ShowImportJob>(id, tvLibrary);
+        jobDispatcher.DispatchJob(
+            new ShowImportJob
+            {
+                Id = id,
+                LibraryId = tvLibrary.Id,
+                AddedBy = LibraryLinkOrigin.Manual,
+            }
+        );
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)

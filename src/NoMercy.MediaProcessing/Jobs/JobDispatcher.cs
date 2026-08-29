@@ -117,6 +117,21 @@ public class JobDispatcher : IJobDispatcher
         Dispatcher.Dispatch(job);
     }
 
+    /// <summary>
+    /// A job the caller has already filled in.
+    /// <para>
+    /// The overloads around this one each name the two or three fields their
+    /// callers happened to need, which works until a job carries something they
+    /// do not know about - and then the choice is a new overload per field or a
+    /// caller that cannot say what it means.
+    /// </para>
+    /// </summary>
+    public virtual void DispatchJob<TJob>(TJob job)
+        where TJob : AbstractMediaJob
+    {
+        Dispatcher.Dispatch(job);
+    }
+
     public virtual void DispatchJob<TJob>(Ulid libraryId)
         where TJob : AbstractMediaJob, new()
     {

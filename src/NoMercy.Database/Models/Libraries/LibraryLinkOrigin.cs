@@ -9,19 +9,20 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.Database.Models.Libraries;
-using NoMercy.Providers.TMDB.Models.TV;
+namespace NoMercy.Database.Models.Libraries;
 
-namespace NoMercy.MediaProcessing.Shows;
-
-public interface IShowManager
+/// <summary>
+/// Why a title is in a library.
+/// <para>
+/// A row someone asked for and a row a scan brought in are two different things,
+/// and until this existed nothing in the data said which was which.
+/// </para>
+/// </summary>
+public static class LibraryLinkOrigin
 {
-    Task<TmdbTvShowAppends?> AddShowAsync(
-        int id,
-        Library library,
-        bool? priority = false,
-        string? addedBy = null
-    );
-    Task UpdateShowAsync(int id, Library library);
-    Task RemoveShowAsync(int id);
+    /// <summary>Someone pressed add.</summary>
+    public const string Manual = "manual";
+
+    /// <summary>A file on disk brought it in - the watcher, the inbox, a scan.</summary>
+    public const string File = "file";
 }

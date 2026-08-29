@@ -55,6 +55,13 @@ public class ShowImportJob : AbstractMediaJob
 
     public bool HighPriority { get; set; }
 
+    /// <summary>
+    /// Why this show is being imported. Defaults to the file origin, so a
+    /// dispatch site that says nothing is treated as a scan rather than as
+    /// something the owner asked for.
+    /// </summary>
+    public string AddedBy { get; set; } = LibraryLinkOrigin.File;
+
     public override async Task Handle()
     {
         await using MediaContext context = new();
@@ -103,7 +110,12 @@ public class ShowImportJob : AbstractMediaJob
 
         bool wasEmpty = !await context.LibraryTv.AnyAsync(lt => lt.LibraryId == LibraryId);
 
-        TmdbTvShowAppends? show = await showManager.AddShowAsync(Id, tvLibrary, HighPriority);
+        TmdbTvShowAppends? show = await showManager.AddShowAsync(
+            Id,
+            tvLibrary,
+            HighPriority,
+            AddedBy
+        );
         if (show == null)
         {
             await ImportFailureRecorder.RecordAsync(

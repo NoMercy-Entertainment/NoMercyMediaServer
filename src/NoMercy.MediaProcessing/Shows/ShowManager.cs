@@ -43,7 +43,8 @@ public class ShowManager(
     public async Task<TmdbTvShowAppends?> AddShowAsync(
         int id,
         Library library,
-        bool? priority = false
+        bool? priority = false,
+        string? addedBy = null
     )
     {
         logger.LogInformation("Show {Id}: Adding to Library {Title}", [id, library.Title]);
@@ -167,7 +168,7 @@ public class ShowManager(
         await showRepository.AddAsync(show);
         logger.LogDebug("Show {Title}: Added to Database", show.Title);
 
-        await showRepository.LinkToLibrary(library, show);
+        await showRepository.LinkToLibrary(library, show, addedBy);
         logger.LogDebug("Show {Title}: Linked to Library {Title2}", [show.Title, library.Title]);
 
         await StoreGenres(showAppends);
