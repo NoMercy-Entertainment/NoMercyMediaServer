@@ -12,6 +12,7 @@
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Libraries;
 using NoMercy.Database.Models.TvShows;
@@ -92,32 +93,49 @@ public class LibraryListingProvenanceTests : IDisposable
     }
 
     /// <summary>
-    /// The listing's own filter, run against the seeded database.
+    /// The repository's own listing, driven for real.
     ///
     /// <para>
-    /// The repository compiles this query with EF.CompileAsyncQuery and reaches
-    /// it through a context factory, neither of which a fixture can hand a
-    /// connection to. The predicate is what this is about, so the predicate is
-    /// what is asserted - kept beside the repository's, and wrong in the same
-    /// way if either drifts.
+    /// This restated the predicate instead of calling it, and the restatement is
+    /// worthless: mutating LibraryRepository could not make it fail, so it read
+    /// as coverage while guarding nothing. The repository takes the context as a
+    /// parameter here, so there is no reason not to call it.
     /// </para>
     /// </summary>
     private async Task<List<int>> ListedShowIdsAsync()
     {
         await using MediaContext context = new(_options);
 
-        return await context
-            .Tvs.AsNoTracking()
-            .Where(tv => tv.Library.Id == LibraryId)
-            .Where(tv => tv.Library.LibraryUsers.Any(user => user.UserId.Equals(UserId)))
-            .Where(tv =>
-                tv.Episodes.Any(episode => episode.VideoFiles.Any())
-                || tv.Library.LibraryTvs.Any(link =>
-                    link.TvId == tv.Id && link.AddedBy == LibraryLinkOrigin.Manual
-                )
+        LibraryRepository repository = new(new Factory(_options));
+
+        List<int> listed = [];
+
+        await foreach (
+            Tv show in repository.GetLibraryShows(
+                context,
+                UserId,
+                LibraryId,
+                "en",
+                take: 50,
+                skip: 0,
+                orderByExpression: null,
+                direction: null
             )
-            .Select(tv => tv.Id)
-            .ToListAsync();
+        )
+        {
+            listed.Add(show.Id);
+        }
+
+        return listed;
+    }
+
+    private sealed class Factory(DbContextOptions<MediaContext> options)
+        : IDbContextFactory<MediaContext>
+    {
+        public MediaContext CreateDbContext()
+        {
+            return new(options);
+        }
     }
 
     private async Task SeedAsync()
