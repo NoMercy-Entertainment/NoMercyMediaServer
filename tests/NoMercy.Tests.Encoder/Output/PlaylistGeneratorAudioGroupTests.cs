@@ -56,8 +56,18 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
             AudioOutputs: [],
@@ -80,14 +90,21 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
@@ -108,14 +125,21 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
@@ -136,14 +160,21 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("libopus", 128, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("libopus", 128, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
@@ -162,14 +193,21 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("eac3", 384, 6, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("eac3", 384, 6, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
@@ -189,14 +227,21 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
@@ -225,8 +270,18 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
             AudioOutputs:
@@ -250,12 +305,16 @@ public class PlaylistGeneratorAudioGroupTests
         };
 
         PlaylistGenerator generator = new();
-        string master = generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
+        string master = generator.GenerateMasterPlaylist(
+            plan,
+            MediaTitle,
+            videoMetrics,
+            audioMetrics
+        );
 
-        int audioMediaCount = System.Text.RegularExpressions.Regex.Matches(
-            master,
-            "#EXT-X-MEDIA:TYPE=AUDIO"
-        ).Count;
+        int audioMediaCount = System
+            .Text.RegularExpressions.Regex.Matches(master, "#EXT-X-MEDIA:TYPE=AUDIO")
+            .Count;
         audioMediaCount.Should().Be(2);
 
         master.Should().Contain("LANGUAGE=\"eng\"");
@@ -270,14 +329,21 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 0, 2, 48000, StreamAction.Copy, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 0, 2, 48000, StreamAction.Copy, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
@@ -297,14 +363,21 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
-            AudioOutputs:
-            [
-                new("aac", 192, 2, 48000, StreamAction.Drop, "eng", "0:a:0"),
-            ],
+            AudioOutputs: [new("aac", 192, 2, 48000, StreamAction.Drop, "eng", "0:a:0")],
             SubtitleOutputs: [],
             Thumbnails: null
         );
@@ -322,8 +395,18 @@ public class PlaylistGeneratorAudioGroupTests
             VideoOutputs:
             [
                 new(
-                    1920, 1080, "libx264", 23, 8000, "medium", "high", "4.0", false,
-                    "yuv420p", "[v0]", new()
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
                 ),
             ],
             AudioOutputs:
@@ -347,12 +430,101 @@ public class PlaylistGeneratorAudioGroupTests
         };
 
         PlaylistGenerator generator = new();
-        string master = generator.GenerateMasterPlaylist(plan, MediaTitle, videoMetrics, audioMetrics);
+        string master = generator.GenerateMasterPlaylist(
+            plan,
+            MediaTitle,
+            videoMetrics,
+            audioMetrics
+        );
 
-        int defaultCount = System.Text.RegularExpressions.Regex.Matches(master, "DEFAULT=YES").Count;
+        int defaultCount = System
+            .Text.RegularExpressions.Regex.Matches(master, "DEFAULT=YES")
+            .Count;
         defaultCount.Should().Be(1);
 
         master.Should().Contain("LANGUAGE=\"eng\",AUTOSELECT=YES,DEFAULT=YES");
         master.Should().Contain("LANGUAGE=\"fra\",AUTOSELECT=YES,DEFAULT=NO");
+    }
+
+    [Fact]
+    public void GenerateMasterPlaylist_SourceDefaultIsNotFirst_MarksThatRenditionDefault()
+    {
+        // Keira's bug: episodes resumed in Portuguese / swapped en to fr because
+        // DEFAULT=YES followed ffprobe stream order instead of the release's own
+        // default-audio disposition, and that order differs file by file.
+        OutputPlan plan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new(
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
+                ),
+            ],
+            AudioOutputs:
+            [
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "por", "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "jpn", "0:a:1")
+                {
+                    IsSourceDefault = true,
+                },
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:2"),
+            ],
+            SubtitleOutputs: [],
+            Thumbnails: null
+        );
+
+        string master = Generate(plan);
+
+        master.Should().Contain("LANGUAGE=\"jpn\",AUTOSELECT=YES,DEFAULT=YES");
+        master.Should().Contain("LANGUAGE=\"por\",AUTOSELECT=YES,DEFAULT=NO");
+        master.Should().Contain("LANGUAGE=\"eng\",AUTOSELECT=YES,DEFAULT=NO");
+    }
+
+    [Fact]
+    public void GenerateMasterPlaylist_NoSourceDefault_FallsBackToFirstRendition()
+    {
+        OutputPlan plan = new(
+            Format: OutputFormat.Hls,
+            VideoOutputs:
+            [
+                new(
+                    1920,
+                    1080,
+                    "libx264",
+                    23,
+                    8000,
+                    "medium",
+                    "high",
+                    "4.0",
+                    false,
+                    "yuv420p",
+                    "[v0]",
+                    new()
+                ),
+            ],
+            AudioOutputs:
+            [
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "por", "0:a:0"),
+                new("aac", 192, 2, 48000, StreamAction.Transcode, "eng", "0:a:1"),
+            ],
+            SubtitleOutputs: [],
+            Thumbnails: null
+        );
+
+        string master = Generate(plan);
+
+        master.Should().Contain("LANGUAGE=\"por\",AUTOSELECT=YES,DEFAULT=YES");
+        master.Should().Contain("LANGUAGE=\"eng\",AUTOSELECT=YES,DEFAULT=NO");
     }
 }
