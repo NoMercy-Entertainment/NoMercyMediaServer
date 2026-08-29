@@ -178,7 +178,7 @@ public class RetryJitterTests
         Assert.True(
             found,
             $"{methodName} should reference MaxDbRetryAttempts constant value ({value}) in its IL. "
-                         + "This ensures the retry limit of 5 (not the old value of 10) is used."
+                + "This ensures the retry limit of 5 (not the old value of 10) is used."
         );
     }
 
@@ -222,7 +222,7 @@ public class RetryJitterTests
         Assert.False(
             foundTenAsLimit,
             "HIGH-18 regression: ReserveJob still uses hardcoded retry limit of 10. "
-                         + "Should use MaxDbRetryAttempts constant (5)."
+                + "Should use MaxDbRetryAttempts constant (5)."
         );
     }
 }

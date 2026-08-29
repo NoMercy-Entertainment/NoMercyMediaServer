@@ -68,7 +68,7 @@ public class BlockingPatternTests : IDisposable
         Assert.False(
             returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>),
             "ReserveJobQuery should return QueueJob? directly, not Task<QueueJob?>. "
-                         + "Using async compiled query requires .Result which causes deadlocks (CRIT-04)."
+                + "Using async compiled query requires .Result which causes deadlocks (CRIT-04)."
         );
     }
 
@@ -93,12 +93,12 @@ public class BlockingPatternTests : IDisposable
 
         Assert.False(
             returnType == typeof(Task<bool>)
-                       || (
-                           returnType.IsGenericType
-                           && returnType.GetGenericTypeDefinition() == typeof(Task<>)
-                       ),
+                || (
+                    returnType.IsGenericType
+                    && returnType.GetGenericTypeDefinition() == typeof(Task<>)
+                ),
             "ExistsQuery should return bool directly, not Task<bool>. "
-                         + "Using async compiled query requires .Result which causes deadlocks (CRIT-04)."
+                + "Using async compiled query requires .Result which causes deadlocks (CRIT-04)."
         );
     }
 

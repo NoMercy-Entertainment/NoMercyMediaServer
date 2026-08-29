@@ -207,8 +207,10 @@ public class StartupParallelizationTests
         });
 
         // Phase 3: other parallel tasks
-        await Task.WhenAll([Task.Run(async () => await Task.Delay(30)), Task.Run(async () => await Task.Delay(20))]
-        );
+        await Task.WhenAll([
+            Task.Run(async () => await Task.Delay(30)),
+            Task.Run(async () => await Task.Delay(20)),
+        ]);
 
         // Phase 4: Wait for networking then register
         await networkingTask;
