@@ -128,6 +128,23 @@ public class ShowRepository(MediaContext context) : IShowRepository
         return context.Libraries.AsNoTracking().FirstOrDefaultAsync(l => l.Type == type);
     }
 
+    public async Task<bool> EnsureFiledUnderLibraryTypeAsync(int tvId, string libraryType)
+    {
+        Library? target = await context
+            .Libraries.AsNoTracking()
+            .FirstOrDefaultAsync(library => library.Type == libraryType);
+        if (target is null)
+            return false;
+
+        Tv? tv = await context.Tvs.FirstOrDefaultAsync(row => row.Id == tvId);
+        if (tv is null || tv.LibraryId == target.Id)
+            return false;
+
+        tv.LibraryId = target.Id;
+        await context.SaveChangesAsync();
+        return true;
+    }
+
     public Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles)
     {
         return context

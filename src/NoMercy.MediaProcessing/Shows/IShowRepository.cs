@@ -25,6 +25,13 @@ public interface IShowRepository
     Task Remove(int id);
     Task LinkToLibrary(Library library, Tv show, string? addedBy = null);
     Task<Library?> GetLibraryByTypeAsync(string type);
+
+    /// <summary>
+    /// Moves a Tv row into the library of the given type when it is not already
+    /// there. Library membership only — no files move, nothing is re-scanned.
+    /// Returns true when a row was actually moved.
+    /// </summary>
+    Task<bool> EnsureFiledUnderLibraryTypeAsync(int tvId, string libraryType);
     Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles);
     Task StoreTranslations(IEnumerable<Translation> translations);
     Task StoreContentRatings(IEnumerable<CertificationTv> certifications);
