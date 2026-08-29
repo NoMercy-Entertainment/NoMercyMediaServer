@@ -26,6 +26,18 @@ public static class PluginFormFieldType
     /// <summary>A file upload, posted to the plugin's own REST endpoint.</summary>
     public const string File = "file";
 
+    /// <summary>
+    /// A place on the server to put things, chosen rather than typed.
+    /// <para>
+    /// Every plugin that needs somewhere to write was asking its owner to type
+    /// an absolute path into a text box. Nothing validated it, and it was typed
+    /// on the wrong machine: the owner is at a browser and the path has to exist
+    /// on the server, so a typo was accepted, saved, and discovered hours later
+    /// when a download finished and could not be staged.
+    /// </para>
+    /// </summary>
+    public const string Folder = "folder";
+
     public static IReadOnlySet<string> All { get; } =
         new HashSet<string>(StringComparer.Ordinal)
         {
@@ -36,5 +48,6 @@ public static class PluginFormFieldType
             Select,
             Checkbox,
             File,
+            Folder,
         };
 }

@@ -120,7 +120,10 @@ public class PluginLibraryQuery(IDbContextFactory<MediaContext> contextFactory)
                 episode.Title,
                 episode.AirDate,
                 episode.VideoFiles.Any()
-            ))
+            )
+            {
+                Id = episode.Id,
+            })
             .ToListAsync(ct);
     }
 
