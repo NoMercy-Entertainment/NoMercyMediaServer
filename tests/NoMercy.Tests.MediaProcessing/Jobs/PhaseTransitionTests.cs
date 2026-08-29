@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text.RegularExpressions;
+using NoMercy.Tests.Common;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
@@ -34,33 +35,7 @@ public partial class PhaseTransitionTests
 
     private static string LoadVideoEncodeJobSource()
     {
-        if (_cachedSource is not null)
-            return _cachedSource;
-
-        string? dir = AppDomain.CurrentDomain.BaseDirectory;
-
-        while (dir is not null)
-        {
-            string srcCandidate = Path.Combine(dir, "src");
-            if (Directory.Exists(srcCandidate))
-            {
-                string[] files = Directory.GetFiles(
-                    srcCandidate,
-                    "VideoEncodeJob.cs",
-                    SearchOption.AllDirectories
-                );
-
-                if (files.Length > 0)
-                {
-                    _cachedSource = File.ReadAllText(files[0]);
-                    return _cachedSource;
-                }
-            }
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new FileNotFoundException("VideoEncodeJob.cs not found under any src/ ancestor");
+        return _cachedSource ??= File.ReadAllText(RepoPaths.SourceFile("VideoEncodeJob.cs"));
     }
 
     [Fact]

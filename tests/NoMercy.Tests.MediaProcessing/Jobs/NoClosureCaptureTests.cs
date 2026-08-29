@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text.RegularExpressions;
+using NoMercy.Tests.Common;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
@@ -124,35 +125,7 @@ public partial class NoClosureCaptureTests
 
     private static string ReadVideoEncodeJobSource()
     {
-        string path = FindSourceFile("VideoEncodeJob.cs");
-        return File.ReadAllText(path);
-    }
-
-    private static string FindSourceFile(string fileName)
-    {
-        string? dir = AppDomain.CurrentDomain.BaseDirectory;
-
-        while (dir != null)
-        {
-            string candidate = Path.Combine(dir, "src");
-            if (Directory.Exists(candidate))
-            {
-                string[] matches = Directory.GetFiles(
-                    candidate,
-                    fileName,
-                    SearchOption.AllDirectories
-                );
-
-                if (matches.Length > 0)
-                    return matches[0];
-            }
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new FileNotFoundException(
-            $"Could not find source file '{fileName}' under any src/ directory"
-        );
+        return File.ReadAllText(RepoPaths.SourceFile("VideoEncodeJob.cs"));
     }
 
     private static Regex FieldDeclarationPattern(string typeName) =>

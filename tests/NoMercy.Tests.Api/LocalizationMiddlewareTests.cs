@@ -14,6 +14,7 @@ using I18N.DotNet;
 using Microsoft.AspNetCore.Http;
 using NoMercy.Api.Middleware;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.Tests.Common;
 using Xunit;
 
 namespace NoMercy.Tests.Api;
@@ -36,8 +37,11 @@ public class LocalizationMiddlewareTests
     [Fact]
     public void ApplicationConfiguration_HasSingleUseRequestLocalizationCall()
     {
-        string sourceFile = FindRepoFile(
-            Path.Combine("src", "NoMercy.Service", "Configuration", "ApplicationConfiguration.cs")
+        string sourceFile = RepoPaths.File(
+            "src",
+            "NoMercy.Service",
+            "Configuration",
+            "ApplicationConfiguration.cs"
         );
 
         string source = File.ReadAllText(sourceFile);
@@ -45,25 +49,6 @@ public class LocalizationMiddlewareTests
         int count = Regex.Matches(source, @"UseRequestLocalization\s*\(").Count;
 
         Assert.Equal(1, count);
-    }
-
-    // Walk up from the test assembly instead of a fixed ".." chain — the output
-    // directory depth changes under a redirected BaseOutputPath.
-    private static string FindRepoFile(string relativePath)
-    {
-        string dir = AppContext.BaseDirectory;
-        while (dir != null!)
-        {
-            string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate))
-                return candidate;
-
-            dir = Path.GetDirectoryName(dir)!;
-        }
-
-        throw new FileNotFoundException(
-            $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
-        );
     }
 
     [Fact]

@@ -11,6 +11,7 @@
 
 using System.Reflection;
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercy.Tests.Common;
 using Xunit;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
@@ -35,19 +36,15 @@ public sealed class AudioImportReleaseResolutionTests
 {
     private static string ReadAudioImportJobSource()
     {
-        const string relativePath =
-            "src/NoMercy.MediaProcessing/Jobs/MediaJobs/AudioImportJob.cs";
-
-        string? dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            string candidate = Path.GetFullPath(Path.Combine(dir, relativePath));
-            if (File.Exists(candidate))
-                return File.ReadAllText(candidate);
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new FileNotFoundException($"Could not locate {relativePath}");
+        return File.ReadAllText(
+            RepoPaths.File(
+                "src",
+                "NoMercy.MediaProcessing",
+                "Jobs",
+                "MediaJobs",
+                "AudioImportJob.cs"
+            )
+        );
     }
 
     [Fact]
@@ -71,7 +68,10 @@ public sealed class AudioImportReleaseResolutionTests
     {
         string source = ReadAudioImportJobSource();
 
-        int callSites = CountOccurrences(source, "await ResolveReleaseIdAsync(mediaFile, audioTag)");
+        int callSites = CountOccurrences(
+            source,
+            "await ResolveReleaseIdAsync(mediaFile, audioTag)"
+        );
 
         Assert.Equal(2, callSites);
     }
@@ -86,7 +86,10 @@ public sealed class AudioImportReleaseResolutionTests
     public void NeitherImportPath_SkipsUntaggedFilesWithoutFingerprinting()
     {
         string source = ReadAudioImportJobSource();
-        string normalized = string.Join(' ', source.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        string normalized = string.Join(
+            ' ',
+            source.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+        );
 
         Assert.DoesNotContain(
             "audioTag.MusicBrainz?.ReleaseId is null || audioTag.MusicBrainz.ReleaseId == Guid.Empty ) continue;",
