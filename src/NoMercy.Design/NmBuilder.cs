@@ -995,60 +995,6 @@ public static class NMCheckboxExtensions
 public static class NMInputExtensions
 {
     /// <summary>
-    /// Addon left · dropdown
-    /// </summary>
-    public static NMInputProps AddonLeftDropdown(this NMInputProps props, bool value)
-    {
-        props.AddonLeftDropdown = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Addon left · icon
-    /// </summary>
-    public static NMInputProps AddonLeftIcon(this NMInputProps props, bool value)
-    {
-        props.AddonLeftIcon = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Addon left · label
-    /// </summary>
-    public static NMInputProps AddonLeftText(this NMInputProps props, string value)
-    {
-        props.AddonLeftText = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Addon right · dropdown
-    /// </summary>
-    public static NMInputProps AddonRightDropdown(this NMInputProps props, bool value)
-    {
-        props.AddonRightDropdown = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Addon right · icon
-    /// </summary>
-    public static NMInputProps AddonRightIcon(this NMInputProps props, bool value)
-    {
-        props.AddonRightIcon = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Addon right · label
-    /// </summary>
-    public static NMInputProps AddonRightText(this NMInputProps props, string value)
-    {
-        props.AddonRightText = value;
-        return props;
-    }
-
-    /// <summary>
     /// Whether the input is disabled
     /// </summary>
     public static NMInputProps Disabled(this NMInputProps props, bool value)
@@ -1063,51 +1009,6 @@ public static class NMInputExtensions
     public static NMInputProps Error(this NMInputProps props, bool value)
     {
         props.Error = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Left icon
-    /// </summary>
-    public static NMInputProps IconLeftValue(this NMInputProps props, string value)
-    {
-        props.IconLeftValue = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Right icon
-    /// </summary>
-    public static NMInputProps IconRightValue(this NMInputProps props, string value)
-    {
-        props.IconRightValue = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label hanging
-    /// </summary>
-    public static NMInputProps LabelHanging(this NMInputProps props, bool value)
-    {
-        props.LabelHanging = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label leading icon
-    /// </summary>
-    public static NMInputProps LabelLeadingIcon(this NMInputProps props, bool value)
-    {
-        props.LabelLeadingIcon = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label icon
-    /// </summary>
-    public static NMInputProps LabelLeadingIconValue(this NMInputProps props, string value)
-    {
-        props.LabelLeadingIconValue = value;
         return props;
     }
 
@@ -1371,33 +1272,6 @@ public static class NMTextareaExtensions
     }
 
     /// <summary>
-    /// Label hanging
-    /// </summary>
-    public static NMTextareaProps LabelHanging(this NMTextareaProps props, bool value)
-    {
-        props.LabelHanging = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label leading icon
-    /// </summary>
-    public static NMTextareaProps LabelLeadingIcon(this NMTextareaProps props, bool value)
-    {
-        props.LabelLeadingIcon = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label icon
-    /// </summary>
-    public static NMTextareaProps LabelLeadingIconValue(this NMTextareaProps props, string value)
-    {
-        props.LabelLeadingIconValue = value;
-        return props;
-    }
-
-    /// <summary>
     /// Maximum character limit
     /// </summary>
     public static NMTextareaProps MaxChars(this NMTextareaProps props, int value)
@@ -1579,36 +1453,6 @@ public static class NMCheckboxGroupExtensions
     }
 
     /// <summary>
-    /// Label hanging
-    /// </summary>
-    public static NMCheckboxGroupProps LabelHanging(this NMCheckboxGroupProps props, bool value)
-    {
-        props.LabelHanging = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label leading icon
-    /// </summary>
-    public static NMCheckboxGroupProps LabelLeadingIcon(this NMCheckboxGroupProps props, bool value)
-    {
-        props.LabelLeadingIcon = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label icon
-    /// </summary>
-    public static NMCheckboxGroupProps LabelLeadingIconValue(
-        this NMCheckboxGroupProps props,
-        string value
-    )
-    {
-        props.LabelLeadingIconValue = value;
-        return props;
-    }
-
-    /// <summary>
     /// Layout direction
     /// </summary>
     public static NMCheckboxGroupProps Layout(this NMCheckboxGroupProps props, string value)
@@ -1676,36 +1520,6 @@ public static class NMRadioGroupExtensions
     public static NMRadioGroupProps GroupError(this NMRadioGroupProps props, bool value)
     {
         props.GroupError = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label hanging
-    /// </summary>
-    public static NMRadioGroupProps LabelHanging(this NMRadioGroupProps props, bool value)
-    {
-        props.LabelHanging = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label leading icon
-    /// </summary>
-    public static NMRadioGroupProps LabelLeadingIcon(this NMRadioGroupProps props, bool value)
-    {
-        props.LabelLeadingIcon = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label icon
-    /// </summary>
-    public static NMRadioGroupProps LabelLeadingIconValue(
-        this NMRadioGroupProps props,
-        string value
-    )
-    {
-        props.LabelLeadingIconValue = value;
         return props;
     }
 
@@ -2494,42 +2308,6 @@ public static class NMSelectExtensions
     }
 
     /// <summary>
-    /// Left icon
-    /// </summary>
-    public static NMSelectProps IconLeftValue(this NMSelectProps props, string value)
-    {
-        props.IconLeftValue = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label hanging
-    /// </summary>
-    public static NMSelectProps LabelHanging(this NMSelectProps props, bool value)
-    {
-        props.LabelHanging = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label leading icon
-    /// </summary>
-    public static NMSelectProps LabelLeadingIcon(this NMSelectProps props, bool value)
-    {
-        props.LabelLeadingIcon = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Label icon
-    /// </summary>
-    public static NMSelectProps LabelLeadingIconValue(this NMSelectProps props, string value)
-    {
-        props.LabelLeadingIconValue = value;
-        return props;
-    }
-
-    /// <summary>
     /// Array of selectable options
     /// </summary>
     public static NMSelectProps Options(
@@ -3000,24 +2778,6 @@ public static class NMIconPickerExtensions
     public static NMIconPickerProps Placeholder(this NMIconPickerProps props, string value)
     {
         props.Placeholder = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Emoji source
-    /// </summary>
-    public static NMIconPickerProps ShowEmoji(this NMIconPickerProps props, bool value)
-    {
-        props.ShowEmoji = value;
-        return props;
-    }
-
-    /// <summary>
-    /// Icons source
-    /// </summary>
-    public static NMIconPickerProps ShowIcons(this NMIconPickerProps props, bool value)
-    {
-        props.ShowIcons = value;
         return props;
     }
 

@@ -476,30 +476,6 @@ public record NmSelectOption
 }
 
 /// <summary>
-/// One node of a tree. A branch carries children and can be expanded; a
-/// leaf carries neither. The distinction is stated rather than inferred
-/// from whether `children` happens to be empty, because an empty folder is
-/// still a folder.
-/// </summary>
-public record NmTreeNode
-{
-    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Label { get; set; }
-
-    [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Type { get; set; }
-
-    [JsonProperty("expanded", NullValueHandling = NullValueHandling.Ignore)]
-    public bool? Expanded { get; set; }
-
-    [JsonProperty("selected", NullValueHandling = NullValueHandling.Ignore)]
-    public bool? Selected { get; set; }
-
-    [JsonProperty("children")]
-    public List<NmTreeNode> Children { get; set; } = [];
-}
-
-/// <summary>
 /// One message in a conversation. `variant` is who is speaking, which is
 /// what decides the side it sits on and the colour it takes.
 /// </summary>
@@ -528,28 +504,6 @@ public record NmStep
 
     [JsonProperty("description", NullValueHandling = NullValueHandling.Ignore)]
     public string? Description { get; set; }
-}
-
-/// <summary>
-/// One option in a group that behaves as a set: a button group, a segmented
-/// control, a checkbox or radio group.
-/// </summary>
-public record NmChoice
-{
-    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Label { get; set; }
-
-    [JsonProperty("value", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Value { get; set; }
-
-    [JsonProperty("icon", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Icon { get; set; }
-
-    [JsonProperty("active", NullValueHandling = NullValueHandling.Ignore)]
-    public bool? Active { get; set; }
-
-    [JsonProperty("disabled", NullValueHandling = NullValueHandling.Ignore)]
-    public bool? Disabled { get; set; }
 }
 
 /// <summary>

@@ -2023,19 +2023,8 @@ public static class NmKitchenSink
                     Label = "default",
                     Props = new NMInputProps
                     {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         LeadingTextValue = "$",
                         Placeholder = "Placeholder Text",
                         Size = "md",
@@ -2059,343 +2048,12 @@ public static class NmKitchenSink
                 },
                 new()
                 {
-                    Id = "input-addonleftdropdown-true",
-                    Label = "addonLeftDropdown = true",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-addonleftdropdown-true",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-addonleftdropdown-true-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-addonleftdropdown-false",
-                    Label = "addonLeftDropdown = false",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = false,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-addonleftdropdown-false",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-addonleftdropdown-false-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-addonlefticon-true",
-                    Label = "addonLeftIcon = true",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = true,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-addonlefticon-true",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-addonlefticon-true-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-addonlefticon-false",
-                    Label = "addonLeftIcon = false",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-addonlefticon-false",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-addonlefticon-false-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-addonrightdropdown-true",
-                    Label = "addonRightDropdown = true",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = true,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-addonrightdropdown-true",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-addonrightdropdown-true-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-addonrightdropdown-false",
-                    Label = "addonRightDropdown = false",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-addonrightdropdown-false",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-addonrightdropdown-false-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-addonrighticon-true",
-                    Label = "addonRightIcon = true",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = true,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-addonrighticon-true",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-addonrighticon-true-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-addonrighticon-false",
-                    Label = "addonRightIcon = false",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-addonrighticon-false",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-addonrighticon-false-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
                     Id = "input-disabled-true",
                     Label = "disabled = true",
                     Props = new NMInputProps
                     {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
                         Disabled = true,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         LeadingTextValue = "$",
                         Placeholder = "Placeholder Text",
                         Size = "md",
@@ -2423,19 +2081,8 @@ public static class NmKitchenSink
                     Label = "disabled = false",
                     Props = new NMInputProps
                     {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         LeadingTextValue = "$",
                         Placeholder = "Placeholder Text",
                         Size = "md",
@@ -2463,19 +2110,8 @@ public static class NmKitchenSink
                     Label = "error = true",
                     Props = new NMInputProps
                     {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
                         Disabled = false,
                         Error = true,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         LeadingTextValue = "$",
                         Placeholder = "Placeholder Text",
                         Size = "md",
@@ -2503,19 +2139,8 @@ public static class NmKitchenSink
                     Label = "error = false",
                     Props = new NMInputProps
                     {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         LeadingTextValue = "$",
                         Placeholder = "Placeholder Text",
                         Size = "md",
@@ -2539,183 +2164,12 @@ public static class NmKitchenSink
                 },
                 new()
                 {
-                    Id = "input-labelhanging-true",
-                    Label = "labelHanging = true",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = true,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-labelhanging-true",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-labelhanging-true-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-labelhanging-false",
-                    Label = "labelHanging = false",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-labelhanging-false",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-labelhanging-false-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-labelleadingicon-true",
-                    Label = "labelLeadingIcon = true",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = true,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-labelleadingicon-true",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-labelleadingicon-true-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "input-labelleadingicon-false",
-                    Label = "labelLeadingIcon = false",
-                    Props = new NMInputProps
-                    {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        LeadingTextValue = "$",
-                        Placeholder = "Placeholder Text",
-                        Size = "md",
-                        TestId = "input-labelleadingicon-false",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "input-labelleadingicon-false-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "searchMagnifyingGlass",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
                     Id = "input-size-sm",
                     Label = "size = sm",
                     Props = new NMInputProps
                     {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         LeadingTextValue = "$",
                         Placeholder = "Placeholder Text",
                         Size = "sm",
@@ -2743,19 +2197,8 @@ public static class NmKitchenSink
                     Label = "size = md",
                     Props = new NMInputProps
                     {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         LeadingTextValue = "$",
                         Placeholder = "Placeholder Text",
                         Size = "md",
@@ -2783,19 +2226,8 @@ public static class NmKitchenSink
                     Label = "size = lg",
                     Props = new NMInputProps
                     {
-                        AddonLeftDropdown = true,
-                        AddonLeftIcon = false,
-                        AddonLeftText = "https://",
-                        AddonRightDropdown = false,
-                        AddonRightIcon = false,
-                        AddonRightText = ".com",
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        IconRightValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         LeadingTextValue = "$",
                         Placeholder = "Placeholder Text",
                         Size = "lg",
@@ -2822,34 +2254,6 @@ public static class NmKitchenSink
             [
                 new()
                 {
-                    Name = "addonLeftDropdown",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "true",
-                },
-                new()
-                {
-                    Name = "addonLeftIcon",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "addonRightDropdown",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "addonRightIcon",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
                     Name = "disabled",
                     Control = "toggle",
                     Values = ["true", "false"],
@@ -2858,20 +2262,6 @@ public static class NmKitchenSink
                 new()
                 {
                     Name = "error",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "labelHanging",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "labelLeadingIcon",
                     Control = "toggle",
                     Values = ["true", "false"],
                     Default = "false",
@@ -2976,74 +2366,6 @@ public static class NmKitchenSink
                         ShowCounter = false,
                         Size = "md",
                         TestId = "textarea-error-false",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-labelhanging-true",
-                    Label = "labelHanging = true",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Type here...",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "md",
-                        LabelHanging = true,
-                        TestId = "textarea-labelhanging-true",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-labelhanging-false",
-                    Label = "labelHanging = false",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Type here...",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "md",
-                        LabelHanging = false,
-                        TestId = "textarea-labelhanging-false",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-labelleadingicon-true",
-                    Label = "labelLeadingIcon = true",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Type here...",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "md",
-                        LabelLeadingIcon = true,
-                        TestId = "textarea-labelleadingicon-true",
-                    },
-                },
-                new()
-                {
-                    Id = "textarea-labelleadingicon-false",
-                    Label = "labelLeadingIcon = false",
-                    Props = new NMTextareaProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        MaxChars = 200,
-                        Placeholder = "Type here...",
-                        Resize = "vertical",
-                        ShowCounter = false,
-                        Size = "md",
-                        LabelLeadingIcon = false,
-                        TestId = "textarea-labelleadingicon-false",
                     },
                 },
                 new()
@@ -3193,20 +2515,6 @@ public static class NmKitchenSink
                 },
                 new()
                 {
-                    Name = "labelHanging",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = null,
-                },
-                new()
-                {
-                    Name = "labelLeadingIcon",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = null,
-                },
-                new()
-                {
                     Name = "resize",
                     Control = "select",
                     Values = ["vertical", "none", "both"],
@@ -3249,10 +2557,6 @@ public static class NmKitchenSink
                     {
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Options =
                         [
                             new NmSelectOption { Label = "Apple", Value = "apple" },
@@ -3290,10 +2594,6 @@ public static class NmKitchenSink
                     {
                         Disabled = true,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Options =
                         [
                             new NmSelectOption { Label = "Apple", Value = "apple" },
@@ -3331,10 +2631,6 @@ public static class NmKitchenSink
                     {
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Options =
                         [
                             new NmSelectOption { Label = "Apple", Value = "apple" },
@@ -3372,10 +2668,6 @@ public static class NmKitchenSink
                     {
                         Disabled = false,
                         Error = true,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Options =
                         [
                             new NmSelectOption { Label = "Apple", Value = "apple" },
@@ -3413,10 +2705,6 @@ public static class NmKitchenSink
                     {
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Options =
                         [
                             new NmSelectOption { Label = "Apple", Value = "apple" },
@@ -3448,180 +2736,12 @@ public static class NmKitchenSink
                 },
                 new()
                 {
-                    Id = "select-labelhanging-true",
-                    Label = "labelHanging = true",
-                    Props = new NMSelectProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = true,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Options =
-                        [
-                            new NmSelectOption { Label = "Apple", Value = "apple" },
-                            new NmSelectOption { Label = "Banana", Value = "banana" },
-                            new NmSelectOption { Label = "Cherry", Value = "cherry" },
-                            new NmSelectOption { Label = "Mango", Value = "mango" },
-                            new NmSelectOption { Label = "Pineapple", Value = "pineapple" },
-                        ],
-                        Placeholder = "Select an option...",
-                        Size = "md",
-                        TestId = "select-labelhanging-true",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "select-labelhanging-true-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "bulletList",
-                                        ["size"] = "sm",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "select-labelhanging-false",
-                    Label = "labelHanging = false",
-                    Props = new NMSelectProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Options =
-                        [
-                            new NmSelectOption { Label = "Apple", Value = "apple" },
-                            new NmSelectOption { Label = "Banana", Value = "banana" },
-                            new NmSelectOption { Label = "Cherry", Value = "cherry" },
-                            new NmSelectOption { Label = "Mango", Value = "mango" },
-                            new NmSelectOption { Label = "Pineapple", Value = "pineapple" },
-                        ],
-                        Placeholder = "Select an option...",
-                        Size = "md",
-                        TestId = "select-labelhanging-false",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "select-labelhanging-false-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "bulletList",
-                                        ["size"] = "sm",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "select-labelleadingicon-true",
-                    Label = "labelLeadingIcon = true",
-                    Props = new NMSelectProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = true,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Options =
-                        [
-                            new NmSelectOption { Label = "Apple", Value = "apple" },
-                            new NmSelectOption { Label = "Banana", Value = "banana" },
-                            new NmSelectOption { Label = "Cherry", Value = "cherry" },
-                            new NmSelectOption { Label = "Mango", Value = "mango" },
-                            new NmSelectOption { Label = "Pineapple", Value = "pineapple" },
-                        ],
-                        Placeholder = "Select an option...",
-                        Size = "md",
-                        TestId = "select-labelleadingicon-true",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "select-labelleadingicon-true-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "bulletList",
-                                        ["size"] = "sm",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
-                    Id = "select-labelleadingicon-false",
-                    Label = "labelLeadingIcon = false",
-                    Props = new NMSelectProps
-                    {
-                        Disabled = false,
-                        Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Options =
-                        [
-                            new NmSelectOption { Label = "Apple", Value = "apple" },
-                            new NmSelectOption { Label = "Banana", Value = "banana" },
-                            new NmSelectOption { Label = "Cherry", Value = "cherry" },
-                            new NmSelectOption { Label = "Mango", Value = "mango" },
-                            new NmSelectOption { Label = "Pineapple", Value = "pineapple" },
-                        ],
-                        Placeholder = "Select an option...",
-                        Size = "md",
-                        TestId = "select-labelleadingicon-false",
-                        Slots = new Dictionary<string, List<NmComponent>>
-                        {
-                            ["leading"] = new List<NmComponent>
-                            {
-                                new()
-                                {
-                                    Id = "select-labelleadingicon-false-leading-1",
-                                    Component = "NMIcon",
-                                    Props = new Dictionary<string, object?>
-                                    {
-                                        ["icon"] = "bulletList",
-                                        ["size"] = "sm",
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-                new()
-                {
                     Id = "select-size-sm",
                     Label = "size = sm",
                     Props = new NMSelectProps
                     {
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Options =
                         [
                             new NmSelectOption { Label = "Apple", Value = "apple" },
@@ -3659,10 +2779,6 @@ public static class NmKitchenSink
                     {
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Options =
                         [
                             new NmSelectOption { Label = "Apple", Value = "apple" },
@@ -3700,10 +2816,6 @@ public static class NmKitchenSink
                     {
                         Disabled = false,
                         Error = false,
-                        IconLeftValue = "System/search-magnifying-glass",
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Options =
                         [
                             new NmSelectOption { Label = "Apple", Value = "apple" },
@@ -3746,20 +2858,6 @@ public static class NmKitchenSink
                 new()
                 {
                     Name = "error",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "labelHanging",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "labelLeadingIcon",
                     Control = "toggle",
                     Values = ["true", "false"],
                     Default = "false",
@@ -4242,9 +3340,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "checkbox-group-default",
@@ -4332,9 +3427,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = true,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "checkbox-group-groupdisabled-true",
@@ -4424,9 +3516,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "checkbox-group-groupdisabled-false",
@@ -4516,9 +3605,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = true,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "checkbox-group-grouperror-true",
@@ -4608,9 +3694,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "checkbox-group-grouperror-false",
@@ -4694,383 +3777,12 @@ public static class NmKitchenSink
                 },
                 new()
                 {
-                    Id = "checkbox-group-labelhanging-true",
-                    Label = "labelHanging = true",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        LabelHanging = true,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Layout = "vertical",
-                        Size = "md",
-                        TestId = "checkbox-group-labelhanging-true",
-                        Items =
-                        [
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-true-child-1",
-                                Component = "NMFormLabel",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Tell me about",
-                                    ["infoIcon"] = true,
-                                    ["infoTooltip"] = "Where a finished scan is announced",
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "checkbox-group-labelhanging-true-child-1-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-true-child-2",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "Email" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-true-child-3",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "SMS" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-true-child-4",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "Push" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-true-child-5",
-                                Component = "NMHelper",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["helperText"] = "Pick as many as you like.",
-                                    ["icon"] = true,
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "checkbox-group-labelhanging-true-child-5-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-labelhanging-false",
-                    Label = "labelHanging = false",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Layout = "vertical",
-                        Size = "md",
-                        TestId = "checkbox-group-labelhanging-false",
-                        Items =
-                        [
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-false-child-1",
-                                Component = "NMFormLabel",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Tell me about",
-                                    ["infoIcon"] = true,
-                                    ["infoTooltip"] = "Where a finished scan is announced",
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "checkbox-group-labelhanging-false-child-1-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-false-child-2",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "Email" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-false-child-3",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "SMS" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-false-child-4",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "Push" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelhanging-false-child-5",
-                                Component = "NMHelper",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["helperText"] = "Pick as many as you like.",
-                                    ["icon"] = true,
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "checkbox-group-labelhanging-false-child-5-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-labelleadingicon-true",
-                    Label = "labelLeadingIcon = true",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = true,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Layout = "vertical",
-                        Size = "md",
-                        TestId = "checkbox-group-labelleadingicon-true",
-                        Items =
-                        [
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-true-child-1",
-                                Component = "NMFormLabel",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Tell me about",
-                                    ["infoIcon"] = true,
-                                    ["infoTooltip"] = "Where a finished scan is announced",
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "checkbox-group-labelleadingicon-true-child-1-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-true-child-2",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "Email" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-true-child-3",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "SMS" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-true-child-4",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "Push" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-true-child-5",
-                                Component = "NMHelper",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["helperText"] = "Pick as many as you like.",
-                                    ["icon"] = true,
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "checkbox-group-labelleadingicon-true-child-5-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                },
-                new()
-                {
-                    Id = "checkbox-group-labelleadingicon-false",
-                    Label = "labelLeadingIcon = false",
-                    Props = new NMCheckboxGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Layout = "vertical",
-                        Size = "md",
-                        TestId = "checkbox-group-labelleadingicon-false",
-                        Items =
-                        [
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-false-child-1",
-                                Component = "NMFormLabel",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Tell me about",
-                                    ["infoIcon"] = true,
-                                    ["infoTooltip"] = "Where a finished scan is announced",
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "checkbox-group-labelleadingicon-false-child-1-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-false-child-2",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "Email" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-false-child-3",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "SMS" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-false-child-4",
-                                Component = "NMCheckbox",
-                                Props = new Dictionary<string, object?> { ["labelText"] = "Push" },
-                            },
-                            new()
-                            {
-                                Id = "checkbox-group-labelleadingicon-false-child-5",
-                                Component = "NMHelper",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["helperText"] = "Pick as many as you like.",
-                                    ["icon"] = true,
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "checkbox-group-labelleadingicon-false-child-5-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                },
-                new()
-                {
                     Id = "checkbox-group-layout-vertical",
                     Label = "layout = vertical",
                     Props = new NMCheckboxGroupProps
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "checkbox-group-layout-vertical",
@@ -5160,9 +3872,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "horizontal",
                         Size = "md",
                         TestId = "checkbox-group-layout-horizontal",
@@ -5252,9 +3961,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "inline",
                         Size = "md",
                         TestId = "checkbox-group-layout-inline",
@@ -5342,9 +4048,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "sm",
                         TestId = "checkbox-group-size-sm",
@@ -5432,9 +4135,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "checkbox-group-size-md",
@@ -5522,9 +4222,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "lg",
                         TestId = "checkbox-group-size-lg",
@@ -5623,20 +4320,6 @@ public static class NmKitchenSink
                 },
                 new()
                 {
-                    Name = "labelHanging",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "labelLeadingIcon",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
                     Name = "layout",
                     Control = "select",
                     Values = ["vertical", "horizontal", "inline"],
@@ -5673,9 +4356,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "radio-group-default",
@@ -5772,9 +4452,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = true,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "radio-group-groupdisabled-true",
@@ -5873,9 +4550,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "radio-group-groupdisabled-false",
@@ -5974,9 +4648,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = true,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "radio-group-grouperror-true",
@@ -6073,9 +4744,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "radio-group-grouperror-false",
@@ -6166,417 +4834,12 @@ public static class NmKitchenSink
                 },
                 new()
                 {
-                    Id = "radio-group-labelhanging-true",
-                    Label = "labelHanging = true",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        LabelHanging = true,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Layout = "vertical",
-                        Size = "md",
-                        TestId = "radio-group-labelhanging-true",
-                        Items =
-                        [
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-true-child-1",
-                                Component = "NMFormLabel",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Delivery",
-                                    ["infoIcon"] = true,
-                                    ["infoTooltip"] = "How soon it arrives",
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id = "radio-group-labelhanging-true-child-1-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-true-child-2",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Standard",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-true-child-3",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Express",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-true-child-4",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Overnight",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-true-child-5",
-                                Component = "NMHelper",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["helperText"] = "One of the three.",
-                                    ["icon"] = true,
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id = "radio-group-labelhanging-true-child-5-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-labelhanging-false",
-                    Label = "labelHanging = false",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Layout = "vertical",
-                        Size = "md",
-                        TestId = "radio-group-labelhanging-false",
-                        Items =
-                        [
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-false-child-1",
-                                Component = "NMFormLabel",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Delivery",
-                                    ["infoIcon"] = true,
-                                    ["infoTooltip"] = "How soon it arrives",
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "radio-group-labelhanging-false-child-1-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-false-child-2",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Standard",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-false-child-3",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Express",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-false-child-4",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Overnight",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelhanging-false-child-5",
-                                Component = "NMHelper",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["helperText"] = "One of the three.",
-                                    ["icon"] = true,
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "radio-group-labelhanging-false-child-5-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-labelleadingicon-true",
-                    Label = "labelLeadingIcon = true",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = true,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Layout = "vertical",
-                        Size = "md",
-                        TestId = "radio-group-labelleadingicon-true",
-                        Items =
-                        [
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-true-child-1",
-                                Component = "NMFormLabel",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Delivery",
-                                    ["infoIcon"] = true,
-                                    ["infoTooltip"] = "How soon it arrives",
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "radio-group-labelleadingicon-true-child-1-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-true-child-2",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Standard",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-true-child-3",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Express",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-true-child-4",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Overnight",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-true-child-5",
-                                Component = "NMHelper",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["helperText"] = "One of the three.",
-                                    ["icon"] = true,
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "radio-group-labelleadingicon-true-child-5-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                },
-                new()
-                {
-                    Id = "radio-group-labelleadingicon-false",
-                    Label = "labelLeadingIcon = false",
-                    Props = new NMRadioGroupProps
-                    {
-                        GroupDisabled = false,
-                        GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
-                        Layout = "vertical",
-                        Size = "md",
-                        TestId = "radio-group-labelleadingicon-false",
-                        Items =
-                        [
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-false-child-1",
-                                Component = "NMFormLabel",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Delivery",
-                                    ["infoIcon"] = true,
-                                    ["infoTooltip"] = "How soon it arrives",
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "radio-group-labelleadingicon-false-child-1-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-false-child-2",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Standard",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-false-child-3",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Express",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-false-child-4",
-                                Component = "NMRadio",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["labelText"] = "Overnight",
-                                },
-                            },
-                            new()
-                            {
-                                Id = "radio-group-labelleadingicon-false-child-5",
-                                Component = "NMHelper",
-                                Props = new Dictionary<string, object?>
-                                {
-                                    ["helperText"] = "One of the three.",
-                                    ["icon"] = true,
-                                    ["slots"] = new Dictionary<string, List<NmComponent>>
-                                    {
-                                        ["icon"] = new List<NmComponent>
-                                        {
-                                            new()
-                                            {
-                                                Id =
-                                                    "radio-group-labelleadingicon-false-child-5-icon-1",
-                                                Component = "NMIcon",
-                                                Props = new Dictionary<string, object?>
-                                                {
-                                                    ["icon"] = "infoCircle",
-                                                    ["size"] = "sm",
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        ],
-                    },
-                },
-                new()
-                {
                     Id = "radio-group-layout-vertical",
                     Label = "layout = vertical",
                     Props = new NMRadioGroupProps
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "radio-group-layout-vertical",
@@ -6673,9 +4936,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "horizontal",
                         Size = "md",
                         TestId = "radio-group-layout-horizontal",
@@ -6772,9 +5032,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "inline",
                         Size = "md",
                         TestId = "radio-group-layout-inline",
@@ -6871,9 +5128,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "sm",
                         TestId = "radio-group-size-sm",
@@ -6970,9 +5224,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "md",
                         TestId = "radio-group-size-md",
@@ -7069,9 +5320,6 @@ public static class NmKitchenSink
                     {
                         GroupDisabled = false,
                         GroupError = false,
-                        LabelHanging = false,
-                        LabelLeadingIcon = false,
-                        LabelLeadingIconValue = "Shopping/tag",
                         Layout = "vertical",
                         Size = "lg",
                         TestId = "radio-group-size-lg",
@@ -7173,20 +5421,6 @@ public static class NmKitchenSink
                 new()
                 {
                     Name = "groupError",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "labelHanging",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "false",
-                },
-                new()
-                {
-                    Name = "labelLeadingIcon",
                     Control = "toggle",
                     Values = ["true", "false"],
                     Default = "false",
@@ -24322,8 +22556,6 @@ public static class NmKitchenSink
                         DataValue = "IconHeart",
                         Disabled = false,
                         Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = true,
-                        ShowIcons = true,
                         Size = "md",
                         TestId = "icon-picker-default",
                     },
@@ -24339,8 +22571,6 @@ public static class NmKitchenSink
                         DataValue = "IconHeart",
                         Disabled = true,
                         Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = true,
-                        ShowIcons = true,
                         Size = "md",
                         TestId = "icon-picker-disabled-true",
                     },
@@ -24356,78 +22586,8 @@ public static class NmKitchenSink
                         DataValue = "IconHeart",
                         Disabled = false,
                         Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = true,
-                        ShowIcons = true,
                         Size = "md",
                         TestId = "icon-picker-disabled-false",
-                    },
-                },
-                new()
-                {
-                    Id = "icon-picker-showemoji-true",
-                    Label = "showEmoji = true",
-                    Props = new NMIconPickerProps
-                    {
-                        DataIconsUrl = "https://nomercy.tv/img/placeholder.png",
-                        DataSources = "emoji",
-                        DataValue = "IconHeart",
-                        Disabled = false,
-                        Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = true,
-                        ShowIcons = true,
-                        Size = "md",
-                        TestId = "icon-picker-showemoji-true",
-                    },
-                },
-                new()
-                {
-                    Id = "icon-picker-showemoji-false",
-                    Label = "showEmoji = false",
-                    Props = new NMIconPickerProps
-                    {
-                        DataIconsUrl = "https://nomercy.tv/img/placeholder.png",
-                        DataSources = "emoji",
-                        DataValue = "IconHeart",
-                        Disabled = false,
-                        Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = false,
-                        ShowIcons = true,
-                        Size = "md",
-                        TestId = "icon-picker-showemoji-false",
-                    },
-                },
-                new()
-                {
-                    Id = "icon-picker-showicons-true",
-                    Label = "showIcons = true",
-                    Props = new NMIconPickerProps
-                    {
-                        DataIconsUrl = "https://nomercy.tv/img/placeholder.png",
-                        DataSources = "emoji",
-                        DataValue = "IconHeart",
-                        Disabled = false,
-                        Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = true,
-                        ShowIcons = true,
-                        Size = "md",
-                        TestId = "icon-picker-showicons-true",
-                    },
-                },
-                new()
-                {
-                    Id = "icon-picker-showicons-false",
-                    Label = "showIcons = false",
-                    Props = new NMIconPickerProps
-                    {
-                        DataIconsUrl = "https://nomercy.tv/img/placeholder.png",
-                        DataSources = "emoji",
-                        DataValue = "IconHeart",
-                        Disabled = false,
-                        Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = true,
-                        ShowIcons = false,
-                        Size = "md",
-                        TestId = "icon-picker-showicons-false",
                     },
                 },
                 new()
@@ -24441,8 +22601,6 @@ public static class NmKitchenSink
                         DataValue = "IconHeart",
                         Disabled = false,
                         Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = true,
-                        ShowIcons = true,
                         Size = "sm",
                         TestId = "icon-picker-size-sm",
                     },
@@ -24458,8 +22616,6 @@ public static class NmKitchenSink
                         DataValue = "IconHeart",
                         Disabled = false,
                         Placeholder = "Select an icon or emoji…",
-                        ShowEmoji = true,
-                        ShowIcons = true,
                         Size = "md",
                         TestId = "icon-picker-size-md",
                     },
@@ -24473,20 +22629,6 @@ public static class NmKitchenSink
                     Control = "toggle",
                     Values = ["true", "false"],
                     Default = "false",
-                },
-                new()
-                {
-                    Name = "showEmoji",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "true",
-                },
-                new()
-                {
-                    Name = "showIcons",
-                    Control = "toggle",
-                    Values = ["true", "false"],
-                    Default = "true",
                 },
                 new()
                 {

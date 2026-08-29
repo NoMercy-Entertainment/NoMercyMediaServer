@@ -441,34 +441,6 @@ components:
         value:
           type: string
 
-    NMTreeNode:
-      type: object
-      description: |
-        One node of a tree. A branch carries children and can be expanded; a leaf
-        carries neither. The distinction is stated rather than inferred from
-        whether `children` happens to be empty, because an empty folder is still
-        a folder.
-      required:
-        - label
-        - type
-      properties:
-        label:
-          type: string
-        type:
-          type: string
-          enum: [branch, leaf]
-        expanded:
-          type: boolean
-          nullable: true
-        selected:
-          type: boolean
-          nullable: true
-        children:
-          type: array
-          nullable: true
-          items:
-            $ref: '#/components/schemas/NMTreeNode'
-
     NMChatMessage:
       type: object
       description: |
@@ -500,29 +472,6 @@ components:
           type: string
         description:
           type: string
-          nullable: true
-
-    NMChoice:
-      type: object
-      description: |
-        One option in a group that behaves as a set: a button group, a segmented
-        control, a checkbox or radio group.
-      required:
-        - label
-      properties:
-        label:
-          type: string
-        value:
-          type: string
-          nullable: true
-        icon:
-          type: string
-          nullable: true
-        active:
-          type: boolean
-          nullable: true
-        disabled:
-          type: boolean
           nullable: true
 
     # ===========================================
