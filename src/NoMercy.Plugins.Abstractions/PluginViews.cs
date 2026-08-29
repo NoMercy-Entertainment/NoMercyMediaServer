@@ -294,25 +294,16 @@ public static class PluginViews
         {
             Id = id,
             Component = PluginComponentType.Form,
-            Props = new()
-            {
-                ["box"] = new Dictionary<string, object?>
-                {
-                    ["direction"] = "column",
-
-                    ["width"] = "full",
-                    ["gap"] = new Dictionary<string, object?> { ["all"] = "3" },
-                    ["padding"] = new Dictionary<string, object?> { ["all"] = "4" },
-                },
-            },
-            // A field is a component, not an entry in a bag. Declaring them as
-            // props left the card with nothing inside it and drew an empty bar
-            // where the form should be.
-            Items =
-            [
-                .. fields.Select(field => Field(id, field)),
-                Button($"{id}-submit", submitLabel, submitAction, variant: "primary"),
-            ],
+            // The fields as fields, not as drawn controls.
+            //
+            // This sent design-system components and let a card hold them, which
+            // drew a form perfectly and submitted nothing: a card carries the
+            // action the server wrote at build time, and nothing collected what
+            // the owner had typed. Both clients already have a form that collects
+            // and posts, and both key it on exactly this - the web on its `fields`
+            // prop, Compose on PluginNode.Form. Each draws the controls in its own
+            // idiom, which is also how a remote gets a field it can actually open.
+            Props = new() { ["submitLabel"] = submitLabel, ["fields"] = fields },
             Action = submitAction,
         };
 
@@ -615,88 +606,5 @@ public static class PluginViews
                 Component = "NMHelper",
                 Props = new() { ["helperText"] = secondary },
             };
-    }
-
-    /// <summary>
-    /// One field, as the component that collects it. A label is a sibling
-    /// rather than a prop on the control: only the checkbox declares one, and
-    /// the rest would have dropped it silently.
-    /// </summary>
-    private static PluginComponent Field(string formId, PluginFormField field)
-    {
-        string id = $"{formId}-{field.Name}";
-
-        if (field.Type == PluginFormFieldType.Checkbox || field.Type == PluginFormFieldType.Toggle)
-            return new()
-            {
-                Id = id,
-                Component = field.Type == PluginFormFieldType.Toggle ? "NMToggle" : "NMCheckbox",
-                Props = new()
-                {
-                    ["name"] = field.Name,
-                    ["labelText"] = field.Label,
-                    ["checked"] = field.Value as bool? ?? false,
-                    ["ariaLabel"] = field.Label,
-                },
-            };
-
-        string component = field.Type switch
-        {
-            PluginFormFieldType.Select => "NMSelect",
-            PluginFormFieldType.File => "NMFileUpload",
-            _ => "NMInput",
-        };
-
-        Dictionary<string, object?> props = new()
-        {
-            ["name"] = field.Name,
-            ["placeholder"] = field.Placeholder ?? field.Label,
-            ["required"] = field.Required,
-            ["value"] = field.Value,
-        };
-
-        if (field.Type == PluginFormFieldType.Password || field.Type == PluginFormFieldType.Number)
-            props["type"] = field.Type;
-
-        if (field.Accept is not null)
-            props["accept"] = field.Accept;
-
-        if (field.Multiple)
-            props["multiple"] = true;
-
-        if (field.Options.Count > 0)
-            props["options"] = field.Options;
-
-        return new()
-        {
-            Id = $"{id}-group",
-            Component = PluginComponentType.Container,
-            Props = new()
-            {
-                ["variant"] = "ghost",
-                ["box"] = new Dictionary<string, object?>
-                {
-                    ["direction"] = "column",
-
-                    ["width"] = "full",
-                    ["gap"] = new Dictionary<string, object?> { ["all"] = "1" },
-                },
-            },
-            Items =
-            [
-                new()
-                {
-                    Id = $"{id}-label",
-                    Component = "NMFormLabel",
-                    Items = [Leaf($"{id}-label-text", field.Label)],
-                },
-                new()
-                {
-                    Id = id,
-                    Component = component,
-                    Props = props,
-                },
-            ],
-        };
     }
 }
