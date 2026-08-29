@@ -888,4 +888,19 @@ internal static class DocumentedSnippets
 
         _ = node;
     }
+
+    private static void iconpicker()
+    {
+        NMIconPickerProps props = new()
+        {
+            Id = "icon-picker-1",
+            Size = "md",
+            Box = new() { Margin = new() { Y = NmSpace.X4 }, Padding = new() { All = NmSpace.X3 } },
+        };
+        
+        // In a plugin, the record becomes a node the client draws:
+        PluginComponent node = PluginDesign.Node("icon-picker-1", props);
+
+        _ = node;
+    }
 }

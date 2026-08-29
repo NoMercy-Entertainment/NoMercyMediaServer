@@ -33,7 +33,7 @@ public class NmKitchenSinkTests
     [Fact]
     public void EveryComponentTheDesignSystemPublishesIsDrawn()
     {
-        NmKitchenSink.Components.Should().HaveCount(56);
+        NmKitchenSink.Components.Should().HaveCount(57);
     }
 
     [Fact]
