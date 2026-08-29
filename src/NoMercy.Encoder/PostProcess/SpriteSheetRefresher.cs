@@ -32,6 +32,17 @@ public class SpriteSheetRefresher(
     EncoderOptions options
 ) : ISpriteSheetRefresher
 {
+    private static readonly string[] ProgressiveExtensions =
+    [
+        ".mp4",
+        ".mkv",
+        ".m4v",
+        ".webm",
+        ".mov",
+        ".avi",
+        ".ts",
+    ];
+
     public async Task<string?> RefreshAsync(
         IStorage storage,
         string mediaFolder,
@@ -152,6 +163,20 @@ public class SpriteSheetRefresher(
         (int)(2 * Math.Round((double)tileWidth * video.Height / video.Width / 2));
 
     /// <summary>
+    /// Something in the folder to sample frames from: a rendition playlist when
+    /// the title was encoded to HLS, otherwise the progressive file itself.
+    ///
+    /// <para>The progressive fallback is not an edge case. Every title carrying
+    /// a legacy <c>sprite.webp</c> predates the HLS layout and holds one flat
+    /// <c>.mp4</c> with no <c>video_*</c> folder at all — exactly the population
+    /// this job exists to upgrade. Looking only for renditions meant all 4218
+    /// queued jobs gave up on "nothing playable to sample" and not one sheet was
+    /// ever rebuilt.</para>
+    /// </summary>
+    private static string? FindPlayableSource(IStorage storage, string mediaFolder) =>
+        FindRenditionPlaylist(storage, mediaFolder) ?? FindProgressiveFile(storage, mediaFolder);
+
+    /// <summary>
     /// A rendition playlist to sample frames from. The master playlist sits at
     /// the folder root and names the renditions, but ffmpeg reading the master
     /// picks a variant by its own rules; addressing a rendition directly keeps
@@ -159,7 +184,7 @@ public class SpriteSheetRefresher(
     /// derived from. Highest rendition wins — the sheet is downscaled from it
     /// either way, and scaling down from the best copy is the sharper result.
     /// </summary>
-    private static string? FindPlayableSource(IStorage storage, string mediaFolder)
+    private static string? FindRenditionPlaylist(IStorage storage, string mediaFolder)
     {
         List<string> renditions = [];
 
@@ -192,6 +217,36 @@ public class SpriteSheetRefresher(
     }
 
     /// <summary>
+    /// The progressive video file a pre-HLS title was encoded to. Largest wins,
+    /// because the folder can also hold a short extra beside the feature and the
+    /// sheet must describe the feature.
+    ///
+    /// <para>Only the folder root is read: <c>original/</c> beside it holds the
+    /// untouched source, which may be HDR and is not what any client plays.</para>
+    /// </summary>
+    private static string? FindProgressiveFile(IStorage storage, string mediaFolder)
+    {
+        StorageEntry? largest = null;
+
+        foreach (StorageEntry entry in storage.List(mediaFolder, null, recursive: false))
+        {
+            if (entry.IsDirectory)
+                continue;
+
+            string extension = Path.GetExtension(storage.GetName(entry.Path));
+            if (!ProgressiveExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+                continue;
+
+            if (largest is null || entry.SizeBytes > largest.SizeBytes)
+                largest = entry;
+        }
+
+        return largest is null
+            ? null
+            : storage.CombinePath(mediaFolder, storage.GetName(largest.Path));
+    }
+
+    /// <summary>
     /// Drops every sheet and cue file except the one just written. A stale pair
     /// left beside the new one is not harmless: the scan registers whatever
     /// sprite it finds, so the old sheet can win and the upgrade goes unnoticed.
@@ -208,10 +263,17 @@ public class SpriteSheetRefresher(
             string name = storage.GetName(entry.Path);
             string stem = Path.GetFileNameWithoutExtension(name);
 
-            if (
-                stem.Equals(keepStem, StringComparison.OrdinalIgnoreCase)
-                || SpriteSheet.ReadTileWidth($"{stem}.webp") is null
-            )
+            if (stem.Equals(keepStem, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // The legacy pair states no tile size, so the name check below cannot
+            // recognise it and it outlived every rebuild — the scan then had two
+            // sheets to choose from and could still register the old one.
+            bool legacy =
+                SpriteSheet.IsLegacySheet(name)
+                || name.Equals("previews.vtt", StringComparison.OrdinalIgnoreCase);
+
+            if (!legacy && SpriteSheet.ReadTileWidth($"{stem}.webp") is null)
                 continue;
 
             storage.Delete(entry.Path);
