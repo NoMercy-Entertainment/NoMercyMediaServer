@@ -631,38 +631,7 @@ public class CollectionRepository(IDbContextFactory<MediaContext> contextFactory
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        // SQLite schema uses DeleteBehavior.Restrict globally.
-        // Temporarily disable FK enforcement so the collection and all its dependents
-        // are removed atomically.
-        //
-        // PRAGMA foreign_keys is a per-connection setting; pin one connection
-        // across the PRAGMA + DELETE + restore so the PRAGMA actually applies
-        // to the DELETE that follows it. See TvShowRepository.DeleteAsync.
-        bool ownsConnection =
-            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
-
-        if (ownsConnection)
-            await context.Database.OpenConnectionAsync(ct);
-
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
-            try
-            {
-                await context
-                    .Collections.Where(collection => collection.Id == id)
-                    .ExecuteDeleteAsync(ct);
-            }
-            finally
-            {
-                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
-            }
-        }
-        finally
-        {
-            if (ownsConnection)
-                await context.Database.CloseConnectionAsync();
-        }
+        await MediaSubtreeDelete.CollectionAsync(context, id, ct);
     }
 
     public async Task<Collection?> GetCollectionForRescanAsync(
