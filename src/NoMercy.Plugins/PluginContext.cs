@@ -36,6 +36,16 @@ public class PluginContext : IPluginContext
     public IPluginHubContext Hub { get; }
 
     /// <summary>
+    /// Null when the plugin never declared the capability. Checking for it is
+    /// the plugin's route, rather than calling and catching.
+    /// </summary>
+    public IPluginEncoder? Encoder { get; }
+
+    public IPluginJobs? Jobs { get; }
+
+    public IPluginStorage? Storage { get; }
+
+    /// <summary>
     /// Playback, typed. Always present: the grants decide whether an intent
     /// reaches anyone, and a plugin branching on null for a surface that is part
     /// of its contract would be branching on how the host was wired rather than
@@ -58,9 +68,16 @@ public class PluginContext : IPluginContext
         Func<IReadOnlyList<string>>? grantedHosts = null,
         string? pluginName = null,
         Version? pluginVersion = null,
-        IPluginHubContext? hub = null
+        IPluginHubContext? hub = null,
+        IPluginEncoder? encoder = null,
+        IPluginJobs? jobs = null,
+        IPluginStorage? pluginStorage = null
     )
     {
+        Encoder = encoder;
+        Jobs = jobs;
+        Storage = pluginStorage;
+
         PluginId = pluginId;
         EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
         Services = services ?? throw new ArgumentNullException(nameof(services));

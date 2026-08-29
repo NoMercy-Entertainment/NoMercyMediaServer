@@ -43,6 +43,15 @@ public class JobDispatcher : IJobDispatcher
         Dispatcher.Dispatch(job, onQueue, priority);
     }
 
+    /// <summary>
+    /// Queue a job and say which one it became, for a caller that has to follow
+    /// it afterwards. Null when an identical payload is already queued.
+    /// </summary>
+    public virtual string? DispatchTracked(IShouldQueue job)
+    {
+        return Dispatcher.DispatchTracked(job, job.QueueName, job.Priority);
+    }
+
     public void DispatchChild(
         IShouldQueue job,
         string onQueue,

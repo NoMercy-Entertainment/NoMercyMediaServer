@@ -31,7 +31,10 @@ public class PluginContextFactory(
     IPluginLibraryQuery libraryQuery,
     IPluginLibraryWriterFactory libraryWriterFactory,
     IPluginConfiguration platformConfiguration,
-    IPluginHubContextFactory hubContextFactory
+    IPluginHubContextFactory hubContextFactory,
+    IPluginEncoder? encoder = null,
+    IPluginJobs? jobs = null,
+    IPluginStorage? pluginStorage = null
 ) : IPluginContextFactory
 {
     public IPluginContext Create(
@@ -53,6 +56,25 @@ public class PluginContextFactory(
         if (PluginCapabilityGuard.DeclaresHook(capabilities, PluginHookCapability.LibraryWrite))
             writer = libraryWriterFactory.CreateFor(pluginId);
 
+        // The same rule as the writer: declaring a capability is an intention,
+        // and a host that mediates nothing hands back null rather than a call
+        // that throws. A plugin can check for the facade instead of catching.
+        IPluginEncoder? encoderFacade = null;
+        IPluginJobs? jobsFacade = null;
+        if (PluginCapabilityGuard.DeclaresHook(capabilities, PluginHookCapability.Encoder))
+        {
+            encoderFacade = encoder;
+
+            // Jobs travels with the encoder because they are one story: asking
+            // for work and learning what became of it. A plugin that can start
+            // an encode and cannot see it finish deletes files on a guess.
+            jobsFacade = jobs;
+        }
+
+        IPluginStorage? storageFacade = null;
+        if (PluginCapabilityGuard.DeclaresHook(capabilities, PluginHookCapability.Storage))
+            storageFacade = pluginStorage;
+
         return new PluginContext(
             pluginId,
             eventBus,
@@ -68,7 +90,10 @@ public class PluginContextFactory(
             () => grantStore.Granted(pluginId, PluginGrantKind.NetworkHost),
             pluginName,
             pluginVersion,
-            hubContextFactory.For(pluginId)
+            hubContextFactory.For(pluginId),
+            encoderFacade,
+            jobsFacade,
+            storageFacade
         );
     }
 }

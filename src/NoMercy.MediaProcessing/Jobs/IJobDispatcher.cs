@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs;
 
@@ -29,6 +30,12 @@ public interface IJobDispatcher : NoMercyQueue.Core.Interfaces.IJobDispatcher
     /// <summary>A job the caller has already filled in.</summary>
     void DispatchJob<TJob>(TJob job)
         where TJob : AbstractMediaJob;
+
+    /// <summary>
+    /// Queue a job and say which one it became, for a caller that has to follow
+    /// it afterwards. Null when an identical payload is already queued.
+    /// </summary>
+    string? DispatchTracked(IShouldQueue job);
 
     void DispatchJob<TJob>(Ulid libraryId)
         where TJob : AbstractMediaJob, new();

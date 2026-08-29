@@ -244,6 +244,10 @@ public class CronWorkerRegistrationTests
 
         public bool JobExists(string payload) => false;
 
+        public QueueJobModel? FindJobByPayloadHash(string payloadHash) => null;
+
+        public FailedJobModel? FindFailedJobByPayloadHash(string payloadHash) => null;
+
         public void UpdateJob(QueueJobModel job) { }
 
         public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt) { }
