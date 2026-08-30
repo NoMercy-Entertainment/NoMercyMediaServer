@@ -43,6 +43,25 @@ public class QueueEngineEndToEndTests : IDisposable
     private readonly IQueueContext _adapter;
     private readonly JobQueue _jobQueue;
 
+    /// <summary>
+    /// How long the worker may sit before it looks for work again.
+    ///
+    /// <para>
+    /// The worker waits on its signal with this timeout, so a job that has to be
+    /// picked up again after a failure can cost that long per attempt. The waits
+    /// below are written as attempts times this window plus headroom rather than
+    /// as bare numbers: the exhausted-retries test allowed fifteen seconds for
+    /// three attempts, which is exactly the polling worst case with nothing left
+    /// for running the job, and it went red on a loaded CI runner while passing
+    /// on every developer machine.
+    /// </para>
+    /// </summary>
+    private static readonly TimeSpan PollWindow = TimeSpan.FromSeconds(5);
+
+    /// <summary>The budget for a job that takes <paramref name="attempts" /> tries.</summary>
+    private static TimeSpan Budget(int attempts) =>
+        (PollWindow * attempts) + TimeSpan.FromSeconds(10);
+
     public QueueEngineEndToEndTests()
     {
         (_context, _adapter) = TestQueueContextFactory.CreateInMemoryContextWithAdapter();
@@ -116,12 +135,12 @@ public class QueueEngineEndToEndTests : IDisposable
             }
         );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource cts = new(Budget(attempts: 1));
         QueueWorker worker = new(_jobQueue, "worker-success");
 
         Task workerTask = worker.StartAsync(cts.Token);
 
-        bool signalled = await done.WaitAsync(TimeSpan.FromSeconds(8));
+        bool signalled = await done.WaitAsync(Budget(attempts: 1));
         worker.Stop();
         cts.Cancel();
         await workerTask;
@@ -161,12 +180,12 @@ public class QueueEngineEndToEndTests : IDisposable
 
         _context.QueueJobs.Count().Should().Be(1, "job must be in queue before worker starts");
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(15));
+        using CancellationTokenSource cts = new(Budget(attempts: 2));
         QueueWorker worker = new(_jobQueue, "retry-e2e");
 
         Task workerTask = worker.StartAsync(cts.Token);
 
-        bool signalled = await done.WaitAsync(TimeSpan.FromSeconds(12));
+        bool signalled = await done.WaitAsync(Budget(attempts: 2));
         worker.Stop();
         cts.Cancel();
         await workerTask;
@@ -201,7 +220,7 @@ public class QueueEngineEndToEndTests : IDisposable
             }
         );
 
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(20));
+        using CancellationTokenSource cts = new(Budget(attempts: 3));
         QueueWorker worker = new(_jobQueue, "exhaust-retries");
         Task workerTask = worker.StartAsync(cts.Token);
 
@@ -210,7 +229,7 @@ public class QueueEngineEndToEndTests : IDisposable
         // QueueJobs assertion below racing it. Waiting for both is still a
         // real wait: if the row is never removed the deadline expires and the
         // assertion fails, which is what it is there for.
-        DateTime deadline = DateTime.UtcNow.AddSeconds(15);
+        DateTime deadline = DateTime.UtcNow.Add(Budget(attempts: 3));
         while (DateTime.UtcNow < deadline)
         {
             if (_context.FailedJobs.Count() > 0 && _context.QueueJobs.Count() == 0)
