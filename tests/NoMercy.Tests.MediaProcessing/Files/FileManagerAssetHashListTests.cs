@@ -425,6 +425,37 @@ public sealed class FileManagerAssetHashListTests : IDisposable
         tracks.Should().NotContain(t => t.Kind == "thumbnails");
     }
 
+    [Fact]
+    public void GetExtraFiles_LegacySpriteSheetWithPreviewsVtt_IsPaired()
+    {
+        // The older encoder wrote the pair under two different names. Judged on
+        // stem alone the cue file is thrown away, and the client is left with a
+        // sheet it cannot read: the scrub bubble shows the time and no image.
+        string hostDir = Path.Combine(_tempRoot, "Movie.LegacyPreviews");
+        Directory.CreateDirectory(hostDir);
+        File.WriteAllBytes(Path.Combine(hostDir, "sprite.webp"), new byte[16]);
+        File.WriteAllText(Path.Combine(hostDir, "previews.vtt"), "WEBVTT\n");
+
+        List<VideoTrack> tracks = InvokeGetExtraFiles(BuildLocalStorage(), hostDir);
+
+        tracks.Should().Contain(t => t.Kind == "sprite" && t.File == "/sprite.webp");
+        tracks.Should().Contain(t => t.Kind == "thumbnails" && t.File == "/previews.vtt");
+    }
+
+    [Fact]
+    public void GetExtraFiles_PreviewsVttWithoutASpriteSheet_IsExcluded()
+    {
+        // The legacy pairing is by name, so it must still require the sheet it
+        // names — a lone previews.vtt points its cues at nothing.
+        string hostDir = Path.Combine(_tempRoot, "Movie.LonePreviews");
+        Directory.CreateDirectory(hostDir);
+        File.WriteAllText(Path.Combine(hostDir, "previews.vtt"), "WEBVTT\n");
+
+        List<VideoTrack> tracks = InvokeGetExtraFiles(BuildLocalStorage(), hostDir);
+
+        tracks.Should().NotContain(t => t.Kind == "thumbnails");
+    }
+
     // -----------------------------------------------------------------------
     // GetSubtitles — the DB-facing (lightweight, no hash) subtitle list, and
     // its orphaned-bitmap detection.

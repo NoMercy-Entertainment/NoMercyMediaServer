@@ -610,9 +610,19 @@ public partial class FileManager
         // Only register VTTs whose basename has a matching sprite WEBP on
         // disk. Drops stale VTTs left behind when the sprite was re-rendered
         // at a different dimension and the old VTT wasn't cleaned up.
+        // The older encoder named the pair sprite.webp + previews.vtt, so a stem
+        // comparison alone drops that cue file and leaves a sheet no client can
+        // read — the scrub bubble draws the time and no image.
         foreach ((string name, string stem) in vttCandidates)
         {
-            if (spriteByStem.ContainsKey(stem))
+            bool paired =
+                spriteByStem.ContainsKey(stem)
+                || (
+                    stem.Equals("previews", StringComparison.OrdinalIgnoreCase)
+                    && spriteByStem.ContainsKey("sprite")
+                );
+
+            if (paired)
                 tracks.Add(new() { File = "/" + name, Kind = "thumbnails" });
         }
 
