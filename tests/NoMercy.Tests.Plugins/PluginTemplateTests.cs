@@ -11,6 +11,7 @@
 
 using System.Text.Json;
 using FluentAssertions;
+using NoMercy.Tests.Common;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -26,19 +27,7 @@ public class PluginTemplateTests
     // directory depth changes under a redirected BaseOutputPath.
     private static string FindRepoPath(string relativePath)
     {
-        string dir = AppContext.BaseDirectory;
-        while (dir != null!)
-        {
-            string candidate = Path.Combine(dir, relativePath);
-            if (Path.Exists(candidate))
-                return candidate;
-
-            dir = Path.GetDirectoryName(dir)!;
-        }
-
-        throw new FileNotFoundException(
-            $"Could not locate {relativePath} above {AppContext.BaseDirectory}"
-        );
+        return RepoPaths.At(relativePath);
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new()

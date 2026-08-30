@@ -37,13 +37,7 @@ public sealed class AudioImportReleaseResolutionTests
     private static string ReadAudioImportJobSource()
     {
         return File.ReadAllText(
-            RepoPaths.File(
-                "src",
-                "NoMercy.MediaProcessing",
-                "Jobs",
-                "MediaJobs",
-                "AudioImportJob.cs"
-            )
+            RepoPaths.At("src", "NoMercy.MediaProcessing", "Jobs", "MediaJobs", "AudioImportJob.cs")
         );
     }
 

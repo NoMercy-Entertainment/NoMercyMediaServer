@@ -40,7 +40,12 @@ public static class RepoPaths
     public static string Src { get; } = Path.Combine(Root, "src");
 
     /// <summary>A path under the repository root, by its parts.</summary>
-    public static string File(params string[] parts) => Path.Combine([Root, .. parts]);
+    ///
+    /// <remarks>
+    /// Named At rather than File so a caller can still reach System.IO.File on
+    /// the line that reads what this returns.
+    /// </remarks>
+    public static string At(params string[] parts) => Path.Combine([Root, .. parts]);
 
     /// <summary>The one source file with this name, anywhere under src.</summary>
     public static string SourceFile(string fileName)

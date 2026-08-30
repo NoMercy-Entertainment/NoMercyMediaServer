@@ -13,6 +13,7 @@ using System.Reflection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Queue;
 using NoMercy.Queue.MediaServer;
+using NoMercy.Tests.Common;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Interfaces;
@@ -264,28 +265,6 @@ public class BlockingPatternTests : IDisposable
 
     private static string FindSourceFile(string relativePath)
     {
-        // Walk up from the test assembly location to find the repo root
-        string? dir = AppDomain.CurrentDomain.BaseDirectory;
-        while (dir != null)
-        {
-            string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate))
-                return candidate;
-
-            // Also check if we're in a well-known build output structure
-            string repoCandidate = Path.Combine([dir, "..", "..", "..", "..", "..", relativePath]);
-            string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved))
-                return resolved;
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        // Fallback: try from /workspaces/NoMercyMediaServer
-        string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback))
-            return fallback;
-
-        throw new FileNotFoundException($"Could not find source file: {relativePath}");
+        return RepoPaths.At(relativePath);
     }
 }

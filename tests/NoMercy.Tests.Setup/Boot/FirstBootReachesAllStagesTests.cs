@@ -24,6 +24,7 @@ using NoMercy.Setup.Auth;
 using NoMercy.Setup.Boot;
 using NoMercy.Setup.Server;
 using NoMercy.Storage.Drivers.Local;
+using NoMercy.Tests.Common;
 using NoMercy.Tests.Setup.Infrastructure;
 using NoMercyQueue;
 
@@ -200,15 +201,6 @@ public sealed class FirstBootReachesAllStagesTests : IDisposable
 
     private static string ReadSource(string relativePath)
     {
-        string? dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            string candidate = Path.GetFullPath(Path.Combine(dir, relativePath));
-            if (File.Exists(candidate))
-                return File.ReadAllText(candidate);
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new FileNotFoundException($"Could not locate {relativePath}");
+        return File.ReadAllText(RepoPaths.At(relativePath));
     }
 }

@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercyQueue\NoMercyQueue.csproj" />
+    <ProjectReference Include="..\NoMercy.Tests.Common\NoMercy.Tests.Common.csproj" />
     <ProjectReference Include="..\..\src\NoMercyQueue.Core\NoMercyQueue.Core.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Queue.MediaServer\NoMercy.Queue.MediaServer.csproj" />
     <ProjectReference Include="..\..\src\NoMercyQueue.Sqlite\NoMercyQueue.Sqlite.csproj" />

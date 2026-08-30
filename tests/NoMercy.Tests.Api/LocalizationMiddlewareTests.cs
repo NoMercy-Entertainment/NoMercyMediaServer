@@ -37,7 +37,7 @@ public class LocalizationMiddlewareTests
     [Fact]
     public void ApplicationConfiguration_HasSingleUseRequestLocalizationCall()
     {
-        string sourceFile = RepoPaths.File(
+        string sourceFile = RepoPaths.At(
             "src",
             "NoMercy.Service",
             "Configuration",

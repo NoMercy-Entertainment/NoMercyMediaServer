@@ -456,7 +456,11 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
     public async Task DownloadFfmpeg_WindowsAssetPresent_DownloadsExtractsAndSetsExecutionPermissions()
     {
         byte[] zipBytes = BuildFfmpegZip();
-        string assetUrl = "https://example.com/ffmpeg-windows-x64.zip";
+        // The name DownloadFfmpeg actually selects on Windows: it matches on
+        // "windows" and "x86_64". Registering "x64" meant no asset was selected
+        // at all, so on Windows this test downloaded nothing and only passed on
+        // the Linux runner, through the Linux asset below.
+        string assetUrl = "https://example.com/ffmpeg-windows-x86_64.zip";
 
         FakeHttpHandler handler = new();
         handler.Register(assetUrl, zipBytes);
@@ -467,7 +471,7 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         handler.RegisterReleaseInfo(
             "https://api.github.com/repos/NoMercy-Entertainment/nomercy-ffmpeg/releases/latest",
             ReleaseWithAssets([
-                MakeAsset("ffmpeg-windows-x64.zip", assetUrl, zipBytes),
+                MakeAsset("ffmpeg-windows-x86_64.zip", assetUrl, zipBytes),
                 MakeAsset("ffmpeg-linux-x86_64.zip", assetUrl, zipBytes),
             ])
         );

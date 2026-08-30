@@ -9,6 +9,8 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercy.Tests.Common;
+
 namespace NoMercy.Tests.Service.Seeds;
 
 /// <summary>
@@ -65,15 +67,6 @@ public sealed class DatabaseSeederRunNoDuplicateOfflineSeedTests
 
     private static string ReadSource(string relativePath)
     {
-        string? dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            string candidate = Path.GetFullPath(Path.Combine(dir, relativePath));
-            if (File.Exists(candidate))
-                return File.ReadAllText(candidate);
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new FileNotFoundException($"Could not locate {relativePath}");
+        return File.ReadAllText(RepoPaths.At(relativePath));
     }
 }

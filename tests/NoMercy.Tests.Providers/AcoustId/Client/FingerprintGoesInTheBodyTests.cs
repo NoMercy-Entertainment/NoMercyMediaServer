@@ -11,6 +11,7 @@
 
 using System.Reflection;
 using NoMercy.Providers.AcoustId.Client;
+using NoMercy.Tests.Common;
 
 namespace NoMercy.Tests.Providers.AcoustId.Client;
 
@@ -31,18 +32,9 @@ public class FingerprintGoesInTheBodyTests
 {
     private static string ReadClientSource()
     {
-        const string relativePath = "src/NoMercy.Providers/AcoustId/Client/AcoustIdBaseClient.cs";
-
-        string? dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            string candidate = Path.GetFullPath(Path.Combine(dir, relativePath));
-            if (File.Exists(candidate))
-                return File.ReadAllText(candidate);
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new FileNotFoundException($"Could not locate {relativePath}");
+        return File.ReadAllText(
+            RepoPaths.At("src", "NoMercy.Providers", "AcoustId", "Client", "AcoustIdBaseClient.cs")
+        );
     }
 
     [Fact]
