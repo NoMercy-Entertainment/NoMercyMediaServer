@@ -72,6 +72,19 @@ public class UserDataRepositoryRemoveForItemTests : IDisposable
             .ToListAsync();
     }
 
+    // What continue-watching actually lists, which is the filter HomeRepository
+    // applies. "Removed" is a row that stops being listed, not a row that stops
+    // existing.
+    private async Task<List<UserData>> ListedAsync()
+    {
+        await using MediaContext ctx = _factory.CreateDbContext();
+        return await ctx
+            .UserData.AsNoTracking()
+            .Where(u => u.UserId == SeedConstants.UserId)
+            .Where(u => !u.RemovedFromContinueWatching)
+            .ToListAsync();
+    }
+
     [Fact]
     public async Task RemoveForItem_Movie_RemovesOnlyThatMovie_AndLeavesOtherMovieAndTv()
     {
@@ -84,10 +97,10 @@ public class UserDataRepositoryRemoveForItemTests : IDisposable
 
         Assert.Equal(2, deleted); // movie 129 had two rows
 
-        List<UserData> remaining = await RemainingAsync();
-        Assert.DoesNotContain(remaining, u => u.MovieId == 129);
-        Assert.Contains(remaining, u => u.MovieId == 680); // other movie untouched
-        Assert.Contains(remaining, u => u.TvId == 1399); // tv untouched
+        List<UserData> listed = await ListedAsync();
+        Assert.DoesNotContain(listed, u => u.MovieId == 129);
+        Assert.Contains(listed, u => u.MovieId == 680); // other movie untouched
+        Assert.Contains(listed, u => u.TvId == 1399); // tv untouched
     }
 
     [Fact]
@@ -102,9 +115,40 @@ public class UserDataRepositoryRemoveForItemTests : IDisposable
 
         Assert.Equal(1, deleted);
 
-        List<UserData> remaining = await RemainingAsync();
-        Assert.DoesNotContain(remaining, u => u.TvId == 1399);
-        Assert.Equal(3, remaining.Count); // movie 129 (2) + movie 680 (1)
+        List<UserData> listed = await ListedAsync();
+        Assert.DoesNotContain(listed, u => u.TvId == 1399);
+        Assert.Equal(3, listed.Count); // movie 129 (2) + movie 680 (1)
+    }
+
+    // The one that cost a viewer his place. Finishing an episode sends
+    // RemoveWatched for the SHOW, and this deleted every row the show had —
+    // every other episode's resume point with it, unrecoverably. The show has to
+    // leave the list; the positions have to stay.
+    [Fact]
+    public async Task RemoveForItem_Tv_KeepsEveryEpisodesPosition()
+    {
+        List<UserData> before = await RemainingAsync();
+        List<Ulid> tvRows = [.. before.Where(u => u.TvId == 1399).Select(u => u.Id)];
+        Dictionary<Ulid, int> timesBefore = before
+            .Where(u => u.TvId == 1399)
+            .ToDictionary(u => u.Id, u => u.Time ?? 0);
+        Assert.NotEmpty(tvRows);
+
+        await _repository.RemoveForItemAsync(
+            SeedConstants.UserId,
+            MediaTypes.TvMediaType,
+            1399,
+            null
+        );
+
+        List<UserData> after = await RemainingAsync();
+        Assert.Equal(before.Count, after.Count);
+        foreach (Ulid id in tvRows)
+        {
+            UserData row = Assert.Single(after, u => u.Id == id);
+            Assert.True(row.RemovedFromContinueWatching);
+            Assert.Equal(timesBefore[id], row.Time ?? 0);
+        }
     }
 
     [Fact]
