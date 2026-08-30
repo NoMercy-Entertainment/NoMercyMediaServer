@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Reflection;
+using NoMercy.Tests.Common;
 using NoMercyQueue;
 using Xunit;
 
@@ -166,25 +167,6 @@ public class WorkerCountRaceConditionTests
 
     private static string FindSourceFile(string relativePath)
     {
-        string? dir = AppDomain.CurrentDomain.BaseDirectory;
-        while (dir != null)
-        {
-            string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate))
-                return candidate;
-
-            string repoCandidate = Path.Combine([dir, "..", "..", "..", "..", "..", relativePath]);
-            string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved))
-                return resolved;
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback))
-            return fallback;
-
-        throw new FileNotFoundException($"Could not find source file: {relativePath}");
+        return RepoPaths.At(relativePath);
     }
 }

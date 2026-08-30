@@ -36,6 +36,15 @@ public static class PluginLibraryServiceCollectionExtensions
         services.AddSingleton<IPluginLibraryQuery, PluginLibraryQuery>();
         services.AddSingleton<IPluginLibraryWriterFactory, PluginLibraryWriterFactory>();
 
+        // The three facades that retire the reflection. A plugin reached the
+        // server's own job and storage types by name because there was nothing
+        // else to reach, and that construction broke silently four times in
+        // three days - each break a plugin that simply never encoded anything
+        // while all of its tests stayed green.
+        services.AddSingleton<IPluginEncoder, PluginEncoder>();
+        services.AddSingleton<IPluginJobs, PluginJobs>();
+        services.AddSingleton<IPluginStorage, PluginStorage>();
+
         return services;
     }
 }

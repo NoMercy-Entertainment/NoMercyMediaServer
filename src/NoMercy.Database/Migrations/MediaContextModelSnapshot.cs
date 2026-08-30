@@ -3833,6 +3833,14 @@ namespace NoMercy.Database.Migrations
                     b.Property<int>("TvId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("AddedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AddedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("LibraryId", "TvId");
 
                     b.HasIndex("LibraryId");

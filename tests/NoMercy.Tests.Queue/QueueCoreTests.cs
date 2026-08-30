@@ -586,6 +586,10 @@ public class QueueCoreTests
 
         public bool JobExists(string payload) => _jobs.Any(j => j.Payload == payload);
 
+        public QueueJobModel? FindJobByPayloadHash(string payloadHash) => null;
+
+        public FailedJobModel? FindFailedJobByPayloadHash(string payloadHash) => null;
+
         public void UpdateJob(QueueJobModel job) { }
 
         public void UpdateJobPayload(int jobId, string newPayload, DateTime availableAt)

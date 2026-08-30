@@ -294,7 +294,16 @@ public class TvShowsController(
             targetLibraryId = tvLibrary?.Id ?? tv.Library.Id;
         }
 
-        jobDispatcher.DispatchJob<ShowImportJob>(id, targetLibraryId);
+        // The owner pressed add, so the link records that. A show with nothing
+        // on disk yet is still a show they asked for, and the listing shows it.
+        jobDispatcher.DispatchJob(
+            new ShowImportJob
+            {
+                Id = id,
+                LibraryId = targetLibraryId,
+                AddedBy = LibraryLinkOrigin.Manual,
+            }
+        );
 
         return Ok(
             new StatusResponseDto<string>
@@ -347,7 +356,14 @@ public class TvShowsController(
 
         try
         {
-            jobDispatcher.DispatchJob<ShowImportJob>(id, library.Id);
+            jobDispatcher.DispatchJob(
+                new ShowImportJob
+                {
+                    Id = id,
+                    LibraryId = library.Id,
+                    AddedBy = LibraryLinkOrigin.Manual,
+                }
+            );
         }
         catch (Exception e)
         {

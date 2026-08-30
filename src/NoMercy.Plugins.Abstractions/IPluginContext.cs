@@ -68,6 +68,38 @@ public interface IPluginContext
     /// </summary>
     IPluginLibraryWriter? LibraryWriter { get; }
 
+    /// <summary>
+    /// Asking the server to encode a file the plugin has staged.
+    /// <para>
+    /// Present only when the plugin declared
+    /// <see cref="PluginHookCapability.Encoder" />; null otherwise, so the
+    /// absence is checkable rather than a call that throws. Without it a plugin
+    /// reached the server's own job types by name and drove them with
+    /// reflection, which broke silently four times in three days.
+    /// </para>
+    /// </summary>
+    IPluginEncoder? Encoder => null;
+
+    /// <summary>
+    /// Learning what became of a job this plugin asked for.
+    /// <para>
+    /// Beside <see cref="Encoder" /> because asking for work and learning
+    /// whether it happened are one story: a plugin that deletes a file once the
+    /// encode lands cannot tell a failure from a job still running without this,
+    /// and both look like "the library does not have it yet", for ever.
+    /// </para>
+    /// </summary>
+    IPluginJobs? Jobs => null;
+
+    /// <summary>
+    /// The places the server can write, rather than a path the owner typed.
+    /// <para>
+    /// Present only when the plugin declared
+    /// <see cref="PluginHookCapability.Storage" />.
+    /// </para>
+    /// </summary>
+    IPluginStorage? Storage => null;
+
     /// <summary>What the owner has granted this plugin, and how to ask for more.</summary>
     IPluginGrants Grants { get; }
 

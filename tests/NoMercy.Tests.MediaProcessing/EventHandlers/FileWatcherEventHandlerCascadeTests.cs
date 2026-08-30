@@ -61,6 +61,10 @@ internal sealed class FileWatcherTestQueueContext : IQueueContext
 
     public bool JobExists(string payload) => Jobs.Any(j => j.Payload == payload);
 
+    public QueueJobModel? FindJobByPayloadHash(string payloadHash) => null;
+
+    public FailedJobModel? FindFailedJobByPayloadHash(string payloadHash) => null;
+
     public void UpdateJob(QueueJobModel job)
     {
         int idx = Jobs.FindIndex(j => j.Id == job.Id);

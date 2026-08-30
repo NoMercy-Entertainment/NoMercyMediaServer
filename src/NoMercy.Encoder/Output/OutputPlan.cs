@@ -141,7 +141,11 @@ public record AudioOutputPlan(
     // built from — set by AudioPlanBuilder at the point the source stream is
     // in hand. -1 (default) means unset. See VideoOutputPlan.SourceStreamIndex
     // for why this must be captured rather than re-derived by language match.
-    int SourceStreamIndex = -1
+    int SourceStreamIndex = -1,
+    // The source stream's default disposition. The master playlist marks this
+    // rendition DEFAULT=YES so playback follows what the release intended
+    // instead of whichever stream ffprobe happened to list first.
+    bool IsSourceDefault = false
 )
 {
     /// <summary>

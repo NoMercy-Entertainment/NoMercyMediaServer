@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using NoMercy.Setup.Server;
+using NoMercy.Tests.Common;
 using RegexMatch = System.Text.RegularExpressions.Match;
 
 namespace NoMercy.Tests.Providers.Setup;
@@ -24,15 +25,7 @@ public class BinariesCloudflaredArchTests
 
     private static string FindSourceFile()
     {
-        string dir = AppContext.BaseDirectory;
-        while (dir != null!)
-        {
-            string candidate = Path.Combine([dir, "src", "NoMercy.Setup", "Server", "Binaries.cs"]);
-            if (File.Exists(candidate))
-                return candidate;
-            dir = Path.GetDirectoryName(dir)!;
-        }
-        throw new FileNotFoundException("Could not find src/NoMercy.Setup/Server/Binaries.cs");
+        return RepoPaths.At("src", "NoMercy.Setup", "Server", "Binaries.cs");
     }
 
     private static string GetSourceCode() => File.ReadAllText(SourcePath);

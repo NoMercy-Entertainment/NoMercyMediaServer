@@ -158,7 +158,18 @@ public static class PluginLayout
     /// <summary>A form, which is a shape a remote control handles badly.</summary>
     public const string Form = "form";
 
-    public static readonly string[] All = [Standard, ListDetail, Grid, Immersive, Form];
+    /// <summary>
+    /// The width the page is given, with the page's ordinary padding.
+    /// <para>
+    /// <see cref="Standard" /> holds a page to a measure a person can read
+    /// across, which is right for a page of cards and wrong for a page of data:
+    /// a table wants every column it declared. There was no shape meaning this,
+    /// so a nine-column table lost five columns and its row buttons.
+    /// </para>
+    /// </summary>
+    public const string Wide = "wide";
+
+    public static readonly string[] All = [Standard, ListDetail, Grid, Immersive, Form, Wide];
 
     public static bool IsKnown(string? layout)
     {

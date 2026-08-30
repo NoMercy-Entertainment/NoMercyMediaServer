@@ -32,6 +32,22 @@ public interface IQueueContext : IDisposable
 
     QueueJobModel? FindJob(int id);
     bool JobExists(string payload);
+
+    /// <summary>
+    /// The queued job carrying this payload, or null.
+    ///
+    /// <para>
+    /// By hash rather than by id, because the id is the one thing that does not
+    /// survive: a job that succeeds is deleted from the queue, and a job that
+    /// fails is deleted and rewritten into the failed table under a new
+    /// identity. The payload is what both rows have in common, so it is what
+    /// lets a caller ask what became of the work it asked for.
+    /// </para>
+    /// </summary>
+    QueueJobModel? FindJobByPayloadHash(string payloadHash);
+
+    /// <summary>The recorded failure carrying this payload, or null.</summary>
+    FailedJobModel? FindFailedJobByPayloadHash(string payloadHash);
     void UpdateJob(QueueJobModel job);
 
     /// <summary>

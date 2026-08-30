@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using NoMercyQueue.Core;
 using NoMercyQueue.Core.Interfaces;
 using NoMercyQueue.Core.Models;
 
@@ -58,6 +59,16 @@ public class TestQueueContextAdapter : IQueueContext
     public bool JobExists(string payload)
     {
         return Jobs.Any(j => j.Payload == payload);
+    }
+
+    public QueueJobModel? FindJobByPayloadHash(string payloadHash)
+    {
+        return Jobs.FirstOrDefault(j => QueuePayloadHash.For(j.Payload) == payloadHash);
+    }
+
+    public FailedJobModel? FindFailedJobByPayloadHash(string payloadHash)
+    {
+        return FailedJobs.FirstOrDefault(j => QueuePayloadHash.For(j.Payload) == payloadHash);
     }
 
     public void UpdateJob(QueueJobModel job)

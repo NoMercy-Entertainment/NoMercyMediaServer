@@ -97,7 +97,29 @@ public record PluginLibraryEpisode(
     string? Title,
     DateTime? AirDate,
     bool HasFile
-);
+)
+{
+    /// <summary>
+    /// The server's own id for this episode, which is what an encode registers
+    /// its result against.
+    /// <para>
+    /// Without it a plugin holding exactly the episode it means had no way to
+    /// say which row the work belongs to, and the only route to the id was
+    /// asking the server to re-identify the file from its name — a text search
+    /// on whatever a parser read out of it. That is a fair guess for a folder a
+    /// person just pointed at and a guess a plugin never needed to make: the
+    /// encode registered against nothing, the queue counter moved, the library
+    /// stayed empty, and from outside it looked like an encode still running.
+    /// </para>
+    /// <para>
+    /// A member rather than a positional parameter, so every plugin compiled
+    /// against the older shape still constructs. It leads the record at the next
+    /// contract bump, where <see cref="PluginLibraryShow"/> and
+    /// <see cref="PluginLibraryMovie"/> already carry theirs.
+    /// </para>
+    /// </summary>
+    public int Id { get; init; }
+}
 
 /// <param name="Path">Full path, as the server records it.</param>
 /// <param name="Quality">The server's own quality label for the file, or empty when it has none.</param>

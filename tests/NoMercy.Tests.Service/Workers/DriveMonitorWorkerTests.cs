@@ -88,6 +88,11 @@ public sealed class DriveMonitorWorkerTests
         return previous;
     }
 
+    // Each case starts a BackgroundService against a process-wide event bus.
+    // Leaving one running let its publishes land in the NEXT case's recorder -
+    // one case then saw two events and another saw none, which is what the
+    // faster CI runners surfaced. Every case stops its worker before restoring
+    // the bus.
     [Theory]
     [InlineData([DriveEventType.DriveAdded, "drive_added"])]
     [InlineData([DriveEventType.DriveRemoved, "drive_removed"])]
@@ -113,6 +118,7 @@ public sealed class DriveMonitorWorkerTests
 
             await worker.StartAsync(CancellationToken.None);
             await Task.Delay(50);
+            await worker.StopAsync(CancellationToken.None);
 
             Assert.Single(eventBus.Published);
             Assert.Equal(expectedMethod, eventBus.Published[0].DriveStateData.Method);
@@ -146,6 +152,7 @@ public sealed class DriveMonitorWorkerTests
             {
                 await worker.StartAsync(CancellationToken.None);
                 await Task.Delay(50);
+                await worker.StopAsync(CancellationToken.None);
             });
 
             Assert.Null(thrown);
@@ -178,6 +185,7 @@ public sealed class DriveMonitorWorkerTests
 
             await worker.StartAsync(CancellationToken.None);
             await Task.Delay(50);
+            await worker.StopAsync(CancellationToken.None);
 
             Assert.Single(eventBus.Published);
             Assert.Equal("drive_changed", eventBus.Published[0].DriveStateData.Method);

@@ -129,12 +129,24 @@ public partial class MediaIdentificationService(
         if (parsed.Episode == null && !airDate.HasValue)
             return null;
 
-        Ulid libraryId = await ctx
-            .Libraries.Where(item => item.Type == libraryType)
-            .Select(item => item.Id)
-            .FirstOrDefaultAsync();
+        // Identification reads. It does not write.
+        //
+        // This used to import the first TMDB result for whatever a parser read
+        // out of a filename, before an episode had been resolved and before
+        // anything was confirmed. Listing a folder is what the dashboard does
+        // before the owner has committed to anything, and what a plugin asks
+        // when it wants to know about a file, so a recurring scan quietly
+        // attached thirteen shows nobody had asked for and 1,604 episode rows
+        // with them - and nothing anywhere removes a row from LibraryTv.
+        //
+        // A show the server does not hold is now simply not a match, which the
+        // caller already handles. Import stays where it already was: the add-show
+        // button, the file watcher, the inbox, and the changes cron all have
+        // either a real file or a person behind them.
+        bool showIsInLibrary = await ctx.Tvs.AsNoTracking().AnyAsync(item => item.Id == show.Id);
 
-        await EnsureShowInLibraryAsync(ctx, show.Id, show.Name, libraryId);
+        if (!showIsInLibrary)
+            return null;
 
         // Daily/dated episode (yyyy.mm.dd): map the air date to the episode that
         // aired that day, then fall through to the normal season/episode resolution.
@@ -305,7 +317,9 @@ public partial class MediaIdentificationService(
                 if (altGroups?.Results.Any(g => g.Type == 2) != true)
                     continue;
 
-                await EnsureShowInLibraryAsync(ctx, altShow.Id, altShow.Name, libraryId);
+                // Candidates, tested and not attached. This attached every
+                // alternative it was unsure about, so one mis-parsed name could
+                // pull in five shows and keep the four that did not match.
                 episode = await ResolveAbsoluteEpisodeAsync(ctx, altShow.Id, episodeNumber);
                 if (episode != null)
                     break;
@@ -456,34 +470,14 @@ public partial class MediaIdentificationService(
             if (details == null)
                 return null;
 
+            // The same rule as the show path above, and the same reason. This was
+            // only ever reported against shows because shows are what the owner
+            // had been scanning; the construction here is identical and imports a
+            // whole movie on the first search result for a parsed filename.
             bool hasMovie = ctx.Movies.AsNoTracking().Any(item => item.Id == movie.Id);
 
-            Ulid libraryId = await ctx
-                .Libraries.AsNoTracking()
-                .Where(item => item.Type == libraryType)
-                .Select(item => item.Id)
-                .FirstOrDefaultAsync();
-
             if (!hasMovie)
-            {
-                if (EventBusProvider.IsConfigured)
-                {
-                    await EventBusProvider.Current.PublishAsync(
-                        new UserNotifiedEvent
-                        {
-                            Title = "Movie not found",
-                            Message = $"Movie {movie.Title} not found in library, adding now",
-                            Type = "info",
-                        }
-                    );
-                }
-
-                await RunJobSynchronouslyAsync<MovieImportJob>(job =>
-                {
-                    job.LibraryId = libraryId;
-                    job.Id = movie.Id;
-                });
-            }
+                return null;
 
             movieItem = new()
             {
@@ -504,37 +498,6 @@ public partial class MediaIdentificationService(
         };
 
         return (match, movieItem.ImdbId);
-    }
-
-    private async Task EnsureShowInLibraryAsync(
-        MediaContext ctx,
-        int showId,
-        string showName,
-        Ulid libraryId
-    )
-    {
-        bool hasShow = ctx.Tvs.AsNoTracking().Any(item => item.Id == showId);
-        if (hasShow)
-            return;
-
-        if (EventBusProvider.IsConfigured)
-        {
-            await EventBusProvider.Current.PublishAsync(
-                new UserNotifiedEvent
-                {
-                    Title = "Show not found",
-                    Message = $"Show {showName} not found in library, adding now",
-                    Type = "info",
-                }
-            );
-        }
-
-        await RunJobSynchronouslyAsync<ShowImportJob>(job =>
-        {
-            job.LibraryId = libraryId;
-            job.Id = showId;
-            job.HighPriority = true;
-        });
     }
 
     private static async Task<Episode?> ResolveAbsoluteEpisodeAsync(

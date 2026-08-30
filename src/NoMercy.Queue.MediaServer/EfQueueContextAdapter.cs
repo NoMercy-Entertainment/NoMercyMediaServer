@@ -246,6 +246,34 @@ public class EfQueueContextAdapter : IQueueContext
         return Execute(context => ExistsQuery(context, payloadHash, payload));
     }
 
+    public QueueJobModel? FindJobByPayloadHash(string payloadHash)
+    {
+        return Execute<QueueJobModel?>(context =>
+        {
+            QueueJob? job = context
+                .QueueJobs.AsNoTracking()
+                .FirstOrDefault(entity => entity.PayloadHash == payloadHash);
+
+            return job == null ? null : ToModel(job);
+        });
+    }
+
+    public FailedJobModel? FindFailedJobByPayloadHash(string payloadHash)
+    {
+        return Execute<FailedJobModel?>(context =>
+        {
+            // The failed table keeps the payload but not its hash, so the match
+            // is made here rather than in SQL. A server's failed table is small
+            // - it is the jobs that went wrong, not the jobs that ran.
+            FailedJob? failed = context
+                .FailedJobs.AsNoTracking()
+                .AsEnumerable()
+                .FirstOrDefault(entity => QueuePayloadHash.For(entity.Payload) == payloadHash);
+
+            return failed == null ? null : ToFailedModel(failed);
+        });
+    }
+
     public void UpdateJob(QueueJobModel job)
     {
         Execute(context =>

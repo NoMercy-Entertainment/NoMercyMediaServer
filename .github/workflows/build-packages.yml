@@ -31,12 +31,14 @@ jobs:
     strategy:
       matrix:
         package-type: [deb, rpm, arch]
-        os: [ubuntu-latest]
+        os: [[self-hosted, Linux, X64, beast-unit]]
         include:
+          # No self-hosted Windows box builds installers, so this leg stays on
+          # a GitHub-hosted runner.
           - package-type: windows-installer
             os: windows-latest
           - package-type: macos-installer
-            os: macos-latest
+            os: [self-hosted, macOS, ARM64, mac-mini]
       fail-fast: false
 
     steps:

@@ -15,6 +15,7 @@ using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup.Auth;
+using NoMercy.Tests.Common;
 
 namespace NoMercy.Tests.Setup;
 
@@ -285,19 +286,11 @@ public class OfflineTokenValidationIntegrationTests
     {
         // Auth.cs was replaced by AuthManager.cs — verify OfflineJwksCache.LoadCachedPublicKey
         // is still called during token initialization (AuthManager.InitializeAsync).
-        string dir = AppContext.BaseDirectory;
-        while (dir != null!)
-        {
-            string candidate = Path.Combine([dir, "src", "NoMercy.Setup", "Auth", "AuthManager.cs"]);
-            if (File.Exists(candidate))
-            {
-                string source = File.ReadAllText(candidate);
-                Assert.Contains("OfflineJwksCache.LoadCachedPublicKey", source);
-                return;
-            }
-            dir = Path.GetDirectoryName(dir)!;
-        }
-        Assert.Fail("Could not find src/NoMercy.Setup/Auth/AuthManager.cs");
+        string source = File.ReadAllText(
+            RepoPaths.At("src", "NoMercy.Setup", "Auth", "AuthManager.cs")
+        );
+
+        Assert.Contains("OfflineJwksCache.LoadCachedPublicKey", source);
     }
 
     [Fact]
@@ -305,43 +298,26 @@ public class OfflineTokenValidationIntegrationTests
     {
         // Auth.cs was replaced by AuthManager.cs — verify OfflineJwksCache.LoadCachedPublicKey
         // is called during token initialization in the new implementation.
-        string dir = AppContext.BaseDirectory;
-        while (dir != null!)
-        {
-            string candidate = Path.Combine([dir, "src", "NoMercy.Setup", "Auth", "AuthManager.cs"]);
-            if (File.Exists(candidate))
-            {
-                string source = File.ReadAllText(candidate);
-                Assert.Contains("OfflineJwksCache.LoadCachedPublicKey", source);
-                return;
-            }
-            dir = Path.GetDirectoryName(dir)!;
-        }
-        Assert.Fail("Could not find src/NoMercy.Setup/Auth/AuthManager.cs");
+        string source = File.ReadAllText(
+            RepoPaths.At("src", "NoMercy.Setup", "Auth", "AuthManager.cs")
+        );
+
+        Assert.Contains("OfflineJwksCache.LoadCachedPublicKey", source);
     }
 
     [Fact]
     public void ServiceConfiguration_UsesIssuerSigningKeyResolver()
     {
         // Verify the JWT bearer config includes the offline key resolver
-        string dir = AppContext.BaseDirectory;
-        while (dir != null!)
-        {
-            string configDir = Path.Combine(dir, "src", "NoMercy.Service", "Configuration");
-            if (Directory.Exists(configDir))
-            {
-                // ServiceConfiguration is split into partial files (ServiceConfiguration*.cs);
-                // the JWT bearer setup lives in ServiceConfiguration.Auth.cs.
-                string source = string.Empty;
-                foreach (string file in Directory.GetFiles(configDir, "ServiceConfiguration*.cs"))
-                    source += File.ReadAllText(file);
+        // ServiceConfiguration is split into partial files (ServiceConfiguration*.cs);
+        // the JWT bearer setup lives in ServiceConfiguration.Auth.cs.
+        string configDir = RepoPaths.At("src", "NoMercy.Service", "Configuration");
 
-                Assert.Contains("IssuerSigningKeyResolver", source);
-                Assert.Contains("OfflineJwksCache.CachedSigningKey", source);
-                return;
-            }
-            dir = Path.GetDirectoryName(dir)!;
-        }
-        Assert.Fail("Could not find the NoMercy.Service Configuration directory");
+        string source = string.Empty;
+        foreach (string file in Directory.GetFiles(configDir, "ServiceConfiguration*.cs"))
+            source += File.ReadAllText(file);
+
+        Assert.Contains("IssuerSigningKeyResolver", source);
+        Assert.Contains("OfflineJwksCache.CachedSigningKey", source);
     }
 }

@@ -10,6 +10,8 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
@@ -146,15 +148,39 @@ public sealed class NetworkDiscoveryIpClassificationTests
         Assert.Equal(System.Net.Sockets.AddressFamily.InterNetwork, parsed!.AddressFamily);
     }
 
+    /// <summary>
+    /// Only meaningful where the machine has a routable interface to prefer.
+    /// Inside a container the routing interface IS the container interface, so
+    /// discovery has nothing else to return and says so with an error - which
+    /// is what a CI runner in docker hits. Asserting the requirement there
+    /// tests the host, not the code.
+    /// </summary>
     [Fact]
     public void InternalIp_WhenNeverExplicitlySet_IsNeverAContainerAddress()
     {
+        if (!HasRoutableInterface())
+            return;
+
         NetworkDiscovery discovery = BuildDiscovery();
 
         string ip = discovery.InternalIp;
 
         Assert.False(NetworkDiscovery.IsDockerOrWslAddress(IPAddress.Parse(ip)));
     }
+
+    /// <summary>
+    /// One non-loopback, non-container IPv4 on any interface - the thing the
+    /// requirement above is about preferring.
+    /// </summary>
+    private static bool HasRoutableInterface() =>
+        NetworkInterface
+            .GetAllNetworkInterfaces()
+            .Where(nic => nic.OperationalStatus == OperationalStatus.Up)
+            .SelectMany(nic => nic.GetIPProperties().UnicastAddresses)
+            .Select(address => address.Address)
+            .Where(address => address.AddressFamily == AddressFamily.InterNetwork)
+            .Where(address => !IPAddress.IsLoopback(address))
+            .Any(address => !NetworkDiscovery.IsDockerOrWslAddress(address));
 
     [Fact]
     public void InternalIp_Getter_IsIdempotent_OnceResolved()

@@ -100,6 +100,20 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
             return;
         }
 
+        // A privileged, host-networked kernel nfsd inside a container that is
+        // itself a container has nowhere to export from: the mount half-succeeds
+        // and the test host then never exits, which the blame collector reports
+        // ten minutes later as a crash rather than as this. The CI runners are
+        // docker-in-docker, so the suite skips there and stays honest about why.
+        if (RunningInsideContainer())
+        {
+            StartupError =
+                "The test host is itself a container; a nested privileged nfsd "
+                + "cannot export, so the storage backends are not started here.";
+            Available = false;
+            return;
+        }
+
         try
         {
             // The Dockerfile + configs ship next to the test sources; locate them
@@ -176,6 +190,29 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
         {
             StartupError = $"{ex.GetType().Name}: {ex.Message}";
             Available = false;
+        }
+    }
+
+    /// <summary>
+    /// The marker every container runtime leaves, plus the cgroup line podman
+    /// and older docker write. Cheap, and it needs no docker call of its own.
+    /// </summary>
+    private static bool RunningInsideContainer()
+    {
+        if (File.Exists("/.dockerenv"))
+            return true;
+
+        if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") is "true" or "1")
+            return true;
+
+        try
+        {
+            return File.Exists("/proc/1/cgroup")
+                && File.ReadAllText("/proc/1/cgroup").Contains("docker", StringComparison.Ordinal);
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -271,6 +308,13 @@ public sealed class StorageBackendsFixture : IAsyncLifetime
     /// </summary>
     public NfsStorageDriver? TryBuildNfsDriver(int version = 4)
     {
+        // No backends container, no export to mount. Without this the driver
+        // still constructs wherever libnfs happens to be installed, and the
+        // mount fails against a host that was never started - a failure that
+        // reads like a broken driver instead of an absent fixture.
+        if (!Available)
+            return null;
+
         try
         {
             NfsDriverConfig config = NfsDriverConfig.For(NfsHost, NfsExport, version: version);

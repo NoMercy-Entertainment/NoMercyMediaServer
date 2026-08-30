@@ -84,4 +84,60 @@ public class TitleMatcherTests
 
         result.Should().BeFalse();
     }
+
+    /// <summary>
+    /// Every case below is a real show that sat in the Series library because the
+    /// matcher rejected the correct AniList hit over a separator character. TMDB
+    /// and AniList disagree on en dashes, ampersand-vs-and, and the decorative
+    /// star, tilde and gender marks that anime titles carry.
+    /// </summary>
+    [Theory]
+    [InlineData(
+        "KONOSUBA – An Explosion on This Wonderful World!",
+        "KONOSUBA -An Explosion on This Wonderful World!"
+    )]
+    [InlineData(
+        "Berserk: The Golden Age Arc – Memorial Edition",
+        "Berserk: The Golden Age Arc - Memorial Edition"
+    )]
+    [InlineData("Level 1 Demon Lord & One Room Hero", "Level 1 Demon Lord and One Room Hero")]
+    [InlineData("Saint Cecilia and Pastor Lawrence", "Saint Cecilia & Pastor Lawrence")]
+    [InlineData("Please Twins!", "Please☆Twins!")]
+    [InlineData("Rin: Daughters of Mnemosyne", "RIN ~Daughters of Mnemosyne~")]
+    [InlineData(
+        "Reborn to Master the Blade: From Hero-King to Extraordinary Squire ♀",
+        "Reborn to Master the Blade: From Hero-King to Extraordinary Squire"
+    )]
+    public void Matches_SeparatorAndDecorationDifferences_StillMatch(
+        string searchTitle,
+        string candidateTitle
+    )
+    {
+        TitleMatcher.Matches(searchTitle, [candidateTitle]).Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Normalising separators must not collapse genuinely different titles: a
+    /// K-pop music show that is not anime still has to fail against the unrelated
+    /// anime AniList returns for it.
+    /// </summary>
+    [Fact]
+    public void Matches_UnrelatedTitle_StillDoesNotMatch()
+    {
+        TitleMatcher
+            .Matches("&TEAM EPISODE", ["Tenchi Souzou Design-bu: Tokubetsu-hen"])
+            .Should()
+            .BeFalse();
+    }
+
+    /// <summary>
+    /// TMDB writes "The Piano Forest"; AniList lists it as "Piano Forest". The
+    /// leading article was the only word that failed, so a real anime stayed
+    /// filed under the tv library.
+    /// </summary>
+    [Fact]
+    public void Matches_LeadingArticleOnlyOnTheSearchTitle_StillMatches()
+    {
+        TitleMatcher.Matches("The Piano Forest", ["Piano Forest"]).Should().BeTrue();
+    }
 }

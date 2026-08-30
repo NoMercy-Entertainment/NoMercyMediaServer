@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Text.RegularExpressions;
+using NoMercy.Tests.Common;
 
 namespace NoMercy.Tests.MediaProcessing.Jobs;
 
@@ -24,7 +25,7 @@ public partial class HttpResponseDisposalAuditTests
     [Fact]
     public void Source_HttpResponseMessage_HasUsing()
     {
-        string srcDir = FindSrcDirectory();
+        string srcDir = RepoPaths.Src;
         string[] csFiles = Directory.GetFiles(srcDir, "*.cs", SearchOption.AllDirectories);
 
         List<string> violations = [];
@@ -84,25 +85,6 @@ public partial class HttpResponseDisposalAuditTests
         }
 
         Assert.Empty(violations);
-    }
-
-    private static string FindSrcDirectory()
-    {
-        string? dir = AppDomain.CurrentDomain.BaseDirectory;
-        while (dir != null)
-        {
-            string candidate = Path.Combine(dir, "src");
-            if (Directory.Exists(candidate))
-                return candidate;
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        string fallback = "/workspaces/NoMercyMediaServer/src";
-        if (Directory.Exists(fallback))
-            return fallback;
-
-        throw new DirectoryNotFoundException("Could not find src/ directory");
     }
 
     [GeneratedRegex(@"HttpResponseMessage\s+\w+\s*=")]

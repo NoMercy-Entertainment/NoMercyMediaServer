@@ -552,4 +552,118 @@ public class AnimeEnrichmentServiceTests
 
         await service.EnrichMovieAsync(7, "Your Name", 2016, ["JP"]);
     }
+
+    /// <summary>
+    /// The classifier only chose a library at import time, so a show imported
+    /// before it existed - or one whose AniList/Jikan lookup was inconclusive that
+    /// day and defaulted to the tv library - stayed misfiled forever, and turned up
+    /// under "Latest in Series" on the home screen.
+    /// </summary>
+    [Fact]
+    public async Task EnrichTvAsync_ClassifiedAnime_IsRefiledUnderTheAnimeLibrary()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("Attack on Titan", 2013, It.IsAny<string[]?>()))
+            .ReturnsAsync("anime");
+        Mock<IShowRepository> showRepository = new();
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            Mock.Of<IAniListMetadataProvider>(),
+            Mock.Of<IJikanMetadataProvider>(),
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(7, "Attack on Titan", 2013, ["JP"]);
+
+        showRepository.Verify(r => r.EnsureFiledUnderLibraryTypeAsync(7, "anime"), Times.Once);
+    }
+
+    [Fact]
+    public async Task EnrichTvAsync_NotClassifiedAnime_IsNeverRefiled()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c => c.ClassifyAsync("Breaking Bad", 2008, It.IsAny<string[]?>()))
+            .ReturnsAsync("tv");
+        Mock<IShowRepository> showRepository = new();
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            Mock.Of<IAniListMetadataProvider>(),
+            Mock.Of<IJikanMetadataProvider>(),
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(1, "Breaking Bad", 2008, ["US"]);
+
+        showRepository.Verify(
+            r => r.EnsureFiledUnderLibraryTypeAsync(It.IsAny<int>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
+    /// <summary>
+    /// An inconclusive lookup is not a verdict, so it must not move a row either
+    /// way - the same rule the import path and the audit already follow.
+    /// </summary>
+    [Fact]
+    public async Task EnrichTvAsync_InconclusiveLookup_IsNeverRefiled()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        classifier
+            .Setup(c =>
+                c.ClassifyAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string[]?>())
+            )
+            .ReturnsAsync((string?)null);
+        Mock<IShowRepository> showRepository = new();
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            Mock.Of<IAniListMetadataProvider>(),
+            Mock.Of<IJikanMetadataProvider>(),
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(9, "Rate Limited Today", 2020, ["JP"]);
+
+        showRepository.Verify(
+            r => r.EnsureFiledUnderLibraryTypeAsync(It.IsAny<int>(), It.IsAny<string>()),
+            Times.Never
+        );
+    }
+
+    /// <summary>
+    /// Themes and demographics only ever come from a successful anime match, so a
+    /// fully-enriched show is provably anime. Placement is corrected from that
+    /// stored proof, without spending an AniList/Jikan call to re-derive it.
+    /// </summary>
+    [Fact]
+    public async Task EnrichTvAsync_AlreadyEnriched_IsRefiledWithoutCallingTheClassifier()
+    {
+        Mock<IMediaTypeClassifier> classifier = new();
+        Mock<IShowRepository> showRepository = new();
+        showRepository.Setup(r => r.HasAnimeThemesAsync(4)).ReturnsAsync(true);
+        showRepository.Setup(r => r.HasAnimeDemographicsAsync(4)).ReturnsAsync(true);
+
+        AnimeEnrichmentService service = new(
+            classifier.Object,
+            Mock.Of<IAniListMetadataProvider>(),
+            Mock.Of<IJikanMetadataProvider>(),
+            showRepository.Object,
+            Mock.Of<NoMercy.MediaProcessing.Movies.IMovieRepository>()
+        );
+
+        await service.EnrichTvAsync(4, "Cowboy Bebop", 1998, ["JP"]);
+
+        showRepository.Verify(r => r.EnsureFiledUnderLibraryTypeAsync(4, "anime"), Times.Once);
+        classifier.Verify(
+            c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string[]?>()),
+            Times.Never
+        );
+    }
 }

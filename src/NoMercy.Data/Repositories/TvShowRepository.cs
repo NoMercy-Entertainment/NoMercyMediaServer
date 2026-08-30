@@ -356,46 +356,20 @@ public class TvShowRepository(
             return;
 
         JobDispatcher jobDispatcher = new();
-        jobDispatcher.DispatchJob<ShowImportJob>(id, tvLibrary);
+        jobDispatcher.DispatchJob(
+            new ShowImportJob
+            {
+                Id = id,
+                LibraryId = tvLibrary.Id,
+                AddedBy = LibraryLinkOrigin.Manual,
+            }
+        );
     }
 
     public async Task DeleteAsync(int id, CancellationToken ct = default)
     {
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
-        // SQLite schema uses DeleteBehavior.Restrict globally — the modelBuilder
-        // cascade rules only affect EF's tracked-entity cascades, not bulk
-        // ExecuteDeleteAsync. Without disabling FK enforcement the delete
-        // throws on the first dependent row (seasons, episodes, video files,
-        // userdata, etc.) and the controller returns 500. Mirrors the same
-        // workaround applied in MovieRepository / CollectionRepository.
-        //
-        // PRAGMA foreign_keys is per-connection in SQLite. EF Core's
-        // ExecuteSqlRawAsync and ExecuteDeleteAsync each open and close a pooled
-        // connection by default — PRAGMA OFF on connection A doesn't apply to
-        // the DELETE on connection B. Pin one connection across all three calls.
-        bool ownsConnection =
-            context.Database.GetDbConnection().State != System.Data.ConnectionState.Open;
-
-        if (ownsConnection)
-            await context.Database.OpenConnectionAsync(ct);
-
-        try
-        {
-            await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = OFF", ct);
-            try
-            {
-                await context.Tvs.Where(tv => tv.Id == id).ExecuteDeleteAsync(ct);
-            }
-            finally
-            {
-                await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys = ON", ct);
-            }
-        }
-        finally
-        {
-            if (ownsConnection)
-                await context.Database.CloseConnectionAsync();
-        }
+        await MediaSubtreeDelete.ShowAsync(context, id, ct);
     }
 
     public async Task<IEnumerable<Episode>> GetMissingLibraryShows(

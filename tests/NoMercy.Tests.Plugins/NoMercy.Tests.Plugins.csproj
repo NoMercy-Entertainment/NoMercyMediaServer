@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NoMercy.Plugins.Abstractions\NoMercy.Plugins.Abstractions.csproj" />
+    <ProjectReference Include="..\NoMercy.Tests.Common\NoMercy.Tests.Common.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Plugins\NoMercy.Plugins.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Events\NoMercy.Events.csproj" />
     <ProjectReference Include="..\..\src\NoMercy.Storage\NoMercy.Storage.csproj" />

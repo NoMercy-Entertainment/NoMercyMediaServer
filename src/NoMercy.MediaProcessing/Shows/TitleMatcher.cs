@@ -33,8 +33,17 @@ public static partial class TitleMatcher
             .Replace(
                 title
                     .Replace('-', ' ')
+                    .Replace('–', ' ')
+                    .Replace('—', ' ')
+                    .Replace('~', ' ')
+                    .Replace('～', ' ')
                     .Replace('.', ' ')
                     .Replace(':', ' ')
+                    .Replace("&", " and ")
+                    .Replace("★", " ")
+                    .Replace("☆", " ")
+                    .Replace("♀", " ")
+                    .Replace("♂", " ")
                     .Replace("’", string.Empty)
                     .Replace("'", string.Empty),
                 " "
@@ -44,9 +53,18 @@ public static partial class TitleMatcher
     private static string[] WordsFor(string title) =>
         Normalize(title).ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
+    // TMDB prefixes English titles with an article that AniList and Jikan
+    // routinely drop ("The Piano Forest" vs "Piano Forest"), and requiring every
+    // search word to appear then rejects the correct hit. Dropping them from the
+    // search side only still requires every meaningful word to match.
+    private static readonly HashSet<string> IgnorableWords = ["the", "a", "an"];
+
     public static bool Matches(string searchTitle, IEnumerable<string?> candidateTitles)
     {
-        string[] searchWords = WordsFor(searchTitle);
+        string[] searchWords =
+        [
+            .. WordsFor(searchTitle).Where(word => !IgnorableWords.Contains(word)),
+        ];
         if (searchWords.Length == 0)
             return false;
 

@@ -43,6 +43,15 @@ public class JobDispatcher : IJobDispatcher
         Dispatcher.Dispatch(job, onQueue, priority);
     }
 
+    /// <summary>
+    /// Queue a job and say which one it became, for a caller that has to follow
+    /// it afterwards. Null when an identical payload is already queued.
+    /// </summary>
+    public virtual string? DispatchTracked(IShouldQueue job)
+    {
+        return Dispatcher.DispatchTracked(job, job.QueueName, job.Priority);
+    }
+
     public void DispatchChild(
         IShouldQueue job,
         string onQueue,
@@ -114,6 +123,21 @@ public class JobDispatcher : IJobDispatcher
         where TJob : AbstractMediaJob, new()
     {
         TJob job = new() { Id = id, LibraryId = libraryId };
+        Dispatcher.Dispatch(job);
+    }
+
+    /// <summary>
+    /// A job the caller has already filled in.
+    /// <para>
+    /// The overloads around this one each name the two or three fields their
+    /// callers happened to need, which works until a job carries something they
+    /// do not know about - and then the choice is a new overload per field or a
+    /// caller that cannot say what it means.
+    /// </para>
+    /// </summary>
+    public virtual void DispatchJob<TJob>(TJob job)
+        where TJob : AbstractMediaJob
+    {
         Dispatcher.Dispatch(job);
     }
 

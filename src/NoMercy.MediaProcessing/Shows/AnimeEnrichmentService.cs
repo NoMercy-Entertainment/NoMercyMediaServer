@@ -42,6 +42,16 @@ public class AnimeEnrichmentService(
     {
         bool hasThemes = await showRepository.HasAnimeThemesAsync(tvId);
         bool hasDemographics = await showRepository.HasAnimeDemographicsAsync(tvId);
+
+        // Recorded themes or demographics only ever come from a successful
+        // AniList/Jikan anime match, so they are proof of "anime" that costs no
+        // network call. Placement is re-checked from that proof before the
+        // already-enriched short-circuit below, because a show enriched by an
+        // earlier pass can still be sitting in the library a pre-classifier
+        // import (or an inconclusive lookup) filed it under.
+        if (hasThemes || hasDemographics)
+            await showRepository.EnsureFiledUnderLibraryTypeAsync(tvId, "anime");
+
         if (hasThemes && hasDemographics)
             return;
 
@@ -79,6 +89,11 @@ public class AnimeEnrichmentService(
         );
         if (classification != "anime")
             return;
+
+        // The classifier just confirmed anime, so a show sitting in any other
+        // library is misfiled — whatever put it there (a pre-classifier import,
+        // or a lookup that was inconclusive at import time and defaulted to tv).
+        await showRepository.EnsureFiledUnderLibraryTypeAsync(tvId, "anime");
 
         if (!hasThemes)
         {

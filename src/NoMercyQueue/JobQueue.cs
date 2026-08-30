@@ -43,18 +43,30 @@ public class JobQueue(
         }
     }
 
-    public void Enqueue(QueueJobModel queueJob)
+    /// <summary>
+    /// Queue a job, and say which one it became.
+    ///
+    /// <para>
+    /// Null when an identical payload is already queued. That is not a failure -
+    /// asking twice for the same work is how a retry behaves - but a caller that
+    /// holds a file until the job lands has to be able to tell "queued as 41"
+    /// from "already queued, and I have no id for it".
+    /// </para>
+    /// </summary>
+    public int? Enqueue(QueueJobModel queueJob)
     {
         lock (_writeLock)
         {
             bool exists = context.JobExists(queueJob.Payload);
             if (exists)
-                return;
+                return null;
 
             context.AddJob(queueJob);
         }
 
         WorkAvailable.Release();
+
+        return queueJob.Id;
     }
 
     public QueueJobModel? Dequeue()

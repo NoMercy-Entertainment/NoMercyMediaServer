@@ -109,7 +109,7 @@ public sealed class FakeManagementPipeServer : IDisposable
         await server.WaitForConnectionAsync(ct);
 
         string request = await ReadRequestAsync(server, ct);
-        await respond(server);
+        await RespondAsync(respond, server);
 
         return request;
     }
@@ -130,9 +130,57 @@ public sealed class FakeManagementPipeServer : IDisposable
         await using NetworkStream stream = new(connection, false);
 
         string request = await ReadRequestAsync(stream, ct);
-        await respond(stream);
+        await RespondAsync(respond, stream);
 
         return request;
+    }
+
+    /// <summary>
+    /// Did this write fail because the client is gone?
+    ///
+    /// <para>
+    /// Several scenarios here cancel the client part-way through a streamed
+    /// response and then assert the command exited cleanly. The peer closing its
+    /// end is the whole point of those, so the server's in-flight write failing
+    /// is the expected end of the exchange rather than a fault: on Linux it
+    /// surfaces as EPIPE or ECONNRESET, on Windows as a broken pipe.
+    /// </para>
+    ///
+    /// <para>
+    /// Only those are swallowed, and only when the socket names the reason. A
+    /// bare IOException is not one of them: nearly every IO fault is one, so
+    /// treating it as the peer leaving would make this fixture hide the faults
+    /// it exists to expose.
+    /// </para>
+    /// </summary>
+    private static bool ClientHasGone(Exception exception) =>
+        exception switch
+        {
+            ObjectDisposedException => true,
+            IOException { InnerException: SocketException socket } => socket.SocketErrorCode
+                is SocketError.Shutdown
+                    or SocketError.ConnectionReset
+                    or SocketError.ConnectionAborted
+                    or SocketError.OperationAborted,
+            SocketException socket => socket.SocketErrorCode
+                is SocketError.Shutdown
+                    or SocketError.ConnectionReset
+                    or SocketError.ConnectionAborted
+                    or SocketError.OperationAborted,
+            _ => false,
+        };
+
+    /// <summary>Answer the request, treating the client leaving as the end of it.</summary>
+    private static async Task RespondAsync(Func<Stream, Task> respond, Stream stream)
+    {
+        try
+        {
+            await respond(stream);
+        }
+        catch (Exception exception) when (ClientHasGone(exception))
+        {
+            // The client cancelled and closed its end. Nothing left to say.
+        }
     }
 
     private Socket EnsureListener()

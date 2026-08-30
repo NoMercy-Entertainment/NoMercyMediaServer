@@ -308,12 +308,25 @@ public class PluginViewContractTests
 
         string json = Serialize(form);
 
-        // A field is the component that collects it, not a type string in a bag
-        // no component reads.
-        json.Should().Contain("\"component\":\"NMFileUpload\"");
+        // The fields as fields, for a client that collects them.
+        //
+        // These were sent as one design-system component per field, held by a
+        // card. That drew a form perfectly and submitted nothing: a card carries
+        // the action the server wrote at build time, and nothing gathered what
+        // the owner had typed - so a full indexer entered on a settings page
+        // saved with its name set and its url empty, while the page reported
+        // success. Both clients already own a form that collects and posts, and
+        // both key it on this.
+        json.Should().Contain("\"component\":\"PluginForm\"");
+        json.Should().Contain("\"submitLabel\":\"Add\"");
         json.Should().Contain("\"accept\":\".torrent\"");
-        json.Should().Contain("\"component\":\"NMCheckbox\"");
-        json.Should().Contain("\"component\":\"NMButton\"");
+        json.Should().Contain("\"name\":\"torrent\"");
+        json.Should().Contain("\"name\":\"startPaused\"");
+
+        // Not a card. The one tag in the vocabulary that cannot be a
+        // design-system component, because collecting is the whole of what it
+        // does.
+        form.Component.Should().NotBe("NMCard");
     }
 
     [Fact]

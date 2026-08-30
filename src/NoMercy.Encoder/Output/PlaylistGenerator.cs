@@ -23,6 +23,13 @@ namespace NoMercy.Encoder.Output;
 
 public class PlaylistGenerator : IPlaylistGenerator
 {
+    private readonly record struct AudioMediaEntry(
+        string Uri,
+        string Language,
+        string DisplayName,
+        bool IsSourceDefault
+    );
+
     /// <summary>
     /// Returns the minimum HLS version number required for the given combination
     /// of active features. The caller takes the max of all that apply.
@@ -111,13 +118,11 @@ public class PlaylistGenerator : IPlaylistGenerator
             audioGroupId = $"audio_{plan.AudioOutputs[0].CodecToken}";
         }
 
-        bool defaultAudioEmitted = false;
-        // Tracks whether any EXT-X-MEDIA:TYPE=AUDIO line was actually written —
-        // NOT just whether plan.AudioOutputs is non-empty. A rendition can be
-        // planned but never materialise (missing segments, zero bandwidth) and
-        // gets skipped below; the STREAM-INF AUDIO="..." attribute must follow
-        // that same fate so it never references a group with zero members.
-        bool audioGroupEmitted = false;
+        // Collect the renditions that will actually be written before any line
+        // is emitted. DEFAULT=YES must go to the source's default-disposition
+        // track, and that track is not necessarily the first one that survives
+        // the materialisation checks below.
+        List<AudioMediaEntry> audioEntries = [];
         foreach (AudioOutputPlan audio in plan.AudioOutputs)
         {
             if (audio.Action is not (StreamAction.Copy or StreamAction.Transcode))
@@ -144,16 +149,33 @@ public class PlaylistGenerator : IPlaylistGenerator
 
             string subDir = StoragePathHelpers.GetParent(playlistResolved) ?? playlistResolved;
             string playlistFile = StoragePathHelpers.GetName(playlistResolved);
-
-            string uri = $"{subDir}/{playlistFile}.m3u8";
             string language = audio.Language ?? "und";
-            string displayName = GetAudioDisplayName(language);
-            bool isDefault = !defaultAudioEmitted;
-            defaultAudioEmitted = true;
-            audioGroupEmitted = true;
 
+            audioEntries.Add(
+                new(
+                    Uri: $"{subDir}/{playlistFile}.m3u8",
+                    Language: language,
+                    DisplayName: GetAudioDisplayName(language),
+                    IsSourceDefault: audio.IsSourceDefault
+                )
+            );
+        }
+
+        int defaultAudioIndex = audioEntries.FindIndex(entry => entry.IsSourceDefault);
+        if (defaultAudioIndex < 0)
+            defaultAudioIndex = 0;
+
+        // Tracks whether any EXT-X-MEDIA:TYPE=AUDIO line was actually written —
+        // NOT just whether plan.AudioOutputs is non-empty. A rendition can be
+        // planned but never materialise (missing segments, zero bandwidth) and
+        // gets skipped above; the STREAM-INF AUDIO="..." attribute must follow
+        // that same fate so it never references a group with zero members.
+        bool audioGroupEmitted = audioEntries.Count > 0;
+        for (int i = 0; i < audioEntries.Count; i++)
+        {
+            AudioMediaEntry entry = audioEntries[i];
             sb.AppendLine(
-                $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{audioGroupId}\",LANGUAGE=\"{language}\",AUTOSELECT=YES,DEFAULT={YesNo(isDefault)},URI=\"{uri}\",NAME=\"{displayName}\""
+                $"#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"{audioGroupId}\",LANGUAGE=\"{entry.Language}\",AUTOSELECT=YES,DEFAULT={YesNo(i == defaultAudioIndex)},URI=\"{entry.Uri}\",NAME=\"{entry.DisplayName}\""
             );
         }
 

@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using NoMercy.MediaProcessing.Jobs.MediaJobs;
+using NoMercyQueue.Core.Interfaces;
 
 namespace NoMercy.MediaProcessing.Jobs;
 
@@ -20,25 +21,26 @@ namespace NoMercy.MediaProcessing.Jobs;
 /// </summary>
 public interface IJobDispatcher : NoMercyQueue.Core.Interfaces.IJobDispatcher
 {
-    void DispatchJob<TJob>(
-            Ulid libraryId,
-            Ulid folderId,
-            Guid releaseId,
-            string filePath
-        )
-            where TJob : AbstractMusicFolderJob, new();
+    void DispatchJob<TJob>(Ulid libraryId, Ulid folderId, Guid releaseId, string filePath)
+        where TJob : AbstractMusicFolderJob, new();
 
     void DispatchJob<TJob>(int id, Ulid libraryId)
-            where TJob : AbstractMediaJob, new();
+        where TJob : AbstractMediaJob, new();
+
+    /// <summary>A job the caller has already filled in.</summary>
+    void DispatchJob<TJob>(TJob job)
+        where TJob : AbstractMediaJob;
+
+    /// <summary>
+    /// Queue a job and say which one it became, for a caller that has to follow
+    /// it afterwards. Null when an identical payload is already queued.
+    /// </summary>
+    string? DispatchTracked(IShouldQueue job);
 
     void DispatchJob<TJob>(Ulid libraryId)
-            where TJob : AbstractMediaJob, new();
+        where TJob : AbstractMediaJob, new();
 
-    void DispatchColorPaletteJob(
-            string entityType,
-            string entityId,
-            int? priority = null
-        );
+    void DispatchColorPaletteJob(string entityType, string entityId, int? priority = null);
 
     void DispatchJob<TJob, TChild>(IEnumerable<TChild> data, string name)
         where TJob : AbstractShowExtraDataJob<TChild, string>, new();

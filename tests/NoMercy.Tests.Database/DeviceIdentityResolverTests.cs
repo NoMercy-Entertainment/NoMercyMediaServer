@@ -74,15 +74,27 @@ public class DeviceIdentityResolverTests : IDisposable
     [Fact]
     public void ResolveAndPersist_Container_EvidenceOfPriorRegistration_KeepsHardwareDerivedId()
     {
+        // The fingerprint is supplied rather than read from this machine. Left
+        // to Info.DeviceId the case asserts a property of whatever host runs
+        // it, and a CI runner in a container reads the empty DMI that hashes to
+        // a known-degenerate id - which the resolver is supposed to migrate, so
+        // the case failed for doing its job.
+        Guid hardwareId = Guid.Parse("0f9a4c31-7c2e-4a55-9a6d-5f2b1e3d7c48");
+        Assert.False(KnownDegenerateDeviceIds.IsDegenerate(hardwareId));
+
         _context.Configuration.Add(
             new() { Key = "ssl_certificate", SecureValue = "existing-cert" }
         );
         _context.Configuration.Add(new() { Key = "ssl_private_key", SecureValue = "existing-key" });
         _context.SaveChanges();
 
-        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(_context, inContainer: true);
+        Guid resolvedId = DeviceIdentityResolver.ResolveAndPersist(
+            _context,
+            hardwareId,
+            inContainer: true
+        );
 
-        Assert.Equal(Info.DeviceId, resolvedId);
+        Assert.Equal(hardwareId, resolvedId);
 
         // Regression guard: the non-degenerate path must never touch the cert rows.
         Assert.NotNull(_context.Configuration.FirstOrDefault(c => c.Key == "ssl_certificate"));

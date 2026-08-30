@@ -111,11 +111,14 @@ public class ShowRepository(MediaContext context) : IShowRepository
         }
     }
 
-    public Task LinkToLibrary(Library library, Tv tv)
+    public Task LinkToLibrary(Library library, Tv tv, string? addedBy = null)
     {
         return context
-            .LibraryTv.Upsert(new(library.Id, tv.Id))
+            .LibraryTv.Upsert(new(library.Id, tv.Id, addedBy))
             .On(v => new { v.LibraryId, v.TvId })
+            // A link that already exists keeps the origin it was created with. A
+            // scan re-running over a show the owner added must not quietly
+            // downgrade it to something a file brought in.
             .WhenMatched((lts, lti) => new() { LibraryId = lti.LibraryId, TvId = lti.TvId })
             .RunAsync();
     }
@@ -123,6 +126,23 @@ public class ShowRepository(MediaContext context) : IShowRepository
     public Task<Library?> GetLibraryByTypeAsync(string type)
     {
         return context.Libraries.AsNoTracking().FirstOrDefaultAsync(l => l.Type == type);
+    }
+
+    public async Task<bool> EnsureFiledUnderLibraryTypeAsync(int tvId, string libraryType)
+    {
+        Library? target = await context
+            .Libraries.AsNoTracking()
+            .FirstOrDefaultAsync(library => library.Type == libraryType);
+        if (target is null)
+            return false;
+
+        Tv? tv = await context.Tvs.FirstOrDefaultAsync(row => row.Id == tvId);
+        if (tv is null || tv.LibraryId == target.Id)
+            return false;
+
+        tv.LibraryId = target.Id;
+        await context.SaveChangesAsync();
+        return true;
     }
 
     public Task StoreAlternativeTitles(IEnumerable<AlternativeTitle> alternativeTitles)

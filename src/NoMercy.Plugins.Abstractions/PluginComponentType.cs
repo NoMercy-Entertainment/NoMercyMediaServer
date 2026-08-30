@@ -36,7 +36,24 @@ public static class PluginComponentType
     public const string Card = "NMCard";
     public const string Detail = "NMCard";
     public const string Button = "NMButton";
-    public const string Form = "NMCard";
+
+    /// <summary>
+    /// A real form: it collects what its controls hold and puts that in the
+    /// action's payload.
+    /// <para>
+    /// The one tag here that cannot be a design-system component. NMCard draws
+    /// the fields and a submit button perfectly well, and carries the action the
+    /// server wrote at build time - so a person typed a full indexer into a
+    /// settings page, pressed Save, and the plugin's config was written with the
+    /// name set and every other value empty, while the page reported success. No
+    /// plugin's settings could be filled in through the dashboard at all.
+    /// </para>
+    /// <para>
+    /// The fields inside it stay design-system components, so it looks like the
+    /// rest of the interface. Only the collecting is this component's own.
+    /// </para>
+    /// </summary>
+    public const string Form = "PluginForm";
     public const string WebView = "PluginWebView";
     public const string EmptyState = "NMEmptyState";
     public const string Spinner = "NMSpinner";

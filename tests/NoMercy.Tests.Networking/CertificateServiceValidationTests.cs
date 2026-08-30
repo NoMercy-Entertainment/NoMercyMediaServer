@@ -17,6 +17,7 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Information;
+using NoMercy.Tests.Common;
 using Xunit;
 
 namespace NoMercy.Tests.Networking;
@@ -465,21 +466,6 @@ public sealed class CertificateServiceValidationTests : IDisposable
 
     private static string FindSourceFile(string relativePath)
     {
-        string? dir = AppDomain.CurrentDomain.BaseDirectory;
-        while (dir != null)
-        {
-            string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate))
-                return candidate;
-
-            string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
-            string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved))
-                return resolved;
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        throw new FileNotFoundException($"Could not locate {relativePath}");
+        return RepoPaths.At(relativePath);
     }
 }

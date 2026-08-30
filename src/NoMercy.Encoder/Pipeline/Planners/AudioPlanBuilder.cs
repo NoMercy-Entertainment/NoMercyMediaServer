@@ -81,7 +81,8 @@ public static class AudioPlanBuilder
                             ? new Dictionary<string, string>(audioProfile.CustomArguments)
                             : null,
                         SourceCodecName: stream.Codec.ToLowerInvariant(),
-                        SourceStreamIndex: stream.Index
+                        SourceStreamIndex: stream.Index,
+                        IsSourceDefault: stream.IsDefault
                     )
                 );
             }

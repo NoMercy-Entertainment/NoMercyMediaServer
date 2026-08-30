@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Events;
 using NoMercy.Plugins;
 using NoMercy.Plugins.Abstractions;
+using NoMercy.Tests.Common;
 using Xunit;
 
 namespace NoMercy.Tests.Plugins;
@@ -69,11 +70,19 @@ public class PluginBootScanTests : IDisposable
 
     private static string GetEchoPluginBinDir()
     {
-        // Navigate from the test bin dir to the Echo project's own output directory.
-        // Echo must NOT be loaded into the default AssemblyLoadContext (no ProjectReference
-        // copy) — loading it through PluginLoadContext requires clean isolation.
+        // The Echo project's own output directory. Echo must NOT be loaded into
+        // the default AssemblyLoadContext (no ProjectReference copy) — loading
+        // it through PluginLoadContext requires clean isolation.
+        //
+        // That is also why these tests need an ordinary in-repo build: a single
+        // redirected BaseOutputPath puts every project in one directory, so the
+        // sample lands beside the test assembly and the isolation the tests are
+        // about cannot exist.
         string testBinDir = Path.GetDirectoryName(typeof(PluginBootScanTests).Assembly.Location)!;
-        string repoRoot = Path.GetFullPath(Path.Combine(testBinDir, "..", "..", "..", "..", ".."));
+        // The checkout, from this file's own compile-time path rather than a
+        // count of folders above the test assembly. The count was right for one
+        // output layout and silently wrong for any other.
+        string repoRoot = RepoPaths.Root;
         // Mirror the test's own build configuration + TFM so this works under
         // both Debug (local) and Release (CI coverage) — hardcoding "Debug"
         // makes every Echo-staging test fail when CI builds Release.
@@ -231,12 +240,10 @@ public class PluginBootScanTests : IDisposable
         // amended rather than replaced, keeping the id and assembly the scan
         // matches on.
         string manifestPath = Path.Combine(_echoPluginDir, "plugin.json");
-        System.Text.Json.Nodes.JsonNode manifest =
-            System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(manifestPath))!;
-        manifest["capabilities"] = new System.Text.Json.Nodes.JsonObject
-        {
-            ["rest"] = true,
-        };
+        System.Text.Json.Nodes.JsonNode manifest = System.Text.Json.Nodes.JsonNode.Parse(
+            File.ReadAllText(manifestPath)
+        )!;
+        manifest["capabilities"] = new System.Text.Json.Nodes.JsonObject { ["rest"] = true };
         File.WriteAllText(manifestPath, manifest.ToJsonString());
 
         // Scanned first, so the entry carries what its plugin.json declared.
@@ -245,7 +252,9 @@ public class PluginBootScanTests : IDisposable
         PluginInfo scanned = _manager.GetInstalledPlugins().Should().ContainSingle().Subject;
         scanned
             .Capabilities.Should()
-            .NotBeNull("the scan reads plugin.json, so the entry starts out knowing what it asked for");
+            .NotBeNull(
+                "the scan reads plugin.json, so the entry starts out knowing what it asked for"
+            );
 
         // Then reloaded the way enabling reloads it: by assembly path, with no
         // manifest anywhere near it.

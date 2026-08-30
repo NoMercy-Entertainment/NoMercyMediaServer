@@ -13,6 +13,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging.Abstractions;
+using NoMercy.Tests.Common;
 using NoMercy.Tests.Queue.TestHelpers;
 using NoMercyQueue;
 using NoMercyQueue.Core.Models;
@@ -166,25 +167,6 @@ public class QueueRunnerFireAndForgetTests
 
     private static string FindSourceFile(string relativePath)
     {
-        string? dir = AppDomain.CurrentDomain.BaseDirectory;
-        while (dir != null)
-        {
-            string candidate = Path.Combine(dir, relativePath);
-            if (File.Exists(candidate))
-                return candidate;
-
-            string repoCandidate = Path.Combine(dir, "..", "..", "..", "..", "..", relativePath);
-            string resolved = Path.GetFullPath(repoCandidate);
-            if (File.Exists(resolved))
-                return resolved;
-
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-
-        string fallback = Path.Combine("/workspaces/NoMercyMediaServer", relativePath);
-        if (File.Exists(fallback))
-            return fallback;
-
-        throw new FileNotFoundException($"Could not find source file: {relativePath}");
+        return RepoPaths.At(relativePath);
     }
 }

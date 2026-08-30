@@ -34,6 +34,17 @@ public static class PluginHookCapability
     public const string LibraryWrite = "libraryWrite";
 
     /// <summary>
+    /// Writing files anywhere the server can write, through
+    /// <see cref="IPluginStorage" />.
+    /// <para>
+    /// Elevated: a plugin that can write into a library folder can overwrite an
+    /// owner's media, which is not a thing to arrive through a baseline
+    /// auto-enable.
+    /// </para>
+    /// </summary>
+    public const string Storage = "storage";
+
+    /// <summary>
     /// Hooks that can never be baseline, whatever else a plugin declares.
     /// <para>Consent classification asks whether every declared hook is
     /// harmless. A hook that can delete a user's media is not, so it is named
@@ -42,5 +53,11 @@ public static class PluginHookCapability
     /// auto-enabled.</para>
     /// </summary>
     public static IReadOnlySet<string> Elevated { get; } =
-        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { LibraryWrite, Auth, Encoder };
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            LibraryWrite,
+            Auth,
+            Encoder,
+            Storage,
+        };
 }
