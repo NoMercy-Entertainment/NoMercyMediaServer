@@ -257,8 +257,13 @@ runs:
         mv "./output/$PROJECT_NAME" "./output/$PROJECT_NAME-macos-x64"
         echo "Renamed CLI binary for macOS."
 
+    # create-dmg drives hdiutil, and its appdmg dependency is darwin-only, so on
+    # the Linux runner this pipeline builds on it failed at npm install every
+    # time. continue-on-error hid that from the job result and left a red error
+    # in the log of every leg. No .dmg has ever reached a release: the release
+    # workflow's find for one simply matches nothing.
     - name: Create DMG (macOS Installer)
-      if: inputs.project != 'Cli'
+      if: inputs.project != 'Cli' && runner.os == 'macOS'
       shell: bash
       continue-on-error: true
       run: |
