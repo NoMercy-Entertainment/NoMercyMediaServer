@@ -113,6 +113,11 @@ runs:
         cp "${ACTION_TEMPLATES}/DEBIAN/postrm" "${PACKAGE_ROOT}/DEBIAN/postrm"
         chmod 755 "${PACKAGE_ROOT}/DEBIAN/postrm"
 
+        # dpkg refuses a control directory it considers world-writable, and the
+        # runner's umask leaves every mkdir at 777. The scripts inside are given
+        # 755 above; the directory holding them needs the same.
+        chmod 0755 "${PACKAGE_ROOT}/DEBIAN"
+
         # Build package
         dpkg-deb --build "${PACKAGE_ROOT}"
         mkdir -p "./packages/apt/pool/main/n/nomercy"
