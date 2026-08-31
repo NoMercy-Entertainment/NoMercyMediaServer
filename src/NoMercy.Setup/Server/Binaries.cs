@@ -591,6 +591,26 @@ public class Binaries
         return creationTime >= releaseDate;
     }
 
+    private bool InstalledFfmpegMatchesProcessArchitecture()
+    {
+        if (!_storage.Exists(AppFiles.FfmpegPath))
+            return true;
+
+        try
+        {
+            using Stream stream = _storage.OpenRead(AppFiles.FfmpegPath);
+            return ExecutableArchitecture.MatchesProcess(stream);
+        }
+        catch (Exception ex)
+        {
+            Logger.Setup(
+                $"Could not probe installed ffmpeg architecture: {ex.Unwrap()}",
+                LogEventLevel.Verbose
+            );
+            return true;
+        }
+    }
+
     // A rate-limited fetch must never block a boot/recovery tick for the full GitHub
     // hourly reset window (up to 60 minutes) — that starves every other startup
     // dependency and, for the degraded-mode recovery loop, means the process never
@@ -1397,8 +1417,19 @@ public class Binaries
 
         if (CheckLocalVersion(releaseInfo, AppFiles.FfmpegPath, out string version))
         {
-            _binaryReport.Add($"Ffmpeg = {version}");
-            return;
+            if (InstalledFfmpegMatchesProcessArchitecture())
+            {
+                _binaryReport.Add($"Ffmpeg = {version}");
+                return;
+            }
+
+            // A release shipped through an arch-blind picker left ARM64 binaries on
+            // x64 machines. They pass the version check but can never start, so a
+            // mismatch here falls through to a fresh download of the correct build.
+            Logger.Setup(
+                $"Installed ffmpeg does not match this machine's CPU architecture ({RuntimeInformation.ProcessArchitecture}) — replacing it with the correct build.",
+                LogEventLevel.Warning
+            );
         }
 
         // Skip the update when ffmpeg is locked by a running encode — the zip

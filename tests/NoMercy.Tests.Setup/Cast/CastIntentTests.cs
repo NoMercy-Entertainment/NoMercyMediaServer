@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using Newtonsoft.Json;
 using NoMercy.Setup.Cast;
 
 namespace NoMercy.Tests.Setup.Cast;
@@ -78,6 +79,34 @@ public class CastIntentTests
 
         Assert.Equal("track-1", intent.TrackId);
         Assert.Equal(30, intent.ResumeAt);
+    }
+
+    // The receiver opens its OWN transcode session, and the server decides which
+    // audio rendition that session marks default. Without the language on the
+    // intent, an episode the phone was playing in English starts over on the
+    // television in the dub the file declares. Reported from a real handoff on
+    // 2026-08-31.
+    [Fact]
+    public void PlayVideo_CarriesTheLanguageTheHandingOffDeviceWasPlaying()
+    {
+        CastIntent intent = CastIntent.PlayVideo(
+            "tv",
+            "44310",
+            resumeAt: 120,
+            audioLanguage: "eng"
+        );
+
+        Assert.Equal("eng", intent.AudioLanguage);
+        Assert.Contains("\"audio_language\":\"eng\"", JsonConvert.SerializeObject(intent));
+    }
+
+    [Fact]
+    public void PlayVideo_WithNoLanguage_OmitsTheFieldRatherThanSendingNull()
+    {
+        CastIntent intent = CastIntent.PlayVideo("tv", "44310");
+
+        Assert.Null(intent.AudioLanguage);
+        Assert.DoesNotContain("audio_language", JsonConvert.SerializeObject(intent));
     }
 
     [Fact]

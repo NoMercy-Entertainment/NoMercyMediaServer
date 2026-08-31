@@ -418,7 +418,7 @@ public class SetupEndpoints
         catch (Exception ex)
         {
             Logger.Setup(
-                $"Silent SSO exchange failed: {ex.GetType().Name} — {ex.Message}",
+                $"Silent SSO exchange failed: {ex.GetType().Name} — {ex.DescribeConnectionFailure()}",
                 LogEventLevel.Warning
             );
             // Return a non-2xx so the client's fetch treats this as a failure — a 200
@@ -426,7 +426,7 @@ public class SetupEndpoints
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await WriteJsonResponse(
                 context.Response,
-                new { status = "error", message = ex.Message }
+                new { status = "error", message = ex.DescribeConnectionFailure() }
             );
         }
     }
@@ -560,16 +560,16 @@ public class SetupEndpoints
         catch (Exception ex)
         {
             Logger.Setup(
-                $"Token exchange failed: {ex.GetType().Name} — {ex.Message}",
+                $"Token exchange failed: {ex.GetType().Name} — {ex.DescribeConnectionFailure()}",
                 LogEventLevel.Error
             );
             // Transition first: TransitionTo clears ErrorMessage, so setting the error
             // before it wiped the message the /setup/status poll surfaces to the user.
             _state.TransitionTo(SetupPhase.Unauthenticated);
-            _state.SetError($"Sign in failed: {ex.Message}");
+            _state.SetError($"Sign in failed: {ex.DescribeConnectionFailure()}");
 
             responseTitle = "Authentication Failed";
-            responseMessage = $"Sign in failed: {ex.Message}";
+            responseMessage = $"Sign in failed: {ex.DescribeConnectionFailure()}";
             responseIsError = true;
 
             RegeneratePkce();
@@ -597,10 +597,12 @@ public class SetupEndpoints
                 catch (Exception ex)
                 {
                     Logger.Setup(
-                        $"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
+                        $"Post-auth registration failed: {ex.GetType().Name} — {ex.DescribeConnectionFailure()}",
                         LogEventLevel.Error
                     );
-                    _state.SetError("Could not connect your server. Please try again.");
+                    _state.SetError(
+                        $"Could not connect your server: {ex.DescribeConnectionFailure()}"
+                    );
                 }
             });
         }
@@ -705,7 +707,11 @@ public class SetupEndpoints
             context.Response.StatusCode = StatusCodes.Status500InternalServerError;
             await WriteJsonResponse(
                 context.Response,
-                new { error = true, message = $"Failed to initiate device login: {ex.Message}" }
+                new
+                {
+                    error = true,
+                    message = $"Failed to initiate device login: {ex.DescribeConnectionFailure()}",
+                }
             );
         }
     }
@@ -741,11 +747,11 @@ public class SetupEndpoints
                 catch (Exception ex)
                 {
                     Logger.Setup(
-                        $"Registration retry failed: {ex.GetType().Name} — {ex.Message}",
+                        $"Registration retry failed: {ex.GetType().Name} — {ex.DescribeConnectionFailure()}",
                         LogEventLevel.Error
                     );
                     _state.SetError(
-                        "Could not connect your server. Check your internet connection and try again."
+                        $"Could not connect your server: {ex.DescribeConnectionFailure()}"
                     );
                 }
             });
@@ -874,10 +880,10 @@ public class SetupEndpoints
         catch (Exception ex)
         {
             Logger.Setup(
-                $"Post-auth registration failed: {ex.GetType().Name} — {ex.Message}",
+                $"Post-auth registration failed: {ex.GetType().Name} — {ex.DescribeConnectionFailure()}",
                 LogEventLevel.Error
             );
-            _state.SetError("Could not connect your server. Please try again.");
+            _state.SetError($"Could not connect your server: {ex.DescribeConnectionFailure()}");
             _state.TransitionTo(SetupPhase.Authenticated);
         }
     }
@@ -977,7 +983,7 @@ public class SetupEndpoints
             catch (Exception ex)
             {
                 _state.TransitionTo(SetupPhase.Unauthenticated);
-                _state.SetError($"Device login error: {ex.Message}");
+                _state.SetError($"Device login error: {ex.DescribeConnectionFailure()}");
                 return;
             }
         }

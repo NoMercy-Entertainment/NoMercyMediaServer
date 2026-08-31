@@ -262,7 +262,7 @@ public class BootOrchestrator
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Device code flow error: {ex.Message}", LogEventLevel.Warning);
+            Logger.Setup($"Device code flow error: {ex.Unwrap()}", LogEventLevel.Warning);
             return DeviceCodeOutcome.Unreachable;
         }
     }
@@ -303,7 +303,7 @@ public class BootOrchestrator
             if (hasCachedKey)
             {
                 Logger.Setup(
-                    $"Keycloak unreachable ({ex.Message}) — offline JWKS cache is present; JWT validation will use cached keys",
+                    $"Keycloak unreachable ({ex.DescribeConnectionFailure()}) — offline JWKS cache is present; JWT validation will use cached keys",
                     LogEventLevel.Warning
                 );
             }
@@ -311,7 +311,7 @@ public class BootOrchestrator
             {
                 Logger.Setup(
                     $"BOOT FAILURE: Keycloak unreachable at {ExternalServicesConfig.Current.AuthBaseUrl} and no cached JWKS key found. "
-                        + $"Cause: {ex.Message}. "
+                        + $"Cause: {ex.DescribeConnectionFailure()}. "
                         + $"The server cannot validate JWTs. Complete setup at /setup or ensure Keycloak is reachable before restarting.",
                     LogEventLevel.Error
                 );
@@ -333,7 +333,7 @@ public class BootOrchestrator
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             Logger.Setup(
-                $"Could not refresh this server's registered address: {ex.Message}",
+                $"Could not refresh this server's registered address: {ex.Unwrap()}",
                 LogEventLevel.Warning
             );
         }
@@ -367,7 +367,10 @@ public class BootOrchestrator
         }
         catch (Exception ex)
         {
-            Logger.Setup($"Registration failed: {ex.Message}", LogEventLevel.Error);
+            Logger.Setup(
+                $"Registration failed: {ex.DescribeConnectionFailure()}",
+                LogEventLevel.Error
+            );
 
             // Don't block — DegradedModeRecovery will retry. Mark Registered as
             // complete so workers don't block forever on a known-degraded boot —
@@ -382,7 +385,7 @@ public class BootOrchestrator
             // failure it had just recorded and /setup/status reported a clean
             // Complete after a failed registration.
             _setupState.TransitionTo(SetupPhase.Complete);
-            _setupState.SetError($"Registration failed: {ex.Message}");
+            _setupState.SetError($"Registration failed: {ex.DescribeConnectionFailure()}");
             return false;
         }
     }
@@ -464,7 +467,7 @@ public class BootOrchestrator
             }
             catch (Exception ex)
             {
-                Logger.Setup($"Device poll error: {ex.Message}", LogEventLevel.Warning);
+                Logger.Setup($"Device poll error: {ex.Unwrap()}", LogEventLevel.Warning);
             }
         }
 

@@ -157,7 +157,7 @@ public class ServerRegistrationService : IServerRegistrationService
 
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
                 Logger.Register(
-                    $"Registration failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    $"Registration failed: {ex.Unwrap()}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
                     LogEventLevel.Warning
                 );
 
@@ -188,7 +188,7 @@ public class ServerRegistrationService : IServerRegistrationService
 
                 int delay = BackoffSeconds[Math.Min(attempt - 1, BackoffSeconds.Length - 1)];
                 Logger.Register(
-                    $"Server assignment failed: {ex.Message}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
+                    $"Server assignment failed: {ex.Unwrap()}, retrying in {delay}s (attempt {attempt}/{maxRetries})",
                     LogEventLevel.Warning
                 );
 
@@ -289,7 +289,7 @@ public class ServerRegistrationService : IServerRegistrationService
             // as one sent people looking at their billing instead of their connectivity.
             _connectivityStatus.TunnelAvailability = TunnelAvailability.CheckFailed;
             Logger.Register(
-                $"Tunnel availability check failed: {ex.Message}",
+                $"Tunnel availability check failed: {ex.Unwrap()}",
                 LogEventLevel.Warning
             );
         }

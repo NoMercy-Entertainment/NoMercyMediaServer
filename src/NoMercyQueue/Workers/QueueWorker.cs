@@ -633,6 +633,12 @@ public class QueueWorker(
             {
                 await StartAsync(_stopCts.Token);
             }
+            catch (OperationCanceledException) when (_stopCts.IsCancellationRequested)
+            {
+                // Stop() during the boot-stage wait (e.g. the HTTP→HTTPS host swap's
+                // StopAll) is an orderly shutdown — logging it as a critical crash
+                // painted every setup boot red.
+            }
             catch (Exception ex)
             {
                 logger?.LogCritical(

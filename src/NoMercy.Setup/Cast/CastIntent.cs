@@ -46,19 +46,35 @@ public class CastIntent
     [JsonProperty("resume_at", NullValueHandling = NullValueHandling.Ignore)]
     public int? ResumeAt { get; set; }
 
+    /// <summary>
+    /// The audio language the handing-off device was playing, as an ISO code.
+    /// A receiver opens its own transcode session and the server decides which
+    /// rendition that session marks default, so without this the television
+    /// starts in whatever the file declares — the Japanese dub of an episode the
+    /// phone was playing in English.
+    /// </summary>
+    [JsonProperty("audio_language", NullValueHandling = NullValueHandling.Ignore)]
+    public string? AudioLanguage { get; set; }
+
     /// <summary>Vue Router target — only set when <see cref="Type"/> = "navigate".</summary>
     [JsonProperty("route", NullValueHandling = NullValueHandling.Ignore)]
     public string? Route { get; set; }
 
     public static CastIntent Idle() => new() { Type = "idle" };
 
-    public static CastIntent PlayVideo(string mediaType, string mediaId, int? resumeAt = null) =>
+    public static CastIntent PlayVideo(
+        string mediaType,
+        string mediaId,
+        int? resumeAt = null,
+        string? audioLanguage = null
+    ) =>
         new()
         {
             Type = "play_video",
             MediaType = mediaType,
             MediaId = mediaId,
             ResumeAt = resumeAt,
+            AudioLanguage = audioLanguage,
         };
 
     public static CastIntent PlayMusic(

@@ -269,7 +269,7 @@ public class AuthManager
                     catch (Exception ex)
                     {
                         Logger.Auth(
-                            $"Background refresh error: {ex.Message} — retrying in 60s",
+                            $"Background refresh error: {ex.Unwrap()} — retrying in 60s",
                             LogEventLevel.Warning
                         );
                         await Task.Delay(TimeSpan.FromSeconds(60), linked);
@@ -347,7 +347,10 @@ public class AuthManager
         }
         catch (Exception ex)
         {
-            Logger.Auth($"PKCE callback failed: {ex.Message}", LogEventLevel.Error);
+            Logger.Auth(
+                $"PKCE callback failed: {ex.DescribeConnectionFailure()}",
+                LogEventLevel.Error
+            );
             _pkceCompletionSource?.TrySetException(ex);
             return false;
         }
@@ -432,7 +435,7 @@ public class AuthManager
         }
         catch (Exception ex)
         {
-            Logger.Auth($"Token refresh exception: {ex.Message}", LogEventLevel.Warning);
+            Logger.Auth($"Token refresh exception: {ex.Unwrap()}", LogEventLevel.Warning);
             return false;
         }
     }
