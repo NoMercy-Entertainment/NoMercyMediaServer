@@ -136,10 +136,14 @@ public class WorkerSelfRegistrationServiceLicenseTests
 
         FakeLicenseTokenClient licenseClient = new(onRequest: () =>
         {
-            DateTime now = DateTime.UtcNow;
             lock (callLock)
             {
-                callTimes.Add(now);
+                // Stamped INSIDE the lock. Read outside it, two heartbeat ticks
+                // racing here could take their timestamps in one order and append
+                // them in the other, and the list would not be monotonic — CI
+                // measured a gap of -712ms and failed on a backoff that was
+                // working perfectly.
+                callTimes.Add(DateTime.UtcNow);
                 if (callTimes.Count >= maxCalls)
                     doneTcs.TrySetResult();
             }

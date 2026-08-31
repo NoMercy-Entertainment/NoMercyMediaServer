@@ -18,7 +18,10 @@ namespace NoMercy.Tests.Notifications.Push;
 
 public class PushDispatchQueueTests
 {
-    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(5);
+    // Long enough that a runner busy with a whole coverage pass cannot hit it,
+    // short enough that a loop which genuinely stopped still fails fast. Five
+    // seconds was neither: CI timed out here on a queue that was working.
+    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(30);
 
     private static PushDispatchRequest Request(string channel = "encode-finished") =>
         new(channel, new PushPayload("Done", "body", null), "token");
