@@ -842,46 +842,50 @@
   </Entry>
   <Entry>
     <Key>Unprocessable Entity.</Key>
-    <Value lang="nl">Unprocessable Entity.</Value>
+    <Value lang="nl">Niet-verwerkbare entiteit.</Value>
   </Entry>
   <Entry>
     <Key>Plugin disabled successfully</Key>
-    <Value lang="nl">Plugin disabled successfully</Value>
+    <Value lang="nl">Plug-in uitgeschakeld</Value>
   </Entry>
   <Entry>
     <Key>Plugin enabled successfully</Key>
-    <Value lang="nl">Plugin enabled successfully</Value>
+    <Value lang="nl">Plug-in ingeschakeld</Value>
   </Entry>
   <Entry>
     <Key>Plugin consent revoked</Key>
-    <Value lang="nl">Plugin consent revoked</Value>
+    <Value lang="nl">Toestemming voor plug-in ingetrokken</Value>
   </Entry>
   <Entry>
     <Key>The update to NoMercy.Plugin.InternetRadio is ready and applies when the server restarts: its files are still in use and cannot be changed until then.</Key>
-    <Value lang="nl">The update to NoMercy.Plugin.InternetRadio is ready and applies when the server restarts: its files are still in use and cannot be changed until then.</Value>
+    <Value lang="nl">De update voor NoMercy.Plugin.InternetRadio staat klaar en wordt toegepast zodra de server opnieuw start: de bestanden zijn nog in gebruik en kunnen tot dan niet worden gewijzigd.</Value>
   </Entry>
   <Entry>
     <Key>No repository offers this plugin</Key>
-    <Value lang="nl">No repository offers this plugin</Value>
+    <Value lang="nl">Geen enkele repository biedt deze plug-in aan</Value>
   </Entry>
   <Entry>
     <Key>Something went wrong moving the item</Key>
-    <Value lang="nl">Something went wrong moving the item</Value>
+    <Value lang="nl">Er ging iets mis bij het verplaatsen van het item</Value>
   </Entry>
   <Entry>
     <Key>Failed job has been queued for retry</Key>
-    <Value lang="nl">Failed job has been queued for retry</Value>
+    <Value lang="nl">De mislukte taak staat opnieuw in de wachtrij</Value>
   </Entry>
   <Entry>
     <Key>Live session not found</Key>
-    <Value lang="nl">Live session not found</Value>
+    <Value lang="nl">Livesessie niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Image folder not found</Key>
-    <Value lang="nl">Image folder not found</Value>
+    <Value lang="nl">Afbeeldingenmap niet gevonden</Value>
   </Entry>
   <Entry>
     <Key>Maximum concurrent live sessions reached</Key>
-    <Value lang="nl">Maximum concurrent live sessions reached</Value>
+    <Value lang="nl">Maximum aantal gelijktijdige livesessies bereikt</Value>
+  </Entry>
+  <Entry>
+    <Key>No video found for the given media</Key>
+    <Value lang="nl">Geen video gevonden voor deze media</Value>
   </Entry>
 </I18N>

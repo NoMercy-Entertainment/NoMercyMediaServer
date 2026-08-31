@@ -153,4 +153,53 @@ public class LocalizationMiddlewareTests
 
         Assert.Equal("nl", LocalizationHelper.GlobalLocalizer.TargetLanguage);
     }
+
+    // Entered where a Dutch viewer enters: the middleware, on a request carrying
+    // Accept-Language, reading the catalogue embedded in the built NoMercy.Api
+    // assembly. A build succeeding says nothing about any of that — every one of
+    // these strings reached a Dutch user in English, and four of them were
+    // appended by the runtime itself as it hit them.
+    [Theory]
+    [InlineData("Live session not found")]
+    [InlineData("Image folder not found")]
+    [InlineData("Maximum concurrent live sessions reached")]
+    [InlineData("No video found for the given media")]
+    [InlineData("Plugin enabled successfully")]
+    [InlineData("Plugin disabled successfully")]
+    [InlineData("Plugin consent revoked")]
+    [InlineData("No repository offers this plugin")]
+    [InlineData("Something went wrong moving the item")]
+    [InlineData("Failed job has been queued for retry")]
+    [InlineData("Unprocessable Entity.")]
+    public async Task ADutchRequestGetsDutchBack(string englishKey)
+    {
+        LocalizationMiddleware middleware = new(_ => Task.CompletedTask);
+        DefaultHttpContext context = new();
+        context.Request.Headers["Accept-Language"] = "nl";
+
+        await middleware.InvokeAsync(context);
+
+        string dutch = englishKey.Localize();
+        Assert.NotEqual(englishKey, dutch);
+        Assert.False(string.IsNullOrWhiteSpace(dutch));
+    }
+
+    // The placeholders and the words Dutch spells the same way. Asserted so a
+    // later sweep that "fixes" every key equal to its value cannot invent a
+    // translation for a format string.
+    [Theory]
+    [InlineData("{0} {1}")]
+    [InlineData("Albums")]
+    [InlineData("Genres")]
+    [InlineData("Conflict.")]
+    public async Task SomeKeysAreTheSameInDutchAndStayThatWay(string englishKey)
+    {
+        LocalizationMiddleware middleware = new(_ => Task.CompletedTask);
+        DefaultHttpContext context = new();
+        context.Request.Headers["Accept-Language"] = "nl";
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(englishKey, englishKey.Localize());
+    }
 }

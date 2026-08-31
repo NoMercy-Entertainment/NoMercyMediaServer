@@ -78,7 +78,18 @@ public class UserDataRepository(IDbContextFactory<MediaContext> contextFactory)
 
         await using MediaContext context = await contextFactory.CreateDbContextAsync(ct);
         IQueryable<UserData>? query = BuildQuery(context, userId, type, intId, ulidId);
-        return query is null ? 0 : await query.ExecuteDeleteAsync(ct);
+        if (query is null)
+            return 0;
+
+        // Hidden, not deleted. "Watched" means leave the continue-watching row,
+        // and this took the resume point of every episode of the show with it —
+        // finishing one episode erased where the viewer was in all the others,
+        // with nothing to restore from. RemovedFromContinueWatching is the flag
+        // that exists for exactly this, and the list already filters on it.
+        return await query.ExecuteUpdateAsync(
+            setters => setters.SetProperty(data => data.RemovedFromContinueWatching, true),
+            ct
+        );
     }
 
     public async Task<int> HideFromContinueWatchingAsync(
