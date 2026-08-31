@@ -128,7 +128,7 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
 
         List<TvProjection> rows = await context
             .Tvs.AsNoTracking()
-            .Where(tv => tv.Library.Type == "anime" && tv.Id > cursor)
+            .Where(tv => tv.Library.Type != "anime" && tv.Id > cursor)
             .OrderBy(tv => tv.Id)
             .Take(BatchSize)
             .Select(tv => new TvProjection(tv.Id, tv.Title, tv.FirstAirDate, tv.OriginCountry))
@@ -167,7 +167,7 @@ public class AnimeEnrichmentBackfillJob : IShouldQueue, IJobStorageInjector
 
         List<MovieProjection> rows = await context
             .Movies.AsNoTracking()
-            .Where(movie => movie.Library.Type == "anime" && movie.Id > cursor)
+            .Where(movie => movie.Library.Type != "anime" && movie.Id > cursor)
             .OrderBy(movie => movie.Id)
             .Take(BatchSize)
             .Select(movie => new MovieProjection(
