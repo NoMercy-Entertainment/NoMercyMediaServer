@@ -127,7 +127,12 @@ public partial class VideoHub : ConnectionHub
         string mediaType = parts[0];
         string mediaId = state.CurrentItem.Id.ToString();
         int? resumeAt = state.Time > 0 ? state.Time / 1000 : null;
-        return CastIntent.PlayVideo(mediaType, mediaId, resumeAt);
+        // The language the handing-off device was playing travels with the
+        // position, for the same reason the position does: the receiver opens
+        // its own session and would otherwise start the episode over in whatever
+        // the file declares.
+        string? audioLanguage = state.CurrentAudio?.Language;
+        return CastIntent.PlayVideo(mediaType, mediaId, resumeAt, audioLanguage);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
