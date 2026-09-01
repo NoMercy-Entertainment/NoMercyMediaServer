@@ -363,4 +363,183 @@ public class PlaybackDecisionEngineTests
         decision.Action.Should().Be(PlaybackAction.TranscodeAudio);
         decision.Reason.Should().Contain("Audio codec");
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Per-codec capability (Samsung shape): HEVC Main10 present, AVC High10 absent
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static ClientCapabilities MakeSamsungClient() =>
+        new(
+            Video:
+            [
+                new VideoCodecCapability(
+                    VideoCodecType.H264,
+                    ["high", "main"],
+                    8,
+                    3840,
+                    2160,
+                    60,
+                    [],
+                    0
+                ),
+                new VideoCodecCapability(
+                    VideoCodecType.H265,
+                    ["main", "main10"],
+                    10,
+                    3840,
+                    2160,
+                    60,
+                    ["hdr10", "hlg"],
+                    0
+                ),
+            ],
+            Audio:
+            [
+                new AudioCodecCapability(AudioCodecType.Aac, 2, false, true),
+                new AudioCodecCapability(AudioCodecType.Ac3, 6, true, false),
+            ],
+            SupportedContainers: ["mp4", "mkv", "ts"],
+            SupportsHdr: true,
+            MaxBitrateKbps: 0
+        );
+
+    [Fact]
+    public void Samsung_Hevc10BitSource_ClientHasHevcMain10_DirectPlay()
+    {
+        MediaInfo media = MakeMedia("mpegts", MakeVideo10BitSdr("hevc"), MakeAudio("aac"));
+
+        PlaybackDecision decision = _engine.Decide(media, MakeSamsungClient());
+
+        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+    }
+
+    [Fact]
+    public void Samsung_Avc10BitSource_ClientLacksAvcHigh10_TranscodesVideo()
+    {
+        // AVC (h264) capability entry tops out at 8-bit — no high10 profile
+        // claimed. A 10-bit AVC source must not pass on the strength of the
+        // HEVC entry.
+        MediaInfo media = MakeMedia("mpegts", MakeVideo10BitSdr("h264"), MakeAudio("aac"));
+
+        PlaybackDecision decision = _engine.Decide(media, MakeSamsungClient());
+
+        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
+        decision.Reason.Should().Contain("8-bit");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Legacy-payload synthesis fallback
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void LegacyFlatPayload_NoVideoArray_SynthesizesTodaysBehavior_DirectPlay()
+    {
+        MediaInfo media = MakeMedia("hls", MakeVideo10BitSdr("hevc"), MakeAudio("aac"));
+
+        ClientCapabilities legacyClient = new(
+            Video: null,
+            Audio: null,
+            SupportedContainers: ["hls"],
+            SupportsHdr: true,
+            MaxBitrateKbps: 0,
+            SupportedVideoCodecs: [VideoCodecType.H265],
+            SupportedAudioCodecs: [AudioCodecType.Aac],
+            Supports10Bit: true
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, legacyClient);
+
+        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+    }
+
+    [Fact]
+    public void LegacyFlatPayload_NoVideoArray_Supports10BitFalse_TranscodesExactlyLikeToday()
+    {
+        MediaInfo media = MakeMedia("hls", MakeVideo10BitSdr("hevc"), MakeAudio("aac"));
+
+        ClientCapabilities legacyClient = new(
+            Video: null,
+            Audio: null,
+            SupportedContainers: ["hls"],
+            SupportsHdr: true,
+            MaxBitrateKbps: 0,
+            SupportedVideoCodecs: [VideoCodecType.H265],
+            SupportedAudioCodecs: [AudioCodecType.Aac],
+            Supports10Bit: false
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, legacyClient);
+
+        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
+        decision.Reason.Should().Contain("10-bit");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Audio passthrough / channel gating
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Audio_ChannelsExceedCapability_TranscodeAudio()
+    {
+        AudioStreamInfo sevenOne = new(
+            Index: 1,
+            Codec: "ac3",
+            Channels: 8,
+            SampleRate: 48000,
+            BitRateKbps: 640,
+            Language: "eng",
+            IsDefault: true,
+            IsForced: false
+        );
+
+        MediaInfo media = MakeMedia("matroska,webm", MakeVideo("h264"), sevenOne);
+
+        ClientCapabilities client = new(
+            Video: [new VideoCodecCapability(VideoCodecType.H264, [], 8, 3840, 2160, 60, [], 0)],
+            Audio: [new AudioCodecCapability(AudioCodecType.Ac3, 6, true, false)],
+            SupportedContainers: ["mkv"],
+            SupportsHdr: false,
+            MaxBitrateKbps: 0
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, client);
+
+        decision.Action.Should().Be(PlaybackAction.TranscodeAudio);
+    }
+
+    [Fact]
+    public void Audio_NeitherPassthroughNorDecode_TranscodeAudio()
+    {
+        MediaInfo media = MakeMedia("matroska,webm", MakeVideo("h264"), MakeAudio("ac3"));
+
+        ClientCapabilities client = new(
+            Video: [new VideoCodecCapability(VideoCodecType.H264, [], 8, 3840, 2160, 60, [], 0)],
+            Audio: [new AudioCodecCapability(AudioCodecType.Ac3, 6, false, false)],
+            SupportedContainers: ["mkv"],
+            SupportsHdr: false,
+            MaxBitrateKbps: 0
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, client);
+
+        decision.Action.Should().Be(PlaybackAction.TranscodeAudio);
+    }
+
+    [Fact]
+    public void Audio_PassthroughOnly_NoDecode_DirectPlay()
+    {
+        MediaInfo media = MakeMedia("matroska,webm", MakeVideo("h264"), MakeAudio("ac3"));
+
+        ClientCapabilities client = new(
+            Video: [new VideoCodecCapability(VideoCodecType.H264, [], 8, 3840, 2160, 60, [], 0)],
+            Audio: [new AudioCodecCapability(AudioCodecType.Ac3, 6, true, false)],
+            SupportedContainers: ["mkv"],
+            SupportsHdr: false,
+            MaxBitrateKbps: 0
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, client);
+
+        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+    }
 }

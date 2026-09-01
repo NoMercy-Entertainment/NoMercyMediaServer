@@ -646,18 +646,50 @@ public class LiveTranscodeService(
         }
     }
 
-    private static ClientCapabilities ToClientCapabilities(ClientCapabilitiesDto dto)
+    internal static ClientCapabilities ToClientCapabilities(ClientCapabilitiesDto dto)
     {
         return new(
-            SupportedVideoCodecs: dto.VideoCodecs ?? [],
-            SupportedAudioCodecs: dto.AudioCodecs ?? [],
-            SupportedContainers: dto.Containers ?? [],
+            Video: dto.Video?.Select(ToVideoCodecCapability).ToArray() ?? [],
+            Audio: dto.Audio?.Select(ToAudioCodecCapability).ToArray() ?? [],
+            // dto.Containers is the legacy field name a client on the old flat
+            // wire shape actually sends ("containers", not "supported_containers");
+            // reading only the primary field silently dropped every legacy
+            // client's container list, made IsContainerCompatible always false,
+            // and forced a Remux session even when video/audio/HDR/10-bit all
+            // matched.
+            SupportedContainers: dto.SupportedContainers ?? dto.Containers ?? [],
+            SupportsHdr: dto.SupportsHdr,
+            MaxBitrateKbps: dto.MaxBitrateKbps,
+            SupportedVideoCodecs: dto.VideoCodecs,
+            SupportedAudioCodecs: dto.AudioCodecs,
             MaxWidth: dto.MaxWidth,
             MaxHeight: dto.MaxHeight,
-            SupportsHdr: dto.SupportsHdr,
             Supports10Bit: dto.Supports10Bit,
-            MaxBitrateKbps: dto.MaxBitrateKbps,
             MaxAudioChannels: dto.MaxAudioChannels > 0 ? dto.MaxAudioChannels : 2
+        );
+    }
+
+    private static VideoCodecCapability ToVideoCodecCapability(VideoCodecCapabilityDto dto)
+    {
+        return new(
+            Codec: dto.Codec,
+            Profiles: dto.Profiles,
+            MaxBitDepth: dto.MaxBitDepth,
+            MaxWidth: dto.MaxWidth,
+            MaxHeight: dto.MaxHeight,
+            MaxFramerate: dto.MaxFramerate,
+            HdrFormats: dto.HdrFormats,
+            MaxBitrateKbps: dto.MaxBitrateKbps
+        );
+    }
+
+    private static AudioCodecCapability ToAudioCodecCapability(AudioCodecCapabilityDto dto)
+    {
+        return new(
+            Codec: dto.Codec,
+            MaxChannels: dto.MaxChannels,
+            Passthrough: dto.Passthrough,
+            Decode: dto.Decode
         );
     }
 

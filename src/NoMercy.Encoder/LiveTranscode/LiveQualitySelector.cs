@@ -134,13 +134,16 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
     {
         LiveQuality[] candidates = GetAvailableQualities(input, client, speeds, budget);
 
+        VideoCodecType[]? allowedCodecs = ResolveAllowedCodecs(client);
+
         // Filter by client capabilities
         IEnumerable<LiveQuality> allowed = candidates.Where(q =>
-            q.Width <= client.MaxWidth
-            && q.Height <= client.MaxHeight
+            q.Width <= (client.MaxWidth ?? int.MaxValue)
+            && q.Height <= (client.MaxHeight ?? int.MaxValue)
             && (
-                client.SupportedVideoCodecs.Length == 0
-                || client.SupportedVideoCodecs.Contains(q.Codec)
+                allowedCodecs is null
+                || allowedCodecs.Length == 0
+                || allowedCodecs.Contains(q.Codec)
             )
         );
 
@@ -206,7 +209,7 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
 
     private static VideoCodecType ResolveTargetCodec(ClientCapabilities client)
     {
-        foreach (VideoCodecType codec in client.SupportedVideoCodecs)
+        foreach (VideoCodecType codec in ResolveAllowedCodecs(client) ?? [])
         {
             if (EncodableCodecs.Contains(codec))
                 return codec;
@@ -215,6 +218,17 @@ public class LiveQualitySelector(ICodecResolver codecResolver, IHardwareCapabili
         // Empty list or nothing we can encode — H264 is the universal baseline.
         return VideoCodecType.H264;
     }
+
+    /// <summary>
+    /// New-shape clients declare per-codec capability in <see cref="ClientCapabilities.Video"/>;
+    /// older builds still send the flat <see cref="ClientCapabilities.SupportedVideoCodecs"/>
+    /// list. Mirrors PlaybackDecisionEngine's legacy-payload synthesis so a new-shape-only
+    /// client is filtered by its declared codecs instead of silently allowing every codec.
+    /// </summary>
+    private static VideoCodecType[]? ResolveAllowedCodecs(ClientCapabilities client) =>
+        client.Video.Length > 0
+            ? [.. client.Video.Select(v => v.Codec)]
+            : client.SupportedVideoCodecs;
 
     private static int EstimateBitrateKbps(int width, int height) =>
         (width, height) switch

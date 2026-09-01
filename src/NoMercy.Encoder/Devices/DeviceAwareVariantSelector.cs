@@ -28,13 +28,7 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
             return new(null, caps, null, null, "no variants available");
 
         if (caps is null)
-            return new(
-                variants[0].Index,
-                null,
-                null,
-                null,
-                "no capabilities declared"
-            );
+            return new(variants[0].Index, null, null, null, "no capabilities declared");
 
         int ramCeiling = caps.RamTier switch
         {
@@ -172,9 +166,9 @@ public class DeviceAwareVariantSelector : IDeviceAwareVariantSelector
         if (deviceCaps.MaxAudioChannels is int declaredChannels)
             maxChannels = Math.Min(maxChannels, declaredChannels);
 
-        int maxHeight = client.MaxHeight;
+        int? maxHeight = client.MaxHeight;
         if (deviceCaps.MaxVideoHeight is int declaredHeight)
-            maxHeight = Math.Min(maxHeight > 0 ? maxHeight : int.MaxValue, declaredHeight);
+            maxHeight = Math.Min(maxHeight is > 0 ? maxHeight.Value : int.MaxValue, declaredHeight);
 
         bool supportsHdr = client.SupportsHdr && deviceCaps.HdrSupport;
 
