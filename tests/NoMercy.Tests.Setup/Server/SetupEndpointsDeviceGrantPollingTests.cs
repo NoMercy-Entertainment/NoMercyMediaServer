@@ -52,7 +52,14 @@ namespace NoMercy.Tests.Setup.Server;
 /// RFC 8628 minimum <c>Math.Clamp</c> floor already enforces >= 1s), so most scenarios
 /// here cost only 1-2 real seconds of wall-clock wait.
 /// </remarks>
+// Every scenario here points ExternalServicesConfig.Current.AuthBaseUrl at a
+// loopback server and polls real wall-clock time — exactly the shared
+// process-wide state and CPU contention ProcessWideSetupStateCollection
+// exists to serialize this class was never in it, so it ran in xUnit's
+// default parallel bucket fighting every other test class for the thread
+// pool, which is what made its wall-clock assertions flake under CI load.
 [Trait("Category", "Unit")]
+[Collection(ProcessWideSetupStateCollection.Name)]
 public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
 {
     private readonly AppDbContext _appContext;
