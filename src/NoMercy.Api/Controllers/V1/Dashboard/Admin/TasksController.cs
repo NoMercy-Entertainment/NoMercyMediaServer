@@ -183,22 +183,36 @@ public class TasksController(
         }
     }
 
+    /// <summary>
+    /// There is no create/update/delete verb for the task collection itself —
+    /// a task is a queue row, and the real surface for that is
+    /// <c>queue/{id}</c> (update priority, delete) plus the dispatch jobs
+    /// that create rows in the first place. This route never had an
+    /// implementation to fall back to, so it answers honestly instead of a
+    /// 200 that did nothing.
+    /// </summary>
     [HttpPost]
     public IActionResult Store()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return NotImplementedResponse(
+            "Creating a task directly is not supported. Dispatch a job instead."
+        );
     }
 
     [HttpPatch]
     public IActionResult Update()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return NotImplementedResponse(
+            "Updating the task collection is not supported. Use PATCH queue/{id} for a single job."
+        );
     }
 
     [HttpDelete]
     public IActionResult Destroy()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return NotImplementedResponse(
+            "Clearing the task collection is not supported. Use DELETE queue/{id} for a single job."
+        );
     }
 
     [HttpPost]
@@ -207,12 +221,18 @@ public class TasksController(
     {
         IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
         if (pids.Count == 0)
-            return Ok(false);
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Status = "not_found",
+                    Message = "No running process for that task",
+                }
+            );
 
         foreach (int pid in pids)
             processThrottle.Suspend(pid);
 
-        return Ok(true);
+        return Ok(new StatusResponseDto<string> { Status = "success", Message = "Task paused" });
     }
 
     [HttpPost]
@@ -221,19 +241,33 @@ public class TasksController(
     {
         IReadOnlyCollection<int> pids = processRegistry.GetProcessIds(id);
         if (pids.Count == 0)
-            return Ok(false);
+            return Ok(
+                new StatusResponseDto<string>
+                {
+                    Status = "not_found",
+                    Message = "No running process for that task",
+                }
+            );
 
         foreach (int pid in pids)
             processThrottle.Resume(pid);
 
-        return Ok(true);
+        return Ok(new StatusResponseDto<string> { Status = "success", Message = "Task resumed" });
     }
 
+    /// <summary>
+    /// Active task-worker threads across every queue, straight from
+    /// <see cref="QueueRunner.GetActiveWorkerThreads"/> — the count the
+    /// dashboard's pause toggle derives its state from (workers &gt; 0 means
+    /// running).
+    /// </summary>
     [HttpGet]
     [Route("runners")]
     public IActionResult RunningTaskWorkers()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        int workers = QueueRunner.Current?.GetActiveWorkerThreads().Count ?? 0;
+
+        return Ok(new RunnersResponseDto { Status = "ok", Workers = workers });
     }
 
     [HttpGet]
@@ -1581,4 +1615,18 @@ public class IncompleteEncodeDto
 
     [JsonProperty("last_seen_at")]
     public DateTime LastSeenAt { get; set; }
+}
+
+/// <summary>
+/// Active task-worker count for the dashboard's pause toggle. Read directly
+/// off <c>response.data</c> by the client, not through a
+/// <see cref="DataResponseDto{T}"/> wrapper.
+/// </summary>
+public class RunnersResponseDto
+{
+    [JsonProperty("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonProperty("workers")]
+    public int Workers { get; set; }
 }

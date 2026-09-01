@@ -76,9 +76,20 @@ public class DevicesController(
     [HttpPost]
     public IActionResult Create()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return NotImplementedResponse("Registering a device from the dashboard is not supported.");
     }
 
+    /// <summary>
+    /// "Clear activity logs" — the dashboard/mobile/KMP clients all call this
+    /// route to wipe the device activity-log history, not to delete devices.
+    /// It used to double as a device-collection delete that silently dragged
+    /// every activity log down with it as an undocumented side effect. That
+    /// coupling is gone: this route now does exactly the one thing its name
+    /// and its callers mean — clear every <see cref="Database.Models.Users.ActivityLog"/>
+    /// row — and never removes a <see cref="Device"/> row. Bulk device removal
+    /// already has its own honest, narrower endpoints
+    /// (<see cref="DestroyOffline"/>, <see cref="DestroyOne"/>).
+    /// </summary>
     [HttpDelete]
     public async Task<IActionResult> Destroy()
     {

@@ -331,7 +331,7 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task UpdateNotifications_ReturnsOk_WhenAuthenticated()
+    public async Task UpdateNotifications_ReturnsNotImplemented_WhenAuthenticated()
     {
         HttpResponseMessage response = await PatchAsync(
             _authed,
@@ -339,12 +339,8 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             new { }
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        string body = await response.Content.ReadAsStringAsync();
-        using JsonDocument doc = JsonDocument.Parse(body);
-
-        doc.RootElement.TryGetProperty("status", out JsonElement status).Should().BeTrue();
-        status.GetString().Should().Be("success");
+        // Notification settings have no storage behind them yet — the
+        // endpoint answers honestly instead of a 200 that persisted nothing.
+        response.StatusCode.Should().Be(HttpStatusCode.NotImplemented);
     }
 }

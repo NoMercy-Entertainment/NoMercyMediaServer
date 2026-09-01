@@ -80,7 +80,9 @@ public class ServerActivityController(IActivityRepository activityRepository) : 
     [Authorize(Policy = "MediaAccess")]
     public IActionResult Create()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return NotImplementedResponse(
+            "Activity logs are written by the server, not by client POST."
+        );
     }
 
     [HttpDelete]

@@ -124,14 +124,17 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task PostConfiguration_ReturnsOk_WhenAuthenticated()
+    public async Task PostConfiguration_ReturnsNotImplemented_WhenAuthenticated()
     {
+        // There is nothing to "create" for configuration — PATCH changes
+        // existing keys. The route answers honestly instead of a 200 that
+        // wrote nothing.
         HttpResponseMessage response = await _authed.PostAsync(
             "/api/v1/dashboard/configuration",
             null
         );
 
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NotImplemented);
     }
 
     [Fact]

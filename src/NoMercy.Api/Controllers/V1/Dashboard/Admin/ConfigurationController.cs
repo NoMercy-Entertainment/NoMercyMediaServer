@@ -117,7 +117,9 @@ public class ConfigurationController(
     [Authorize(Policy = "Moderator")]
     public IActionResult Store()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return NotImplementedResponse(
+            "Creating configuration is not supported. Use PATCH to change existing keys."
+        );
     }
 
     [HttpPatch]
