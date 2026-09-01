@@ -30,6 +30,8 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     private readonly IConnectivityManager _connectivityManager;
     private readonly IConnectivityStatus _connectivityStatus;
     private readonly SemaphoreSlim _reevaluationLock = new(1, 1);
+    private CancellationTokenSource? _debounceCts;
+    private static readonly TimeSpan ReevaluationDebounceWindow = TimeSpan.FromMilliseconds(100);
 
     private readonly IAuthTokenStore _authTokenStore;
 
@@ -65,18 +67,26 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     // collaborators.
     internal async void OnNetworkAddressChanged(object? sender, EventArgs e)
     {
+        string oldIp = _networkDiscovery.InternalIp;
+        // Force re-discovery by reading from interfaces
+        string newIp = GetCurrentInternalIp();
+
+        if (newIp == oldIp)
+            return;
+
+        // A NIC flap fires this burst multiple times in quick succession. Coalesce the
+        // burst into the one that survives the window rather than dropping every event
+        // after the first — the old WaitAsync(0) single-flight gate discarded a concurrent
+        // change outright, which could leave a stale address never re-pinged if the change
+        // that got dropped was the real, final one.
+        if (!await DebounceAsync())
+            return;
+
         if (!await _reevaluationLock.WaitAsync(0))
             return;
 
         try
         {
-            string oldIp = _networkDiscovery.InternalIp;
-            // Force re-discovery by reading from interfaces
-            string newIp = GetCurrentInternalIp();
-
-            if (newIp == oldIp)
-                return;
-
             _logger.LogInformation("Network address changed: {OldIp} → {NewIp}", [oldIp, newIp]);
             _networkDiscovery.InternalIp = newIp;
 
@@ -104,10 +114,15 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         if (!e.IsAvailable)
             return;
 
-        // Share the single-flight lock with OnNetworkAddressChanged: a NIC flap
-        // raises both events, and two concurrent EvaluateAsync calls would race on
-        // the ConnectivityManager's active strategy (tear down / double-establish
-        // the tunnel or port-forward against each other).
+        // Shares the debounce window with OnNetworkAddressChanged: a NIC flap raises both
+        // events, and coalescing them into one reevaluation avoids racing two evaluations
+        // against each other on the ConnectivityManager's active strategy.
+        if (!await DebounceAsync())
+            return;
+
+        // Share the single-flight lock with OnNetworkAddressChanged: two concurrent
+        // EvaluateAsync calls would race on the ConnectivityManager's active strategy
+        // (tear down / double-establish the tunnel or port-forward against each other).
         if (!await _reevaluationLock.WaitAsync(0))
             return;
 
@@ -126,6 +141,30 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
         finally
         {
             _reevaluationLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Waits out the debounce window, restarting it (and cancelling any wait already in
+    /// progress) every time this is called. Returns false when superseded by a later call
+    /// within the window — that later call carries the reevaluation forward, so the earlier
+    /// one exits without ever reaching the single-flight lock.
+    /// </summary>
+    private async Task<bool> DebounceAsync()
+    {
+        CancellationTokenSource cts = new();
+        CancellationTokenSource? previous = Interlocked.Exchange(ref _debounceCts, cts);
+        previous?.Cancel();
+        previous?.Dispose();
+
+        try
+        {
+            await Task.Delay(ReevaluationDebounceWindow, cts.Token);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
         }
     }
 
@@ -257,6 +296,8 @@ public class NetworkChangeMonitor : IHostedService, IDisposable
     {
         NetworkChange.NetworkAddressChanged -= OnNetworkAddressChanged;
         NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
         _reevaluationLock.Dispose();
         GC.SuppressFinalize(this);
     }

@@ -147,6 +147,41 @@ public class LiveQualitySelectorTests
         qualities.Should().OnlyContain(q => q.Codec == VideoCodecType.H264);
     }
 
+    [Fact]
+    public void NewShapeOnlyClient_TargetsCodecFromVideoArray_NotAnyCodec()
+    {
+        // A client sending only the new per-codec Video array (no legacy
+        // SupportedVideoCodecs) must still be filtered by its declared codec —
+        // it must not silently fall through to "any codec allowed".
+        IHardwareCapabilities hardware = MakeGpuHardware();
+        MediaInfo media = MakeMedia(1920, 1080);
+        ClientCapabilities client = new(
+            Video:
+            [
+                new(
+                    Codec: VideoCodecType.H265,
+                    Profiles: [],
+                    MaxBitDepth: 8,
+                    MaxWidth: 7680,
+                    MaxHeight: 4320,
+                    MaxFramerate: 60,
+                    HdrFormats: [],
+                    MaxBitrateKbps: 0
+                ),
+            ],
+            MaxWidth: 7680,
+            MaxHeight: 4320
+        );
+        SpeedIndex speeds = MakeFastGpuSpeedIndex();
+        IResourceBudget budget = MakeBudget(hardware);
+
+        LiveQuality[] qualities = _gpuSelector.GetAvailableQualities(media, client, speeds, budget);
+        LiveQuality optimal = _gpuSelector.SelectOptimal(media, client, speeds, budget);
+
+        qualities.Should().OnlyContain(q => q.Codec == VideoCodecType.H265);
+        optimal.Codec.Should().Be(VideoCodecType.H265);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // GetAvailableQualities
     // ──────────────────────────────────────────────────────────────────────────

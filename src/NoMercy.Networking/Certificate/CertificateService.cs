@@ -141,9 +141,28 @@ public class CertificateService : ICertificateService
             // DB not ready or cert PEM is malformed — fall through to file check.
         }
 
-        // Legacy fallback: cert files on disk (pre-DB-storage installs)
+        // Legacy fallback: cert files on disk (pre-DB-storage installs). File presence
+        // alone is not validity — an expired PEM left on disk from a pre-DB install must
+        // return false the same way the DB-backed path above does, or BootOrchestrator
+        // treats an expired legacy cert as "already registered" and skips re-registration.
 #pragma warning disable CS0618
-        return _driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile);
+        if (!_driver.FileExists(AppFiles.CertFile) || !_driver.FileExists(AppFiles.KeyFile))
+            return false;
+
+        try
+        {
+            string legacyCertPem;
+            using (StreamReader certReader = new(_driver.OpenRead(AppFiles.CertFile)))
+                legacyCertPem = certReader.ReadToEnd();
+
+            using X509Certificate2 legacyCert = X509Certificate2.CreateFromPem(legacyCertPem);
+            return legacyCert.NotAfter > DateTime.Now;
+        }
+        catch
+        {
+            // Malformed/unreadable legacy PEM — treat as no valid certificate.
+            return false;
+        }
 #pragma warning restore CS0618
     }
 

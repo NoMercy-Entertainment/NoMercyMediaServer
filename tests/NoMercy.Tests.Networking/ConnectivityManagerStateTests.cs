@@ -22,8 +22,25 @@ using Xunit;
 namespace NoMercy.Tests.Networking;
 
 [Trait("Category", "Unit")]
-public sealed class ConnectivityManagerStateTests
+public sealed class ConnectivityManagerStateTests : IDisposable
 {
+    private readonly ConnectivityMode _originalMode = RuntimeServerSettings
+        .Current
+        .ConnectivityMode;
+
+    // Every fixture here exercises strategy evaluation, which requires Auto —
+    // RuntimeServerSettings.Current is a process-wide static, and its default is now
+    // LocalOnly (a fresh install must not attempt remote connectivity unasked).
+    public ConnectivityManagerStateTests()
+    {
+        RuntimeServerSettings.Current.ConnectivityMode = ConnectivityMode.Auto;
+    }
+
+    public void Dispose()
+    {
+        RuntimeServerSettings.Current.ConnectivityMode = _originalMode;
+    }
+
     private static NetworkDiscovery BuildNetworkDiscovery()
     {
         NetworkDiscovery d = new(

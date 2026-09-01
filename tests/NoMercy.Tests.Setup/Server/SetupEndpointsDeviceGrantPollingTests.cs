@@ -14,7 +14,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
@@ -29,6 +31,7 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Setup.Infrastructure;
 using NoMercyQueue.Workers;
+using Xunit.Abstractions;
 
 namespace NoMercy.Tests.Setup.Server;
 
@@ -38,8 +41,10 @@ namespace NoMercy.Tests.Setup.Server;
 /// <c>authorization_pending</c> as "keep waiting" (not an error), <c>slow_down</c> as
 /// "back off, keep polling" (not fatal), any other error code as terminal (stop and
 /// surface it), and a genuinely expired device code as a timeout rather than an
-/// infinite silent loop. A network exception mid-poll must degrade to the same
-/// terminal error state, never crash the background task unobserved.
+/// infinite silent loop. A TRANSIENT network exception mid-poll (a blip) must not end
+/// the login — it retries like <c>authorization_pending</c> — while a PERSISTENT
+/// failure still gives up after a capped number of consecutive attempts rather than
+/// spinning silently past the code's own expiry.
 /// </summary>
 /// <remarks>
 /// Drives the private <c>PollDeviceGrant</c> loop through the public
@@ -48,7 +53,14 @@ namespace NoMercy.Tests.Setup.Server;
 /// RFC 8628 minimum <c>Math.Clamp</c> floor already enforces >= 1s), so most scenarios
 /// here cost only 1-2 real seconds of wall-clock wait.
 /// </remarks>
-[Trait("Category", "Unit")]
+// Every scenario here spins up a real LoopbackHttpServer and polls real
+// wall-clock time against it -- a real HTTP round trip, not a deterministic
+// unit -- so it was mislabeled as Unit and forced into the "fast tests" job's
+// tight budget. It also shares process-wide state
+// (ExternalServicesConfig.Current.AuthBaseUrl), which is what
+// ProcessWideSetupStateCollection exists to serialize.
+[Trait("Category", "Integration")]
+[Collection(ProcessWideSetupStateCollection.Name)]
 public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
 {
     private readonly AppDbContext _appContext;
@@ -58,8 +70,20 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     private readonly string _tempAppPath;
     private readonly string? _originalTokenClientId;
 
-    public SetupEndpointsDeviceGrantPollingTests()
+    // PollDeviceGrant is spawned fire-and-forget and only exits early via
+    // _appStopping.IsCancellationRequested. A bare Mock.Of<IHostApplicationLifetime>()
+    // never signals that, so a scenario that doesn't converge before its own
+    // assertion times out left the real background poll task running for the
+    // rest of the device code's expiry window -- against a loopback server this
+    // test had already disposed -- eating thread-pool capacity and mutating
+    // shared state for every test that ran after it in the same process. Wired
+    // to a real token so Dispose can actually stop it.
+    private readonly CancellationTokenSource _appStoppingCts = new();
+    private readonly ITestOutputHelper _output;
+
+    public SetupEndpointsDeviceGrantPollingTests(ITestOutputHelper output)
     {
+        _output = output;
         SetupTerminalUi.ForceInteractiveForTests = false;
 
         _originalAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
@@ -94,6 +118,8 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
 
     public void Dispose()
     {
+        _appStoppingCts.Cancel();
+        _appStoppingCts.Dispose();
         SetupTerminalUi.ForceInteractiveForTests = null;
         _appContext.Database.CloseConnection();
         _appContext.Dispose();
@@ -109,8 +135,23 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         catch (UnauthorizedAccessException) { }
     }
 
-    private SetupEndpoints BuildEndpoints() =>
-        new(_setupState, _authManager, new NoOpRegistrationService());
+    private SetupEndpoints BuildEndpoints()
+    {
+        Mock<IHostApplicationLifetime> lifetime = new();
+        lifetime.SetupGet(l => l.ApplicationStopping).Returns(_appStoppingCts.Token);
+        return new(
+            _setupState,
+            _authManager,
+            new NoOpRegistrationService(),
+            new RealHttpClientFactory(),
+            lifetime.Object
+        );
+    }
+
+    private sealed class RealHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
+    }
 
     private static DefaultHttpContext BuildPostContext(string path)
     {
@@ -326,12 +367,15 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     }
 
     [Fact]
-    public async Task PollDeviceGrant_NetworkExceptionMidPoll_TransitionsToUnauthenticatedWithError()
+    public async Task PollDeviceGrant_PersistentNetworkException_RetriesThenTransitionsToUnauthenticatedWithError()
     {
         // Serve the device-code request normally, but abort the connection (a real
         // network-level failure, not a parseable HTTP error) for every poll tick
         // against the token endpoint — deterministic, no scope-swap race against the
-        // fire-and-forget background poll task.
+        // fire-and-forget background poll task. A single blip must not end the login
+        // (see the recovery test below); this covers the OTHER half of that fix — a
+        // persistently dead IdP must still give up eventually rather than spin past
+        // the device code's own RFC 8628 expiry in silence.
         using LoopbackHttpServer server = new();
         server.Handler = req =>
             req.Path.EndsWith("/device")
@@ -343,12 +387,102 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         DefaultHttpContext context = BuildPostContext("/setup/device-code");
         await endpoints.HandleRequestAsync(context);
 
-        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
+        // Root-caused a real bug (fixed in SetupEndpoints.cs, PollDeviceGrant):
+        // consecutiveTransientFailures reset to 0 the instant PostAsync returned,
+        // BEFORE the body was read, so a connection that failed between headers
+        // and body could never accumulate past 1 -- a persistently dead IdP
+        // polled silently forever. But the last two CI runs (30s, then 60s
+        // budget) BOTH still failed at just over their own deadline (32s, 65s),
+        // which is exactly as consistent with "still not converging" as with
+        // "converging under variance" -- inconclusive without seeing whether the
+        // wait actually resolves before its own deadline. Logging every tick so
+        // the next run answers that with real data instead of another
+        // deadline-size guess.
+        DateTime start = DateTime.UtcNow;
+        DateTime deadline = start.AddSeconds(60);
+        DateTime nextLog = start;
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
+        {
+            if (DateTime.UtcNow >= nextLog)
+            {
+                nextLog = DateTime.UtcNow.AddSeconds(2);
+                _output.WriteLine(
+                    $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] waiting: phase={_setupState.CurrentPhase}, requests={server.RequestCount}"
+                );
+            }
             await Task.Delay(100);
+        }
+        _output.WriteLine(
+            $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] ended: phase={_setupState.CurrentPhase}, error={_setupState.ErrorMessage ?? "(null)"}, requests={server.RequestCount}"
+        );
 
         Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
         Assert.NotNull(_setupState.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task PollDeviceGrant_TransientBlipThenRecovery_DoesNotEndLogin_StoresTokensAndAuthenticates()
+    {
+        // A brief network blip (a couple of aborted connections, standing in for a
+        // ~5s outage at the 1s poll interval used here) followed by the IdP coming
+        // back must NOT end the device login — this is the defect the retry/backoff
+        // fix addresses: a transient exception used to permanently abort the ONLY
+        // Docker/NAS login path there is.
+        string jwt = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(
+            new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+                issuer: "https://auth.nomercy.tv/realms/NoMercyTV",
+                audience: "nomercy-server",
+                claims:
+                [
+                    new(
+                        System.Security.Claims.ClaimTypes.NameIdentifier,
+                        Guid.NewGuid().ToString()
+                    ),
+                ],
+                notBefore: DateTime.UtcNow.AddMinutes(-5),
+                expires: DateTime.UtcNow.AddHours(1)
+            )
+        );
+        string successBody = JsonConvert.SerializeObject(
+            new AuthResponse
+            {
+                AccessToken = jwt,
+                RefreshToken = "refresh-1",
+                TokenType = "Bearer",
+                ExpiresIn = 3600,
+            }
+        );
+
+        int tokenPollAttempts = 0;
+        using LoopbackHttpServer server = new();
+        server.Handler = req =>
+        {
+            if (req.Path.EndsWith("/device"))
+                return new(200, DeviceAuthResponseJson(expiresIn: 600, interval: 1));
+
+            int attempt = Interlocked.Increment(ref tokenPollAttempts);
+            // First two ticks: a transient network-level failure (the blip).
+            // Third tick onward: the IdP is back — succeed.
+            return attempt <= 2 ? LoopbackResponse.Aborted() : new(200, successBody);
+        };
+        using ExternalServicesConfigScope scope = new(authBaseUrl: server.BaseUrl);
+
+        SetupEndpoints endpoints = BuildEndpoints();
+        DefaultHttpContext context = BuildPostContext("/setup/device-code");
+        await endpoints.HandleRequestAsync(context);
+
+        DateTime deadline = DateTime.UtcNow.AddSeconds(15);
+        while (_setupState.CurrentPhase < SetupPhase.Authenticated && DateTime.UtcNow < deadline)
+            await Task.Delay(100);
+
+        Assert.True(
+            _setupState.CurrentPhase >= SetupPhase.Authenticated,
+            $"expected at least Authenticated, was {_setupState.CurrentPhase} (error: {_setupState.ErrorMessage})"
+        );
+        Assert.True(
+            tokenPollAttempts > 2,
+            "expected the loop to survive the blip and keep polling"
+        );
     }
 
     [Fact]

@@ -9,15 +9,17 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Security;
 using Microsoft.AspNetCore.DataProtection;
-using NoMercy.NmSystem.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Moq;
 using Newtonsoft.Json;
 using NoMercy.Api.Middleware;
 using NoMercy.Database;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Security;
 using NoMercy.Setup.Auth;
 using NoMercy.Setup.Server;
 using NoMercy.Storage.Drivers.Local;
@@ -27,6 +29,11 @@ namespace NoMercy.Tests.Setup;
 
 public class SetupModeMiddlewareTests
 {
+    private sealed class NoOpHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
+    }
+
     private static SetupEndpoints CreateSetupEndpoints(SetupState state)
     {
         ServiceCollection services = new();
@@ -41,7 +48,13 @@ public class SetupModeMiddlewareTests
         dbContext.Database.EnsureCreated();
 
         AuthManager authManager = new(dbContext, new LocalStorageDriver(), new AuthTokenStore());
-        return new(state, authManager, new FakeServerRegistrationService());
+        return new(
+            state,
+            authManager,
+            new FakeServerRegistrationService(),
+            new NoOpHttpClientFactory(),
+            Mock.Of<IHostApplicationLifetime>()
+        );
     }
 
     private static SetupModeMiddleware CreateMiddleware(

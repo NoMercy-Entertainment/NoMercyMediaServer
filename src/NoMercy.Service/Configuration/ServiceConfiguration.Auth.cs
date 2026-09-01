@@ -117,9 +117,19 @@ public static partial class ServiceConfiguration
 
                 // Enable offline token validation via cached signing keys
                 options.TokenValidationParameters.ValidateIssuerSigningKey = true;
-                options.TokenValidationParameters.ValidIssuer = ExternalServicesConfig
-                    .Current
-                    .AuthBaseUrl;
+                // Keycloak's real `iss` claim (and its .well-known discovery document)
+                // never carries a trailing slash, but AuthBaseUrl is configured WITH one
+                // (it's concatenated straight into URLs like "{AuthBaseUrl}protocol/
+                // openid-connect/token" elsewhere) — an exact-match ValidIssuer against
+                // the slash-terminated form rejected every real token with "issuer is
+                // invalid", failing auth for every client hub (device/video/ripper/
+                // dashboard) network-wide. Accept both forms rather than picking one.
+                string authBaseUrl = ExternalServicesConfig.Current.AuthBaseUrl;
+                options.TokenValidationParameters.ValidIssuers =
+                [
+                    authBaseUrl,
+                    authBaseUrl.TrimEnd('/'),
+                ];
 
                 // Explicitly enforce audience validation. options.Audience already sets
                 // ValidAudience; this line makes the intent unambiguous and guards against

@@ -14,6 +14,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -59,6 +60,20 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
         return middleware;
     }
 
+    // A matched endpoint with no [AllowAnonymous] metadata — the shape a real
+    // [Authorize]-protected controller action carries once UseRouting has run.
+    // These tests invoke AccessLogMiddleware directly (no real routing pass), so
+    // without this the middleware's new endpoint-metadata check would see a null
+    // endpoint and treat every synthetic context below as anonymous-exempt,
+    // masking the guid/user checks these tests exist to cover. Tests for the
+    // actual [AllowAnonymous] gate live in AnonymousRouteAccessTests, which runs
+    // the real pipeline end to end.
+    private static readonly Endpoint ProtectedEndpoint = new(
+        _ => Task.CompletedTask,
+        new EndpointMetadataCollection(),
+        "test-protected-endpoint"
+    );
+
     private DefaultHttpContext MakeContext(
         string path,
         ClaimsPrincipal? user = null,
@@ -68,6 +83,7 @@ public class AccessLogMiddlewareTests : IClassFixture<NoMercyApiFactory>
         DefaultHttpContext context = new() { RequestServices = null! };
         context.Request.Path = path;
         context.Response.Body = new MemoryStream();
+        context.SetEndpoint(ProtectedEndpoint);
         if (user is not null)
             context.User = user;
         if (withRequestServices)

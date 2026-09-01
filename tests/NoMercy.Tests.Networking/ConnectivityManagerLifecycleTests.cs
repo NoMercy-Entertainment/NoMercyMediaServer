@@ -30,8 +30,27 @@ namespace NoMercy.Tests.Networking;
 /// leaves a tunnel or port mapping dangling.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class ConnectivityManagerLifecycleTests
+public sealed class ConnectivityManagerLifecycleTests : IDisposable
 {
+    private readonly ConnectivityMode _originalMode = RuntimeServerSettings
+        .Current
+        .ConnectivityMode;
+
+    // Most fixtures in this file exercise strategy evaluation, which requires Auto —
+    // RuntimeServerSettings.Current is a process-wide static, and its default is now
+    // LocalOnly (a fresh install must not attempt remote connectivity unasked), so every
+    // test here that isn't specifically testing the LocalOnly-pinned path needs Auto
+    // restored explicitly rather than inheriting whatever an earlier test left behind.
+    public ConnectivityManagerLifecycleTests()
+    {
+        RuntimeServerSettings.Current.ConnectivityMode = ConnectivityMode.Auto;
+    }
+
+    public void Dispose()
+    {
+        RuntimeServerSettings.Current.ConnectivityMode = _originalMode;
+    }
+
     private sealed class FastNetworkDiscovery : INetworkDiscovery
     {
         public int DiscoverCallCount { get; private set; }
@@ -56,6 +75,8 @@ public sealed class ConnectivityManagerLifecycleTests
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
         public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
+
+        public Task RemovePortMappingsAsync() => Task.CompletedTask;
     }
 
     private sealed class RecordingStrategy(bool succeeds) : IConnectivityStrategy
@@ -242,6 +263,38 @@ public sealed class ConnectivityManagerLifecycleTests
         Assert.Null(ex);
         // Never reached DiscoverExternalIpAsync — auth never arrived.
         Assert.Equal(0, discovery.DiscoverCallCount);
+    }
+
+    [Fact]
+    public async Task StartAsync_AuthArrivesLate_StillEvaluatesConnectivity()
+    {
+        // The 30s-and-give-up behaviour used to `return` out of ExecuteAsync entirely,
+        // so a server whose operator signed in slower than 30s stayed local-only for the
+        // rest of the process's life. This proves it instead keeps polling and re-enters
+        // evaluation the moment a token shows up, however late.
+        FastNetworkDiscovery discovery = new();
+        BootStatus boot = new();
+        boot.MarkStarted();
+        AuthTokenStore tokenStore = new(); // AccessToken starts null
+        RecordingStrategy strategy = new(succeeds: true);
+        ConnectivityManager manager = BuildManager(discovery, boot, tokenStore, strategy);
+
+        await manager.StartAsync(CancellationToken.None);
+
+        // Give the wait loop a couple of real poll iterations with no token before the
+        // token shows up — proving it did not give up after the first check.
+        await Task.Delay(1500);
+        Assert.Equal(0, discovery.DiscoverCallCount);
+
+        tokenStore.SetAccessToken("late-token");
+
+        for (int i = 0; i < 100 && discovery.DiscoverCallCount == 0; i++)
+            await Task.Delay(50);
+
+        Assert.Equal(1, discovery.DiscoverCallCount);
+        Assert.Equal(ConnectivityState.DirectAccess, manager.CurrentState);
+
+        await manager.StopAsync(CancellationToken.None);
     }
 
     [Fact]

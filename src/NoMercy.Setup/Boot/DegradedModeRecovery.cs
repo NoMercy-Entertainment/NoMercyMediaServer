@@ -25,7 +25,28 @@ namespace NoMercy.Setup.Boot;
 
 public interface IDegradedModeRecovery
 {
-    Task StartRecoveryLoop(DeferredTasks tasks);
+    Task StartRecoveryLoop(DeferredTasks tasks, CancellationToken ct = default);
+
+    /// <summary>
+    /// Per-component snapshot of the recovery loop's current progress, read by
+    /// <c>/health/detailed</c> so a caller can distinguish "auth still pending" from
+    /// "network still down" from "not registered yet" instead of one flat degraded flag.
+    /// </summary>
+    RecoveryStatus CurrentStatus { get; }
+}
+
+/// <summary>
+/// Snapshot of <see cref="DegradedModeRecovery.StartRecoveryLoop"/>'s progress, exposed
+/// read-only for <c>/health/detailed</c>.
+/// </summary>
+public sealed record RecoveryStatus
+{
+    public bool IsRunning { get; init; }
+    public bool ApiKeysLoaded { get; init; }
+    public bool Authenticated { get; init; }
+    public bool NetworkDiscovered { get; init; }
+    public bool Registered { get; init; }
+    public bool BinariesReady { get; init; }
 }
 
 public class DegradedModeRecovery : IDegradedModeRecovery
@@ -87,142 +108,199 @@ public class DegradedModeRecovery : IDegradedModeRecovery
         TimeSpan.FromMinutes(30),
     ];
 
-    public async Task StartRecoveryLoop(DeferredTasks tasks)
+    private volatile RecoveryStatus _currentStatus = new();
+
+    public RecoveryStatus CurrentStatus => _currentStatus;
+
+    public async Task StartRecoveryLoop(DeferredTasks tasks, CancellationToken ct = default)
     {
         int attempt = 0;
+        _currentStatus = BuildStatus(tasks, isRunning: true);
 
-        while (!tasks.AllCompleted)
+        try
         {
-            TimeSpan delay = BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)];
-            await _delay(delay);
-
-            bool hasNetwork = await NetworkProbe.CheckConnectivity();
-            if (!hasNetwork)
+            while (!tasks.AllCompleted && !ct.IsCancellationRequested)
             {
-                attempt++;
-                Logger.App(
-                    $"Network still unavailable. Next retry in {BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)]}"
-                );
-                continue;
-            }
+                TimeSpan delay = BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)];
 
-            Logger.App("Network connectivity restored — executing deferred tasks");
+                // Race the injectable delay against the shutdown token instead of changing
+                // _delay's signature — the real production delay (Task.Delay) has no way to
+                // observe cancellation mid-sleep on its own, and every existing test injects
+                // a single-argument no-op delegate that a token-aware signature would break.
+                Task cancellation = Task.Delay(Timeout.Infinite, ct);
+                Task completed = await Task.WhenAny(_delay(delay), cancellation);
+                if (completed == cancellation)
+                    break;
 
-            if (!tasks.BinariesReady)
-            {
-                await TryProvisionBinariesAsync(tasks);
-            }
-
-            if (!tasks.ApiKeysLoaded)
-            {
-                try
+                bool hasNetwork = await NetworkProbe.CheckConnectivity();
+                if (!hasNetwork)
                 {
-                    await _apiKeyLoader.LoadKeys();
-                    tasks.ApiKeysLoaded = _apiKeyStore.KeysLoaded;
-                }
-                catch (Exception e)
-                {
-                    Logger.App($"Deferred ApiInfo failed: {e.Message}", LogEventLevel.Warning);
-                }
-            }
-
-            if (tasks is { Authenticated: false, ApiKeysLoaded: true })
-            {
-                string? token = _authTokenStore.AccessToken;
-                if (string.IsNullOrEmpty(token))
-                {
-                    // Auth not ready — AuthManager background refresh will handle it
+                    attempt++;
                     Logger.App(
-                        "Auth not ready — waiting for AuthManager background refresh",
-                        LogEventLevel.Verbose
+                        $"Network still unavailable. Next retry in {BackoffSchedule[Math.Min(attempt, BackoffSchedule.Length - 1)]}"
                     );
+                    _currentStatus = BuildStatus(tasks, isRunning: true);
+                    continue;
                 }
-                else
-                {
-                    tasks.Authenticated = true;
-                }
-            }
 
-            if (!tasks.NetworkDiscovered)
-            {
-                try
-                {
-                    if (_networkDiscovery is not null)
-                        await _networkDiscovery.DiscoverExternalIpAsync();
-                    tasks.NetworkDiscovered = true;
-                    ServerPhaseTracker.Current?.MarkComplete(BootStage.Network);
-                }
-                catch (Exception e)
-                {
-                    Logger.App(
-                        $"Deferred network discovery failed: {e.Message}",
-                        LogEventLevel.Warning
-                    );
-                }
-            }
+                Logger.App("Network connectivity restored — executing deferred tasks");
 
-            if (tasks is { Registered: false, Authenticated: true, NetworkDiscovered: true })
-            {
-                try
+                if (!tasks.BinariesReady)
                 {
-                    // Ensure token is present and not expired before attempting registration.
-                    // AuthManager background refresh keeps the token alive; a null/empty check
-                    // is not sufficient — nomercy-tv will reject an expired JWT.
-                    bool tokenNeedsRefresh = true;
+                    await TryProvisionBinariesAsync(tasks);
+                }
 
-                    string? registrationToken = _authTokenStore.AccessToken;
-                    if (!string.IsNullOrEmpty(registrationToken))
+                if (!tasks.ApiKeysLoaded)
+                {
+                    try
                     {
-                        try
-                        {
-                            JwtSecurityTokenHandler tokenHandler = new();
-                            JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(
-                                registrationToken
-                            );
-                            tokenNeedsRefresh =
-                                parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
-                        }
-                        catch
-                        {
-                            // Token could not be parsed — treat as expired
-                        }
+                        await _apiKeyLoader.LoadKeys();
+                        tasks.ApiKeysLoaded = _apiKeyStore.KeysLoaded;
                     }
+                    catch (Exception e)
+                    {
+                        Logger.App($"Deferred ApiInfo failed: {e.Message}", LogEventLevel.Warning);
+                    }
+                }
 
-                    if (tokenNeedsRefresh)
+                if (tasks is { Authenticated: false, ApiKeysLoaded: true })
+                {
+                    string? token = _authTokenStore.AccessToken;
+                    if (string.IsNullOrEmpty(token))
+                    {
+                        // Auth not ready — AuthManager background refresh will handle it
+                        Logger.App(
+                            "Auth not ready — waiting for AuthManager background refresh",
+                            LogEventLevel.Verbose
+                        );
+                    }
+                    else
+                    {
+                        tasks.Authenticated = true;
+                    }
+                }
+
+                if (!tasks.NetworkDiscovered)
+                {
+                    try
+                    {
+                        if (_networkDiscovery is not null)
+                            await _networkDiscovery.DiscoverExternalIpAsync();
+                        tasks.NetworkDiscovered = true;
+                        ServerPhaseTracker.Current?.MarkComplete(BootStage.Network);
+                    }
+                    catch (Exception e)
                     {
                         Logger.App(
-                            "Access token missing or expired before deferred registration — waiting for AuthManager background refresh",
+                            $"Deferred network discovery failed: {e.Message}",
                             LogEventLevel.Warning
                         );
-                        // Auth not ready — AuthManager background refresh will handle it
-                        continue;
                     }
-
-                    await _serverRegistrationService.Init();
-                    tasks.Registered = true;
-                    ServerPhaseTracker.Current?.MarkComplete(BootStage.Registered);
                 }
-                catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
+
+                if (tasks is { Registered: false, Authenticated: true, NetworkDiscovered: true })
                 {
-                    // Cooldown active — will retry on next loop iteration
-                    Logger.App($"Deferred registration deferred: {e.Message}", LogEventLevel.Debug);
+                    try
+                    {
+                        // Ensure token is present and not expired before attempting registration.
+                        // AuthManager background refresh keeps the token alive; a null/empty check
+                        // is not sufficient — nomercy-tv will reject an expired JWT.
+                        bool tokenNeedsRefresh = true;
+
+                        string? registrationToken = _authTokenStore.AccessToken;
+                        if (!string.IsNullOrEmpty(registrationToken))
+                        {
+                            try
+                            {
+                                JwtSecurityTokenHandler tokenHandler = new();
+                                JwtSecurityToken parsedToken = tokenHandler.ReadJwtToken(
+                                    registrationToken
+                                );
+                                tokenNeedsRefresh =
+                                    parsedToken.ValidTo <= DateTime.UtcNow.AddSeconds(30);
+                            }
+                            catch
+                            {
+                                // Token could not be parsed — treat as expired
+                            }
+                        }
+
+                        if (tokenNeedsRefresh)
+                        {
+                            Logger.App(
+                                "Access token missing or expired before deferred registration — waiting for AuthManager background refresh",
+                                LogEventLevel.Warning
+                            );
+                            // Auth not ready — AuthManager background refresh will handle it
+                            continue;
+                        }
+
+                        await _serverRegistrationService.Init();
+                        tasks.Registered = true;
+                        ServerPhaseTracker.Current?.MarkComplete(BootStage.Registered);
+                    }
+                    catch (InvalidOperationException e) when (e.Message.Contains("cooldown"))
+                    {
+                        // Cooldown active — will retry on next loop iteration
+                        Logger.App(
+                            $"Deferred registration deferred: {e.Message}",
+                            LogEventLevel.Debug
+                        );
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.App(
+                            $"Deferred registration failed: {e.Message}",
+                            LogEventLevel.Warning
+                        );
+                    }
                 }
-                catch (Exception e)
+
+                if (
+                    tasks is
+                    {
+                        ApiKeysLoaded: true,
+                        Authenticated: true,
+                        NetworkDiscovered: true,
+                        SeedsRun: true,
+                        Registered: true,
+                        BinariesReady: true
+                    }
+                )
                 {
-                    Logger.App($"Deferred registration failed: {e.Message}", LogEventLevel.Warning);
+                    tasks.AllCompleted = true;
+                    // Recovery finished — clear the flag HealthController.GetDetailed reads so
+                    // /health/detailed goes back to "healthy" instead of staying degraded forever
+                    // after this one recovery completes.
+                    Start.IsDegradedMode = false;
+                    Logger.App("Full mode restored — all deferred tasks completed");
                 }
-            }
 
-            if (
-                tasks is { ApiKeysLoaded: true, Authenticated: true, NetworkDiscovered: true, SeedsRun: true, Registered: true, BinariesReady: true }
-            )
-            {
-                tasks.AllCompleted = true;
-                Logger.App("Full mode restored — all deferred tasks completed");
+                _currentStatus = BuildStatus(tasks, isRunning: !tasks.AllCompleted);
+                attempt++;
             }
-
-            attempt++;
         }
+        catch (OperationCanceledException)
+        {
+            Logger.App("Degraded-mode recovery loop cancelled — server is shutting down");
+        }
+        finally
+        {
+            _currentStatus = BuildStatus(tasks, isRunning: false);
+        }
+    }
+
+    private static RecoveryStatus BuildStatus(DeferredTasks tasks, bool isRunning)
+    {
+        return new()
+        {
+            IsRunning = isRunning,
+            ApiKeysLoaded = tasks.ApiKeysLoaded,
+            Authenticated = tasks.Authenticated,
+            NetworkDiscovered = tasks.NetworkDiscovered,
+            Registered = tasks.Registered,
+            BinariesReady = tasks.BinariesReady,
+        };
     }
 
     /// <summary>

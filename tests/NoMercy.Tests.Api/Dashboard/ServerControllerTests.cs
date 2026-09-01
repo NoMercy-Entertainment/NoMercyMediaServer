@@ -12,19 +12,25 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Database;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
+using Configuration = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
 [Trait("Category", "DashboardServer")]
 public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
 {
+    private readonly NoMercyApiFactory _factory;
     private readonly HttpClient _authed;
     private readonly HttpClient _unauthed;
 
     public ServerControllerTests(NoMercyApiFactory factory)
     {
+        _factory = factory;
         _authed = factory.CreateClient().AsAuthenticated();
         _unauthed = factory.CreateClient().AsUnauthenticated();
     }
@@ -35,12 +41,24 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
     private Task<HttpResponseMessage> PostJsonAsync(HttpClient client, string url, object body) =>
         client.PostAsync(url, JsonBody(body));
 
+    private async Task<string?> ReadPersistedConfigValueAsync(string key)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        AppDbContext appContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Configuration? configuration = await appContext.Configuration.FirstOrDefaultAsync(c =>
+            c.Key == key
+        );
+        return configuration?.Value;
+    }
+
     [Fact]
     public async Task GetServer_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/server");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -56,7 +74,9 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/server/info");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -113,7 +133,9 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/server/setup");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -142,7 +164,9 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/dashboard/server/resources"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -163,7 +187,9 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/server/paths");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -202,7 +228,9 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/dashboard/server/update/check"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -231,7 +259,9 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             null
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -253,7 +283,9 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             null
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -276,7 +308,9 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
             new { ip = "10.0.0.1" }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -307,5 +341,57 @@ public class ServerControllerTests : IClassFixture<NoMercyApiFactory>
 
         doc.RootElement.TryGetProperty("status", out JsonElement status).Should().BeTrue();
         status.GetString().Should().Be("ok");
+    }
+
+    [Fact]
+    public async Task ChangeIp_PersistsInternalIpToConfigurationTable()
+    {
+        HttpResponseMessage response = await PostJsonAsync(
+            _authed,
+            "/api/v1/dashboard/server/changeIp",
+            new { ip = "192.168.1.101" }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string? persisted = await ReadPersistedConfigValueAsync("internalIp");
+        persisted
+            .Should()
+            .Be("192.168.1.101", "the changed IP must be persisted, not just held in memory");
+    }
+
+    [Fact]
+    public async Task UpdateWorkers_PersistsWorkerCountToConfigurationTable()
+    {
+        HttpResponseMessage response = await _authed.PatchAsync(
+            "/api/v1/dashboard/server/workers/library/3",
+            null
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string? persisted = await ReadPersistedConfigValueAsync("libraryRunners");
+        persisted
+            .Should()
+            .Be("3", "the worker count must be written to Configuration so it survives a restart");
+    }
+
+    [Fact]
+    public async Task LogLevel_PersistsLevelToConfigurationTable()
+    {
+        HttpResponseMessage response = await _authed.PostAsync(
+            "/api/v1/dashboard/server/loglevel?level=Warning",
+            null
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string? persisted = await ReadPersistedConfigValueAsync("logLevel");
+        persisted
+            .Should()
+            .Be(
+                "Warning",
+                "the log level must be persisted, not only the in-memory NOMERCY_LOG_LEVEL-backed value"
+            );
     }
 }

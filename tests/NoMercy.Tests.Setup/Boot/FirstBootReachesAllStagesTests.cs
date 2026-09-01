@@ -74,8 +74,14 @@ public sealed class FirstBootReachesAllStagesTests : IDisposable
             new FakeDegradedModeRecovery(),
             new FakeServerRegistrationService(),
             new AuthTokenStore(),
-            new CertificateService(NullLogger<CertificateService>.Instance, null!)
+            new CertificateService(NullLogger<CertificateService>.Instance, null!),
+            new RealHttpClientFactory()
         );
+    }
+
+    private sealed class RealHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
     }
 
     public void Dispose()

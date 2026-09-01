@@ -216,7 +216,9 @@ public class VideoPlaylistResponseDto
                 .Concat(fontsTrack)
                 .Concat(chaptersTrack)
                 .OrderBy(track => track.Language)
-                .ToList()
+                .ToList(),
+            videoFile.Metadata,
+            baseFolder
         );
 
         Season = index is not null ? 0 : episode.SeasonNumber;
@@ -346,7 +348,9 @@ public class VideoPlaylistResponseDto
                 .Concat(fontsTrack)
                 .Concat(chaptersTrack)
                 .OrderBy(track => track.Language)
-                .ToList()
+                .ToList(),
+            videoFile.Metadata,
+            baseFolder
         );
 
         Chapters = videoFile.Metadata?.Chapters ?? [];
@@ -462,6 +466,50 @@ public class VideoPlaylistResponseDto
     /// what it gained was a <c>.webp</c> where it parses cue text.</para>
     /// <para>Kept as a named step rather than inlined: the pairing is the contract
     /// clients depend on, and it is worth stating that both halves go out.</para>
+    /// <para>The stored track rows are not trusted over the metadata. A folder
+    /// scanned before the preview files were renamed keeps a <c>sprite</c> row
+    /// naming a sheet that is no longer on disk and no <c>thumbnails</c> row at
+    /// all, and a client with no cue file shows no previews — measured on a real
+    /// television against <c>Furious.7.(2015)</c>, whose row said
+    /// <c>sprite.webp</c> while the folder held <c>thumbs_320x180.webp</c> and
+    /// its <c>.vtt</c>. <see cref="IPreview"/> carries both real names, so where
+    /// it has them they replace the pair rather than sit beside it.</para>
     /// </summary>
-    private static List<VideoTrack> NormalizePreviewTracks(List<VideoTrack> tracks) => tracks;
+    private static List<VideoTrack> NormalizePreviewTracks(
+        List<VideoTrack> tracks,
+        Metadata? metadata,
+        string baseFolder
+    )
+    {
+        List<VideoTrack> fromMetadata = PreviewTracksFrom(metadata, baseFolder);
+        if (fromMetadata.Count == 0)
+            return tracks;
+
+        return
+        [
+            .. tracks.Where(track => track.Kind is not ("sprite" or "thumbnails")),
+            .. fromMetadata,
+        ];
+    }
+
+    /// <summary>
+    /// The sheet and its cue file, named as the scan found them on disk.
+    /// </summary>
+    private static List<VideoTrack> PreviewTracksFrom(Metadata? metadata, string baseFolder)
+    {
+        List<VideoTrack> tracks = [];
+
+        foreach (IPreview preview in metadata?.Previews ?? [])
+        {
+            if (preview is { ImageFileName: { Length: > 0 } sheet, ImageFileSize: > 0 })
+                tracks.Add(new() { File = $"{baseFolder}/{sheet.EncodePath()}", Kind = "sprite" });
+
+            if (preview is { TimeFileName: { Length: > 0 } cues, TimeFileSize: > 0 })
+                tracks.Add(
+                    new() { File = $"{baseFolder}/{cues.EncodePath()}", Kind = "thumbnails" }
+                );
+        }
+
+        return tracks;
+    }
 }

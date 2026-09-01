@@ -169,6 +169,8 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
         public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
+
+        public Task RemovePortMappingsAsync() => Task.CompletedTask;
     }
 
     [Fact]
@@ -363,5 +365,7 @@ public sealed class SelfSignedCertificateFallbackTests : IDisposable
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
         public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
+
+        public Task RemovePortMappingsAsync() => Task.CompletedTask;
     }
 }

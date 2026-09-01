@@ -32,5 +32,8 @@ public sealed class FakeServerRegistrationService : IServerRegistrationService
 /// <summary>No-op <see cref="IDegradedModeRecovery"/> for boot tests.</summary>
 public sealed class FakeDegradedModeRecovery : IDegradedModeRecovery
 {
-    public Task StartRecoveryLoop(DeferredTasks tasks) => Task.CompletedTask;
+    public Task StartRecoveryLoop(DeferredTasks tasks, CancellationToken ct = default) =>
+        Task.CompletedTask;
+
+    public RecoveryStatus CurrentStatus { get; } = new();
 }

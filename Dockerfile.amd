@@ -50,6 +50,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sqlite3 \
     htop \
     nvtop \
+    # Required for outbound HTTPS (Keycloak, TMDB, API key fetch) — without
+    # this .NET has no trusted root store and every TLS handshake fails with
+    # AuthenticationException: UntrustedRoot. Present on the base Dockerfile,
+    # missing here.
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user for security

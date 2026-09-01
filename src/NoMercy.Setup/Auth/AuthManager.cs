@@ -560,7 +560,12 @@ public class AuthManager
                 );
                 if (
                     metadata?.ExpiresAt is not null
-                    && DateTime.TryParse(metadata.ExpiresAt, out DateTime parsedExpiry)
+                    && DateTime.TryParse(
+                        metadata.ExpiresAt,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.RoundtripKind,
+                        out DateTime parsedExpiry
+                    )
                 )
                     return parsedExpiry;
             }

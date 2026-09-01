@@ -69,10 +69,10 @@ public class UsersController(IUserRepository userRepository) : BaseController
             Id = request.Id,
             Email = request.Email,
             Name = request.Name,
-            Allowed = true,
+            Allowed = request.Allowed,
             AudioTranscoding = request.AudioTranscoding,
             VideoTranscoding = request.VideoTranscoding,
-            NoTranscoding = true,
+            NoTranscoding = request.NoTranscoding,
             Manage = request.Manage,
             Owner = request.Owner,
             LibraryUser =
@@ -80,7 +80,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
                     .Libraries?.Select(libraryId => new LibraryUser
                     {
                         LibraryId = libraryId,
-                        UserId = userId,
+                        UserId = request.Id,
                     })
                     .ToList()
                 ?? [],
@@ -165,15 +165,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
         if (user is null)
             return NotFoundResponse("User not found");
 
-        // TODO Implement notification settings.
-
-        return Ok(
-            new StatusResponseDto<string>
-            {
-                Status = "success",
-                Message = "Notification settings updated",
-            }
-        );
+        return NotImplementedResponse("Notification settings are not implemented yet.");
     }
 
     [HttpGet]
@@ -253,14 +245,6 @@ public class UsersController(IUserRepository userRepository) : BaseController
         if (user is null)
             return NotFoundResponse("User not found");
 
-        // TODO Implement notification settings.
-
-        return Ok(
-            new StatusResponseDto<string>
-            {
-                Status = "success",
-                Message = "Notification settings updated",
-            }
-        );
+        return NotImplementedResponse("Notification settings are not implemented yet.");
     }
 }

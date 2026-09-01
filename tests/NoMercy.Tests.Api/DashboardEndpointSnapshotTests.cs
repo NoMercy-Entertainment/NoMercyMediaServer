@@ -36,7 +36,7 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             element.TryGetProperty(propertyName, out _),
             $"Expected JSON property '{propertyName}' not found. "
-                         + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
+                + $"Properties: [{string.Join(", ", EnumerateProperties(element))}]"
         );
 
     private static IEnumerable<string> EnumerateProperties(JsonElement element)
@@ -66,7 +66,7 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         Assert.True(
             hasCustomStatus || hasProblemDetails,
             $"Expected status response shape. "
-                         + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
+                + $"Properties: [{string.Join(", ", EnumerateProperties(root))}]"
         );
     }
 
@@ -90,21 +90,17 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task Configuration_Store_ReturnsPlaceholder()
+    public async Task Configuration_Store_ReturnsNotImplemented()
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/dashboard/configuration",
             JsonBody(new { })
         );
 
-        string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
         );
-
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
     }
 
     [Fact]
@@ -168,36 +164,28 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task Devices_Create_ReturnsPlaceholder()
+    public async Task Devices_Create_ReturnsNotImplemented()
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/dashboard/devices",
             JsonBody(new { })
         );
 
-        string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
         );
-
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
     }
 
     [Fact]
-    public async Task Devices_Destroy_ReturnsPlaceholder()
+    public async Task Devices_Destroy_ClearsActivityLogs_ReturnsOk()
     {
         HttpResponseMessage response = await _client.DeleteAsync("/api/v1/dashboard/devices");
 
-        string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            $"Expected OK (200), got {(int)response.StatusCode}"
         );
-
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
     }
 
     // =========================================================================
@@ -570,21 +558,17 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task Activity_Create_ReturnsPlaceholder()
+    public async Task Activity_Create_ReturnsNotImplemented()
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/dashboard/activity",
             JsonBody(new { })
         );
 
-        string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
         );
-
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
     }
 
     [Fact]
@@ -873,25 +857,46 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task Tasks_Store_ReturnsPlaceholder()
+    public async Task Tasks_Store_ReturnsNotImplemented()
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/dashboard/tasks",
             JsonBody(new { })
         );
 
-        string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
         );
-
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
     }
 
     [Fact]
-    public async Task Tasks_Runners_ReturnsPlaceholder()
+    public async Task Tasks_Update_ReturnsNotImplemented()
+    {
+        HttpResponseMessage response = await _client.PatchAsync(
+            "/api/v1/dashboard/tasks",
+            JsonBody(new { })
+        );
+
+        Assert.True(
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
+        );
+    }
+
+    [Fact]
+    public async Task Tasks_Destroy_ReturnsNotImplemented()
+    {
+        HttpResponseMessage response = await _client.DeleteAsync("/api/v1/dashboard/tasks");
+
+        Assert.True(
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
+        );
+    }
+
+    [Fact]
+    public async Task Tasks_Runners_ReturnsActiveWorkerCount()
     {
         HttpResponseMessage response = await _client.GetAsync("/api/v1/dashboard/tasks/runners");
 
@@ -902,7 +907,8 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
         );
 
         JsonDocument json = JsonDocument.Parse(body);
-        AssertJsonHasProperty(json.RootElement, "data");
+        AssertJsonHasProperty(json.RootElement, "workers");
+        Assert.Equal(JsonValueKind.Number, json.RootElement.GetProperty("workers").ValueKind);
     }
 
     [Fact]
@@ -967,32 +973,43 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task Tasks_PauseTask_NonExistent_ReturnsOk()
+    public async Task Tasks_PauseTask_NonExistent_ReturnsNotFoundStatusWithMessage()
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/dashboard/tasks/pause/999999",
             JsonBody(new { })
         );
 
-        // Pause returns bool result; non-existent ID returns false wrapped in 200
+        string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}"
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
+
+        // No process for a non-existent task — the response must say so rather
+        // than a bare `false` a client cannot distinguish from "unsupported".
+        JsonDocument json = JsonDocument.Parse(body);
+        AssertStatusResponse(json.RootElement);
+        Assert.Equal("not_found", json.RootElement.GetProperty("status").GetString());
     }
 
     [Fact]
-    public async Task Tasks_ResumeTask_NonExistent_ReturnsOk()
+    public async Task Tasks_ResumeTask_NonExistent_ReturnsNotFoundStatusWithMessage()
     {
         HttpResponseMessage response = await _client.PostAsync(
             "/api/v1/dashboard/tasks/resume/999999",
             JsonBody(new { })
         );
 
+        string body = await response.Content.ReadAsStringAsync();
         Assert.True(
             response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}"
+            $"Expected OK, got {(int)response.StatusCode}: {body}"
         );
+
+        JsonDocument json = JsonDocument.Parse(body);
+        AssertStatusResponse(json.RootElement);
+        Assert.Equal("not_found", json.RootElement.GetProperty("status").GetString());
     }
 
     // =========================================================================
@@ -1069,21 +1086,31 @@ public class DashboardEndpointSnapshotTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
-    public async Task Users_Notifications_ReturnsStatusResponse()
+    public async Task Users_Notifications_ReturnsNotImplemented()
     {
         HttpResponseMessage response = await _client.PatchAsync(
             "/api/v1/dashboard/users/notifications",
             JsonBody(new { })
         );
 
-        string body = await response.Content.ReadAsStringAsync();
         Assert.True(
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected OK, got {(int)response.StatusCode}: {body}"
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
+        );
+    }
+
+    [Fact]
+    public async Task Users_UserNotifications_ReturnsNotImplemented()
+    {
+        HttpResponseMessage response = await _client.PatchAsync(
+            $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}/notifications",
+            JsonBody(new { })
         );
 
-        JsonDocument json = JsonDocument.Parse(body);
-        AssertStatusResponse(json.RootElement);
+        Assert.True(
+            response.StatusCode == HttpStatusCode.NotImplemented,
+            $"Expected NotImplemented (501), got {(int)response.StatusCode}"
+        );
     }
 
     [Fact]

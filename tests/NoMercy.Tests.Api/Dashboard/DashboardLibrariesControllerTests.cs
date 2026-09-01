@@ -238,6 +238,49 @@ public class DashboardLibrariesControllerTests : IClassFixture<NoMercyApiFactory
     }
 
     [Fact]
+    public async Task PatchLibrary_WithImage_PersistsTheImage()
+    {
+        Ulid libraryId = await SeedIsolatedLibraryAsync();
+
+        HttpResponseMessage response = await PatchAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { image = "/library-images/new-cover.jpg" }
+        );
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Library reloaded = await LoadLibraryAsync(libraryId);
+        reloaded.Image.Should().Be("/library-images/new-cover.jpg");
+    }
+
+    [Fact]
+    public async Task PatchLibrary_WithEmptyImage_RemovesThePersistedImage()
+    {
+        Ulid libraryId = await SeedIsolatedLibraryAsync();
+
+        HttpResponseMessage setResponse = await PatchAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { image = "/library-images/old-cover.jpg" }
+        );
+        setResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await LoadLibraryAsync(libraryId)).Image.Should().Be("/library-images/old-cover.jpg");
+
+        HttpResponseMessage clearResponse = await PatchAsync(
+            _authed,
+            $"/api/v1/dashboard/libraries/{libraryId}",
+            new { image = "" }
+        );
+        clearResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        Library reloaded = await LoadLibraryAsync(libraryId);
+        reloaded
+            .Image.Should()
+            .BeNull("an empty image value in the request must clear the library's image");
+    }
+
+    [Fact]
     public async Task DeleteLibrary_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.DeleteAsync(

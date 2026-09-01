@@ -67,6 +67,17 @@ public class LiveSession : ILiveSession
     // Injected by LiveEncoder after construction via AttachRunnerFactory.
     private Func<TimeSpan, CancellationToken, Task>? _runnerFactory;
 
+    // The most recently spawned runner task (LiveEncoder's initial spawn, or a
+    // Seek/ChangeQuality/Resume respawn). Cancelling _runnerCts only asks
+    // LiveFfmpegRunner to stop — the actual ffmpeg process kill and the
+    // synchronous WaitForExit() that releases its file handles happen inside
+    // that task. DisposeAsync must await it, or scratch-directory cleanup
+    // races the still-exiting process and fails with "used by another
+    // process" (see LiveStreamingService.TryDeleteScratch).
+    private Task? _currentRunnerTask;
+
+    internal void TrackRunnerTask(Task task) => Volatile.Write(ref _currentRunnerTask, task);
+
     // Injected by LiveStreamingService via AttachBufferResetCallback.
     private Action? _bufferResetCallback;
 
@@ -239,9 +250,11 @@ public class LiveSession : ILiveSession
                 SetState(LiveSessionState.Transcoding);
                 MarkTranscodeStart();
 
-                _ = Task.Run(
-                    () => _runnerFactory(position, _runnerCts.Token),
-                    CancellationToken.None
+                TrackRunnerTask(
+                    Task.Run(
+                        () => _runnerFactory(position, _runnerCts.Token),
+                        CancellationToken.None
+                    )
                 );
             }
         }
@@ -293,9 +306,11 @@ public class LiveSession : ILiveSession
                 // Keep same playback position — quality change doesn't rewind
                 TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
                 MarkTranscodeStart();
-                _ = Task.Run(
-                    () => _runnerFactory(resumePosition, _runnerCts.Token),
-                    CancellationToken.None
+                TrackRunnerTask(
+                    Task.Run(
+                        () => _runnerFactory(resumePosition, _runnerCts.Token),
+                        CancellationToken.None
+                    )
                 );
             }
         }
@@ -368,9 +383,11 @@ public class LiveSession : ILiveSession
             {
                 MarkTranscodeStart();
                 TimeSpan resumePosition = new(Interlocked.Read(ref _playbackPositionTicks));
-                _ = Task.Run(
-                    () => _runnerFactory(resumePosition, _runnerCts.Token),
-                    CancellationToken.None
+                TrackRunnerTask(
+                    Task.Run(
+                        () => _runnerFactory(resumePosition, _runnerCts.Token),
+                        CancellationToken.None
+                    )
                 );
             }
         }
@@ -432,7 +449,7 @@ public class LiveSession : ILiveSession
         return DateTime.UtcNow - lastReport <= maxAge;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {
@@ -452,13 +469,32 @@ public class LiveSession : ILiveSession
             // Already disposed
         }
 
+        // Cancelling _runnerCts only signals LiveFfmpegRunner to stop; the
+        // actual process kill + WaitForExit() that releases ffmpeg's file
+        // handles run inside the tracked task. Waiting for it here (bounded,
+        // since ProcessRunner already caps its own graceful-kill grace period
+        // at 5s) is what lets LiveStreamingService.TryDeleteScratch delete the
+        // scratch directory without racing a still-exiting process.
+        Task? runnerTask = Volatile.Read(ref _currentRunnerTask);
+        if (runnerTask is not null)
+        {
+            try
+            {
+                await Task.WhenAny(runnerTask, Task.Delay(TimeSpan.FromSeconds(10)))
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected on shutdown
+            }
+        }
+
         SetState(LiveSessionState.Ended);
         _segmentChannel.Writer.TryComplete();
 
         _seekLock.Dispose();
         _runnerCts.Dispose();
         _sessionCts.Dispose();
-        return ValueTask.CompletedTask;
     }
 
     private async IAsyncEnumerable<Segment> ReadSegmentsAsync(

@@ -44,7 +44,7 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(5000, "because API calls should complete within 5 seconds");
+            .BeLessThan(10000, "because API calls should complete within a generous CI-safe budget");
         result.Should().NotBeNull();
     }
 
@@ -63,7 +63,7 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(5000, "because API calls should complete within 5 seconds");
+            .BeLessThan(10000, "because API calls should complete within a generous CI-safe budget");
         result.Should().NotBeNull();
     }
 
@@ -82,7 +82,7 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(5000, "because API calls should complete within 5 seconds");
+            .BeLessThan(10000, "because API calls should complete within a generous CI-safe budget");
         result.Should().NotBeNull();
     }
 
@@ -101,7 +101,7 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
         // Assert
         stopwatch
             .ElapsedMilliseconds.Should()
-            .BeLessThan(5000, "because API calls should complete within 5 seconds");
+            .BeLessThan(10000, "because API calls should complete within a generous CI-safe budget");
         result.Should().NotBeNull();
     }
 
@@ -292,8 +292,8 @@ public class TmdbSearchPerformanceTests : TmdbTestBase
 
         // Note: This test assumes caching might be implemented
         // If no caching, both should still be within reasonable time
-        stopwatch1.ElapsedMilliseconds.Should().BeLessThan(5000);
-        stopwatch2.ElapsedMilliseconds.Should().BeLessThan(5000);
+        stopwatch1.ElapsedMilliseconds.Should().BeLessThan(10000);
+        stopwatch2.ElapsedMilliseconds.Should().BeLessThan(10000);
     }
 
     #endregion

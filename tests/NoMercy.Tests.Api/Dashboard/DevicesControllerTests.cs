@@ -70,58 +70,57 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
         }
 
         ctx.Devices.AddRange([
-                new Device
-                {
-                    Id = _ownedDeviceId,
-                    DeviceId = _ownedDeviceId.ToString(),
-                    Name = "Owned Device",
-                    Type = "phone",
-                    Browser = "xunit",
-                    Os = "TestOS",
-                    Version = "1.0",
-                    Ip = "127.0.0.1",
-                    OwnerUserId = TestUserId,
-                },
-                new Device
-                {
-                    Id = _otherDeviceId,
-                    DeviceId = _otherDeviceId.ToString(),
-                    Name = "Other User Device",
-                    Type = "phone",
-                    Browser = "xunit",
-                    Os = "TestOS",
-                    Version = "1.0",
-                    Ip = "127.0.0.2",
-                    OwnerUserId = otherUserId,
-                },
-                new Device
-                {
-                    Id = _onlineDeviceId,
-                    DeviceId = _onlineDeviceId.ToString(),
-                    Name = "Online Device",
-                    Type = "tv",
-                    Browser = "xunit",
-                    Os = "TestOS",
-                    Version = "1.0",
-                    Ip = "127.0.0.3",
-                    Fingerprint = "online-fp",
-                    OwnerUserId = TestUserId,
-                },
-                new Device
-                {
-                    Id = _offlineDeviceId,
-                    DeviceId = _offlineDeviceId.ToString(),
-                    Name = "Offline Device",
-                    Type = "tv",
-                    Browser = "xunit",
-                    Os = "TestOS",
-                    Version = "1.0",
-                    Ip = "127.0.0.4",
-                    Fingerprint = "offline-fp",
-                    OwnerUserId = TestUserId,
-                }
-            ]
-        );
+            new Device
+            {
+                Id = _ownedDeviceId,
+                DeviceId = _ownedDeviceId.ToString(),
+                Name = "Owned Device",
+                Type = "phone",
+                Browser = "xunit",
+                Os = "TestOS",
+                Version = "1.0",
+                Ip = "127.0.0.1",
+                OwnerUserId = TestUserId,
+            },
+            new Device
+            {
+                Id = _otherDeviceId,
+                DeviceId = _otherDeviceId.ToString(),
+                Name = "Other User Device",
+                Type = "phone",
+                Browser = "xunit",
+                Os = "TestOS",
+                Version = "1.0",
+                Ip = "127.0.0.2",
+                OwnerUserId = otherUserId,
+            },
+            new Device
+            {
+                Id = _onlineDeviceId,
+                DeviceId = _onlineDeviceId.ToString(),
+                Name = "Online Device",
+                Type = "tv",
+                Browser = "xunit",
+                Os = "TestOS",
+                Version = "1.0",
+                Ip = "127.0.0.3",
+                Fingerprint = "online-fp",
+                OwnerUserId = TestUserId,
+            },
+            new Device
+            {
+                Id = _offlineDeviceId,
+                DeviceId = _offlineDeviceId.ToString(),
+                Name = "Offline Device",
+                Type = "tv",
+                Browser = "xunit",
+                Os = "TestOS",
+                Version = "1.0",
+                Ip = "127.0.0.4",
+                Fingerprint = "offline-fp",
+                OwnerUserId = TestUserId,
+            },
+        ]);
 
         ctx.ActivityLogs.Add(
             new()
@@ -348,20 +347,22 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
     }
 
     // =========================================================================
-    // DELETE /devices — clear activity logs for current user's devices
+    // DELETE /devices (collection) — "clear activity logs". This is the route
+    // app-web (Desktop.vue handleClearActivityLogs, Mobile.vue clearAll) and
+    // KMP (deleteAllDeviceSessions on Android + Apple) actually call. It must
+    // clear every activity log, for every device, and must not touch a single
+    // Device row — that used to be an undocumented side effect and is gone.
     // =========================================================================
 
     [Fact]
-    public async Task Destroy_ClearsActivityLogsForCurrentUserDevices_Returns200()
+    public async Task Destroy_ClearsEveryActivityLog_ButLeavesDeviceRowsAlone()
     {
-        // Insert a fresh activity log for _ownedDeviceId immediately before calling the
-        // endpoint.  We do NOT rely on the log seeded in InitializeAsync because parallel
-        // test classes (e.g. ServerActivityControllerTests) may delete all TestUserId logs
-        // between InitializeAsync and this assertion.
-        int freshLogId;
+        Guid otherUserId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        int ownedLogId;
+        int otherLogId;
         await using (MediaContext seedCtx = new())
         {
-            ActivityLog fresh = new()
+            ActivityLog ownedLog = new()
             {
                 Category = ActivityCategory.Auth,
                 Type = "auth.test",
@@ -370,9 +371,19 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
                 UserId = TestUserId,
                 DeviceId = _ownedDeviceId,
             };
-            seedCtx.ActivityLogs.Add(fresh);
+            ActivityLog otherLog = new()
+            {
+                Category = ActivityCategory.Auth,
+                Type = "auth.login",
+                Time = DateTime.UtcNow,
+                Success = true,
+                UserId = otherUserId,
+                DeviceId = _otherDeviceId,
+            };
+            seedCtx.ActivityLogs.AddRange(ownedLog, otherLog);
             await seedCtx.SaveChangesAsync();
-            freshLogId = fresh.Id;
+            ownedLogId = ownedLog.Id;
+            otherLogId = otherLog.Id;
         }
 
         HttpResponseMessage response = await _authed.DeleteAsync("/api/v1/dashboard/devices");
@@ -383,56 +394,19 @@ public class DevicesControllerTests : IClassFixture<NoMercyApiFactory>, IAsyncLi
             $"Expected 200, got {(int)response.StatusCode}: {body}"
         );
 
-        // The freshly-inserted log must be gone — checked by ID to avoid false positives
-        // from parallel tests that may add/remove other logs for the same device.
+        // The persisted outcome: every activity log is gone, for every device
+        // and every user — not just the caller's own history.
         await using MediaContext after = new();
-        bool freshLogStillExists = await after.ActivityLogs.AnyAsync(l => l.Id == freshLogId);
-        Assert.False(
-            freshLogStillExists,
-            "The freshly-inserted ActivityLog must be deleted by Destroy()"
-        );
+        bool ownedLogGone = !await after.ActivityLogs.AnyAsync(l => l.Id == ownedLogId);
+        bool otherLogGone = !await after.ActivityLogs.AnyAsync(l => l.Id == otherLogId);
+        Assert.True(ownedLogGone, "DELETE /devices must clear the caller's activity logs");
+        Assert.True(otherLogGone, "DELETE /devices must clear every user's activity logs");
 
-        // Device rows themselves must be untouched.
-        bool deviceStillExists = await after.Devices.AnyAsync(d => d.Id == _ownedDeviceId);
-        Assert.True(deviceStillExists, "Device rows must NOT be deleted by Destroy()");
-    }
-
-    [Fact]
-    public async Task Destroy_AsModerator_ClearsAllActivityLogs_IncludingOtherUsers()
-    {
-        // Seed a log for the other user's device and capture its id.
-        Guid otherUserId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
-        int otherLogId;
-        await using (MediaContext seedCtx = new())
-        {
-            ActivityLog otherLog = new()
-            {
-                Category = ActivityCategory.Auth,
-                Type = "auth.login",
-                Time = DateTime.UtcNow,
-                Success = true,
-                UserId = otherUserId,
-                DeviceId = _otherDeviceId,
-            };
-            seedCtx.ActivityLogs.Add(otherLog);
-            await seedCtx.SaveChangesAsync();
-            otherLogId = otherLog.Id;
-        }
-
-        HttpResponseMessage response = await _authed.DeleteAsync("/api/v1/dashboard/devices");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        // The admin clear-logs action wipes the entire activity history, so even
-        // another user's log is removed. Device rows themselves stay untouched.
-        await using MediaContext after = new();
-        bool otherLogStillExists = await after.ActivityLogs.AnyAsync(l => l.Id == otherLogId);
-        Assert.False(
-            otherLogStillExists,
-            "Moderator clear-logs must remove ALL activity logs, including other users'"
-        );
-
+        // Unrelated data — the device rows themselves — must be untouched.
+        bool ownedDeviceStillExists = await after.Devices.AnyAsync(d => d.Id == _ownedDeviceId);
         bool otherDeviceStillExists = await after.Devices.AnyAsync(d => d.Id == _otherDeviceId);
-        Assert.True(otherDeviceStillExists, "Clearing logs must NOT delete device rows");
+        Assert.True(ownedDeviceStillExists, "DELETE /devices must not delete any device");
+        Assert.True(otherDeviceStillExists, "DELETE /devices must not delete any device");
     }
 
     [Fact]

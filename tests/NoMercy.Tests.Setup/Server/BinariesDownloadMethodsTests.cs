@@ -10,6 +10,7 @@
 // -----------------------------------------------------------------------------
 
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
@@ -394,6 +395,35 @@ public sealed class BinariesDownloadMethodsTests : IDisposable
         // FFmpeg is the one dependency the encoder cannot run without at all — an
         // empty release AND nothing on disk must fail loudly (retried by
         // DegradedModeRecovery), not silently leave the server encoder-less.
+        await Assert.ThrowsAsync<InvalidOperationException>(() => binaries.DownloadFfmpeg());
+    }
+
+    [Fact]
+    public async Task DownloadFfmpeg_NoAssetsInRelease_ExistingBinaryIsWrongArchitecture_Throws()
+    {
+        Directory.CreateDirectory(AppFiles.FfmpegFolder);
+
+        // A real PE header for whichever architecture this test process is NOT
+        // running as, mirroring ExecutableArchitectureTests.MatchesProcess_WrongArchitecture.
+        // Without a fetchable release, DownloadFfmpeg cannot replace it — it must
+        // throw so DegradedModeRecovery keeps retrying instead of silently leaving
+        // a binary on disk that Windows/the OS loader will refuse to start.
+        ushort wrongMachine =
+            RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+                ? (ushort)0x8664 // PE machine: x64
+                : (ushort)0xAA64; // PE machine: ARM64
+        byte[] wrongArchPe = new byte[80];
+        wrongArchPe[0] = (byte)'M';
+        wrongArchPe[1] = (byte)'Z';
+        BitConverter.GetBytes(0x40u).CopyTo(wrongArchPe, 0x3C);
+        wrongArchPe[0x40] = (byte)'P';
+        wrongArchPe[0x41] = (byte)'E';
+        BitConverter.GetBytes(wrongMachine).CopyTo(wrongArchPe, 0x44);
+        await File.WriteAllBytesAsync(AppFiles.FfmpegPath, wrongArchPe);
+
+        FakeHttpHandler handler = new();
+        Binaries binaries = BuildBinaries(handler);
+
         await Assert.ThrowsAsync<InvalidOperationException>(() => binaries.DownloadFfmpeg());
     }
 

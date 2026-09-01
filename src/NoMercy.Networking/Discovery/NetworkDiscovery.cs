@@ -34,6 +34,8 @@ public class NetworkDiscovery : INetworkDiscovery
     private bool _hasFoundDevice;
     private bool _containerIpWarned;
     private static bool _natHandlersSubscribed;
+    private TaskCompletionSource<bool>? _deviceFoundSignal;
+    private List<Mapping> _createdMappings = [];
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly IConnectivityStatus _connectivityStatus;
@@ -206,12 +208,22 @@ public class NetworkDiscovery : INetworkDiscovery
 
             _logger.LogInformation("Discovering UPNP devices");
 
+            if (!_hasFoundDevice)
+                _deviceFoundSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
             _ = Task.Run(() => NatUtility.StartDiscovery());
 
-            if (!_hasFoundDevice)
-                await Task.Delay(TimeSpan.FromSeconds(5));
-            if (!_hasFoundDevice)
-                await Task.Delay(TimeSpan.FromSeconds(10));
+            // A container's network namespace almost never has a routable path to the
+            // host's IGD, so waiting here just stalls boot for the full window on every
+            // Docker install for a discovery that was never going to succeed. Discovery
+            // still runs (a container on host networking can occasionally see a device),
+            // it just no longer blocks startup on it.
+            if (!_hasFoundDevice && !Screen.IsDocker)
+            {
+                // Event-driven: return the instant DeviceFound fires instead of always
+                // sleeping the full window, capped at the same 15s ceiling as before.
+                await Task.WhenAny(_deviceFoundSignal!.Task, Task.Delay(TimeSpan.FromSeconds(15)));
+            }
 
             if (!_hasFoundDevice)
             {
@@ -265,6 +277,7 @@ public class NetworkDiscovery : INetworkDiscovery
 
         _device = args.Device;
         _hasFoundDevice = true;
+        _deviceFoundSignal?.TrySetResult(true);
 
         ApplyNatStatus();
     }
@@ -281,25 +294,45 @@ public class NetworkDiscovery : INetworkDiscovery
         {
             _logger.LogInformation("Trying to add UPNP records");
 
-            _device.CreatePortMap(
-                new(
-                    Protocol.Tcp,
-                    RuntimeServerSettings.Current.InternalServerPort,
-                    RuntimeServerSettings.Current.ExternalServerPort,
-                    0,
-                    "NoMercy MediaServer (TCP)"
-                )
+            Mapping tcpMapping = new(
+                Protocol.Tcp,
+                RuntimeServerSettings.Current.InternalServerPort,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                0,
+                "NoMercy MediaServer (TCP)"
+            );
+            Mapping udpMapping = new(
+                Protocol.Udp,
+                RuntimeServerSettings.Current.InternalServerPort,
+                RuntimeServerSettings.Current.ExternalServerPort,
+                0,
+                "NoMercy MediaServer (UDP)"
             );
 
-            _device.CreatePortMap(
-                new(
-                    Protocol.Udp,
-                    RuntimeServerSettings.Current.InternalServerPort,
-                    RuntimeServerSettings.Current.ExternalServerPort,
-                    0,
-                    "NoMercy MediaServer (UDP)"
-                )
+            _device.CreatePortMap(tcpMapping);
+            _device.CreatePortMap(udpMapping);
+
+            // A router accepting the SOAP call is not proof it actually forwards — Mono.Nat
+            // does not confirm this itself, and routers routinely ack a mapping they then
+            // drop. Reading the mapping back is the cheapest available proof it registered;
+            // this still is not proof a client outside the network can reach it, which is
+            // why PortForwardStrategy only ever treats Filtered as a fallback, never Verified.
+            Mapping? confirmedTcp = _device.GetSpecificMapping(
+                Protocol.Tcp,
+                RuntimeServerSettings.Current.ExternalServerPort
             );
+
+            if (confirmedTcp is null)
+            {
+                _logger.LogInformation(
+                    "Router accepted the UPNP mapping request but does not report it back — treating it as not created"
+                );
+                _hasFoundDevice = false;
+                _connectivityStatus.NatStatus = NatStatus.Closed;
+                return;
+            }
+
+            _createdMappings = [tcpMapping, udpMapping];
 
             string ip = _device.GetExternalIP().ToString();
 
@@ -321,6 +354,32 @@ public class NetworkDiscovery : INetworkDiscovery
         }
 
         _connectivityStatus.NatStatus = NatStatus.Filtered;
+    }
+
+    /// <summary>
+    /// Removes every mapping this process successfully created and verified. A mapping is
+    /// requested with lifetime 0 (permanent), so without this it survives on the router
+    /// until it reboots — a stale forward per boot that outlives a graceful stop.
+    /// </summary>
+    public Task RemovePortMappingsAsync()
+    {
+        if (_device is null || _createdMappings.Count == 0)
+            return Task.CompletedTask;
+
+        foreach (Mapping mapping in _createdMappings)
+        {
+            try
+            {
+                _device.DeletePortMap(mapping);
+            }
+            catch (Exception e)
+            {
+                _logger.LogDebug("Failed to remove UPNP port mapping: {Message}", e.Message);
+            }
+        }
+
+        _createdMappings = [];
+        return Task.CompletedTask;
     }
 
     public async Task<bool> IsPortOpenAsync()

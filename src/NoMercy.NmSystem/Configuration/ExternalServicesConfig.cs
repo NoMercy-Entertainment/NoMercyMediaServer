@@ -21,6 +21,16 @@ namespace NoMercy.NmSystem.Configuration;
 /// </summary>
 public class ExternalServicesConfig
 {
+    /// <summary>
+    /// Named <see cref="IHttpClientFactory"/> client for every outbound Keycloak
+    /// call made from the setup/boot flow (token exchange, refresh, device-code
+    /// grant, reachability probe) — registered with a configured timeout in
+    /// ServiceConfiguration.HttpClients.cs. NoMercy.Setup cannot reference
+    /// NoMercy.Providers' HttpClientNames (Providers depends on Setup), so the
+    /// name lives here instead, in the shared NmSystem layer both sides see.
+    /// </summary>
+    public const string KeycloakHttpClientName = "Keycloak";
+
     private const string DefaultAuthBaseUrl = "https://auth.nomercy.tv/realms/NoMercyTV/";
     private const string DefaultAppBaseUrl = "https://app.nomercy.tv/";
     private const string DefaultApiBaseUrl = "https://api.nomercy.tv/";

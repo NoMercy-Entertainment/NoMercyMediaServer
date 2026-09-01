@@ -229,6 +229,46 @@ public class VideoPlaylistResponseDtoTests
     }
 
     [Fact]
+    public void Ctor_StaleSpriteRow_IsReplacedByTheNamesTheScanRecorded()
+    {
+        // A folder scanned before the preview files were renamed keeps a sprite
+        // row naming a sheet that is no longer on disk and no thumbnails row at
+        // all, and both clients resolve the scrub preview from the thumbnails
+        // entry alone — so the strip falls back to bare timestamps. Measured on a
+        // real television against Furious.7.(2015): the row said sprite.webp and
+        // the folder held thumbs_320x180.webp beside its .vtt.
+        Movie movie = BuildMovieWithCertification(
+            "US",
+            [new() { File = "/sprite.webp", Kind = "sprite" }]
+        );
+
+        movie.VideoFiles.First().Metadata = new()
+        {
+            Previews =
+            [
+                new()
+                {
+                    ImageFileName = "thumbs_320x180.webp",
+                    ImageFileSize = 1024,
+                    TimeFileName = "thumbs_320x180.vtt",
+                    TimeFileSize = 512,
+                },
+            ],
+        };
+
+        VideoPlaylistResponseDto dto = new(movie, "movie", 1, "US");
+
+        Assert.EndsWith(
+            "thumbs_320x180.vtt",
+            Assert.Single(dto.Tracks, t => t.Kind == "thumbnails").File
+        );
+        Assert.EndsWith(
+            "thumbs_320x180.webp",
+            Assert.Single(dto.Tracks, t => t.Kind == "sprite").File
+        );
+    }
+
+    [Fact]
     public void Ctor_MultipleSpriteTracks_AllSurvive()
     {
         // A title rendered at more than one preview dimension has a sheet per size.

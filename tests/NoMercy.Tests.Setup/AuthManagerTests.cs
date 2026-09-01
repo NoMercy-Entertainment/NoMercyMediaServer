@@ -9,14 +9,15 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using NoMercy.NmSystem.Security;
 using System.IdentityModel.Tokens.Jwt;
-using NoMercy.NmSystem.Auth;
+using System.Reflection;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
+using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Security;
 using NoMercy.Setup.Auth;
 using NoMercy.Storage.Drivers.Local;
 
@@ -146,6 +147,64 @@ public class AuthManagerTests : IDisposable
         bool result = await _authManager.InitializeAsync();
 
         Assert.False(result);
+    }
+
+    /// <summary>
+    /// Reflection is used deliberately: <c>ParseExpiresAt</c> is private, and the fix
+    /// under test (RoundtripKind parsing) must hold on ANY host, not just whichever
+    /// timezone happens to run this suite. A bare <c>DateTime.TryParse</c> of a
+    /// round-trip "O" string (which ends in "Z" for a UTC value) converts the VALUE to
+    /// the host's local wall-clock reading and marks it Kind=Local — comparing that
+    /// against <c>DateTime.UtcNow</c> then misjudges expiry by exactly the host's UTC
+    /// offset. Asserting both the numeric value AND Kind==Utc here proves the parse is
+    /// offset-independent — the same assertion holds whether this test runs in UTC,
+    /// UTC+5, or UTC-8, without needing to mutate process-wide TimeZoneInfo.Local.
+    /// </summary>
+    [Fact]
+    public void ParseExpiresAt_RoundTripUtcString_PreservesUtcKindAndValueOnAnyHost()
+    {
+        MethodInfo parseExpiresAt =
+            typeof(AuthManager).GetMethod(
+                "ParseExpiresAt",
+                BindingFlags.NonPublic | BindingFlags.Static
+            ) ?? throw new InvalidOperationException("ParseExpiresAt not found via reflection");
+
+        DateTime expectedUtc = new(2030, 6, 15, 12, 30, 0, DateTimeKind.Utc);
+        string metadataJson = $"{{\"expires_at\":\"{expectedUtc:O}\",\"token_type\":\"Bearer\"}}";
+
+        object? result = parseExpiresAt.Invoke(null, [null, metadataJson]);
+
+        Assert.IsType<DateTime>(result);
+        DateTime parsed = (DateTime)result!;
+
+        // The bare (non-RoundtripKind) TryParse this replaces would instead shift the
+        // VALUE to local wall-clock time on any host not running in UTC — a directly
+        // observable defect, not merely a Kind label difference.
+        Assert.Equal(DateTimeKind.Utc, parsed.Kind);
+        Assert.Equal(expectedUtc, parsed);
+    }
+
+    /// <summary>
+    /// End-to-end version of the same fix: a token whose metadata expiry sits just
+    /// past <see cref="DateTime.UtcNow"/> must still be judged VALID. With the old bare
+    /// TryParse, a host west of UTC (e.g. UTC-5) would parse this "Z"-suffixed value as
+    /// if it were that many hours further in the past, misjudging a still-valid token
+    /// as expired.
+    /// </summary>
+    [Fact]
+    public async Task InitializeAsync_ExpiryJustInFuture_JudgedValid_RegardlessOfHostTimeZone()
+    {
+        DateTime almostExpired = DateTime.UtcNow.AddMinutes(10);
+        string jwt = CreateValidJwt(almostExpired);
+        await SeedSecureValue("auth_access_token", jwt);
+        await SeedSecureValue(
+            "auth_token_metadata",
+            $"{{\"expires_at\":\"{almostExpired:O}\",\"token_type\":\"Bearer\"}}"
+        );
+
+        bool result = await _authManager.InitializeAsync();
+
+        Assert.True(result);
     }
 
     [Fact]

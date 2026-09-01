@@ -150,6 +150,8 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
             delay: _ => Task.CompletedTask
         );
 
+        Start.IsDegradedMode = true;
+
         await recovery.StartRecoveryLoop(tasks).WaitAsync(TimeSpan.FromSeconds(15));
 
         Assert.True(tasks.AllCompleted);
@@ -158,6 +160,43 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
         Assert.True(tasks.NetworkDiscovered);
         Assert.True(tasks.Registered);
         Assert.Equal(1, registration.InitCallCount);
+
+        // Recovery finished — HealthController.GetDetailed must see the flag cleared,
+        // not stuck degraded forever after this one recovery completed.
+        Assert.False(Start.IsDegradedMode);
+        Assert.False(recovery.CurrentStatus.IsRunning);
+        Assert.True(recovery.CurrentStatus.Authenticated);
+        Assert.True(recovery.CurrentStatus.Registered);
+    }
+
+    [Fact]
+    public async Task StartRecoveryLoop_CancellationRequested_ExitsWithoutCompletingTasks()
+    {
+        // RFC 5737 TEST-NET-1 — keeps the loop parked on "no network" so it is still
+        // running (and observing the token) when cancellation fires, instead of racing
+        // a real network-available pass.
+        NetworkProbe.ProbeTargets = ["192.0.2.1"];
+
+        DeferredTasks tasks = new();
+        using CancellationTokenSource cts = new();
+        DegradedModeRecovery recovery = new(
+            new AuthTokenStore(),
+            new NoOpApiKeyLoader(),
+            new ApiKeyStore(),
+            new NoOpServerRegistrationService(),
+            networkDiscovery: null,
+            delay: _ => Task.Delay(Timeout.Infinite, CancellationToken.None)
+        );
+
+        Task loopTask = recovery.StartRecoveryLoop(tasks, cts.Token);
+        Assert.True(recovery.CurrentStatus.IsRunning);
+
+        cts.Cancel();
+
+        await loopTask.WaitAsync(TimeSpan.FromSeconds(10));
+
+        Assert.False(tasks.AllCompleted);
+        Assert.False(recovery.CurrentStatus.IsRunning);
     }
 
     [Fact]
@@ -353,5 +392,7 @@ public sealed class DegradedModeRecoveryLoopTests : IDisposable
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
         public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
+
+        public Task RemovePortMappingsAsync() => Task.CompletedTask;
     }
 }

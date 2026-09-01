@@ -473,6 +473,24 @@ public class ManagementController(
         );
     }
 
+    /// <summary>
+    /// Belt-and-suspenders persist for worker counts (mirrors
+    /// ConfigurationController.PersistWorkerCount). SetWorkerCount only
+    /// resizes the live queue; without this write the Configuration table
+    /// stays stale and the count reverts to the default on next boot.
+    /// </summary>
+    private async Task PersistWorkerCount(string queueName, int count)
+    {
+        string key = $"{queueName}Runners";
+        await appContext
+            .Configuration.Upsert(new() { Key = key, Value = count.ToString() })
+            .On(configuration => configuration.Key)
+            .WhenMatched((_, configuration) => new() { Value = configuration.Value })
+            .RunAsync();
+
+        await queueRunner.SetWorkerCount(queueName, count, null);
+    }
+
     [HttpPut("config")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateConfig([FromBody] ManagementConfigUpdateDto request)
@@ -483,10 +501,9 @@ public class ManagementController(
                 runtimeSettings.LibraryWorkers.Key,
                 (int)request.LibraryWorkers
             );
-            await queueRunner.SetWorkerCount(
+            await PersistWorkerCount(
                 runtimeSettings.LibraryWorkers.Key,
-                (int)request.LibraryWorkers,
-                null
+                (int)request.LibraryWorkers
             );
         }
 
@@ -496,11 +513,7 @@ public class ManagementController(
                 runtimeSettings.ImportWorkers.Key,
                 (int)request.ImportWorkers
             );
-            await queueRunner.SetWorkerCount(
-                runtimeSettings.ImportWorkers.Key,
-                (int)request.ImportWorkers,
-                null
-            );
+            await PersistWorkerCount(runtimeSettings.ImportWorkers.Key, (int)request.ImportWorkers);
         }
 
         if (request.ExtrasWorkers is not null)
@@ -509,11 +522,7 @@ public class ManagementController(
                 runtimeSettings.ExtrasWorkers.Key,
                 (int)request.ExtrasWorkers
             );
-            await queueRunner.SetWorkerCount(
-                runtimeSettings.ExtrasWorkers.Key,
-                (int)request.ExtrasWorkers,
-                null
-            );
+            await PersistWorkerCount(runtimeSettings.ExtrasWorkers.Key, (int)request.ExtrasWorkers);
         }
 
         if (request.EncoderWorkers is not null)
@@ -522,10 +531,9 @@ public class ManagementController(
                 runtimeSettings.EncoderWorkers.Key,
                 (int)request.EncoderWorkers
             );
-            await queueRunner.SetWorkerCount(
+            await PersistWorkerCount(
                 runtimeSettings.EncoderWorkers.Key,
-                (int)request.EncoderWorkers,
-                null
+                (int)request.EncoderWorkers
             );
         }
 
@@ -535,11 +543,7 @@ public class ManagementController(
                 runtimeSettings.CronWorkers.Key,
                 (int)request.CronWorkers
             );
-            await queueRunner.SetWorkerCount(
-                runtimeSettings.CronWorkers.Key,
-                (int)request.CronWorkers,
-                null
-            );
+            await PersistWorkerCount(runtimeSettings.CronWorkers.Key, (int)request.CronWorkers);
         }
 
         if (request.ImageWorkers is not null)
@@ -548,11 +552,7 @@ public class ManagementController(
                 runtimeSettings.ImageWorkers.Key,
                 (int)request.ImageWorkers
             );
-            await queueRunner.SetWorkerCount(
-                runtimeSettings.ImageWorkers.Key,
-                (int)request.ImageWorkers,
-                null
-            );
+            await PersistWorkerCount(runtimeSettings.ImageWorkers.Key, (int)request.ImageWorkers);
         }
 
         if (request.FileWorkers is not null)
@@ -561,11 +561,7 @@ public class ManagementController(
                 runtimeSettings.FileWorkers.Key,
                 (int)request.FileWorkers
             );
-            await queueRunner.SetWorkerCount(
-                runtimeSettings.FileWorkers.Key,
-                (int)request.FileWorkers,
-                null
-            );
+            await PersistWorkerCount(runtimeSettings.FileWorkers.Key, (int)request.FileWorkers);
         }
 
         if (request.MusicWorkers is not null)
@@ -574,11 +570,7 @@ public class ManagementController(
                 runtimeSettings.MusicWorkers.Key,
                 (int)request.MusicWorkers
             );
-            await queueRunner.SetWorkerCount(
-                runtimeSettings.MusicWorkers.Key,
-                (int)request.MusicWorkers,
-                null
-            );
+            await PersistWorkerCount(runtimeSettings.MusicWorkers.Key, (int)request.MusicWorkers);
         }
 
         if (request.ServerName is not null)

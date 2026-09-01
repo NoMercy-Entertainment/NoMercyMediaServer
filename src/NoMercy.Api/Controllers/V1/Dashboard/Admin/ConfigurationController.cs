@@ -117,7 +117,9 @@ public class ConfigurationController(
     [Authorize(Policy = "Moderator")]
     public IActionResult Store()
     {
-        return Ok(new PlaceholderResponse { Data = [] });
+        return NotImplementedResponse(
+            "Creating configuration is not supported. Use PATCH to change existing keys."
+        );
     }
 
     [HttpPatch]
@@ -126,10 +128,12 @@ public class ConfigurationController(
     {
         Guid userId = User.UserId();
         List<(string key, object? oldVal, object? newVal)> changes = [];
+        bool restartRequired = false;
 
         if (request.InternalServerPort != 0)
         {
             int oldPort = runtimeSettings.InternalServerPort;
+            restartRequired = restartRequired || oldPort != request.InternalServerPort;
             runtimeSettings.InternalServerPort = request.InternalServerPort;
             await appContext
                 .Configuration.Upsert(
@@ -152,6 +156,7 @@ public class ConfigurationController(
         if (request.ExternalServerPort != 0)
         {
             int oldPort = runtimeSettings.ExternalServerPort;
+            restartRequired = restartRequired || oldPort != request.ExternalServerPort;
             runtimeSettings.ExternalServerPort = request.ExternalServerPort;
             await appContext
                 .Configuration.Upsert(
@@ -362,7 +367,9 @@ public class ConfigurationController(
         return Ok(
             new StatusResponseDto<string>
             {
-                Message = "Configuration updated successfully",
+                Message = restartRequired
+                    ? "Configuration updated successfully. Restart required for the port change to take effect."
+                    : "Configuration updated successfully",
                 Status = "success",
                 Args = [],
             }

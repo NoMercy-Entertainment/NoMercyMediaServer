@@ -27,7 +27,11 @@ namespace NoMercy.Api.Controllers;
 [ApiController]
 [Route("[controller]")]
 [AllowAnonymous]
-public class HealthController(MediaContext mediaContext, IBootStatus bootStatus) : ControllerBase
+public class HealthController(
+    MediaContext mediaContext,
+    IBootStatus bootStatus,
+    IDegradedModeRecovery degradedModeRecovery
+) : ControllerBase
 {
     /// <summary>
     /// Basic liveness probe — returns 200 if the server process is running
@@ -76,6 +80,12 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
         bool databaseHealthy = await CheckDatabase();
         bool isDegraded = Start.IsDegradedMode;
 
+        // Per-component: read the recovery loop's own progress instead of collapsing
+        // every deferred dependency onto the one IsDegradedMode flag — a caller could
+        // not previously tell "Keycloak unreachable" from "tunnel down" from "not
+        // registered yet" because all three read the same boolean.
+        RecoveryStatus recoveryStatus = degradedModeRecovery.CurrentStatus;
+
         string status = DetermineStatus(bootStatus.IsStarted, databaseHealthy, isDegraded);
 
         DetailedHealthResponse response = new()
@@ -89,9 +99,9 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
             Components = new()
             {
                 Database = databaseHealthy ? "ok" : "unavailable",
-                Authentication = isDegraded ? "degraded" : "ok",
-                Network = isDegraded ? "degraded" : "ok",
-                Registration = isDegraded ? "degraded" : "ok",
+                Authentication = ComponentState(isDegraded, recoveryStatus.Authenticated),
+                Network = ComponentState(isDegraded, recoveryStatus.NetworkDiscovered),
+                Registration = ComponentState(isDegraded, recoveryStatus.Registered),
             },
             IsDegraded = isDegraded,
         };
@@ -99,6 +109,16 @@ public class HealthController(MediaContext mediaContext, IBootStatus bootStatus)
         return databaseHealthy
             ? Ok(response)
             : StatusCode(StatusCodes.Status503ServiceUnavailable, response);
+    }
+
+    /// <summary>
+    /// A component is "ok" once the recovery loop reports it recovered even while
+    /// <c>IsDegradedMode</c> is still true for the others — this is the per-component
+    /// signal the flat boolean couldn't give.
+    /// </summary>
+    private static string ComponentState(bool isDegraded, bool componentRecovered)
+    {
+        return !isDegraded || componentRecovered ? "ok" : "degraded";
     }
 
     private static string DetermineStatus(bool serverStarted, bool databaseHealthy, bool isDegraded)

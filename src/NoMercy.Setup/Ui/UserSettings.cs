@@ -31,6 +31,45 @@ public static class UserSettings
             using AppDbContext appContext = new();
             List<Configuration> configuration = appContext.Configuration.ToList();
 
+            // Compat backfill: ConnectivityMode's in-process default changed from Auto
+            // to LocalOnly (a fresh install must not try WAN exposure before anyone
+            // opted in). An existing install that never touched this setting has no
+            // "connectivityMode" row and would silently fall through to the new
+            // LocalOnly default on next boot, stopping port-forward/tunnel with no
+            // warning. Evidence of a prior setup (an issued SSL certificate row) means
+            // this install predates the change, so pin it to the old implicit default
+            // explicitly. A genuinely fresh install has neither row and gets the new
+            // safe default with no backfill.
+            bool hasConnectivityModeRow = configuration.Any(c => c.Key == "connectivityMode");
+            if (!hasConnectivityModeRow)
+            {
+                bool isExistingInstall = configuration.Any(c =>
+                    c.Key == "ssl_certificate" && !string.IsNullOrEmpty(c.SecureValue)
+                );
+                if (isExistingInstall)
+                {
+                    Configuration backfillRow = new()
+                    {
+                        Key = "connectivityMode",
+                        Value = nameof(ConnectivityMode.Auto),
+                    };
+                    appContext
+                        .Configuration.Upsert(
+                            new() { Key = backfillRow.Key, Value = backfillRow.Value }
+                        )
+                        .On(c => c.Key)
+                        .Run();
+                    configuration.Add(backfillRow);
+
+                    Logger.App(
+                        "UserSettings: legacy install detected (SSL certificate on file, no "
+                            + "connectivityMode row) — backfilling connectivityMode=Auto to "
+                            + "preserve prior WAN-exposure behavior",
+                        LogEventLevel.Information
+                    );
+                }
+            }
+
             foreach (Configuration config in configuration)
             {
                 if (config.Key is "internalPort" or "externalPort")

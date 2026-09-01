@@ -99,11 +99,13 @@ public sealed class StartInitRemainingRegisteredFactTests : IDisposable
 
         public Task<DeferredTasks> Captured => _captured.Task;
 
-        public Task StartRecoveryLoop(DeferredTasks tasks)
+        public Task StartRecoveryLoop(DeferredTasks tasks, CancellationToken ct = default)
         {
             _captured.TrySetResult(tasks);
             return Task.CompletedTask;
         }
+
+        public RecoveryStatus CurrentStatus { get; } = new();
     }
 
     [Fact]

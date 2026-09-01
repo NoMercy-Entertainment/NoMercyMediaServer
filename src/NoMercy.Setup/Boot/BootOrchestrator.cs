@@ -14,6 +14,7 @@ using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Security;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
@@ -34,6 +35,7 @@ public class BootOrchestrator
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly ICertificateService _certificateService;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public BootOrchestrator(
         SetupState setupState,
@@ -42,7 +44,8 @@ public class BootOrchestrator
         IDegradedModeRecovery degradedModeRecovery,
         IServerRegistrationService serverRegistrationService,
         IAuthTokenStore authTokenStore,
-        ICertificateService certificateService
+        ICertificateService certificateService,
+        IHttpClientFactory httpClientFactory
     )
     {
         _authTokenStore = authTokenStore;
@@ -52,6 +55,7 @@ public class BootOrchestrator
         _apiKeyLoader = apiKeyLoader;
         _degradedModeRecovery = degradedModeRecovery;
         _serverRegistrationService = serverRegistrationService;
+        _httpClientFactory = httpClientFactory;
     }
 
     /// <summary>
@@ -64,8 +68,6 @@ public class BootOrchestrator
         // Uses Start.cs as shim until Task 17 inlines task definitions
         Logger.Setup("Phase 1: Running essential tasks...");
         await Start.InitEssential();
-
-        await _apiKeyLoader.LoadKeys(ct);
 
         // Initialize TokenStore before any DB access that touches SecureValue
         TokenStore.Initialize(services);
@@ -84,6 +86,12 @@ public class BootOrchestrator
         Logger.Setup("Phase 2: Authentication...");
         await CheckKeycloakReachabilityAsync();
         bool authSucceeded = await _authManager.InitializeAsync();
+
+        // Must run after InitializeAsync: IAuthTokenStore.AccessToken is only set
+        // inside AuthManager, so a call here before auth completed sent every
+        // first-boot GET /v1/info with no bearer — the request that never fails
+        // outright (the API still answers) but silently returns no keys.
+        await _apiKeyLoader.LoadKeys(ct);
 
         if (authSucceeded)
         {
@@ -211,7 +219,9 @@ public class BootOrchestrator
             string deviceEndpoint =
                 $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
 
-            using HttpClient client = new();
+            HttpClient client = _httpClientFactory.CreateClient(
+                ExternalServicesConfig.KeycloakHttpClientName
+            );
             List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceCodeRequestBody(
                 ExternalServicesConfig.Current.TokenClientId
             );
@@ -278,9 +288,9 @@ public class BootOrchestrator
 
         try
         {
-            using HttpClient client = new();
-            client.Timeout = TimeSpan.FromSeconds(10);
-            client.WithNoMercyUserAgent();
+            HttpClient client = _httpClientFactory.CreateClient(
+                ExternalServicesConfig.KeycloakHttpClientName
+            );
 
             using HttpResponseMessage response = await client.GetAsync(wellKnown);
 
@@ -344,18 +354,38 @@ public class BootOrchestrator
         try
         {
             _setupState.TransitionTo(SetupPhase.Registering);
-            _setupState.SetPhaseDetail("Registering server with NoMercy...");
+            // Set BEFORE the work starts: Init() below performs registration AND
+            // certificate acquisition in one call, so a detail set only after it
+            // returns describes a step that already finished — the user watched
+            // "Registering server..." for the whole multi-minute poll.
+            _setupState.SetPhaseDetail(
+                "Registering server and acquiring SSL certificate... (this can take a couple of minutes)"
+            );
 
             await _serverRegistrationService.Init();
 
             _setupState.TransitionTo(SetupPhase.Registered);
-            _setupState.SetPhaseDetail("Acquiring SSL certificate...");
 
             bool hasCert = _certificateService.HasValidCertificate();
 
-            if (hasCert)
-                _setupState.TransitionTo(SetupPhase.CertificateAcquired);
+            if (!hasCert)
+            {
+                // Cert poll exhausted — a distinct, retryable failure, never the
+                // misleading "Complete" a degraded boot used to reach.
+                _setupState.TransitionTo(SetupPhase.Failed);
+                _setupState.SetError(
+                    "Registered, but the SSL certificate could not be acquired. You can retry."
+                );
 
+                NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
+                    NmSystem.Lifecycle.BootStage.Registered
+                );
+
+                return false;
+            }
+
+            _setupState.TransitionTo(SetupPhase.CertificateAcquired);
+            _setupState.SetServerUrl(BuildServerUrl());
             _setupState.TransitionTo(SetupPhase.Complete);
             Logger.Setup("Registration and certificate setup complete");
 
@@ -363,14 +393,19 @@ public class BootOrchestrator
                 NmSystem.Lifecycle.BootStage.Registered
             );
 
-            return hasCert;
+            return true;
         }
         catch (Exception ex)
         {
-            Logger.Setup(
-                $"Registration failed: {ex.DescribeConnectionFailure()}",
-                LogEventLevel.Error
-            );
+            // The cooldown InvalidOperationException is internal backpressure, not
+            // a registration failure — showing its raw message told the operator
+            // their registration failed when the server was simply about to retry.
+            bool isCooldown = ex is InvalidOperationException && ex.Message.Contains("cooldown");
+            string displayMessage = isCooldown
+                ? "Registration is briefly paused after a recent attempt. Retrying shortly — you can also retry now."
+                : $"Registration failed: {ex.DescribeConnectionFailure()}";
+
+            Logger.Setup(displayMessage, LogEventLevel.Error);
 
             // Don't block — DegradedModeRecovery will retry. Mark Registered as
             // complete so workers don't block forever on a known-degraded boot —
@@ -382,12 +417,25 @@ public class BootOrchestrator
 
             // Transition BEFORE recording the error: TransitionTo clears
             // _errorMessage as stale-progress cleanup, so the old order wiped the
-            // failure it had just recorded and /setup/status reported a clean
-            // Complete after a failed registration.
-            _setupState.TransitionTo(SetupPhase.Complete);
-            _setupState.SetError($"Registration failed: {ex.DescribeConnectionFailure()}");
+            // failure it had just recorded. Failed (not Complete) so /setup/status
+            // reports a real failure with a retry, never a false "Setup complete!".
+            _setupState.TransitionTo(SetupPhase.Failed);
+            _setupState.SetError(displayMessage);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Built by NetworkDiscovery rather than assembled here where possible: a
+    /// hand-rolled apex-hostname form ignores a tunnelled server's srv scheme and
+    /// never resolves. Mirrors SetupEndpoints.RunPostAuthRegistration so every
+    /// completion path — interactive setup or this non-interactive boot path —
+    /// ends with a server URL the setup page can show as the "open" link.
+    /// </summary>
+    private static string BuildServerUrl()
+    {
+        return Start.NetworkDiscovery?.ExternalAddress
+            ?? $"https://{Info.DeviceId}.nomercy.tv:{RuntimeServerSettings.Current.ExternalServerPort}";
     }
 
     private async Task RunBackgroundTasksAsync(CancellationToken ct)
@@ -395,7 +443,7 @@ public class BootOrchestrator
         try
         {
             Logger.Setup("Phase 4: Starting background tasks...");
-            await Start.InitRemaining(_degradedModeRecovery, _authTokenStore.AccessToken);
+            await Start.InitRemaining(_degradedModeRecovery, _authTokenStore.AccessToken, ct);
         }
         catch (Exception ex)
         {
@@ -427,7 +475,9 @@ public class BootOrchestrator
 
             try
             {
-                using HttpClient client = new();
+                HttpClient client = _httpClientFactory.CreateClient(
+                    ExternalServicesConfig.KeycloakHttpClientName
+                );
                 List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceTokenBody(
                     ExternalServicesConfig.Current.TokenClientId,
                     deviceCode

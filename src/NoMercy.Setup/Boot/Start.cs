@@ -152,7 +152,8 @@ public class Start
 
     public static async Task InitRemaining(
         IDegradedModeRecovery? recovery = null,
-        string? accessToken = null
+        string? accessToken = null,
+        CancellationToken ct = default
     )
     {
         List<StartupTask> remainingTasks = [.. _allTasks.Where(t => t.Phase > 1)];
@@ -198,7 +199,7 @@ public class Start
                 BinariesReady = runner.CompletedTasks.Contains("Binaries"),
             };
             if (recovery is not null)
-                _ = Task.Run(() => recovery.StartRecoveryLoop(deferred));
+                _ = Task.Run(() => recovery.StartRecoveryLoop(deferred, ct), ct);
         }
 
         // Delay heavy initialization tasks to run in the background after server is ready
