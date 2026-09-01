@@ -203,7 +203,16 @@ public partial class CloudflareTunnelStrategy : IConnectivityStrategy, IDisposab
                 StartInfo = new()
                 {
                     FileName = AppFiles.CloudflareDPath,
-                    Arguments = "tunnel run",
+                    // QUIC (cloudflared's default edge transport) is unstable on some
+                    // networks — UDP filtering/NAT causes the control stream to
+                    // register then repeatedly die with "control stream encountered a
+                    // failure while serving" until cloudflared gives up after its 30s
+                    // registration window and this server falls back to PortForward
+                    // (often itself a false-positive: UPnP reports success without the
+                    // router actually honouring the mapping). http2 runs over a normal
+                    // TCP/TLS connection and is cloudflared's documented mitigation for
+                    // this exact symptom.
+                    Arguments = "tunnel --protocol http2 run",
                     // Pass the tunnel token via environment variable rather than the
                     // command line so it is not exposed in /proc/<pid>/cmdline or via
                     // WMI Win32_Process.CommandLine. cloudflared reads TUNNEL_TOKEN.
