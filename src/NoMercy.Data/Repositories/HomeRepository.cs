@@ -248,6 +248,27 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
                 || ud.CollectionId != null
                 || ud.SpecialId != null
             )
+            // A resume position can survive the file it was recorded against —
+            // the source got deleted or re-imported without a match — and
+            // without this the card still renders with nothing to play. Same
+            // "has a real file" gate GetHomeMovies/GetHomeTvs apply, extended to
+            // the two container shapes (Collection, Special) continue-watching
+            // also carries.
+            .Where(ud =>
+                (ud.Movie != null && ud.Movie.VideoFiles.Any())
+                || (ud.Tv != null && ud.Tv.Episodes.Any(e => e.VideoFiles.Any()))
+                || (
+                    ud.Collection != null
+                    && ud.Collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any())
+                )
+                || (
+                    ud.Special != null
+                    && ud.Special.Items.Any(item =>
+                        (item.Movie != null && item.Movie.VideoFiles.Any())
+                        || (item.Episode != null && item.Episode.VideoFiles.Any())
+                    )
+                )
+            )
             .OrderByDescending(ud => ud.LastPlayedDate)
             .ThenByDescending(ud => ud.Id)
             .Select(ud => new
@@ -411,6 +432,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         List<Movie> movies = await context
             .Movies.AsNoTracking()
             .Where(movie => movie.MovieUser.Any(mu => mu.UserId == userId))
+            .Where(movie => movie.VideoFiles.Any())
             .Include(movie => movie.Translations.Where(t => t.Iso6391 == language))
             .Include(movie =>
                 movie
@@ -434,6 +456,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         List<Tv> tvShows = await context
             .Tvs.AsNoTracking()
             .Where(tv => tv.TvUser.Any(tu => tu.UserId == userId))
+            .Where(tv => tv.Episodes.Any(e => e.VideoFiles.Any()))
             .Include(tv => tv.Translations.Where(t => t.Iso6391 == language))
             .Include(tv =>
                 tv.Images.Where(image => image.Type == "logo" && image.Iso6391 == "en")
@@ -456,6 +479,7 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
         List<Collection> collections = await context
             .Collections.AsNoTracking()
             .Where(collection => collection.CollectionUser.Any(cu => cu.UserId == userId))
+            .Where(collection => collection.CollectionMovies.Any(cm => cm.Movie.VideoFiles.Any()))
             .Include(collection => collection.Translations.Where(t => t.Iso6391 == language))
             .Include(collection =>
                 collection
@@ -485,6 +509,12 @@ public class HomeRepository(MediaContext context, IDbContextFactory<MediaContext
             .Specials.AsNoTracking()
             .AsSplitQuery()
             .Where(special => special.SpecialUser.Any(su => su.UserId == userId))
+            .Where(special =>
+                special.Items.Any(item =>
+                    (item.Movie != null && item.Movie.VideoFiles.Any())
+                    || (item.Episode != null && item.Episode.VideoFiles.Any())
+                )
+            )
             .Include(special => special.Items)
                 .ThenInclude(item => item.Movie)
                     .ThenInclude(m => m!.VideoFiles)
