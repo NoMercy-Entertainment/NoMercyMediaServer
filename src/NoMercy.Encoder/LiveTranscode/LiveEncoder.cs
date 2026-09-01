@@ -148,9 +148,11 @@ public class LiveEncoder(
         session.AttachRunnerFactory(SpawnRunner);
 
         session.MarkTranscodeStart();
-        _ = Task.Run(
-            () => SpawnRunner(request.StartPosition, session.RunnerCancellation),
-            CancellationToken.None
+        session.TrackRunnerTask(
+            Task.Run(
+                () => SpawnRunner(request.StartPosition, session.RunnerCancellation),
+                CancellationToken.None
+            )
         );
 
         logger.LogInformation(
@@ -261,9 +263,11 @@ public class LiveEncoder(
 
         session.AttachRunnerFactory(SpawnRunner);
         session.MarkTranscodeStart();
-        _ = Task.Run(
-            () => SpawnRunner(request.StartPosition, session.RunnerCancellation),
-            CancellationToken.None
+        session.TrackRunnerTask(
+            Task.Run(
+                () => SpawnRunner(request.StartPosition, session.RunnerCancellation),
+                CancellationToken.None
+            )
         );
 
         logger.LogInformation(

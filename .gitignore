@@ -536,6 +536,11 @@ src/NoMercy.App/Resources
 
 # Media files and assets (these should be in separate storage)
 *.mp4
+# Exception: a real ffmpeg needs a real video to reproduce the file-handle
+# race on kill, so this integration fixture is checked in rather than
+# silently Skip'd on every clone that lacks it. Must follow the *.mp4 rule —
+# gitignore only honors a negation that comes after the pattern it un-ignores.
+!tests/NoMercy.Tests.Encoder/Fixtures/live-session-repro.mp4
 *.mkv
 *.avi
 *.mov

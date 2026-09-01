@@ -247,6 +247,47 @@ public class LiveSessionTests
         session.State.Should().Be(LiveSessionState.Ended);
     }
 
+    // Regression: DisposeAsync used to only cancel _runnerCts and return —
+    // the ffmpeg process kill + file-handle release happens inside the
+    // tracked runner task, so a caller proceeding straight to scratch-
+    // directory cleanup (LiveStreamingService.TryDeleteScratch) raced a
+    // still-exiting process and failed with "used by another process".
+    [Fact]
+    public async Task DisposeAsync_WaitsForTrackedRunnerTaskToComplete()
+    {
+        LiveSession session = new("sess-001", MakeQuality());
+        bool runnerFinished = false;
+
+        session.TrackRunnerTask(
+            Task.Run(async () =>
+            {
+                await Task.Delay(200);
+                runnerFinished = true;
+            })
+        );
+
+        await session.DisposeAsync();
+
+        runnerFinished.Should().BeTrue("DisposeAsync must await the tracked runner task");
+    }
+
+    [Fact]
+    public async Task DisposeAsync_TrackedRunnerTaskThrowsOperationCanceled_DoesNotThrow()
+    {
+        LiveSession session = new("sess-001", MakeQuality());
+        session.TrackRunnerTask(
+            Task.Run(async () =>
+            {
+                await Task.Delay(50);
+                throw new OperationCanceledException();
+            })
+        );
+
+        Func<Task> act = async () => await session.DisposeAsync();
+
+        await act.Should().NotThrowAsync();
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Segment channel
     // ──────────────────────────────────────────────────────────────────────────
