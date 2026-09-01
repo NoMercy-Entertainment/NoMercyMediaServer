@@ -542,4 +542,82 @@ public class PlaybackDecisionEngineTests
 
         decision.Action.Should().Be(PlaybackAction.DirectPlay);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Legacy flat shape vs per-codec shape — the exact bug reported live:
+    // a 10-bit SDR HEVC anime episode direct-played on a phone whose HEVC
+    // decoder cannot open 10-bit, because a flat Supports10Bit=true (true
+    // ONLY for some OTHER codec on that device) got applied to every codec
+    // ResolveVideo synthesized. Not HDR — real anime HEVC encodes are
+    // routinely 10-bit SDR (ColorTransfer bt709, not smpte2084/arib-std-b67).
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private static VideoStreamInfo Make10BitSdrHevc() =>
+        new(
+            Index: 0,
+            Codec: "hevc",
+            Width: 1920,
+            Height: 1080,
+            FrameRate: 24.0,
+            BitDepth: 10,
+            PixelFormat: "yuv420p10le",
+            ColorPrimaries: "bt709",
+            ColorTransfer: "bt709",
+            ColorSpace: "bt709",
+            IsDefault: true,
+            BitRateKbps: 8000
+        );
+
+    [Fact]
+    public void TenBitSdrHevc_LegacyFlatSupports10BitAppliesToEveryCodec_WronglyDirectPlays()
+    {
+        // The exact malformed payload the app sent before the per-codec fix:
+        // the device decodes SOME 10-bit codec (say AV1), so the flat
+        // Supports10Bit legacy field is true device-wide, and
+        // ResolveVideo stamps that one boolean onto H264 AND H265 alike.
+        MediaInfo media = MakeMedia("matroska,webm", Make10BitSdrHevc(), MakeAudio("aac"));
+
+        ClientCapabilities client = new(
+            SupportedContainers: ["mkv"],
+            SupportsHdr: false,
+            MaxBitrateKbps: 0,
+            SupportedVideoCodecs: [VideoCodecType.H264, VideoCodecType.H265],
+            SupportedAudioCodecs: [AudioCodecType.Aac],
+            MaxWidth: 3840,
+            MaxHeight: 2160,
+            Supports10Bit: true
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, client);
+
+        // This IS the bug, reproduced against the real engine: a legacy
+        // client claiming device-wide 10-bit support gets a direct-play
+        // verdict for a codec whose hardware decoder cannot open 10-bit.
+        decision.Action.Should().Be(PlaybackAction.DirectPlay);
+    }
+
+    [Fact]
+    public void TenBitSdrHevc_PerCodecShapeNamesHevcAs8BitOnly_CorrectlyTranscodes()
+    {
+        // The fixed app payload: HEVC reported at its own real ceiling
+        // (8-bit only), a DIFFERENT codec (AV1, absent here) is the one
+        // that actually decodes 10-bit. Per-codec keeps them separate.
+        MediaInfo media = MakeMedia("matroska,webm", Make10BitSdrHevc(), MakeAudio("aac"));
+
+        ClientCapabilities client = new(
+            Video:
+            [
+                new VideoCodecCapability(VideoCodecType.H264, [], 8, 3840, 2160, 60, [], 0),
+                new VideoCodecCapability(VideoCodecType.H265, [], 8, 3840, 2160, 60, [], 0),
+            ],
+            Audio: [new AudioCodecCapability(AudioCodecType.Aac, 2, false, true)],
+            SupportedContainers: ["mkv"],
+            SupportsHdr: false,
+            MaxBitrateKbps: 0
+        );
+
+        PlaybackDecision decision = _engine.Decide(media, client);
+
+        decision.Action.Should().Be(PlaybackAction.TranscodeVideo);
+    }
 }
