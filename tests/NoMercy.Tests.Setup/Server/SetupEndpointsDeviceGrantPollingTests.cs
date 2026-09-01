@@ -361,11 +361,14 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         DefaultHttpContext context = BuildPostContext("/setup/device-code");
         await endpoints.HandleRequestAsync(context);
 
-        // Five consecutive failures at a 1s poll interval is ~5s of real work, but
-        // this runs alongside every other test class under CI's parallel test
-        // execution, so give it real headroom rather than a budget sized for an
-        // idle machine (which is what made this flake under load).
-        DateTime deadline = DateTime.UtcNow.AddSeconds(40);
+        // Each attempt is a 1s poll delay plus, if the loopback abort isn't
+        // detected as an immediate connection failure (observed under CI's
+        // thread-pool contention), up to the Keycloak HttpClient's full 15s
+        // timeout (ServiceConfiguration.HttpClients.cs) before the exception
+        // surfaces. Five consecutive attempts is a genuine ~80s worst case, not
+        // the few seconds an idle machine sees — size the budget for that, not
+        // for the happy path.
+        DateTime deadline = DateTime.UtcNow.AddSeconds(100);
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
             await Task.Delay(100);
 
