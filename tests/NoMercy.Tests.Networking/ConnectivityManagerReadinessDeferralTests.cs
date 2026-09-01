@@ -13,6 +13,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NoMercy.Networking.Connectivity;
 using NoMercy.Networking.Discovery;
 using NoMercy.NmSystem.Auth;
+using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Status;
 using Xunit;
 
@@ -27,8 +29,25 @@ namespace NoMercy.Tests.Networking;
 /// yet downloaded read as "the tunnel failed" instead of "not yet".
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class ConnectivityManagerReadinessDeferralTests
+public sealed class ConnectivityManagerReadinessDeferralTests : IDisposable
 {
+    private readonly ConnectivityMode _originalMode = RuntimeServerSettings
+        .Current
+        .ConnectivityMode;
+
+    // Every fixture here exercises strategy evaluation, which requires Auto —
+    // RuntimeServerSettings.Current is a process-wide static, and its default is now
+    // LocalOnly (a fresh install must not attempt remote connectivity unasked).
+    public ConnectivityManagerReadinessDeferralTests()
+    {
+        RuntimeServerSettings.Current.ConnectivityMode = ConnectivityMode.Auto;
+    }
+
+    public void Dispose()
+    {
+        RuntimeServerSettings.Current.ConnectivityMode = _originalMode;
+    }
+
     private sealed class ReadinessControlledStrategy : IConnectivityStrategy
     {
         private volatile bool _isReady;

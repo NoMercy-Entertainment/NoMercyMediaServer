@@ -59,6 +59,8 @@ public sealed class NetworkChangeMonitorTests
         }
 
         public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
+
+        public Task RemovePortMappingsAsync() => Task.CompletedTask;
     }
 
     private sealed class RecordingConnectivityManager : IConnectivityManager
@@ -159,6 +161,35 @@ public sealed class NetworkChangeMonitorTests
         // calls actually ran the re-evaluation body to completion; the other
         // bailed out at the WaitAsync(0) gate.
         Assert.True(manager.EvaluateCallCount <= 2);
+    }
+
+    [Fact]
+    public async Task OnNetworkAddressChanged_BurstOfThree_CoalescesToOneEvaluation_AfterDebounceWindow()
+    {
+        // A NIC flap fires this event several times in a tight burst. The old WaitAsync(0)
+        // single-flight gate dropped every event after whichever one happened to win the
+        // race the instant it fired; this proves the burst is instead coalesced by a timer
+        // — settling to exactly one evaluation only after the debounce window elapses; not
+        // dropped-and-forgotten before it could ever run.
+        RecordingNetworkDiscovery discovery = new() { InternalIp = "224.0.0.1" };
+        RecordingConnectivityManager manager = new();
+        NetworkChangeMonitor monitor = BuildMonitor(discovery, manager);
+
+        DateTime start = DateTime.UtcNow;
+        monitor.OnNetworkAddressChanged(null, EventArgs.Empty);
+        monitor.OnNetworkAddressChanged(null, EventArgs.Empty);
+        monitor.OnNetworkAddressChanged(null, EventArgs.Empty);
+
+        await WaitUntil(() => manager.EvaluateCallCount > 0);
+        TimeSpan elapsed = DateTime.UtcNow - start;
+
+        Assert.Equal(1, manager.EvaluateCallCount);
+        // Proves this went through the debounce timer rather than running instantly on
+        // the first call, which is what the dropped-events gate used to do.
+        Assert.True(
+            elapsed > TimeSpan.FromMilliseconds(60),
+            $"Expected the debounce window to delay evaluation, settled after {elapsed.TotalMilliseconds}ms."
+        );
     }
 
     private static NetworkAvailabilityEventArgs BuildAvailabilityArgs(bool isAvailable)

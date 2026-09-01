@@ -50,6 +50,8 @@ public sealed class ChromeCastServiceGuardClauseTests
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
         public Task<bool> IsPortOpenAsync() => Task.FromResult(false);
+
+        public Task RemovePortMappingsAsync() => Task.CompletedTask;
     }
 
     private static ChromeCastService BuildService() =>

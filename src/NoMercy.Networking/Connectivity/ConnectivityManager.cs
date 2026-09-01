@@ -118,31 +118,10 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
             if (cancellationToken.IsCancellationRequested)
                 return;
 
-            if (_authTokenStore.AccessToken is null)
-            {
-                const int maxWaitSeconds = 30;
+            await WaitForAuthenticationAsync(cancellationToken);
 
-                _logger.LogDebug("ConnectivityManager waiting for authentication...");
-                int maxWait = maxWaitSeconds;
-                while (
-                    _authTokenStore.AccessToken is null
-                    && maxWait-- > 0
-                    && !cancellationToken.IsCancellationRequested
-                )
-                    await Task.Delay(1000, cancellationToken);
-
-                if (_authTokenStore.AccessToken is null)
-                {
-                    // A server that boots before auth settles must not go unreachable in
-                    // silence. This used to log at Debug, so a server stuck here for its whole
-                    // run said nothing at any log level anyone actually reads.
-                    _logger.LogWarning(
-                        "ConnectivityManager giving up after {Seconds}s — no authentication available yet, connectivity will not be evaluated this run",
-                        maxWaitSeconds
-                    );
-                    return;
-                }
-            }
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
             // Discover external IP + UPnP BEFORE evaluating strategies,
             // so IsPortOpenAsync has the real external IP (not "0.0.0.0")
@@ -158,6 +137,43 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         catch (Exception ex)
         {
             _logger.LogWarning("Error in ConnectivityManager: {Message}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Waits for an access token for as long as it takes — an operator slower than 30s to
+    /// sign in must still get connectivity evaluated once they do, not leave the server
+    /// local-only for the rest of the run. Only cancellation (shutdown) breaks the wait.
+    /// </summary>
+    private async Task WaitForAuthenticationAsync(CancellationToken cancellationToken)
+    {
+        if (_authTokenStore.AccessToken is not null)
+            return;
+
+        const int initialWarnAfterSeconds = 30;
+
+        _logger.LogDebug("ConnectivityManager waiting for authentication...");
+        int waitedSeconds = 0;
+        bool warned = false;
+
+        while (_authTokenStore.AccessToken is null && !cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(1000, cancellationToken);
+            waitedSeconds++;
+
+            if (!warned && waitedSeconds >= initialWarnAfterSeconds)
+            {
+                warned = true;
+                // A server that boots before auth settles must not go unreachable in
+                // silence. This used to give up permanently here, so a server whose
+                // operator took longer than 30s to sign in stayed local-only until
+                // somebody restarted it by hand.
+                _logger.LogWarning(
+                    "ConnectivityManager still has no authentication after {Seconds}s — "
+                        + "connectivity stays local-only until sign-in completes, still waiting",
+                    initialWarnAfterSeconds
+                );
+            }
         }
     }
 
@@ -441,6 +457,11 @@ public class ConnectivityManager : IConnectivityManager, IHostedService, IDispos
         {
             await _activeStrategy.TeardownAsync();
         }
+
+        // A UPnP mapping is created with an unbounded lifetime, so it outlives this
+        // process on the router unless explicitly removed — a stale forward left behind
+        // on every clean stop/restart.
+        await _networkDiscovery.RemovePortMappingsAsync();
     }
 
     public void Dispose()

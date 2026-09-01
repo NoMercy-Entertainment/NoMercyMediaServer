@@ -57,7 +57,10 @@ public class RuntimeServerSettings
 
     public bool UseSynthesizedDns { get; set; }
 
-    public ConnectivityMode ConnectivityMode { get; set; } = ConnectivityMode.Auto;
+    // Local-only until the operator explicitly opts in. A fresh install must never start
+    // trying to open itself to the internet (UPnP, tunnels) before anyone has chosen that —
+    // WAN exposure is a setup step, not a default.
+    public ConnectivityMode ConnectivityMode { get; set; } = ConnectivityMode.LocalOnly;
 
     public bool? AllowAdultContent { get; set; }
 

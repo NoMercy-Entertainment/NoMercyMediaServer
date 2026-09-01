@@ -48,6 +48,8 @@ public sealed class PortForwardStrategyTests
         public Task ForceRediscoveryAsync() => Task.CompletedTask;
 
         public Task<bool> IsPortOpenAsync() => Task.FromResult(_portOpen);
+
+        public Task RemovePortMappingsAsync() => Task.CompletedTask;
     }
 
     private static PortForwardStrategy BuildStrategy(
@@ -217,5 +219,7 @@ public sealed class PortForwardStrategyTests
             IsPortOpenCalled = true;
             return Task.FromResult(false);
         }
+
+        public Task RemovePortMappingsAsync() => Task.CompletedTask;
     }
 }

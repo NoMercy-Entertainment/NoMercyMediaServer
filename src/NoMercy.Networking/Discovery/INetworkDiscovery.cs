@@ -44,4 +44,11 @@ public interface INetworkDiscovery
     /// internet (used by the port-forward connectivity strategy).
     /// </summary>
     Task<bool> IsPortOpenAsync();
+
+    /// <summary>
+    /// Removes any UPnP port mappings this process created. A mapping is requested with an
+    /// unbounded lifetime, so it survives on the router until either the router reboots or
+    /// this is called — a clean stop/restart must not leave a stale forward behind.
+    /// </summary>
+    Task RemovePortMappingsAsync();
 }

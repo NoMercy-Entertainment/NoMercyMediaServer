@@ -12,6 +12,7 @@
 using NoMercy.Database;
 using NoMercy.Database.Models.Common;
 using NoMercy.NmSystem.Configuration;
+using NoMercy.NmSystem.Dto;
 using NoMercy.NmSystem.Information;
 using NoMercy.Setup.Ui;
 
@@ -25,6 +26,9 @@ public class UserSettingsTests : IDisposable
 {
     private readonly int _originalInternalPort = RuntimeServerSettings.Current.InternalServerPort;
     private readonly int _originalExternalPort = RuntimeServerSettings.Current.ExternalServerPort;
+    private readonly ConnectivityMode _originalConnectivityMode = RuntimeServerSettings
+        .Current
+        .ConnectivityMode;
 
     public UserSettingsTests()
     {
@@ -44,6 +48,7 @@ public class UserSettingsTests : IDisposable
 
         RuntimeServerSettings.Current.InternalServerPort = _originalInternalPort;
         RuntimeServerSettings.Current.ExternalServerPort = _originalExternalPort;
+        RuntimeServerSettings.Current.ConnectivityMode = _originalConnectivityMode;
     }
 
     [Fact]
@@ -286,6 +291,81 @@ public class UserSettingsTests : IDisposable
         success.Should().BeTrue();
         settings.Should().NotContainKey("externalPort");
         settings.Should().ContainKey("imageRunners");
+    }
+
+    [Fact]
+    public void TryGetUserSettings_ExistingInstallWithCertNoConnectivityModeRow_BackfillsAuto()
+    {
+        // Simulates an upgraded install: it has an issued SSL certificate (proof of a
+        // completed prior setup) but predates the connectivityMode setting entirely.
+        using (AppDbContext context = new())
+        {
+            context.Configuration.Add(
+                new()
+                {
+                    Key = "ssl_certificate",
+                    Value = string.Empty,
+                    SecureValue = "-----BEGIN CERTIFICATE-----fake-----END CERTIFICATE-----",
+                }
+            );
+            context.SaveChanges();
+        }
+
+        bool success = UserSettings.TryGetUserSettings(out Dictionary<string, string> settings);
+
+        success.Should().BeTrue();
+        settings.Should().ContainKey("connectivityMode");
+        settings["connectivityMode"].Should().Be(nameof(ConnectivityMode.Auto));
+
+        using AppDbContext verify = new();
+        Configuration row = verify.Configuration.Single(c => c.Key == "connectivityMode");
+        row.Value.Should().Be(nameof(ConnectivityMode.Auto));
+
+        UserSettings.ApplySettings(settings, silent: true);
+        RuntimeServerSettings.Current.ConnectivityMode.Should().Be(ConnectivityMode.Auto);
+    }
+
+    [Fact]
+    public void TryGetUserSettings_FreshInstallNoCertNoConnectivityModeRow_DoesNotBackfill()
+    {
+        // A genuinely fresh install has neither row — the new safe LocalOnly default
+        // applies with no backfill, since there is no prior behavior to preserve.
+        bool success = UserSettings.TryGetUserSettings(out Dictionary<string, string> settings);
+
+        success.Should().BeTrue();
+        settings.Should().NotContainKey("connectivityMode");
+
+        using AppDbContext verify = new();
+        verify.Configuration.Any(c => c.Key == "connectivityMode").Should().BeFalse();
+
+        RuntimeServerSettings.Current.ConnectivityMode.Should().Be(ConnectivityMode.LocalOnly);
+    }
+
+    [Fact]
+    public void TryGetUserSettings_ExistingInstallWithExplicitConnectivityModeRow_DoesNotOverwrite()
+    {
+        // A prior explicit user choice (even LocalOnly) must never be clobbered by the
+        // backfill — the row-absent check is the only trigger.
+        using (AppDbContext context = new())
+        {
+            context.Configuration.Add(
+                new()
+                {
+                    Key = "ssl_certificate",
+                    Value = string.Empty,
+                    SecureValue = "-----BEGIN CERTIFICATE-----fake-----END CERTIFICATE-----",
+                }
+            );
+            context.Configuration.Add(
+                new() { Key = "connectivityMode", Value = nameof(ConnectivityMode.PortForward) }
+            );
+            context.SaveChanges();
+        }
+
+        bool success = UserSettings.TryGetUserSettings(out Dictionary<string, string> settings);
+
+        success.Should().BeTrue();
+        settings["connectivityMode"].Should().Be(nameof(ConnectivityMode.PortForward));
     }
 
     [Fact]
