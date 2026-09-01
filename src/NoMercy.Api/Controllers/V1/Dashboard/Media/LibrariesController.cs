@@ -179,6 +179,9 @@ public class LibrariesController(
             if (request.Title != null)
                 library.Title = request.Title;
 
+            if (request.Image != null)
+                library.Image = string.IsNullOrWhiteSpace(request.Image) ? null : request.Image;
+
             if (request.PerfectSubtitleMatch.HasValue)
                 library.PerfectSubtitleMatch = request.PerfectSubtitleMatch.Value;
 

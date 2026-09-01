@@ -69,10 +69,10 @@ public class UsersController(IUserRepository userRepository) : BaseController
             Id = request.Id,
             Email = request.Email,
             Name = request.Name,
-            Allowed = true,
+            Allowed = request.Allowed,
             AudioTranscoding = request.AudioTranscoding,
             VideoTranscoding = request.VideoTranscoding,
-            NoTranscoding = true,
+            NoTranscoding = request.NoTranscoding,
             Manage = request.Manage,
             Owner = request.Owner,
             LibraryUser =
@@ -80,7 +80,7 @@ public class UsersController(IUserRepository userRepository) : BaseController
                     .Libraries?.Select(libraryId => new LibraryUser
                     {
                         LibraryId = libraryId,
-                        UserId = userId,
+                        UserId = request.Id,
                     })
                     .ToList()
                 ?? [],

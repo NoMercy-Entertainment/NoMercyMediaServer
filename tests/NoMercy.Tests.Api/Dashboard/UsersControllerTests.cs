@@ -40,7 +40,9 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/users");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -94,7 +96,9 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -146,7 +150,9 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/dashboard/users/permissions"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -174,7 +180,9 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/dashboard/users/{Guid.NewGuid()}"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -194,7 +202,118 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             $"/api/v1/dashboard/users/{TestAuthHandler.DefaultUserId}"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+    }
+
+    [Fact]
+    public async Task CreateUser_PersistsLibraryGrantUnderNewUsersOwnId_NotTheActingUsersId()
+    {
+        Guid newUserId = Guid.NewGuid();
+
+        HttpResponseMessage createResponse = await _authed.PostAsync(
+            "/api/v1/dashboard/users",
+            JsonBody(
+                new
+                {
+                    id = newUserId,
+                    email = "grant-test@example.com",
+                    name = "Grant Test",
+                    manage = false,
+                    owner = false,
+                    allowed = true,
+                    audio_transcoding = true,
+                    video_transcoding = true,
+                    no_transcoding = false,
+                    libraries = new[] { NoMercyApiFactory.MovieLibraryId },
+                }
+            )
+        );
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        HttpResponseMessage detailResponse = await _authed.GetAsync(
+            $"/api/v1/dashboard/users/{newUserId}"
+        );
+        detailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string body = await detailResponse.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+
+        JsonElement libraryUser = data.GetProperty("library_user");
+        libraryUser
+            .GetArrayLength()
+            .Should()
+            .Be(1, "the requested library grant must be persisted for the new user");
+
+        JsonElement grant = libraryUser.EnumerateArray().First();
+        grant
+            .GetProperty("library_id")
+            .GetString()
+            .Should()
+            .Be(NoMercyApiFactory.MovieLibraryId.ToString());
+        grant
+            .GetProperty("UserId")
+            .GetString()
+            .Should()
+            .Be(
+                newUserId.ToString(),
+                "the LibraryUser row must be owned by the newly-created user, not the acting owner"
+            );
+        grant
+            .GetProperty("UserId")
+            .GetString()
+            .Should()
+            .NotBe(TestAuthHandler.DefaultUserId.ToString());
+    }
+
+    [Fact]
+    public async Task CreateUser_PersistsAllowedAndNoTranscodingFromRequest_NotHardcodedDefaults()
+    {
+        Guid newUserId = Guid.NewGuid();
+
+        HttpResponseMessage createResponse = await _authed.PostAsync(
+            "/api/v1/dashboard/users",
+            JsonBody(
+                new
+                {
+                    id = newUserId,
+                    email = "restricted-test@example.com",
+                    name = "Restricted Test",
+                    manage = false,
+                    owner = false,
+                    allowed = false,
+                    audio_transcoding = false,
+                    video_transcoding = false,
+                    no_transcoding = false,
+                    libraries = Array.Empty<Ulid>(),
+                }
+            )
+        );
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        HttpResponseMessage detailResponse = await _authed.GetAsync(
+            $"/api/v1/dashboard/users/{newUserId}"
+        );
+        detailResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string body = await detailResponse.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(body);
+        JsonElement data = doc.RootElement.GetProperty("data");
+
+        data.GetProperty("allowed")
+            .GetBoolean()
+            .Should()
+            .BeFalse("the request's allowed=false must be persisted, not overridden to true");
+        data.GetProperty("no_transcoding")
+            .GetBoolean()
+            .Should()
+            .BeFalse(
+                "the request's no_transcoding=false must be persisted, not overridden to true"
+            );
     }
 
     [Fact]
@@ -206,7 +325,9 @@ public class UsersControllerTests : IClassFixture<NoMercyApiFactory>
             new { }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

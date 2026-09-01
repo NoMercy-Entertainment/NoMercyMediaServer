@@ -204,9 +204,25 @@ public partial class ServerController(
     [HttpPost]
     [Route("loglevel")]
     [Authorize(Policy = "Moderator")]
-    public IActionResult LogLevel(LogEventLevel level)
+    public async Task<IActionResult> LogLevel(LogEventLevel level)
     {
         Logger.SetLogLevel(level);
+
+        await appContext
+            .Configuration.Upsert(
+                new()
+                {
+                    Key = "logLevel",
+                    Value = level.ToString(),
+                    ModifiedBy = User.UserId(),
+                }
+            )
+            .On(configuration => configuration.Key)
+            .WhenMatched(
+                (_, configuration) =>
+                    new() { Value = configuration.Value, ModifiedBy = configuration.ModifiedBy }
+            )
+            .RunAsync();
 
         return Content("Log level set to " + level);
     }
@@ -663,10 +679,32 @@ public partial class ServerController(
     [Authorize(Policy = "Moderator")]
     public async Task<IActionResult> UpdateWorkers(string worker, int count)
     {
-        if (await queueRunner.SetWorkerCount(worker, count, User.UserId()))
-            return Ok($"{worker} worker count set to {count}");
+        Guid userId = User.UserId();
 
-        return BadRequestResponse($"{worker} worker count could not be set to {count}");
+        if (!await queueRunner.SetWorkerCount(worker, count, userId))
+            return BadRequestResponse($"{worker} worker count could not be set to {count}");
+
+        // Belt-and-suspenders persist: SetWorkerCount resizes the live queue
+        // but does not write the Configuration table, so the count reverts to
+        // the default on next boot without this write (mirrors
+        // ConfigurationController.PersistWorkerCount).
+        await appContext
+            .Configuration.Upsert(
+                new()
+                {
+                    Key = $"{worker}Runners",
+                    Value = count.ToString(),
+                    ModifiedBy = userId,
+                }
+            )
+            .On(configuration => configuration.Key)
+            .WhenMatched(
+                (_, configuration) =>
+                    new() { Value = configuration.Value, ModifiedBy = configuration.ModifiedBy }
+            )
+            .RunAsync();
+
+        return Ok($"{worker} worker count set to {count}");
     }
 
     [HttpGet]
@@ -748,6 +786,22 @@ public partial class ServerController(
         logger.LogInformation("Changing IP address to {Ip}", request.Ip);
 
         networkDiscovery.InternalIp = request.Ip;
+
+        await appContext
+            .Configuration.Upsert(
+                new()
+                {
+                    Key = "internalIp",
+                    Value = request.Ip,
+                    ModifiedBy = User.UserId(),
+                }
+            )
+            .On(configuration => configuration.Key)
+            .WhenMatched(
+                (_, configuration) =>
+                    new() { Value = configuration.Value, ModifiedBy = configuration.ModifiedBy }
+            )
+            .RunAsync();
 
         return Ok(
             new StatusResponseDto<string>

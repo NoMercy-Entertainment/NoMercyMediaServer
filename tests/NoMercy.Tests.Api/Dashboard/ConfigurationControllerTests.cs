@@ -12,19 +12,25 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Database;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
+using Configuration = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Tests.Api.Dashboard;
 
 [Trait("Category", "DashboardConfiguration")]
 public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
 {
+    private readonly NoMercyApiFactory _factory;
     private readonly HttpClient _authed;
     private readonly HttpClient _unauthed;
 
     public ConfigurationControllerTests(NoMercyApiFactory factory)
     {
+        _factory = factory;
         _authed = factory.CreateClient().AsAuthenticated();
         _unauthed = factory.CreateClient().AsUnauthenticated();
     }
@@ -40,7 +46,9 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
     {
         HttpResponseMessage response = await _unauthed.GetAsync("/api/v1/dashboard/configuration");
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -110,7 +118,9 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
             null
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -133,7 +143,9 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
             new { swagger = false }
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -178,13 +190,54 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
     }
 
     [Fact]
+    public async Task PatchConfiguration_PortChange_ResponseSaysRestartRequired_AndPersists()
+    {
+        HttpResponseMessage getResponse = await _authed.GetAsync("/api/v1/dashboard/configuration");
+        string getBody = await getResponse.Content.ReadAsStringAsync();
+        using JsonDocument getDoc = JsonDocument.Parse(getBody);
+        int currentInternalPort = getDoc
+            .RootElement.GetProperty("data")
+            .GetProperty("internal_port")
+            .GetInt32();
+        int newInternalPort = currentInternalPort == 1 ? 2 : currentInternalPort - 1;
+
+        HttpResponseMessage patchResponse = await PatchAsync(
+            _authed,
+            "/api/v1/dashboard/configuration",
+            new { internal_port = newInternalPort }
+        );
+        patchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        string body = await patchResponse.Content.ReadAsStringAsync();
+        using JsonDocument doc = JsonDocument.Parse(body);
+        doc.RootElement.TryGetProperty("message", out JsonElement message).Should().BeTrue();
+        message
+            .GetString()!
+            .Should()
+            .Contain(
+                "restart",
+                "the response must tell the operator a restart is required for the port change to take effect"
+            );
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        AppDbContext appContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Configuration? persisted = await appContext.Configuration.FirstOrDefaultAsync(c =>
+            c.Key == "internalPort"
+        );
+        persisted.Should().NotBeNull();
+        persisted!.Value.Should().Be(newInternalPort.ToString());
+    }
+
+    [Fact]
     public async Task GetLanguages_ReturnsUnauthorized_WhenAnonymous()
     {
         HttpResponseMessage response = await _unauthed.GetAsync(
             "/api/v1/dashboard/configuration/languages"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]
@@ -210,7 +263,9 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
             "/api/v1/dashboard/configuration/countries"
         );
 
-        response.StatusCode.Should().BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
+        response
+            .StatusCode.Should()
+            .BeOneOf([HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden]);
     }
 
     [Fact]

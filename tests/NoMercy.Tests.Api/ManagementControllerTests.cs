@@ -12,18 +12,24 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using NoMercy.Database;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
+using Configuration = NoMercy.Database.Models.Common.Configuration;
 
 namespace NoMercy.Tests.Api;
 
 [Trait("Category", "Characterization")]
 public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
 {
+    private readonly NoMercyApiFactory _factory;
     private readonly HttpClient _client;
 
     public ManagementControllerTests(NoMercyApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -174,5 +180,28 @@ public class ManagementControllerTests : IClassFixture<NoMercyApiFactory>
         JsonDocument json = JsonDocument.Parse(content);
 
         Assert.Equal("ok", json.RootElement.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task ManageConfigUpdate_PersistsWorkerCountToConfigurationTable()
+    {
+        StringContent body = new(
+            JsonSerializer.Serialize(new { library_workers = 4 }),
+            Encoding.UTF8,
+            "application/json"
+        );
+
+        HttpResponseMessage response = await _client.PutAsync("/manage/config", body);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        AppDbContext appContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Configuration? persisted = await appContext.Configuration.FirstOrDefaultAsync(c =>
+            c.Key == "libraryRunners"
+        );
+
+        Assert.NotNull(persisted);
+        Assert.Equal("4", persisted!.Value);
     }
 }
