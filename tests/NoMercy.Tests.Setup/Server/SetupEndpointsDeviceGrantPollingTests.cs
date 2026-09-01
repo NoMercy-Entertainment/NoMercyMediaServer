@@ -52,13 +52,13 @@ namespace NoMercy.Tests.Setup.Server;
 /// RFC 8628 minimum <c>Math.Clamp</c> floor already enforces >= 1s), so most scenarios
 /// here cost only 1-2 real seconds of wall-clock wait.
 /// </remarks>
-// Every scenario here points ExternalServicesConfig.Current.AuthBaseUrl at a
-// loopback server and polls real wall-clock time — exactly the shared
-// process-wide state and CPU contention ProcessWideSetupStateCollection
-// exists to serialize this class was never in it, so it ran in xUnit's
-// default parallel bucket fighting every other test class for the thread
-// pool, which is what made its wall-clock assertions flake under CI load.
-[Trait("Category", "Unit")]
+// Every scenario here spins up a real LoopbackHttpServer and polls real
+// wall-clock time against it -- a real HTTP round trip, not a deterministic
+// unit -- so it was mislabeled as Unit and forced into the "fast tests" job's
+// tight budget. It also shares process-wide state
+// (ExternalServicesConfig.Current.AuthBaseUrl), which is what
+// ProcessWideSetupStateCollection exists to serialize.
+[Trait("Category", "Integration")]
 [Collection(ProcessWideSetupStateCollection.Name)]
 public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
 {
@@ -68,6 +68,16 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     private readonly string? _originalAppPath;
     private readonly string _tempAppPath;
     private readonly string? _originalTokenClientId;
+
+    // PollDeviceGrant is spawned fire-and-forget and only exits early via
+    // _appStopping.IsCancellationRequested. A bare Mock.Of<IHostApplicationLifetime>()
+    // never signals that, so a scenario that doesn't converge before its own
+    // assertion times out left the real background poll task running for the
+    // rest of the device code's expiry window -- against a loopback server this
+    // test had already disposed -- eating thread-pool capacity and mutating
+    // shared state for every test that ran after it in the same process. Wired
+    // to a real token so Dispose can actually stop it.
+    private readonly CancellationTokenSource _appStoppingCts = new();
 
     public SetupEndpointsDeviceGrantPollingTests()
     {
@@ -105,6 +115,8 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
 
     public void Dispose()
     {
+        _appStoppingCts.Cancel();
+        _appStoppingCts.Dispose();
         SetupTerminalUi.ForceInteractiveForTests = null;
         _appContext.Database.CloseConnection();
         _appContext.Dispose();
@@ -120,14 +132,18 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         catch (UnauthorizedAccessException) { }
     }
 
-    private SetupEndpoints BuildEndpoints() =>
-        new(
+    private SetupEndpoints BuildEndpoints()
+    {
+        Mock<IHostApplicationLifetime> lifetime = new();
+        lifetime.SetupGet(l => l.ApplicationStopping).Returns(_appStoppingCts.Token);
+        return new(
             _setupState,
             _authManager,
             new NoOpRegistrationService(),
             new RealHttpClientFactory(),
-            Mock.Of<IHostApplicationLifetime>()
+            lifetime.Object
         );
+    }
 
     private sealed class RealHttpClientFactory : IHttpClientFactory
     {
