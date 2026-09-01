@@ -31,6 +31,7 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Setup.Infrastructure;
 using NoMercyQueue.Workers;
+using Xunit.Abstractions;
 
 namespace NoMercy.Tests.Setup.Server;
 
@@ -79,8 +80,16 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     // to a real token so Dispose can actually stop it.
     private readonly CancellationTokenSource _appStoppingCts = new();
 
-    public SetupEndpointsDeviceGrantPollingTests()
+    // Console.WriteLine is not captured by this repo's CI test runner
+    // (confirmed empirically: prior diagnostic lines never appeared in the
+    // Actions log despite compiling and running). ITestOutputHelper is
+    // xUnit's own captured-per-test-result output channel and shows up in
+    // the .trx/console output regardless.
+    private readonly ITestOutputHelper _output;
+
+    public SetupEndpointsDeviceGrantPollingTests(ITestOutputHelper output)
     {
+        _output = output;
         SetupTerminalUi.ForceInteractiveForTests = false;
 
         _originalAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
@@ -394,20 +403,20 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         // failure carries actual timing data instead of another guess.
         DateTime start = DateTime.UtcNow;
         DateTime deadline = start.AddSeconds(400);
-        SetupPhase lastLoggedPhase = _setupState.CurrentPhase;
+        DateTime nextLog = start;
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
         {
-            if (_setupState.CurrentPhase != lastLoggedPhase)
+            if (DateTime.UtcNow >= nextLog)
             {
-                lastLoggedPhase = _setupState.CurrentPhase;
-                Console.WriteLine(
-                    $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] phase -> {lastLoggedPhase}"
+                nextLog = DateTime.UtcNow.AddSeconds(5);
+                _output.WriteLine(
+                    $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] still waiting: phase={_setupState.CurrentPhase}, requests seen by loopback server={server.RequestCount}"
                 );
             }
             await Task.Delay(100);
         }
-        Console.WriteLine(
-            $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] wait ended: phase={_setupState.CurrentPhase}, error={_setupState.ErrorMessage ?? "(null)"}"
+        _output.WriteLine(
+            $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] wait ended: phase={_setupState.CurrentPhase}, error={_setupState.ErrorMessage ?? "(null)"}, requests seen by loopback server={server.RequestCount}"
         );
 
         Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
