@@ -31,6 +31,7 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Setup.Infrastructure;
 using NoMercyQueue.Workers;
+using Xunit.Abstractions;
 
 namespace NoMercy.Tests.Setup.Server;
 
@@ -78,9 +79,11 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     // shared state for every test that ran after it in the same process. Wired
     // to a real token so Dispose can actually stop it.
     private readonly CancellationTokenSource _appStoppingCts = new();
+    private readonly ITestOutputHelper _output;
 
-    public SetupEndpointsDeviceGrantPollingTests()
+    public SetupEndpointsDeviceGrantPollingTests(ITestOutputHelper output)
     {
+        _output = output;
         SetupTerminalUi.ForceInteractiveForTests = false;
 
         _originalAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
@@ -384,22 +387,34 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         DefaultHttpContext context = BuildPostContext("/setup/device-code");
         await endpoints.HandleRequestAsync(context);
 
-        // Root-caused via the diagnostics below (kept in case this ever regresses):
+        // Root-caused a real bug (fixed in SetupEndpoints.cs, PollDeviceGrant):
         // consecutiveTransientFailures reset to 0 the instant PostAsync returned,
-        // BEFORE the body was read. On this CI runner's loopback abort, PostAsync
-        // itself completed and only ReadAsStringAsync threw -- so every tick reset
-        // to 0 then immediately re-incremented to 1 in the same iteration, and the
-        // counter could never pass 1. A persistently dead IdP polled silently
-        // forever instead of ever giving up (SetupEndpoints.cs, PollDeviceGrant).
-        // Fixed at the source: the reset now happens only after the body is fully
-        // read. Confirmed converging on CI at this budget (previously never
-        // converged at all, regardless of size) -- observed ~32s on one run,
-        // just over an initial 30s try. Five consecutive real attempts at the 1s
-        // poll interval is only ~5-8s locally; the rest is real CI variance, not
-        // runaway growth, so this margin is real headroom, not another guess.
-        DateTime deadline = DateTime.UtcNow.AddSeconds(60);
+        // BEFORE the body was read, so a connection that failed between headers
+        // and body could never accumulate past 1 -- a persistently dead IdP
+        // polled silently forever. But the last two CI runs (30s, then 60s
+        // budget) BOTH still failed at just over their own deadline (32s, 65s),
+        // which is exactly as consistent with "still not converging" as with
+        // "converging under variance" -- inconclusive without seeing whether the
+        // wait actually resolves before its own deadline. Logging every tick so
+        // the next run answers that with real data instead of another
+        // deadline-size guess.
+        DateTime start = DateTime.UtcNow;
+        DateTime deadline = start.AddSeconds(60);
+        DateTime nextLog = start;
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
+        {
+            if (DateTime.UtcNow >= nextLog)
+            {
+                nextLog = DateTime.UtcNow.AddSeconds(2);
+                _output.WriteLine(
+                    $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] waiting: phase={_setupState.CurrentPhase}, requests={server.RequestCount}"
+                );
+            }
             await Task.Delay(100);
+        }
+        _output.WriteLine(
+            $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] ended: phase={_setupState.CurrentPhase}, error={_setupState.ErrorMessage ?? "(null)"}, requests={server.RequestCount}"
+        );
 
         Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
         Assert.NotNull(_setupState.ErrorMessage);
