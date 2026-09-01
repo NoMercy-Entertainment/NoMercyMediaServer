@@ -1408,6 +1408,18 @@ public class Binaries
                     "FFmpeg is not installed and release info could not be fetched. Will retry."
                 );
 
+            // A wrong-architecture ffmpeg can never start, so "keep the existing
+            // binaries" is only safe when they actually match this machine. Without
+            // this check, a rate-limited/offline fetch would silently re-accept a
+            // stuck ARM64-on-x64 binary forever, since the replacement logic below
+            // never runs. Throwing here routes into DegradedModeRecovery's retry
+            // loop instead of leaving the server unable to encode with no signal why.
+            if (!InstalledFfmpegMatchesProcessArchitecture())
+                throw new InvalidOperationException(
+                    $"Installed ffmpeg does not match this machine's CPU architecture ({RuntimeInformation.ProcessArchitecture}) "
+                        + "and release info could not be fetched to replace it. Will retry."
+                );
+
             Logger.Setup(
                 "No assets found for FFMpeg release, keeping existing binaries.",
                 LogEventLevel.Warning
