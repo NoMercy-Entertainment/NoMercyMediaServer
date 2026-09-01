@@ -392,9 +392,12 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         // counter could never pass 1. A persistently dead IdP polled silently
         // forever instead of ever giving up (SetupEndpoints.cs, PollDeviceGrant).
         // Fixed at the source: the reset now happens only after the body is fully
-        // read. Five consecutive real attempts at the 1s poll interval is ~5-8s of
-        // real work; sized for CI headroom, not the instant-fail idle-machine case.
-        DateTime deadline = DateTime.UtcNow.AddSeconds(30);
+        // read. Confirmed converging on CI at this budget (previously never
+        // converged at all, regardless of size) -- observed ~32s on one run,
+        // just over an initial 30s try. Five consecutive real attempts at the 1s
+        // poll interval is only ~5-8s locally; the rest is real CI variance, not
+        // runaway growth, so this margin is real headroom, not another guess.
+        DateTime deadline = DateTime.UtcNow.AddSeconds(60);
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
             await Task.Delay(100);
 
