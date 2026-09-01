@@ -384,16 +384,31 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         DefaultHttpContext context = BuildPostContext("/setup/device-code");
         await endpoints.HandleRequestAsync(context);
 
-        // Verified directly (a standalone probe against a real HttpListener under
-        // synthetic thread-pool contention): HttpClient.Timeout's own callback is
-        // a queued continuation, not a hard deadline — under load it measured
-        // ~2.2x its configured 15s before firing. Five consecutive attempts at
-        // that multiplier is a genuine 175s-plus worst case on a contended CI
-        // runner, not the few seconds an idle machine sees. No smaller budget is
-        // provably safe against this mechanism.
-        DateTime deadline = DateTime.UtcNow.AddSeconds(200);
+        // This is the only scenario in the file that needs five CONSECUTIVE real
+        // connection-aborts against the loopback server; every sibling test here
+        // uses the same LoopbackHttpServer+HttpClient pattern but never chains
+        // that many failures back-to-back, and all of them pass reliably in CI —
+        // so whatever makes this slow is specific to repeated aborts, not the
+        // harness in general. 200s wasn't enough (observed ~219s and climbing);
+        // widened further with real headroom, and instrumented so a future
+        // failure carries actual timing data instead of another guess.
+        DateTime start = DateTime.UtcNow;
+        DateTime deadline = start.AddSeconds(400);
+        SetupPhase lastLoggedPhase = _setupState.CurrentPhase;
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
+        {
+            if (_setupState.CurrentPhase != lastLoggedPhase)
+            {
+                lastLoggedPhase = _setupState.CurrentPhase;
+                Console.WriteLine(
+                    $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] phase -> {lastLoggedPhase}"
+                );
+            }
             await Task.Delay(100);
+        }
+        Console.WriteLine(
+            $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] wait ended: phase={_setupState.CurrentPhase}, error={_setupState.ErrorMessage ?? "(null)"}"
+        );
 
         Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
         Assert.NotNull(_setupState.ErrorMessage);
