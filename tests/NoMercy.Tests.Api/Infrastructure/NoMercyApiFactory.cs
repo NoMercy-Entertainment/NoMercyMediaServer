@@ -84,6 +84,13 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
     protected virtual void ConfigureRealAuthentication(IServiceCollection services) { }
 
+    // Set by AnonymousNoMercyApiFactory: registers TestAnonymousAuthHandler (never
+    // produces a principal) instead of TestAuthHandler (always authenticates unless
+    // told to deny). Lets a test exercise the real anonymous request pipeline —
+    // AccessLogMiddleware's [AllowAnonymous]-metadata gate in particular — which the
+    // default, always-authenticated fixture cannot see a regression in.
+    protected virtual bool UseAnonymousTestAuthentication => false;
+
     // Default plugin manager for tests that don't care about plugins. A subclass
     // overrides this to supply a manager with real/fake plugin instances (e.g. an auth
     // plugin, to prove OnTokenValidated can only ever add claims, never grant access).
@@ -99,6 +106,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
 
             if (UseRealAuthentication)
                 ConfigureRealAuthentication(services);
+            else if (UseAnonymousTestAuthentication)
+                ReplaceAuthWithNoDefaultPrincipal(services);
             else
                 ReplaceAuth(services);
 
@@ -772,6 +781,38 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
             );
     }
 
+    // Same authorization policies as ReplaceAuth (default policy + "api" both
+    // require an authenticated user), but the scheme is TestAnonymousAuthHandler,
+    // which never produces one. A request with no special header therefore behaves
+    // exactly like a real anonymous caller: rejected by UseAuthorization for any
+    // [Authorize]-protected endpoint, waved through for any [AllowAnonymous] one.
+    private static void ReplaceAuthWithNoDefaultPrincipal(IServiceCollection services)
+    {
+        services.RemoveAll<IAuthenticationSchemeProvider>();
+        services.RemoveAll<IAuthenticationHandlerProvider>();
+
+        services
+            .AddAuthentication(TestAuthDefaults.AuthenticationScheme)
+            .AddScheme<AuthenticationSchemeOptions, TestAnonymousAuthHandler>(
+                TestAuthDefaults.AuthenticationScheme,
+                _ => { }
+            );
+
+        services
+            .AddAuthorizationBuilder()
+            .SetDefaultPolicy(
+                new AuthorizationPolicyBuilder(TestAuthDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build()
+            )
+            .AddPolicy(
+                "api",
+                new AuthorizationPolicyBuilder(TestAuthDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+                    .Build()
+            );
+    }
+
     private sealed class EmptyApiVersionDescriptionProvider : IApiVersionDescriptionProvider
     {
         public IReadOnlyList<ApiVersionDescription> ApiVersionDescriptions { get; } = [];
@@ -799,4 +840,18 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         public IEnumerable<T> GetPluginsOfType<T>()
             where T : IPlugin => [];
     }
+}
+
+/// <summary>
+/// Same seeded database and DI wiring as <see cref="NoMercyApiFactory"/>, but the
+/// default HTTP client carries NO principal at all — see
+/// <see cref="TestAnonymousAuthHandler"/>. Every other fixture in this test suite
+/// authenticates by default (TestAuthHandler), which never exercises the real
+/// anonymous-request path through AccessLogMiddleware; a test that needs to prove
+/// an [AllowAnonymous] route actually answers without a bearer token uses this
+/// factory instead.
+/// </summary>
+public class AnonymousNoMercyApiFactory : NoMercyApiFactory
+{
+    protected override bool UseAnonymousTestAuthentication => true;
 }

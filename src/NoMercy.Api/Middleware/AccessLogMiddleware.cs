@@ -12,6 +12,7 @@
 using System.Security.Claims;
 using System.Text;
 using System.Web;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,6 +36,12 @@ public class AccessLogMiddleware
         _logger = logger;
     }
 
+    // Log-level hints only — NOT an authorization list. Whether a request may
+    // proceed without a user is decided below from the matched endpoint's
+    // [AllowAnonymous] metadata (or the absence of a matched endpoint, e.g. a
+    // static file), mirroring what UseAuthorization already decided upstream.
+    // These lists only silence per-request logging for known high-frequency
+    // pollers and asset prefixes so they don't flood the console.
     private readonly string[] _ignoredStartsWithRoutes =
     [
         "/images",
@@ -109,6 +116,17 @@ public class AccessLogMiddleware
             return;
         }
 
+        // The authoritative anonymous-access decision: an endpoint that carries
+        // [AllowAnonymous] metadata (e.g. the intake webhook, the HMAC-authenticated
+        // worker routes) — or a request that matched no endpoint at all (static
+        // files, served by middleware after this one) — was already let through by
+        // UseAuthorization upstream. This middleware must not re-impose a bearer-
+        // token requirement those routes were deliberately exempted from; the
+        // hand-kept path lists above are diagnostics, not a second authorization gate.
+        Endpoint? endpoint = context.GetEndpoint();
+        bool isAllowAnonymous =
+            endpoint is null || endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null;
+
         bool ignoreIfGuest = _ignoreIfGuest.Any(route =>
             context.Request.Path.ToString().Equals(route)
         );
@@ -116,7 +134,7 @@ public class AccessLogMiddleware
         string? guid = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (guid is null)
         {
-            if (ignoreIfGuest)
+            if (isAllowAnonymous || ignoreIfGuest)
             {
                 await _next(context);
                 return;
@@ -140,7 +158,7 @@ public class AccessLogMiddleware
 
         if (!Guid.TryParse(guid, out Guid userId) || userId == Guid.Empty)
         {
-            if (ignoreIfGuest)
+            if (isAllowAnonymous || ignoreIfGuest)
             {
                 await _next(context);
                 return;
@@ -166,7 +184,7 @@ public class AccessLogMiddleware
             context.Request.Path.ToString().Equals(route)
         );
 
-        if (ignoreIfAuthenticated)
+        if (ignoreIfAuthenticated || isAllowAnonymous)
         {
             await _next(context);
             return;

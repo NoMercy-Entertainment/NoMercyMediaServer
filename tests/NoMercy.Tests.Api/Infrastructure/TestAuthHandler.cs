@@ -97,3 +97,24 @@ public class TestAuthHandler(
         return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }
+
+/// <summary>
+/// Genuinely anonymous test scheme — unlike <see cref="TestAuthHandler"/>, which
+/// authenticates every request by default (a request must opt OUT via
+/// <see cref="TestAuthDefaults.Deny"/>), this handler never produces a principal.
+/// A request through this scheme carries no bearer token and no ambient identity,
+/// matching what a real anonymous machine caller (the intake webhook, a
+/// HMAC-authenticated worker) actually sends. Used by
+/// <see cref="AnonymousNoMercyApiFactory"/> to exercise the real anonymous
+/// pipeline — AccessLogMiddleware's [AllowAnonymous] gate — instead of the
+/// always-authenticated default fixture, which cannot see a regression there.
+/// </summary>
+public class TestAnonymousAuthHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder
+) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+{
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
+        Task.FromResult(AuthenticateResult.NoResult());
+}
