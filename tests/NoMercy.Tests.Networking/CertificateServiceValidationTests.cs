@@ -205,6 +205,37 @@ public sealed class CertificateServiceValidationTests : IDisposable
         Assert.False(result);
     }
 
+    // Regression: legacy PEM fallback must parse and check NotAfter like the DB path,
+    // not just check file presence. Without the fix, an expired PEM left on disk from a
+    // pre-DB-storage install made HasValidCertificate() return true, so BootOrchestrator
+    // skipped re-registration and the recovery loop marked Registered permanently.
+
+    [Fact]
+    public void HasValidCertificate_ReturnsFalse_WhenLegacyPemFilesAreExpired()
+    {
+        CertificateService service = BuildService();
+        using X509Certificate2 expired = CreateSelfSignedCert(DateTimeOffset.UtcNow.AddSeconds(-1));
+        WritePemFiles(_certDir, expired);
+
+        bool result = service.HasValidCertificate();
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void HasValidCertificate_ReturnsFalse_WhenLegacyCertFileIsMalformed()
+    {
+        CertificateService service = BuildService();
+#pragma warning disable CS0618
+        File.WriteAllText(AppFiles.CertFile, "not a real certificate");
+        File.WriteAllText(AppFiles.KeyFile, "not a real key");
+#pragma warning restore CS0618
+
+        bool result = service.HasValidCertificate();
+
+        Assert.False(result);
+    }
+
     // Regression: DB-presence branch must load + check NotAfter, not just check row existence.
     // Without the fix, HasValidCertificate() returned true for any row regardless of expiry.
 
@@ -439,9 +470,12 @@ public sealed class CertificateServiceValidationTests : IDisposable
         Assert.Contains("dbCert.NotAfter > DateTime.Now", source);
 
         Assert.Contains(
-            "_driver.FileExists(AppFiles.CertFile) && _driver.FileExists(AppFiles.KeyFile)",
+            "!_driver.FileExists(AppFiles.CertFile) || !_driver.FileExists(AppFiles.KeyFile)",
             source
         );
+
+        // Legacy fallback must parse NotAfter, not just check presence.
+        Assert.Contains("legacyCert.NotAfter > DateTime.Now", source);
 
         Assert.Contains("_cachedCertificate is null", source);
 
