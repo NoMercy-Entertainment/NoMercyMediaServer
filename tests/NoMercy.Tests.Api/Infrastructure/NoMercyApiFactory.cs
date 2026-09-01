@@ -732,8 +732,16 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
         );
         services.AddSingleton(testAuthManager);
         IServerRegistrationService registrationService = Mock.Of<IServerRegistrationService>();
+        IHttpClientFactory httpClientFactory = Mock.Of<IHttpClientFactory>();
+        IHostApplicationLifetime appLifetime = Mock.Of<IHostApplicationLifetime>();
         services.AddSingleton(
-            new SetupEndpoints(completedState, testAuthManager, registrationService)
+            new SetupEndpoints(
+                completedState,
+                testAuthManager,
+                registrationService,
+                httpClientFactory,
+                appLifetime
+            )
         );
         services.AddSingleton(
             new BootOrchestrator(
@@ -743,7 +751,8 @@ public class NoMercyApiFactory : WebApplicationFactory<Startup>
                 Mock.Of<IDegradedModeRecovery>(),
                 registrationService,
                 new AuthTokenStore(),
-                new CertificateService(NullLogger<CertificateService>.Instance, null!)
+                new CertificateService(NullLogger<CertificateService>.Instance, null!),
+                httpClientFactory
             )
         );
     }

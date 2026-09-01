@@ -13,6 +13,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
@@ -49,16 +50,22 @@ public class SetupEndpoints
     private bool _exchangeCompleted;
 
     private readonly IServerRegistrationService _serverRegistrationService;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly CancellationToken _appStopping;
 
     public SetupEndpoints(
         SetupState state,
         AuthManager authManager,
-        IServerRegistrationService serverRegistrationService
+        IServerRegistrationService serverRegistrationService,
+        IHttpClientFactory httpClientFactory,
+        IHostApplicationLifetime appLifetime
     )
     {
         _state = state;
         _authManager = authManager;
         _serverRegistrationService = serverRegistrationService;
+        _httpClientFactory = httpClientFactory;
+        _appStopping = appLifetime.ApplicationStopping;
 
         _terminalUi = SetupTerminalUi.IsInteractiveTerminal ? new SetupTerminalUi() : null;
 
@@ -382,8 +389,9 @@ public class SetupEndpoints
             string tokenEndpoint =
                 $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
-            using SystemHttpClient httpClient = new();
-            httpClient.WithNoMercyUserAgent();
+            SystemHttpClient httpClient = _httpClientFactory.CreateClient(
+                ExternalServicesConfig.KeycloakHttpClientName
+            );
 
             using HttpResponseMessage tokenResponse = await httpClient.PostAsync(
                 tokenEndpoint,
@@ -527,8 +535,9 @@ public class SetupEndpoints
             string tokenEndpoint =
                 $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
 
-            using SystemHttpClient httpClient = new();
-            httpClient.WithNoMercyUserAgent();
+            SystemHttpClient httpClient = _httpClientFactory.CreateClient(
+                ExternalServicesConfig.KeycloakHttpClientName
+            );
 
             using HttpResponseMessage tokenResponse = await httpClient.PostAsync(
                 tokenEndpoint,
@@ -649,8 +658,9 @@ public class SetupEndpoints
             string deviceCodeEndpoint =
                 $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
 
-            using SystemHttpClient httpClient = new();
-            httpClient.WithNoMercyUserAgent();
+            SystemHttpClient httpClient = _httpClientFactory.CreateClient(
+                ExternalServicesConfig.KeycloakHttpClientName
+            );
 
             using HttpResponseMessage deviceResponse = await httpClient.PostAsync(
                 deviceCodeEndpoint,
@@ -934,16 +944,32 @@ public class SetupEndpoints
             $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/token";
         DateTime expiresAt = DateTime.UtcNow.AddSeconds(deviceData.ExpiresIn);
 
-        using SystemHttpClient httpClient = new();
-        httpClient.WithNoMercyUserAgent();
+        SystemHttpClient httpClient = _httpClientFactory.CreateClient(
+            ExternalServicesConfig.KeycloakHttpClientName
+        );
 
         // Clamp the server-supplied interval so a hostile or buggy IDP can't
         // tight-loop us (interval=0) or stall the setup phase (huge value).
         int intervalSec = Math.Clamp(deviceData.Interval, 1, 30);
 
-        while (DateTime.UtcNow < expiresAt)
+        // Consecutive transient failures (network blip, DNS hiccup, timeout) —
+        // a single one used to end the whole device login outright, which is the
+        // only Docker/NAS login path there is. Capped so a persistently dead IdP
+        // still gives up eventually rather than spinning past the code's own
+        // RFC 8628 expiry silently.
+        int consecutiveTransientFailures = 0;
+        const int maxConsecutiveTransientFailures = 5;
+
+        while (DateTime.UtcNow < expiresAt && !_appStopping.IsCancellationRequested)
         {
-            await Task.Delay(intervalSec * 1000);
+            try
+            {
+                await Task.Delay(intervalSec * 1000, _appStopping);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
 
             // Stop polling if auth completed via another path (browser login, silent SSO)
             if (_state.IsAuthenticated || _state.CurrentPhase == SetupPhase.Complete)
@@ -953,8 +979,10 @@ public class SetupEndpoints
             {
                 using HttpResponseMessage response = await httpClient.PostAsync(
                     tokenEndpoint,
-                    new FormUrlEncodedContent(tokenBody)
+                    new FormUrlEncodedContent(tokenBody),
+                    _appStopping
                 );
+                consecutiveTransientFailures = 0;
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -1003,11 +1031,29 @@ public class SetupEndpoints
                     return;
                 }
             }
+            catch (OperationCanceledException) when (_appStopping.IsCancellationRequested)
+            {
+                return;
+            }
             catch (Exception ex)
             {
-                _state.TransitionTo(SetupPhase.Unauthenticated);
-                _state.SetError($"Device login error: {ex.DescribeConnectionFailure()}");
-                return;
+                consecutiveTransientFailures++;
+
+                // A blip (timeout, DNS hiccup, connection reset) must not end the only
+                // Docker/NAS login path there is — keep polling like authorization_pending,
+                // same as RFC 8628's own retry story, until it either recovers or the
+                // failure streak/code expiry gives up on its own.
+                if (consecutiveTransientFailures >= maxConsecutiveTransientFailures)
+                {
+                    _state.TransitionTo(SetupPhase.Unauthenticated);
+                    _state.SetError($"Device login error: {ex.DescribeConnectionFailure()}");
+                    return;
+                }
+
+                Logger.Setup(
+                    $"Device poll transient error ({consecutiveTransientFailures}/{maxConsecutiveTransientFailures}): {ex.DescribeConnectionFailure()} — retrying",
+                    LogEventLevel.Warning
+                );
             }
         }
 

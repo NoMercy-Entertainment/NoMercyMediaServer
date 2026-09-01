@@ -35,6 +35,7 @@ public class BootOrchestrator
 
     private readonly IAuthTokenStore _authTokenStore;
     private readonly ICertificateService _certificateService;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public BootOrchestrator(
         SetupState setupState,
@@ -43,7 +44,8 @@ public class BootOrchestrator
         IDegradedModeRecovery degradedModeRecovery,
         IServerRegistrationService serverRegistrationService,
         IAuthTokenStore authTokenStore,
-        ICertificateService certificateService
+        ICertificateService certificateService,
+        IHttpClientFactory httpClientFactory
     )
     {
         _authTokenStore = authTokenStore;
@@ -53,6 +55,7 @@ public class BootOrchestrator
         _apiKeyLoader = apiKeyLoader;
         _degradedModeRecovery = degradedModeRecovery;
         _serverRegistrationService = serverRegistrationService;
+        _httpClientFactory = httpClientFactory;
     }
 
     /// <summary>
@@ -65,8 +68,6 @@ public class BootOrchestrator
         // Uses Start.cs as shim until Task 17 inlines task definitions
         Logger.Setup("Phase 1: Running essential tasks...");
         await Start.InitEssential();
-
-        await _apiKeyLoader.LoadKeys(ct);
 
         // Initialize TokenStore before any DB access that touches SecureValue
         TokenStore.Initialize(services);
@@ -85,6 +86,12 @@ public class BootOrchestrator
         Logger.Setup("Phase 2: Authentication...");
         await CheckKeycloakReachabilityAsync();
         bool authSucceeded = await _authManager.InitializeAsync();
+
+        // Must run after InitializeAsync: IAuthTokenStore.AccessToken is only set
+        // inside AuthManager, so a call here before auth completed sent every
+        // first-boot GET /v1/info with no bearer — the request that never fails
+        // outright (the API still answers) but silently returns no keys.
+        await _apiKeyLoader.LoadKeys(ct);
 
         if (authSucceeded)
         {
@@ -212,7 +219,9 @@ public class BootOrchestrator
             string deviceEndpoint =
                 $"{ExternalServicesConfig.Current.AuthBaseUrl}protocol/openid-connect/auth/device";
 
-            using HttpClient client = new();
+            HttpClient client = _httpClientFactory.CreateClient(
+                ExternalServicesConfig.KeycloakHttpClientName
+            );
             List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceCodeRequestBody(
                 ExternalServicesConfig.Current.TokenClientId
             );
@@ -279,9 +288,9 @@ public class BootOrchestrator
 
         try
         {
-            using HttpClient client = new();
-            client.Timeout = TimeSpan.FromSeconds(10);
-            client.WithNoMercyUserAgent();
+            HttpClient client = _httpClientFactory.CreateClient(
+                ExternalServicesConfig.KeycloakHttpClientName
+            );
 
             using HttpResponseMessage response = await client.GetAsync(wellKnown);
 
@@ -434,7 +443,7 @@ public class BootOrchestrator
         try
         {
             Logger.Setup("Phase 4: Starting background tasks...");
-            await Start.InitRemaining(_degradedModeRecovery, _authTokenStore.AccessToken);
+            await Start.InitRemaining(_degradedModeRecovery, _authTokenStore.AccessToken, ct);
         }
         catch (Exception ex)
         {
@@ -466,7 +475,9 @@ public class BootOrchestrator
 
             try
             {
-                using HttpClient client = new();
+                HttpClient client = _httpClientFactory.CreateClient(
+                    ExternalServicesConfig.KeycloakHttpClientName
+                );
                 List<KeyValuePair<string, string>> body = AuthManager.BuildDeviceTokenBody(
                     ExternalServicesConfig.Current.TokenClientId,
                     deviceCode

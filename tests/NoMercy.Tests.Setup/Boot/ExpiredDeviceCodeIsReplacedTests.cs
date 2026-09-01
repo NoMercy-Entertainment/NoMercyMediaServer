@@ -64,8 +64,14 @@ public class ExpiredDeviceCodeIsReplacedTests : IDisposable
             Mock.Of<IDegradedModeRecovery>(),
             Mock.Of<IServerRegistrationService>(),
             new AuthTokenStore(),
-            new CertificateService(NullLogger<CertificateService>.Instance, null!)
+            new CertificateService(NullLogger<CertificateService>.Instance, null!),
+            new RealHttpClientFactory()
         );
+    }
+
+    private sealed class RealHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
     }
 
     /// <summary>

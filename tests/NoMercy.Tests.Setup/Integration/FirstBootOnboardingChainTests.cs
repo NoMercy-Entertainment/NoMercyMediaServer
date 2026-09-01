@@ -377,7 +377,8 @@ public sealed class FirstBootOnboardingChainTests : IDisposable
             new FakeDegradedModeRecovery(),
             registrationService,
             tokenStore,
-            certificateService
+            certificateService,
+            new RealHttpClientFactory()
         );
 
         bool certAcquired = await orchestrator.RunRegistrationAsync(CancellationToken.None);
@@ -499,7 +500,8 @@ public sealed class FirstBootOnboardingChainTests : IDisposable
             new FakeDegradedModeRecovery(),
             registrationService,
             tokenStore,
-            certificateService
+            certificateService,
+            new RealHttpClientFactory()
         );
 
         bool certAcquired = await orchestrator.RunRegistrationAsync(CancellationToken.None);

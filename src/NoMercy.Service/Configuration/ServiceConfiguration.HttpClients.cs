@@ -251,5 +251,19 @@ public static partial class ServiceConfiguration
                 client.Timeout = defaultTimeout;
             }
         );
+
+        // Keycloak (setup/boot auth flows: token exchange, refresh, device-code
+        // grant, reachability probe). No BaseAddress — AuthBaseUrl can change at
+        // runtime and every caller already builds the full endpoint URL. A bare
+        // `new HttpClient()` per call had no timeout, so a stalled IdP hung each
+        // request for the BCL's 100s default inside a setup/boot loop.
+        services.AddHttpClient(
+            ExternalServicesConfig.KeycloakHttpClientName,
+            client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", userAgent);
+                client.Timeout = TimeSpan.FromSeconds(15);
+            }
+        );
     }
 }

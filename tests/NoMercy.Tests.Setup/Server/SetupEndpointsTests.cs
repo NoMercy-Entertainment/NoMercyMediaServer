@@ -14,8 +14,10 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
+using Moq;
 using Newtonsoft.Json;
 using NoMercy.Database;
 using NoMercy.Networking.Certificate;
@@ -109,7 +111,18 @@ public sealed class SetupEndpointsTests : IDisposable
     }
 
     private SetupEndpoints BuildEndpoints(IServerRegistrationService? registrationService = null) =>
-        new(_setupState, _authManager, registrationService ?? new FakeRegistrationService());
+        new(
+            _setupState,
+            _authManager,
+            registrationService ?? new FakeRegistrationService(),
+            new RealHttpClientFactory(),
+            Mock.Of<IHostApplicationLifetime>()
+        );
+
+    private sealed class RealHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
+    }
 
     private static DefaultHttpContext BuildContext(
         string method,

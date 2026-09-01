@@ -90,7 +90,12 @@ public class ApiKeyLoader : IApiKeyLoader
             string cachedAt = cachedData.CachedAt ?? "unknown";
 
             DateTime? cachedAtDate = cachedData.CachedAt is not null
-                ? DateTime.TryParse(cachedData.CachedAt, out DateTime parsed)
+                ? DateTime.TryParse(
+                    cachedData.CachedAt,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.RoundtripKind,
+                    out DateTime parsed
+                )
                     ? parsed
                     : null
                 : null;

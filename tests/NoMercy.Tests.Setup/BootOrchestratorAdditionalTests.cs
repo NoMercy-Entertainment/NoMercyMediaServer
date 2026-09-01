@@ -109,8 +109,14 @@ public sealed class BootOrchestratorAdditionalTests : IDisposable
             registrationService ?? new FakeServerRegistrationService(),
             new AuthTokenStore(),
             certificateService
-                ?? new CertificateService(NullLogger<CertificateService>.Instance, null!)
+                ?? new CertificateService(NullLogger<CertificateService>.Instance, null!),
+            new RealHttpClientFactory()
         );
+
+    private sealed class RealHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
+    }
 
     [Fact]
     public async Task RunAsync_NoValidToken_ReturnsTrue_EntersSetupMode()
