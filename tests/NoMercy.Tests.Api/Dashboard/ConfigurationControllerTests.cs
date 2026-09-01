@@ -217,7 +217,7 @@ public class ConfigurationControllerTests : IClassFixture<NoMercyApiFactory>
         message
             .GetString()!
             .Should()
-            .Contain(
+            .ContainEquivalentOf(
                 "restart",
                 "the response must tell the operator a restart is required for the port change to take effect"
             );

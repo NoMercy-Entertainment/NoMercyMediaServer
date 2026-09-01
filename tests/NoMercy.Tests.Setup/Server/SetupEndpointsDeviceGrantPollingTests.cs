@@ -361,8 +361,11 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         DefaultHttpContext context = BuildPostContext("/setup/device-code");
         await endpoints.HandleRequestAsync(context);
 
-        // Five consecutive failures at a 1s poll interval before the loop gives up.
-        DateTime deadline = DateTime.UtcNow.AddSeconds(20);
+        // Five consecutive failures at a 1s poll interval is ~5s of real work, but
+        // this runs alongside every other test class under CI's parallel test
+        // execution, so give it real headroom rather than a budget sized for an
+        // idle machine (which is what made this flake under load).
+        DateTime deadline = DateTime.UtcNow.AddSeconds(40);
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
             await Task.Delay(100);
 
