@@ -986,16 +986,6 @@ public class SetupEndpoints
                 if (response.IsSuccessStatusCode)
                 {
                     string content = await response.Content.ReadAsStringAsync();
-                    // Only reset once the body is fully read: a connection that drops
-                    // between headers and body (observed against a real IdP outage,
-                    // and against a hard-aborted connection where PostAsync itself
-                    // completes but ReadAsStringAsync then throws) resetting here
-                    // pre-emptively masked the very failure this counter exists to
-                    // catch -- it fell straight back into the catch block below and
-                    // re-incremented to 1, so consecutiveTransientFailures could never
-                    // pass 1 and a persistently dead IdP polled silently forever
-                    // instead of ever giving up.
-                    consecutiveTransientFailures = 0;
                     AuthResponse data =
                         content.FromJson<AuthResponse>()
                         ?? throw new InvalidOperationException(
@@ -1013,9 +1003,19 @@ public class SetupEndpoints
                 }
 
                 string errorContent = await response.Content.ReadAsStringAsync();
-                consecutiveTransientFailures = 0;
                 dynamic? error = JsonConvert.DeserializeObject<dynamic>(errorContent);
                 string? errorCode = error?.error?.ToString();
+
+                // Reset only once the response has been read AND parsed into a
+                // legitimate RFC 8628 outcome -- not merely once PostAsync or
+                // ReadAsStringAsync returned without throwing. A connection that
+                // fails between headers and body, or that delivers a body
+                // DeserializeObject can't parse, used to still zero the counter
+                // here (in two successive, equally wrong spots) before the
+                // failure surfaced, so it re-incremented to 1 in the same
+                // iteration and could never pass 1 -- a persistently dead IdP
+                // polled silently forever instead of ever giving up.
+                consecutiveTransientFailures = 0;
 
                 // RFC 8628 §3.5: slow_down means keep polling but back off — it is NOT
                 // fatal. Treating it as fatal aborted an otherwise-recoverable device login.
