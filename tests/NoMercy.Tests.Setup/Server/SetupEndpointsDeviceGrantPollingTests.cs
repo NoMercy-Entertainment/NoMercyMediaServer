@@ -31,7 +31,6 @@ using NoMercy.Setup.Ui;
 using NoMercy.Storage.Drivers.Local;
 using NoMercy.Tests.Setup.Infrastructure;
 using NoMercyQueue.Workers;
-using Xunit.Abstractions;
 
 namespace NoMercy.Tests.Setup.Server;
 
@@ -80,16 +79,8 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
     // to a real token so Dispose can actually stop it.
     private readonly CancellationTokenSource _appStoppingCts = new();
 
-    // Console.WriteLine is not captured by this repo's CI test runner
-    // (confirmed empirically: prior diagnostic lines never appeared in the
-    // Actions log despite compiling and running). ITestOutputHelper is
-    // xUnit's own captured-per-test-result output channel and shows up in
-    // the .trx/console output regardless.
-    private readonly ITestOutputHelper _output;
-
-    public SetupEndpointsDeviceGrantPollingTests(ITestOutputHelper output)
+    public SetupEndpointsDeviceGrantPollingTests()
     {
-        _output = output;
         SetupTerminalUi.ForceInteractiveForTests = false;
 
         _originalAppPath = Environment.GetEnvironmentVariable("NOMERCY_APP_PATH");
@@ -393,31 +384,19 @@ public sealed class SetupEndpointsDeviceGrantPollingTests : IDisposable
         DefaultHttpContext context = BuildPostContext("/setup/device-code");
         await endpoints.HandleRequestAsync(context);
 
-        // This is the only scenario in the file that needs five CONSECUTIVE real
-        // connection-aborts against the loopback server; every sibling test here
-        // uses the same LoopbackHttpServer+HttpClient pattern but never chains
-        // that many failures back-to-back, and all of them pass reliably in CI —
-        // so whatever makes this slow is specific to repeated aborts, not the
-        // harness in general. 200s wasn't enough (observed ~219s and climbing);
-        // widened further with real headroom, and instrumented so a future
-        // failure carries actual timing data instead of another guess.
-        DateTime start = DateTime.UtcNow;
-        DateTime deadline = start.AddSeconds(400);
-        DateTime nextLog = start;
+        // Root-caused via the diagnostics below (kept in case this ever regresses):
+        // consecutiveTransientFailures reset to 0 the instant PostAsync returned,
+        // BEFORE the body was read. On this CI runner's loopback abort, PostAsync
+        // itself completed and only ReadAsStringAsync threw -- so every tick reset
+        // to 0 then immediately re-incremented to 1 in the same iteration, and the
+        // counter could never pass 1. A persistently dead IdP polled silently
+        // forever instead of ever giving up (SetupEndpoints.cs, PollDeviceGrant).
+        // Fixed at the source: the reset now happens only after the body is fully
+        // read. Five consecutive real attempts at the 1s poll interval is ~5-8s of
+        // real work; sized for CI headroom, not the instant-fail idle-machine case.
+        DateTime deadline = DateTime.UtcNow.AddSeconds(30);
         while (_setupState.ErrorMessage is null && DateTime.UtcNow < deadline)
-        {
-            if (DateTime.UtcNow >= nextLog)
-            {
-                nextLog = DateTime.UtcNow.AddSeconds(5);
-                _output.WriteLine(
-                    $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] still waiting: phase={_setupState.CurrentPhase}, requests seen by loopback server={server.RequestCount}"
-                );
-            }
             await Task.Delay(100);
-        }
-        _output.WriteLine(
-            $"[{(DateTime.UtcNow - start).TotalSeconds:F1}s] wait ended: phase={_setupState.CurrentPhase}, error={_setupState.ErrorMessage ?? "(null)"}, requests seen by loopback server={server.RequestCount}"
-        );
 
         Assert.Equal(SetupPhase.Unauthenticated, _setupState.CurrentPhase);
         Assert.NotNull(_setupState.ErrorMessage);

@@ -982,11 +982,20 @@ public class SetupEndpoints
                     new FormUrlEncodedContent(tokenBody),
                     _appStopping
                 );
-                consecutiveTransientFailures = 0;
 
                 if (response.IsSuccessStatusCode)
                 {
                     string content = await response.Content.ReadAsStringAsync();
+                    // Only reset once the body is fully read: a connection that drops
+                    // between headers and body (observed against a real IdP outage,
+                    // and against a hard-aborted connection where PostAsync itself
+                    // completes but ReadAsStringAsync then throws) resetting here
+                    // pre-emptively masked the very failure this counter exists to
+                    // catch -- it fell straight back into the catch block below and
+                    // re-incremented to 1, so consecutiveTransientFailures could never
+                    // pass 1 and a persistently dead IdP polled silently forever
+                    // instead of ever giving up.
+                    consecutiveTransientFailures = 0;
                     AuthResponse data =
                         content.FromJson<AuthResponse>()
                         ?? throw new InvalidOperationException(
@@ -1004,6 +1013,7 @@ public class SetupEndpoints
                 }
 
                 string errorContent = await response.Content.ReadAsStringAsync();
+                consecutiveTransientFailures = 0;
                 dynamic? error = JsonConvert.DeserializeObject<dynamic>(errorContent);
                 string? errorCode = error?.error?.ToString();
 
