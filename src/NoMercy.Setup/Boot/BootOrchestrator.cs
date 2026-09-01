@@ -14,6 +14,7 @@ using NoMercy.Networking.Certificate;
 using NoMercy.NmSystem.Auth;
 using NoMercy.NmSystem.Configuration;
 using NoMercy.NmSystem.Extensions;
+using NoMercy.NmSystem.Information;
 using NoMercy.NmSystem.Security;
 using NoMercy.NmSystem.SystemCalls;
 using NoMercy.Setup.Auth;
@@ -344,18 +345,38 @@ public class BootOrchestrator
         try
         {
             _setupState.TransitionTo(SetupPhase.Registering);
-            _setupState.SetPhaseDetail("Registering server with NoMercy...");
+            // Set BEFORE the work starts: Init() below performs registration AND
+            // certificate acquisition in one call, so a detail set only after it
+            // returns describes a step that already finished — the user watched
+            // "Registering server..." for the whole multi-minute poll.
+            _setupState.SetPhaseDetail(
+                "Registering server and acquiring SSL certificate... (this can take a couple of minutes)"
+            );
 
             await _serverRegistrationService.Init();
 
             _setupState.TransitionTo(SetupPhase.Registered);
-            _setupState.SetPhaseDetail("Acquiring SSL certificate...");
 
             bool hasCert = _certificateService.HasValidCertificate();
 
-            if (hasCert)
-                _setupState.TransitionTo(SetupPhase.CertificateAcquired);
+            if (!hasCert)
+            {
+                // Cert poll exhausted — a distinct, retryable failure, never the
+                // misleading "Complete" a degraded boot used to reach.
+                _setupState.TransitionTo(SetupPhase.Failed);
+                _setupState.SetError(
+                    "Registered, but the SSL certificate could not be acquired. You can retry."
+                );
 
+                NmSystem.Lifecycle.ServerPhaseTracker.Current?.MarkComplete(
+                    NmSystem.Lifecycle.BootStage.Registered
+                );
+
+                return false;
+            }
+
+            _setupState.TransitionTo(SetupPhase.CertificateAcquired);
+            _setupState.SetServerUrl(BuildServerUrl());
             _setupState.TransitionTo(SetupPhase.Complete);
             Logger.Setup("Registration and certificate setup complete");
 
@@ -363,14 +384,19 @@ public class BootOrchestrator
                 NmSystem.Lifecycle.BootStage.Registered
             );
 
-            return hasCert;
+            return true;
         }
         catch (Exception ex)
         {
-            Logger.Setup(
-                $"Registration failed: {ex.DescribeConnectionFailure()}",
-                LogEventLevel.Error
-            );
+            // The cooldown InvalidOperationException is internal backpressure, not
+            // a registration failure — showing its raw message told the operator
+            // their registration failed when the server was simply about to retry.
+            bool isCooldown = ex is InvalidOperationException && ex.Message.Contains("cooldown");
+            string displayMessage = isCooldown
+                ? "Registration is briefly paused after a recent attempt. Retrying shortly — you can also retry now."
+                : $"Registration failed: {ex.DescribeConnectionFailure()}";
+
+            Logger.Setup(displayMessage, LogEventLevel.Error);
 
             // Don't block — DegradedModeRecovery will retry. Mark Registered as
             // complete so workers don't block forever on a known-degraded boot —
@@ -382,12 +408,25 @@ public class BootOrchestrator
 
             // Transition BEFORE recording the error: TransitionTo clears
             // _errorMessage as stale-progress cleanup, so the old order wiped the
-            // failure it had just recorded and /setup/status reported a clean
-            // Complete after a failed registration.
-            _setupState.TransitionTo(SetupPhase.Complete);
-            _setupState.SetError($"Registration failed: {ex.DescribeConnectionFailure()}");
+            // failure it had just recorded. Failed (not Complete) so /setup/status
+            // reports a real failure with a retry, never a false "Setup complete!".
+            _setupState.TransitionTo(SetupPhase.Failed);
+            _setupState.SetError(displayMessage);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Built by NetworkDiscovery rather than assembled here where possible: a
+    /// hand-rolled apex-hostname form ignores a tunnelled server's srv scheme and
+    /// never resolves. Mirrors SetupEndpoints.RunPostAuthRegistration so every
+    /// completion path — interactive setup or this non-interactive boot path —
+    /// ends with a server URL the setup page can show as the "open" link.
+    /// </summary>
+    private static string BuildServerUrl()
+    {
+        return Start.NetworkDiscovery?.ExternalAddress
+            ?? $"https://{Info.DeviceId}.nomercy.tv:{RuntimeServerSettings.Current.ExternalServerPort}";
     }
 
     private async Task RunBackgroundTasksAsync(CancellationToken ct)

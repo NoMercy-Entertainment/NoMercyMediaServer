@@ -289,6 +289,7 @@
         "Registering":         ["Registering server...",       "Connecting to NoMercy"],
         "Registered":          ["Server registered",           "Acquiring SSL certificate..."],
         "CertificateAcquired": ["Certificate acquired",        "Finalizing setup..."],
+        "Failed":              ["Setup could not finish",      "Something went wrong — you can retry"],
         "Complete":            ["Setup complete!",             "Your server is ready"]
     };
 

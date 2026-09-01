@@ -244,8 +244,12 @@ public class SetupStateTests
     // BootOrchestratorAdditionalTests that exercise these two call sites directly.
     // Regression coverage for a real bug: before these were added, both call sites'
     // TransitionTo(Complete) was silently rejected and left setup permanently stuck.
-    [InlineData(SetupPhase.Registered, SetupPhase.Complete, true)]
-    [InlineData(SetupPhase.Registering, SetupPhase.Complete, true)]
+    [InlineData(SetupPhase.Registered, SetupPhase.Complete, false)]
+    [InlineData(SetupPhase.Registering, SetupPhase.Complete, false)]
+    [InlineData(SetupPhase.Registering, SetupPhase.Failed, true)]
+    [InlineData(SetupPhase.Registered, SetupPhase.Failed, true)]
+    [InlineData(SetupPhase.Registered, SetupPhase.Authenticated, true)]
+    [InlineData(SetupPhase.Failed, SetupPhase.Authenticated, true)]
     public void IsValidTransition_ReturnsExpected(SetupPhase from, SetupPhase to, bool expected)
     {
         Assert.Equal(expected, SetupState.IsValidTransition(from, to));

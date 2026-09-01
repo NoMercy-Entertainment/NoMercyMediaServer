@@ -459,15 +459,15 @@ public sealed class FirstBootOnboardingChainTests : IDisposable
     }
 
     /// <summary>
-    /// The degraded-mode contract: a failed registration still completes setup
-    /// (partial functionality beats no functionality) but the failure must stay
-    /// visible on /setup/status. TransitionTo clears the error message as
-    /// stale-progress cleanup, so recording the error before the Complete
-    /// transition silently erased it — the UI celebrated a clean setup while the
-    /// server was degraded. Pins the transition-then-error order.
+    /// A failed registration must reach a distinct, retryable Failed phase — never
+    /// the misleading Complete a degraded boot used to reach, which the setup page
+    /// rendered as "Setup complete!" with no error, no retry, no server URL.
+    /// TransitionTo clears the error message as stale-progress cleanup, so
+    /// recording the error before the Failed transition would silently erase it —
+    /// pins the transition-then-error order.
     /// </summary>
     [Fact]
-    public async Task FailedRegistration_CompletesDegraded_ButKeepsTheErrorVisible()
+    public async Task FailedRegistration_ReachesDistinctFailedPhase_WithErrorVisible()
     {
         using LoopbackHttpServer api = new();
         api.Handler = _ => new(401, "{\"message\":\"Unauthenticated.\"}");
@@ -505,7 +505,8 @@ public sealed class FirstBootOnboardingChainTests : IDisposable
         bool certAcquired = await orchestrator.RunRegistrationAsync(CancellationToken.None);
 
         Assert.False(certAcquired);
-        Assert.Equal(SetupPhase.Complete, setupState.CurrentPhase);
+        Assert.Equal(SetupPhase.Failed, setupState.CurrentPhase);
+        Assert.True(setupState.IsSetupRequired);
         Assert.NotNull(setupState.ErrorMessage);
         Assert.Contains("Registration failed", setupState.ErrorMessage);
     }

@@ -157,10 +157,11 @@ public class ServerRunner : IServerRunner
             linkedCts.Token
         );
 
-        // Wait for setup to reach Complete or for the server to be shut down
+        // Wait for setup to reach a terminal outcome (Complete or Failed) or for
+        // the server to be shut down.
         try
         {
-            await setupState.WaitForPhaseAsync(SetupPhase.Complete, linkedCts.Token);
+            await setupState.WaitForTerminalPhaseAsync(linkedCts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -226,8 +227,18 @@ public class ServerRunner : IServerRunner
         AuthManager httpsAuthManager = httpsHost.Services.GetRequiredService<AuthManager>();
         bool hasValidToken = await httpsAuthManager.InitializeAsync();
 
+        // isRegistered must reflect whether a certificate actually exists — the
+        // setup flow that just ran may have finished degraded (registered, cert
+        // not acquired). Hardcoding true here made the fresh host believe setup
+        // was fully done and dropped the /setup recovery UI even when it wasn't.
+        // WebHostFactory.Create(options) above already rewired Start.Certificate
+        // to this host's own ICertificateService (ServiceConfiguration.Core.cs),
+        // so the static accessor reflects the fresh container, not the old one.
         SetupState httpsSetupState = httpsHost.Services.GetRequiredService<SetupState>();
-        httpsSetupState.DetermineInitialPhase(hasValidToken: hasValidToken, isRegistered: true);
+        httpsSetupState.DetermineInitialPhase(
+            hasValidToken: hasValidToken,
+            isRegistered: Start.Certificate!.HasValidCertificate()
+        );
 
         httpsAuthManager.ScheduleBackgroundRefresh(httpsShutdownCoordinator.Token);
 

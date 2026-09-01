@@ -730,7 +730,16 @@ public class SetupEndpoints
 
         SetupPhase phase = _state.CurrentPhase;
 
-        if (phase == SetupPhase.Authenticated || phase == SetupPhase.Registering)
+        // Post-registration phases must be retryable too — Registered (cert never
+        // arrived) and Failed (registration rejected, or cert poll exhausted) used
+        // to fall through to "unauthenticated" and bounce an already-signed-in
+        // user back to login instead of re-running registration/cert acquisition.
+        if (
+            phase == SetupPhase.Authenticated
+            || phase == SetupPhase.Registering
+            || phase == SetupPhase.Registered
+            || phase == SetupPhase.Failed
+        )
         {
             _state.ClearError();
 
@@ -828,6 +837,13 @@ public class SetupEndpoints
                 );
 
             _state.TransitionTo(SetupPhase.Registering);
+            // Set BEFORE Init() runs, not after: Init() is register + assign +
+            // certificate in one call, so a detail set only once it returns
+            // describes work that is already done — the user watched "Connecting
+            // to NoMercy" for the whole multi-minute poll.
+            _state.SetPhaseDetail(
+                "Registering server and securing your connection... (this can take a couple of minutes)"
+            );
             _terminalUi?.ShowProgress("Registering", "Connecting your server to NoMercy...");
 
             if (Start.NetworkDiscovery is not null)
@@ -842,11 +858,6 @@ public class SetupEndpoints
 
             _state.TransitionTo(SetupPhase.Registered);
             _terminalUi?.ShowProgress("Registered", "Setting up your server address...");
-
-            _state.SetPhaseDetail(
-                "Securing your connection... (this can take a couple of minutes)"
-            );
-            _terminalUi?.SetStatus("Securing your connection...");
 
             if (Start.Certificate!.HasValidCertificate())
             {
@@ -865,6 +876,10 @@ public class SetupEndpoints
             }
             else
             {
+                // Distinct, retryable failure — not the Registered+error dead end
+                // that HandleRetry could not recover from and the setup page
+                // rendered with no error, no retry, no server URL.
+                _state.TransitionTo(SetupPhase.Failed);
                 _state.SetError("Registration completed but certificate was not acquired");
             }
         }
@@ -874,17 +889,25 @@ public class SetupEndpoints
                 "Post-auth registration timed out (registration_timeout)",
                 LogEventLevel.Error
             );
+            _state.TransitionTo(SetupPhase.Failed);
             _state.SetError("Registration timed out. Please check your connection and try again.");
-            _state.TransitionTo(SetupPhase.Authenticated);
         }
         catch (Exception ex)
         {
+            // The cooldown InvalidOperationException is internal backpressure, not
+            // a registration failure — showing its raw message told the operator
+            // their registration failed when the server was simply about to retry.
+            bool isCooldown = ex is InvalidOperationException && ex.Message.Contains("cooldown");
+            string displayMessage = isCooldown
+                ? "Registration is briefly paused after a recent attempt. Retrying shortly — you can also retry now."
+                : $"Could not connect your server: {ex.DescribeConnectionFailure()}";
+
             Logger.Setup(
                 $"Post-auth registration failed: {ex.GetType().Name} — {ex.DescribeConnectionFailure()}",
                 LogEventLevel.Error
             );
-            _state.SetError($"Could not connect your server: {ex.DescribeConnectionFailure()}");
-            _state.TransitionTo(SetupPhase.Authenticated);
+            _state.TransitionTo(SetupPhase.Failed);
+            _state.SetError(displayMessage);
         }
     }
 

@@ -184,14 +184,16 @@ public sealed class BootOrchestratorAdditionalTests : IDisposable
         bool certAcquired = await orchestrator.RunRegistrationAsync(CancellationToken.None);
 
         // No certificate has been stored in the fresh on-disk DB, so registration
-        // succeeds but certificate acquisition does not — the phase still reaches
-        // Complete (partial functionality beats no functionality).
+        // succeeds but certificate acquisition does not — the phase reaches the
+        // distinct, retryable Failed phase rather than a misleading Complete.
         Assert.False(certAcquired);
-        Assert.Equal(SetupPhase.Complete, _setupState.CurrentPhase);
+        Assert.Equal(SetupPhase.Failed, _setupState.CurrentPhase);
+        Assert.True(_setupState.IsSetupRequired);
+        Assert.NotNull(_setupState.ErrorMessage);
     }
 
     [Fact]
-    public async Task RunRegistrationAsync_RegistrationThrows_SetsErrorAndStillMarksComplete()
+    public async Task RunRegistrationAsync_RegistrationThrows_SetsErrorAndReachesFailed()
     {
         ThrowingServerRegistrationService throwing = new();
         BootOrchestrator orchestrator = BuildOrchestrator(throwing);
@@ -200,11 +202,12 @@ public sealed class BootOrchestratorAdditionalTests : IDisposable
 
         bool certAcquired = await orchestrator.RunRegistrationAsync(CancellationToken.None);
 
-        // TransitionTo(Complete) clears ErrorMessage as part of every transition (see
-        // SetupState.TransitionTo) — the observable contract here is "never throws,
-        // still reaches Complete degraded" rather than a surviving error message.
+        // TransitionTo(Failed) clears ErrorMessage as part of every transition (see
+        // SetupState.TransitionTo), and SetError runs after it — the error survives,
+        // and the phase is the distinct Failed the setup page renders as a failure.
         Assert.False(certAcquired);
-        Assert.Equal(SetupPhase.Complete, _setupState.CurrentPhase);
+        Assert.Equal(SetupPhase.Failed, _setupState.CurrentPhase);
+        Assert.NotNull(_setupState.ErrorMessage);
     }
 
     [Fact]

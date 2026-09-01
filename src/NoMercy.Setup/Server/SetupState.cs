@@ -22,6 +22,14 @@ public enum SetupPhase
     Registering,
     Registered,
     CertificateAcquired,
+
+    /// <summary>
+    /// A terminal, retryable failure: registration was rejected or the certificate
+    /// poll was exhausted. Ordinal sits before Complete so IsSetupRequired stays
+    /// true and the setup page keeps rendering, and after Authenticated so
+    /// IsAuthenticated stays true and background polling loops that stop on it exit.
+    /// </summary>
+    Failed,
     Complete,
 }
 
@@ -121,6 +129,28 @@ public class SetupState
         }
     }
 
+    /// <summary>
+    /// Waits until setup reaches ANY terminal outcome — Complete or Failed. Failed
+    /// sits before Complete in the enum (so IsSetupRequired stays true and the
+    /// setup page keeps rendering it), which means a plain
+    /// <see cref="WaitForPhaseAsync"/>(Complete) never unblocks on a failed setup —
+    /// callers that need to stop waiting once the attempt is over, one way or the
+    /// other, use this instead.
+    /// </summary>
+    public async Task WaitForTerminalPhaseAsync(CancellationToken cancellationToken = default)
+    {
+        while (true)
+        {
+            lock (_lock)
+            {
+                if (_currentPhase is SetupPhase.Complete or SetupPhase.Failed)
+                    return;
+            }
+
+            await WaitForChangeAsync(cancellationToken);
+        }
+    }
+
     public bool TransitionTo(SetupPhase targetPhase)
     {
         lock (_lock)
@@ -145,6 +175,7 @@ public class SetupState
                 SetupPhase.Registering => "Connecting your server to NoMercy...",
                 SetupPhase.Registered => "Setting up your server address...",
                 SetupPhase.CertificateAcquired => "Connection secured",
+                SetupPhase.Failed => "Setup could not finish — you can retry.",
                 SetupPhase.Complete => "All done — opening NoMercy...",
                 _ => "",
             };
@@ -234,16 +265,22 @@ public class SetupState
             // Certificate failure can go back to registered (retry cert)
             (SetupPhase.Registered, SetupPhase.Registered) => true,
 
-            // Degraded-complete: BootOrchestrator.RunRegistrationAsync intentionally
-            // reaches Complete even when the certificate isn't ready yet (Registered,
-            // no cert) or registration itself failed (still at Registering when its
-            // catch block runs) — "partial functionality beats no functionality," with
-            // DegradedModeRecovery retrying registration/cert acquisition in the
-            // background. Without these, both call sites silently rejected the
-            // transition and left SetupState (and therefore IsSetupRequired) stuck
-            // forever on a degraded first boot.
-            (SetupPhase.Registered, SetupPhase.Complete) => true,
-            (SetupPhase.Registering, SetupPhase.Complete) => true,
+            // Distinct failure: registration was rejected, or the certificate poll
+            // was exhausted. BootOrchestrator.RunRegistrationAsync used to transition
+            // both of these straight to Complete ("partial functionality beats no
+            // functionality") so DegradedModeRecovery could keep retrying in the
+            // background without IsSetupRequired getting stuck forever — but the
+            // setup page checks phase before error, so it rendered a false "Setup
+            // complete!" with no error, no retry, no server URL. Failed keeps
+            // IsSetupRequired true (same unstuck guarantee) while the page renders
+            // it as an actual failure with a retry.
+            (SetupPhase.Registering, SetupPhase.Failed) => true,
+            (SetupPhase.Registered, SetupPhase.Failed) => true,
+
+            // Retry re-enters registration from a post-registration phase without
+            // sending the already-signed-in user back to login.
+            (SetupPhase.Registered, SetupPhase.Authenticated) => true,
+            (SetupPhase.Failed, SetupPhase.Authenticated) => true,
 
             _ => false,
         };
