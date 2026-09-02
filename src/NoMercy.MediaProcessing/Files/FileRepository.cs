@@ -135,6 +135,11 @@ public class FileRepository(MediaContext context, IStorageDriver storageDriver) 
             .FirstOrDefaultAsync();
     }
 
+    public async Task<Episode?> GetEpisodeById(int episodeId)
+    {
+        return await context.Episodes.FirstOrDefaultAsync(e => e.Id == episodeId);
+    }
+
     public async Task RecordUnmatchedEpisodeFileAsync(
         string filePath,
         Ulid libraryId,

@@ -90,8 +90,19 @@ public static class StoragePathHelpers
     /// every path through the driver, so it hands back absolute paths that the
     /// <see cref="IStorage"/> facade rejects on remote backends; rebasing gives
     /// callers a path the facade accepts and a portable value to persist.
-    /// The folder root is matched as a substring; when it is absent the input is
-    /// assumed already relative and returned with a trimmed leading slash.
+    /// <para>
+    /// The folder root is matched as a whole run of path segments — anchored on
+    /// <c>'/'</c> (or the start/end of the string) on both sides — never a bare
+    /// substring. A substring match let a root like <c>"TV.Shows"</c> match
+    /// inside an unrelated, longer sibling segment (e.g. a mount or share named
+    /// <c>"TV.Shows.Archive"</c>), which cut the rebase at the wrong point and
+    /// produced an inconsistent <c>HostFolder</c> for the same file between
+    /// scans. When the root is absent, the input is assumed already relative
+    /// and returned with a trimmed leading slash — this branch is also what
+    /// makes a second rebase of an already-rebased path a no-op: the root is
+    /// still found, still anchored at the same segment boundary, so the result
+    /// is unchanged.
+    /// </para>
     /// </summary>
     public static string RebaseToFolderRoot(string absolutePath, string folderPath)
     {
@@ -101,10 +112,40 @@ public static class StoragePathHelpers
         if (normalizedRoot.Length == 0)
             return normalizedItem.TrimStart('/');
 
-        int rootIndex = normalizedItem.IndexOf(normalizedRoot, StringComparison.OrdinalIgnoreCase);
+        int rootIndex = FindAnchoredSegment(normalizedItem, normalizedRoot);
         return rootIndex < 0
             ? normalizedItem.TrimStart('/')
             : normalizedItem[rootIndex..].TrimStart('/');
+    }
+
+    /// <summary>
+    /// Finds <paramref name="segment"/> in <paramref name="path"/> as a run of
+    /// whole path segments — the match must start at the beginning of the string
+    /// or right after a <c>'/'</c>, and end at the end of the string or right
+    /// before a <c>'/'</c>. Plain <see cref="string.IndexOf(string)"/> would also
+    /// accept a match landing mid-segment (<c>"TV.Shows"</c> inside
+    /// <c>"TV.Shows.Archive"</c>), which is never the intended folder root.
+    /// </summary>
+    private static int FindAnchoredSegment(string path, string segment)
+    {
+        int searchFrom = 0;
+        while (searchFrom <= path.Length - segment.Length)
+        {
+            int idx = path.IndexOf(segment, searchFrom, StringComparison.OrdinalIgnoreCase);
+            if (idx < 0)
+                return -1;
+
+            bool startsAtBoundary = idx == 0 || path[idx - 1] == '/';
+            int endPos = idx + segment.Length;
+            bool endsAtBoundary = endPos == path.Length || path[endPos] == '/';
+
+            if (startsAtBoundary && endsAtBoundary)
+                return idx;
+
+            searchFrom = idx + 1;
+        }
+
+        return -1;
     }
 
     /// <summary>
