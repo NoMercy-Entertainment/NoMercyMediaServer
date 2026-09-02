@@ -1371,6 +1371,12 @@ public class VideoEncodeJob
             }
 
             fileManager.FilterFiles(filterFileName);
+            // mediaId is the id this job was dispatched for (fileMetadata.Id — an
+            // episode id for TV/anime). Carry it through so registration attaches
+            // the output to the episode we were actually encoding, not whatever
+            // episode the output filename happens to parse to. See
+            // FileManager.DispatchedMediaId for the failure this prevents.
+            fileManager.HintDispatchedMediaId(mediaId);
             bool hasCandidates = await fileManager.FindFiles(mediaId, library);
             if (hasCandidates)
                 return;

@@ -147,7 +147,24 @@ public partial class FileManager
 
         List<VideoTrack> tracks = GetExtraFiles(storage, hostFolder);
 
-        Episode? episode = await fileRepository.GetEpisode(Show?.Id, item);
+        // The scan filtered itself down to one file (FilterFiles) and the caller
+        // told us which episode it dispatched that file for (HintDispatchedMediaId).
+        // Trust that known id over re-deriving the episode from the filename — the
+        // filename parser can land on the wrong episode when the title itself
+        // contains digits that read as a season/episode (e.g. South Park's "1%"
+        // parsing as S00E12 instead of the dispatched S15E12). A file that
+        // reached this point through any other route (initial import, manual
+        // rescan, or a plugin-sourced file that skipped the filter) still goes
+        // through the ordinary filename-derived lookup.
+        bool isDispatchedTarget =
+            Show is not null
+            && Filter is not null
+            && DispatchedMediaId is not null
+            && item.Path.Contains(Filter, StringComparison.OrdinalIgnoreCase);
+
+        Episode? episode = isDispatchedTarget
+            ? await fileRepository.GetEpisodeById(DispatchedMediaId!.Value)
+            : await fileRepository.GetEpisode(Show?.Id, item);
 
         // A show file that matches no episode still gets stored below, with neither an
         // episode nor a movie on it — nothing can list or play it, and because the

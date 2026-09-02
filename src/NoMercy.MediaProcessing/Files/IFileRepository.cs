@@ -26,6 +26,12 @@ public interface IFileRepository
     Task<Episode?> GetEpisode(int? showId, MediaFile item);
 
     /// <summary>
+    /// Looks up an episode by its known id — used for the file a post-encode scan
+    /// was dispatched for, instead of re-deriving the episode from the filename.
+    /// </summary>
+    Task<Episode?> GetEpisodeById(int episodeId);
+
+    /// <summary>
     /// Records that a video file in a TV library resolved to no episode. Such a file is
     /// stored with no episode and no movie, so nothing can ever list or play it, and the
     /// library filter (which requires an episode with a playable file) hides the whole

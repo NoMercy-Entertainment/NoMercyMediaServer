@@ -76,4 +76,19 @@ public class StoragePathHelpersRebaseTests
             .Should()
             .Be("MARVELS/tv.shows/show/f.m3u8");
     }
+
+    [Fact]
+    public void Anchors_the_root_at_a_segment_boundary_past_a_longer_sibling_with_the_same_prefix()
+    {
+        // The exact "TV.Shows/TV.Shows" doubling bug: a bare substring match on
+        // root "TV.Shows" found it INSIDE the unrelated, longer sibling segment
+        // "TV.Shows.Archive" that sits earlier in the path, cutting the rebase
+        // at the wrong point. The real "TV.Shows" segment further along must win.
+        string result = StoragePathHelpers.RebaseToFolderRoot(
+            "/mnt/vault/Media/TV.Shows.Archive/Marvels/TV.Shows/What.If.(2021)/f.m3u8",
+            "TV.Shows"
+        );
+
+        result.Should().Be("TV.Shows/What.If.(2021)/f.m3u8");
+    }
 }

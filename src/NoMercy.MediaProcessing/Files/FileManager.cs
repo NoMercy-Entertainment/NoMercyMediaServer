@@ -118,6 +118,21 @@ public partial class FileManager(
 
     private string? Filter { get; set; }
 
+    /// <summary>
+    /// The episode id this encode job was dispatched for, set alongside
+    /// <see cref="FilterFiles"/> by the post-encode scan. <see cref="StoreVideoItem"/>
+    /// uses this id directly for the file the scan filtered down to, instead of
+    /// re-deriving the episode from its filename via
+    /// <see cref="IFileRepository.GetEpisode"/> — the filename parser can land on
+    /// the wrong episode when a title contains digits that themselves read as a
+    /// season/episode (e.g. South Park's "1%" parsing as S00E12 instead of the
+    /// dispatched S15E12). The correct id is already known at dispatch time; this
+    /// hint carries it through instead of throwing it away and re-guessing it.
+    /// Left null on every other call path (initial import, manual rescan), which
+    /// keeps their behavior — filename-derived matching — unchanged.
+    /// </summary>
+    private int? DispatchedMediaId { get; set; }
+
     public async Task<bool> FindFiles(int id, Library library)
     {
         Id = id;
@@ -304,6 +319,16 @@ public partial class FileManager(
     public void FilterFiles(string filter)
     {
         Filter = filter;
+    }
+
+    /// <summary>
+    /// Records the episode id this scan was dispatched for. See
+    /// <see cref="DispatchedMediaId"/> for why <see cref="StoreVideoItem"/> trusts
+    /// this over the filename parser for the filtered file.
+    /// </summary>
+    public void HintDispatchedMediaId(int mediaId)
+    {
+        DispatchedMediaId = mediaId;
     }
 
     public async Task MoveToLibraryFolder(int id, Folder folder)
