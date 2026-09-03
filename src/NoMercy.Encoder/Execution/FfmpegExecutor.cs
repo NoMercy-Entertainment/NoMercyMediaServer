@@ -183,13 +183,14 @@ public class FfmpegExecutor(IProcessRunner processRunner, ILogger<FfmpegExecutor
                 );
             }
 
+            // ClassifyError still reads the whole stream; only the log is bounded.
             EncodingError error = ClassifyError(result.StdErr, result.ExitCode);
             logger.LogError(
                 "[{CorrelationId}] FFmpeg failed: exit={ExitCode} error={ErrorKind}\nstderr: {StdErr}",
                 correlationId,
                 result.ExitCode,
                 error.Kind,
-                result.StdErr
+                FfmpegStderr.Tail(result.StdErr)
             );
 
             return new(

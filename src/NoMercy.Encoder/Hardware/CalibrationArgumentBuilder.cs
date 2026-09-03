@@ -16,7 +16,7 @@ namespace NoMercy.Encoder.Hardware;
 /// <summary>
 /// FFmpeg calibration-argument assembly extracted from HardwareBenchmark:
 /// builds the per-target encode command (hwaccel init, hw-upload filter,
-/// device selector) and the stderr truncation helper.
+/// device selector).
 /// </summary>
 internal static class CalibrationArgumentBuilder
 {
@@ -179,13 +179,5 @@ internal static class CalibrationArgumentBuilder
             args.Add("-gpu");
             args.Add(target.VendorIndex.ToString(CultureInfo.InvariantCulture));
         }
-    }
-
-    internal static string TruncateStderr(string stderr)
-    {
-        if (string.IsNullOrEmpty(stderr))
-            return "<empty>";
-        const int maxLen = 500;
-        return stderr.Length > maxLen ? stderr[^maxLen..] : stderr;
     }
 }
