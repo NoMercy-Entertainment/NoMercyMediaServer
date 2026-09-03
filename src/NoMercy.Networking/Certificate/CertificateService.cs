@@ -210,6 +210,10 @@ public class CertificateService : ICertificateService
     {
         if (EnsureHttpsCertificate())
         {
+            PlaintextToHttpsRedirector.Install(
+                listenOptions,
+                RuntimeServerSettings.Current.InternalServerPort
+            );
             listenOptions.UseHttps(HttpsConnectionAdapterOptions());
         }
         else
