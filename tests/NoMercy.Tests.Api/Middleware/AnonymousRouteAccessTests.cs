@@ -146,8 +146,11 @@ public class AnonymousRouteAccessTests : IClassFixture<AnonymousNoMercyApiFactor
 
         // The controller's own empty-body guard must be what answers — proving
         // the request reached it rather than dying at the bearer-token gate.
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // The body rides along in the failure message: this has gone 401 twice
+        // on CI and never once locally, and the status alone cannot say which
+        // gate rejected it — hmac_invalid and the bearer gate look identical.
         string body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, "body was {0}", body);
         body.Should().Contain("Empty request body");
     }
 
@@ -173,8 +176,8 @@ public class AnonymousRouteAccessTests : IClassFixture<AnonymousNoMercyApiFactor
         // parameter validation must be what answers (400), proving the request
         // reached model binding for the action rather than dying at the bearer-
         // token gate.
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         string body = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, "body was {0}", body);
         body.Should().Contain("field is required");
     }
 
