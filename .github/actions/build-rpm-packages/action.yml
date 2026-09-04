@@ -25,11 +25,14 @@ runs:
         dotnet-version: ${{ inputs.dotnet-version }}
         app-repo-token: ${{ inputs.app-repo-token }}
 
+    - name: Repair runner apt state
+      uses: ./.github/actions/repair-runner-apt-state
+
     - name: Install RPM build dependencies
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y rpm createrepo-c
+        sudo apt-get install -y --no-install-recommends rpm createrepo-c
 
     - name: Build RPM packages
       shell: bash

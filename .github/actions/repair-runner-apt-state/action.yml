@@ -1,0 +1,23 @@
+name: 'Repair runner apt state'
+description: >-
+  Clears the half-configured packages that make every apt call on a self-hosted
+  runner fail, whatever it was asked to install.
+
+runs:
+  using: composite
+  steps:
+    - name: Drop the half-configured spell-checker chain
+      shell: bash
+      run: |
+        # The deb job used to install devscripts, which drags in emacsen-common.
+        # Its postinst exits 255 inside the runner container, dpkg leaves the
+        # whole chain unconfigured, and from then on apt refuses to finish any
+        # install on that box — which is how one packaging job took the release
+        # down twice. The packages are broken, no job here uses them, and they
+        # are ours to clean up. A runner that never had them sees a no-op.
+        sudo dpkg --remove --force-depends --force-remove-reinstreq \
+          libenchant-2-dev libenchant-2-2 hunspell-en-us dictionaries-common \
+          emacsen-common 2>/dev/null || true
+
+        # Anything else left mid-configure by another workload on the same box.
+        sudo dpkg --configure -a || true
