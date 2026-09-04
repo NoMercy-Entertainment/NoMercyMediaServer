@@ -132,7 +132,7 @@ public sealed class PlaintextToHttpsRedirectorTests
             )
             .WaitAsync(TestTimeout.Token);
 
-        string response = await connection.ClientReadsAsync();
+        string response = await connection.ClientReadsAsync(TestTimeout.Token);
 
         Assert.False(reachedNext, "a plaintext request never belongs in the TLS adapter");
         Assert.Contains("301 Moved Permanently", response);
@@ -169,9 +169,11 @@ public sealed class PlaintextToHttpsRedirectorTests
             await _clientToServer.Writer.WriteAsync(bytes);
         }
 
-        public async Task<string> ClientReadsAsync()
+        // Bounded, because the failure this guards against is a read that never
+        // returns: a hanging test reports nothing, where a failing one names the bug.
+        public async Task<string> ClientReadsAsync(CancellationToken ct)
         {
-            ReadResult read = await _serverToClient.Reader.ReadAsync();
+            ReadResult read = await _serverToClient.Reader.ReadAsync(ct).AsTask().WaitAsync(ct);
             return Encoding.ASCII.GetString(read.Buffer.ToArray());
         }
     }
