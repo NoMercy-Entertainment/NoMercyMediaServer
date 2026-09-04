@@ -287,6 +287,34 @@ public class CropDetectorTests
     }
 
     [Fact]
+    public async Task Detect_CapsTheDecoder_NotJustTheOutput()
+    {
+        // A cropdetect scan is a decode: the whole cost is upstream of the
+        // filter. An output -threads reaches the muxer's encoder and leaves the
+        // decoder on every core the host has — measured at 10.6 on the sprite
+        // pass that carried the same mistake.
+        StrongBox<string[]?> args = CaptureCropDetectArgs();
+        CropDetector detector = NewDetector();
+
+        await detector.DetectAsync(
+            "/tmp/in.mkv",
+            sourceVideoFileId: null,
+            sourceIsHdr: false,
+            CancellationToken.None
+        );
+
+        Assert.NotNull(args.Value);
+        int threadsAt = Array.IndexOf(args.Value!, "-threads");
+        int inputAt = Array.IndexOf(args.Value!, "-i");
+
+        Assert.True(threadsAt >= 0, "the scan must carry a thread cap at all");
+        Assert.True(
+            threadsAt < inputAt,
+            $"-threads sits at {threadsAt}, after -i at {inputAt}, so it never reaches the decoder"
+        );
+    }
+
+    [Fact]
     public async Task Detect_SdrSource_UsesSdrCropLimit()
     {
         StrongBox<string[]?> args = CaptureCropDetectArgs();

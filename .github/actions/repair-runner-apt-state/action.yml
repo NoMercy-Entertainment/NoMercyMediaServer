@@ -1,0 +1,39 @@
+name: 'Repair runner apt state'
+description: >-
+  Clears the half-configured packages that make every apt call on a self-hosted
+  runner fail, whatever it was asked to install.
+
+runs:
+  using: composite
+  steps:
+    - name: Drop the half-configured spell-checker chain
+      shell: bash
+      run: |
+        # The runner image installs firefox without --no-install-recommends, so
+        # it carries hunspell-en-us -> dictionaries-common -> emacsen-common.
+        # emacsen-common's postinst cannot succeed in a container, so every
+        # runner starts with dpkg half-configured and apt refuses to finish any
+        # install on it — whatever the job actually asked for. The real fix is
+        # in the runner image; this keeps our own jobs off the floor until then.
+        BROKEN="emacsen-common dictionaries-common hunspell-en-us libenchant-2-2 libenchant-2-dev"
+
+        # Plain --remove runs the same maintainer scripts that are failing, so it
+        # cannot get these out. Replace them with a no-op first, then purge.
+        for package in $BROKEN; do
+          for script in preinst postinst prerm postrm; do
+            file="/var/lib/dpkg/info/${package}.${script}"
+            if [ -f "$file" ]; then
+              printf '#!/bin/sh\nexit 0\n' | sudo tee "$file" >/dev/null
+              sudo chmod 755 "$file"
+            fi
+          done
+        done
+
+        sudo dpkg --configure -a || true
+        sudo apt-get purge -y $BROKEN || true
+
+        # Anything else another workload on this box left mid-configure.
+        sudo dpkg --configure -a || true
+
+        echo "packages still half-configured:"
+        dpkg -l | awk '$1 !~ /^ii/ && $1 ~ /^[a-z]/ {print "  " $1, $2}' || true

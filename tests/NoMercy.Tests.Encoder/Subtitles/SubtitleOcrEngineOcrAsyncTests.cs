@@ -51,6 +51,34 @@ public class SubtitleOcrEngineOcrAsyncTests
     private const string InputPath = "/media/movie.mkv";
     private const string ModelDirectory = "/models/tessdata";
 
+    // ── The thread cap reaches the decoder ────────────────────────────────────
+
+    [Fact]
+    public async Task Thread_cap_sits_ahead_of_the_input()
+    {
+        // After -i the cap lands on the output and the decoder runs uncapped —
+        // the misplacement that let a sprite pass take 10.6 cores on a budget of 2.
+        string[]? args = null;
+        Mock<IProcessRunner> processRunner = CaptureProcess((a, _, _) => args = a);
+
+        SubtitleOcrEngine engine = new(
+            Options(),
+            processRunner.Object,
+            ModelManagerMock().Object,
+            StorageMock().Object,
+            NullLogger<SubtitleOcrEngine>.Instance
+        );
+
+        await engine.OcrAsync(InputPath, 0, "eng", SubtitleCodecType.WebVtt, default);
+
+        args.Should().NotBeNull();
+        int threadsAt = Array.IndexOf(args!, "-threads");
+        int inputAt = Array.IndexOf(args!, "-i");
+
+        threadsAt.Should().BeGreaterThan(-1);
+        threadsAt.Should().BeLessThan(inputAt, "an output -threads never reaches the decoder");
+    }
+
     // ── Filtergraph carries no colon path (Bug 1 regression) ─────────────────
 
     [Fact]
@@ -308,12 +336,7 @@ public class SubtitleOcrEngineOcrAsyncTests
     }
 
     private static OcrSidecarTarget Sidecar(IStorage storage, string variant) =>
-        new(
-            storage,
-            "/encoded/Show.S01E01",
-            "Show.S01E01.NoMercy",
-            variant
-        );
+        new(storage, "/encoded/Show.S01E01", "Show.S01E01.NoMercy", variant);
 
     // ── Failure surfacing ─────────────────────────────────────────────────────
 
@@ -402,9 +425,7 @@ public class SubtitleOcrEngineOcrAsyncTests
                     It.IsAny<CancellationToken>()
                 )
             )
-            .ReturnsAsync(
-                new ProcessResult(0, "", "", TimeSpan.Zero)
-            );
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
         return processRunner;
     }
 
@@ -430,9 +451,7 @@ public class SubtitleOcrEngineOcrAsyncTests
                 string?,
                 CancellationToken
             >((_, args, env, workingDirectory, _) => capture(args, env, workingDirectory))
-            .ReturnsAsync(
-                new ProcessResult(0, "", "", TimeSpan.Zero)
-            );
+            .ReturnsAsync(new ProcessResult(0, "", "", TimeSpan.Zero));
         return processRunner;
     }
 }

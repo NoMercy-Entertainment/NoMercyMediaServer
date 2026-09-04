@@ -94,6 +94,10 @@ public partial class CropDetector(
         string[] args =
         [
             "-hide_banner",
+            // Ahead of -i, or it lands on the output and the decoder — the whole
+            // cost of a cropdetect scan — runs on every core the host has.
+            "-threads",
+            EncodeThreadBudget.AuxiliaryPass.ToString(),
             "-ss",
             StartOffsetSeconds.ToString(),
             "-i",
@@ -102,8 +106,6 @@ public partial class CropDetector(
             ((int)ScanDuration.TotalSeconds).ToString(),
             "-vf",
             CropDetectFilter(isHdr),
-            "-threads",
-            EncodeThreadBudget.AuxiliaryPass.ToString(),
             "-filter_threads",
             EncodeThreadBudget.AuxiliaryPass.ToString(),
             "-f",
