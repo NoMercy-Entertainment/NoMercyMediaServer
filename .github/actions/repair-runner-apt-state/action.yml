@@ -9,15 +9,31 @@ runs:
     - name: Drop the half-configured spell-checker chain
       shell: bash
       run: |
-        # The deb job used to install devscripts, which drags in emacsen-common.
-        # Its postinst exits 255 inside the runner container, dpkg leaves the
-        # whole chain unconfigured, and from then on apt refuses to finish any
-        # install on that box — which is how one packaging job took the release
-        # down twice. The packages are broken, no job here uses them, and they
-        # are ours to clean up. A runner that never had them sees a no-op.
-        sudo dpkg --remove --force-depends --force-remove-reinstreq \
-          libenchant-2-dev libenchant-2-2 hunspell-en-us dictionaries-common \
-          emacsen-common 2>/dev/null || true
+        # The runner image installs firefox without --no-install-recommends, so
+        # it carries hunspell-en-us -> dictionaries-common -> emacsen-common.
+        # emacsen-common's postinst cannot succeed in a container, so every
+        # runner starts with dpkg half-configured and apt refuses to finish any
+        # install on it — whatever the job actually asked for. The real fix is
+        # in the runner image; this keeps our own jobs off the floor until then.
+        BROKEN="emacsen-common dictionaries-common hunspell-en-us libenchant-2-2 libenchant-2-dev"
 
-        # Anything else left mid-configure by another workload on the same box.
+        # Plain --remove runs the same maintainer scripts that are failing, so it
+        # cannot get these out. Replace them with a no-op first, then purge.
+        for package in $BROKEN; do
+          for script in preinst postinst prerm postrm; do
+            file="/var/lib/dpkg/info/${package}.${script}"
+            if [ -f "$file" ]; then
+              printf '#!/bin/sh\nexit 0\n' | sudo tee "$file" >/dev/null
+              sudo chmod 755 "$file"
+            fi
+          done
+        done
+
         sudo dpkg --configure -a || true
+        sudo apt-get purge -y $BROKEN || true
+
+        # Anything else another workload on this box left mid-configure.
+        sudo dpkg --configure -a || true
+
+        echo "packages still half-configured:"
+        dpkg -l | awk '$1 !~ /^ii/ && $1 ~ /^[a-z]/ {print "  " $1, $2}' || true
