@@ -271,6 +271,9 @@ public class SetupEndpoints
             error = _state.ErrorMessage,
             detail = _state.PhaseDetail,
             server_url = _state.ServerUrl,
+            // The server's own origin serves the API (Swagger at /), not the client,
+            // so finishing setup has to hand off to the app instead of to ServerUrl.
+            app_url = ExternalServicesConfig.Current.AppBaseUrl,
         };
     }
 

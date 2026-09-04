@@ -306,6 +306,22 @@ public sealed class SetupEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task HandleSetupStatus_CarriesAppUrl_SoCompletionHandsOffToTheClient()
+    {
+        SetupEndpoints endpoints = BuildEndpoints();
+        DefaultHttpContext context = BuildContext("GET", "/setup/status");
+
+        await endpoints.HandleRequestAsync(context);
+
+        string body = ReadBody(context);
+
+        // The server's own origin serves the API, so a completion handoff to
+        // server_url lands the user on Swagger. setup.js redirects to app_url.
+        Assert.Contains("app_url", body);
+        Assert.Contains(ExternalServicesConfig.Current.AppBaseUrl, body);
+    }
+
+    [Fact]
     public async Task HandleSetupStatus_Post_Returns405()
     {
         SetupEndpoints endpoints = BuildEndpoints();
