@@ -17,6 +17,7 @@ using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
 using NoMercy.Encoder.Progress;
 using NoMercy.Encoder.Subtitles;
+using NoMercy.Resources;
 using NoMercy.Storage;
 
 namespace NoMercy.Tests.Encoder.Subtitles;
@@ -188,7 +189,14 @@ public class WhisperTranscriberTests
         );
 
         capturedArgs.Should().NotBeNull();
-        capturedArgs!.Should().ContainInOrder("-i", InputPath);
+
+        // Ahead of -i or it reaches the output only, leaving the decoder
+        // uncapped — the same misplacement that let a sprite pass take 10.6
+        // cores against a budget of 2.
+        capturedArgs!
+            .Should()
+            .ContainInOrder("-threads", EncodeThreadBudget.AuxiliaryPass.ToString(), "-i");
+        capturedArgs.Should().ContainInOrder("-i", InputPath);
         capturedArgs.Should().ContainInOrder("-map", "0:a:3"); // streamIndex 3
         capturedArgs.Should().Contain("-vn"); // discard video
         capturedArgs.Should().ContainInOrder("-f", "null"); // discard ffmpeg's own output
@@ -421,9 +429,7 @@ public class WhisperTranscriberTests
         Mock<IStorage> storage = new();
         storage.Setup(s => s.Exists(ModelPath)).Returns(true);
         storage.Setup(s => s.Exists(It.Is<string>(p => p.EndsWith(".srt")))).Returns(false);
-        storage
-            .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns<string>(p => new(p));
+        storage.Setup(s => s.AcquireLocalPath(It.IsAny<string>())).Returns<string>(p => new(p));
         Mock<IProcessRunner> processRunner = SuccessProcess();
 
         WhisperTranscriber transcriber = new(
@@ -584,9 +590,7 @@ public class WhisperTranscriberTests
         Mock<IStorage> storage = new();
         storage.Setup(s => s.Exists(modelPath)).Returns(true);
         storage.Setup(s => s.Exists(It.Is<string>(p => p.EndsWith(".srt")))).Returns(true);
-        storage
-            .Setup(s => s.AcquireLocalPath(It.IsAny<string>()))
-            .Returns<string>(p => new(p));
+        storage.Setup(s => s.AcquireLocalPath(It.IsAny<string>())).Returns<string>(p => new(p));
         return storage;
     }
 

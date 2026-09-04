@@ -100,13 +100,15 @@ public partial class SubtitleOcrEngine(
             string[] args =
             [
                 "-hide_banner",
+                // Ahead of -i: after it, the cap reaches the output and leaves the
+                // decoder to take the box.
+                "-threads",
+                EncodeThreadBudget.AuxiliaryPass.ToString(CultureInfo.InvariantCulture),
                 "-i",
                 inputLease.Path,
                 "-filter_complex",
                 $"[0:s:{streamIndex}]ocr=language={language},metadata=print:key=lavfi.ocr.text:file={ocrFileName}",
                 "-an",
-                "-threads",
-                EncodeThreadBudget.AuxiliaryPass.ToString(CultureInfo.InvariantCulture),
                 "-filter_complex_threads",
                 EncodeThreadBudget.AuxiliaryPass.ToString(CultureInfo.InvariantCulture),
                 "-f",

@@ -86,6 +86,10 @@ public class WhisperTranscriber(
         string[] args =
         [
             "-hide_banner",
+            // Ahead of -i: after it, the cap reaches the output and leaves the
+            // decoder to take the box.
+            "-threads",
+            EncodeThreadBudget.AuxiliaryPass.ToString(),
             "-i",
             inputLease.Path,
             "-map",
@@ -93,8 +97,6 @@ public class WhisperTranscriber(
             "-vn",
             "-af",
             whisperFilter,
-            "-threads",
-            EncodeThreadBudget.AuxiliaryPass.ToString(),
             "-f",
             "null",
             "-",
