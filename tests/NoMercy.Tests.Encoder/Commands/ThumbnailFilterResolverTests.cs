@@ -29,7 +29,7 @@ public class ThumbnailFilterResolverTests
             tonemapChain: Tonemap
         );
 
-        filter.Should().Be("format=yuvj420p,fps=1/10,scale=320:-2");
+        filter.Should().Be("fps=1/10,scale=320:-2,format=yuvj420p");
         filter.Should().NotContain("tonemap");
     }
 
@@ -43,8 +43,7 @@ public class ThumbnailFilterResolverTests
             tonemapChain: Tonemap
         );
 
-        filter.Should().StartWith(Tonemap + ",");
-        filter.Should().EndWith("fps=1/10,scale=320:-2");
+        filter.Should().Be($"fps=1/10,{Tonemap},scale=320:-2,format=yuvj420p");
         filter.Should().Contain("tonemap=hable", "HDR sprites must be tonemapped to SDR");
     }
 
@@ -61,6 +60,43 @@ public class ThumbnailFilterResolverTests
         );
 
         filter.Should().Contain("tonemap=hable");
-        filter.Should().EndWith("fps=1/5,scale=240:-2");
+        filter.Should().StartWith("fps=1/5,");
+        filter.Should().EndWith(",scale=240:-2,format=yuvj420p");
+    }
+
+    [Theory]
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(false, 249)]
+    [InlineData(true, 249)]
+    public void Resolve_DecimatesBeforeAnyPerFrameWork(bool sourceIsHdr, int? padToCells)
+    {
+        // A 41-minute episode decodes ~59 600 frames to keep 249. Anything placed
+        // ahead of fps is paid for on all 59 600 — measured at 1178s of CPU for a
+        // leading format convert against 787s once fps leads.
+        string filter = ThumbnailFilterResolver.Resolve(
+            intervalSeconds: 10,
+            width: 320,
+            sourceIsHdr: sourceIsHdr,
+            tonemapChain: Tonemap,
+            padToCells: padToCells
+        );
+
+        filter.Should().StartWith("fps=1/10,");
+
+        int fpsAt = filter.IndexOf("fps=", StringComparison.Ordinal);
+
+        foreach (string expensive in new[] { "format=", "scale=", "zscale=", "tonemap=", "tpad=" })
+        {
+            int at = filter.IndexOf(expensive, StringComparison.Ordinal);
+            if (at < 0)
+                continue;
+
+            at.Should()
+                .BeGreaterThan(
+                    fpsAt,
+                    $"'{expensive}' must run on the kept frames, not on every decoded one"
+                );
+        }
     }
 }

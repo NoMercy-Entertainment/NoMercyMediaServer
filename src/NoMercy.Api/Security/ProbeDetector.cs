@@ -44,6 +44,10 @@ public static class ProbeDetector
         ".sql",
     ];
 
+    // Never list an asset this server serves. swagger-ui-bundle and
+    // swagger-ui-standalone-preset were here, and opening our own Swagger page
+    // twice was worth 10 points — a permanent ban for the operator checking the
+    // server was alive.
     private static readonly string[] ExploitFragments =
     [
         "/wp-admin",
@@ -71,9 +75,6 @@ public static class ProbeDetector
         "/hnap1",
         "/etc/passwd",
         "/.stripe/",
-        "/aws",
-        "swagger-ui-bundle",
-        "swagger-ui-standalone-preset",
         "/.gcp/",
         "gcp-key",
         "service-account.json",

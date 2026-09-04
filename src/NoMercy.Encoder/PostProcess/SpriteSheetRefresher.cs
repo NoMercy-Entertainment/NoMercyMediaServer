@@ -76,7 +76,13 @@ public class SpriteSheetRefresher(
         // numbers this run can produce, so it follows the caller: on when someone
         // is listening, off when nobody is.
         FfmpegCommand command = new FfmpegCommandBuilder()
-            .WithGlobalOptions(new(ProgressPipe: onProgress is not null, Overwrite: true))
+            .WithGlobalOptions(
+                new(
+                    ProgressPipe: onProgress is not null,
+                    Overwrite: true,
+                    Threads: EncodeThreadBudget.AuxiliaryPass
+                )
+            )
             .AddInput(new(storage.GetFullPath(source)))
             .AddOutput(
                 new(
@@ -95,12 +101,12 @@ public class SpriteSheetRefresher(
                         ["-f"] = "spritevtt",
                         ["-sprite_columns"] = grid.Columns.ToString(CultureInfo.InvariantCulture),
                         ["-vtt_filename"] = vttName,
+                        // An output -threads reaches the muxer's encoder and
+                        // nothing else: the h264 decoder took every core anyway,
+                        // 10.6 of them measured. Only the global one above caps it.
                         ["-threads"] = EncodeThreadBudget.AuxiliaryPass.ToString(
                             CultureInfo.InvariantCulture
                         ),
-                        // -threads bounds the decoder; the fps/scale/tpad chain
-                        // runs on ffmpeg's separate filter thread pool, uncapped
-                        // by -threads alone.
                         ["-filter_threads"] = EncodeThreadBudget.AuxiliaryPass.ToString(
                             CultureInfo.InvariantCulture
                         ),

@@ -443,7 +443,7 @@ public class HardwareBenchmark(
                 width,
                 height,
                 result.ExitCode,
-                CalibrationArgumentBuilder.TruncateStderr(result.StdErr)
+                FfmpegStderr.Tail(result.StdErr)
             );
             return null;
         }

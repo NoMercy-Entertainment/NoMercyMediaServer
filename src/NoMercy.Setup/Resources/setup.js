@@ -256,14 +256,19 @@
             stopStatusStream();
             show("step-complete");
 
+            // Hand off to the app, never to server_url: the server's own origin
+            // serves the API, so sending the user there ends setup on Swagger.
+            var appUrl = data.app_url || el("server-url").href;
+
             if (data.server_url) {
-                el("server-url").href = data.server_url;
                 el("server-url-display").textContent = data.server_url;
-                el("redirect-msg").classList.remove("redirect-msg-hidden");
-                setTimeout(function() {
-                    window.location.href = data.server_url;
-                }, 5000);
             }
+
+            el("server-url").href = appUrl;
+            el("redirect-msg").classList.remove("redirect-msg-hidden");
+            setTimeout(function() {
+                window.location.href = appUrl;
+            }, 5000);
 
         } else if (data.error) {
             el("progress-error").textContent = data.error;

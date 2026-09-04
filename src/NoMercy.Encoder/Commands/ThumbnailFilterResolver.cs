@@ -49,15 +49,20 @@ public static class ThumbnailFilterResolver
         int? padToCells
     )
     {
-        string baseFilter = $"format=yuvj420p,fps=1/{intervalSeconds},scale={width}:-2";
+        // fps leads, and everything expensive follows it. A 41-minute episode
+        // decodes ~59 600 frames to keep 249; running the pixel-format convert,
+        // the tonemap and the scale ahead of that decimation paid for all 59 600.
+        string filter = $"fps=1/{intervalSeconds}";
+
+        if (sourceIsHdr)
+            filter +=
+                $",{(string.IsNullOrEmpty(tonemapChain) ? DefaultTonemapChain : tonemapChain)}";
+
+        filter += $",scale={width}:-2,format=yuvj420p";
 
         if (padToCells is > 0)
-            baseFilter += $",tpad=stop={padToCells}:stop_mode=add:color=black";
+            filter += $",tpad=stop={padToCells}:stop_mode=add:color=black";
 
-        if (!sourceIsHdr)
-            return baseFilter;
-
-        string chain = string.IsNullOrEmpty(tonemapChain) ? DefaultTonemapChain : tonemapChain;
-        return $"{chain},{baseFilter}";
+        return filter;
     }
 }
