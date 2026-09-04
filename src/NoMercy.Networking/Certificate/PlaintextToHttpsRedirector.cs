@@ -37,7 +37,7 @@ internal static class PlaintextToHttpsRedirector
         );
     }
 
-    private static async Task HandleAsync(
+    internal static async Task HandleAsync(
         ConnectionContext connectionContext,
         ConnectionDelegate next,
         int httpsPort
@@ -49,19 +49,20 @@ internal static class PlaintextToHttpsRedirector
         );
         ReadOnlySequence<byte> buffer = result.Buffer;
 
-        // Leave every byte in the pipe for the real reader (the TLS adapter, or our own
-        // parser below) — only the "examined" watermark moves, nothing is consumed.
-        input.AdvanceTo(buffer.Start, buffer.End);
-
         bool looksLikeTls = buffer.Length > 0 && buffer.FirstSpan[0] == TlsHandshakeContentType;
         if (result.IsCompleted || buffer.IsEmpty || looksLikeTls)
         {
+            // Nothing consumed AND nothing examined. Examining the ClientHello parks
+            // the pipe until bytes arrive beyond it, and none ever do: the client is
+            // waiting on our ServerHello. Every TLS connection hung on that.
+            input.AdvanceTo(buffer.Start, buffer.Start);
             await next(connectionContext);
             return;
         }
 
         string? host = ParseHostHeader(buffer);
         string path = ParseRequestPath(buffer);
+        input.AdvanceTo(buffer.Start, buffer.End);
         string location = $"https://{host ?? "localhost"}:{httpsPort}{path}";
 
         byte[] response = Encoding.ASCII.GetBytes(

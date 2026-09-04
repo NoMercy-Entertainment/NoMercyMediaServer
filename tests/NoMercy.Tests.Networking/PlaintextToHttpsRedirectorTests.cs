@@ -10,7 +10,10 @@
 // -----------------------------------------------------------------------------
 
 using System.Buffers;
+using System.IO.Pipelines;
 using System.Text;
+using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Http.Features;
 using NoMercy.Networking.Certificate;
 using Xunit;
 
@@ -19,8 +22,7 @@ namespace NoMercy.Tests.Networking;
 [Trait("Category", "Unit")]
 public sealed class PlaintextToHttpsRedirectorTests
 {
-    private static ReadOnlySequence<byte> Request(string raw) =>
-        new(Encoding.ASCII.GetBytes(raw));
+    private static ReadOnlySequence<byte> Request(string raw) => new(Encoding.ASCII.GetBytes(raw));
 
     [Fact]
     public void ParseHostHeader_ReturnsHost_WithoutPlaintextPort()
@@ -78,5 +80,99 @@ public sealed class PlaintextToHttpsRedirectorTests
         string path = PlaintextToHttpsRedirector.ParseRequestPath(buffer);
 
         Assert.Equal("/", path);
+    }
+
+    /// <summary>
+    /// The sniff must hand the TLS adapter a pipe it can read straight away. Marking
+    /// the ClientHello as examined parks that read until bytes arrive past it, and the
+    /// client sends none — it is waiting for the ServerHello. Every https request to
+    /// the internal port hung on exactly that, while plain http still answered 301.
+    /// </summary>
+    [Fact]
+    public async Task ATlsHandshake_IsStillReadableByTheNextHandler()
+    {
+        byte[] clientHello = [0x16, 0x03, 0x01, 0x00, 0x2a];
+        FakeConnection connection = new();
+        await connection.ClientWritesAsync(clientHello);
+
+        ReadResult seenByNext = default;
+        Task handled = PlaintextToHttpsRedirector.HandleAsync(
+            connection,
+            async _ =>
+                seenByNext = await connection
+                    .Transport.Input.ReadAsync(TestTimeout.Token)
+                    .AsTask()
+                    .WaitAsync(TestTimeout.Token),
+            7626
+        );
+
+        await handled.WaitAsync(TestTimeout.Token);
+
+        Assert.Equal(clientHello, seenByNext.Buffer.ToArray());
+    }
+
+    [Fact]
+    public async Task APlaintextRequest_IsAnsweredWithARedirectToTheHttpsPort()
+    {
+        FakeConnection connection = new();
+        await connection.ClientWritesAsync(
+            Encoding.ASCII.GetBytes("GET /dashboard HTTP/1.1\r\nHost: 10.0.1.1:7626\r\n\r\n")
+        );
+
+        bool reachedNext = false;
+        await PlaintextToHttpsRedirector
+            .HandleAsync(
+                connection,
+                _ =>
+                {
+                    reachedNext = true;
+                    return Task.CompletedTask;
+                },
+                7626
+            )
+            .WaitAsync(TestTimeout.Token);
+
+        string response = await connection.ClientReadsAsync();
+
+        Assert.False(reachedNext, "a plaintext request never belongs in the TLS adapter");
+        Assert.Contains("301 Moved Permanently", response);
+        Assert.Contains("Location: https://10.0.1.1:7626/dashboard", response);
+    }
+
+    private static CancellationTokenSource TestTimeout => new(TimeSpan.FromSeconds(5));
+
+    /// <summary>
+    /// A connection whose transport is a real pair of pipes, so the redirector's pipe
+    /// bookkeeping is exercised rather than described.
+    /// </summary>
+    private sealed class FakeConnection : ConnectionContext, IDuplexPipe
+    {
+        private readonly Pipe _clientToServer = new();
+        private readonly Pipe _serverToClient = new();
+
+        public PipeReader Input => _clientToServer.Reader;
+        public PipeWriter Output => _serverToClient.Writer;
+
+        public override IDuplexPipe Transport { get; set; }
+        public override string ConnectionId { get; set; } = "test";
+        public override IFeatureCollection Features { get; } = new FeatureCollection();
+        public override IDictionary<object, object?> Items { get; set; } =
+            new Dictionary<object, object?>();
+
+        public FakeConnection()
+        {
+            Transport = this;
+        }
+
+        public async Task ClientWritesAsync(byte[] bytes)
+        {
+            await _clientToServer.Writer.WriteAsync(bytes);
+        }
+
+        public async Task<string> ClientReadsAsync()
+        {
+            ReadResult read = await _serverToClient.Reader.ReadAsync();
+            return Encoding.ASCII.GetString(read.Buffer.ToArray());
+        }
     }
 }
