@@ -16,6 +16,7 @@ using NoMercy.Encoder.Commands;
 using NoMercy.Encoder.Execution;
 using NoMercy.Encoder.PostProcess;
 using NoMercy.Encoder.Progress;
+using NoMercy.Resources;
 using NoMercy.Storage;
 using NoMercy.Storage.Drivers.Local;
 using Xunit;
@@ -112,6 +113,27 @@ public class SpriteSheetRefresherSourceTests : IDisposable
         File.Exists(Path.Combine(_mediaFolder, "sprite.webp")).Should().BeFalse();
         File.Exists(Path.Combine(_mediaFolder, "previews.vtt")).Should().BeFalse();
         File.Exists(Path.Combine(_mediaFolder, "Show.S01E01.NoMercy.mp4")).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TheThreadCap_SitsAheadOfTheInput_SoItReachesTheDecoder()
+    {
+        WriteFile("Show.S01E01.NoMercy.mp4", 4_000);
+
+        FfmpegCommand? command = await RunAsync(succeeds: false);
+
+        int threadsAt = Array.IndexOf(command!.Arguments, "-threads");
+        int inputAt = Array.IndexOf(command.Arguments, "-i");
+
+        threadsAt.Should().BeGreaterThan(-1);
+        threadsAt
+            .Should()
+            .BeLessThan(
+                inputAt,
+                "an output -threads reaches the encoder only, and h264 decode then "
+                    + "takes every core the box has"
+            );
+        command.Arguments[threadsAt + 1].Should().Be(EncodeThreadBudget.AuxiliaryPass.ToString());
     }
 
     private void WriteFile(string name, int bytes)

@@ -56,13 +56,16 @@ public static class EncodeThreadBudget
 
     /// <summary>
     /// A thumbnail sprite refresh (decode + fps decimation + scale + pad).
-    /// <c>-threads</c>/<c>-filter_threads</c> cap ffmpeg's own decoder and filter
-    /// pools, but swscale's internal scaling threads ignore both — measured at
-    /// 6-7 real cores on this box regardless of either flag. Budgeted above the
-    /// measured cost, not at it: the live CPU-headroom gate is a point-in-time
-    /// sample that can grant a job before an already-running one's ramp-up is
-    /// reflected, so the hard semaphore cap needs to bound concurrency on its
-    /// own — a 32-thread box exhausts its semaphore at 2 of these, not 4.
+    /// <para>The 6-7 real cores this used to be budgeted for were not swscale
+    /// ignoring the flags, as the earlier note here claimed: <c>-threads</c> sat
+    /// on the output, where it reaches the encoder and never the decoder, so
+    /// h264 decode ran on every core — 10.6 measured on a 41-minute 1080p
+    /// episode. Both sprite paths now pass it globally, ahead of the input, and
+    /// the same pass measures 1.90 cores.</para>
+    /// <para>Budgeted above the measured cost, not at it: the live CPU-headroom
+    /// gate is a point-in-time sample that can grant a job before an
+    /// already-running one's ramp-up is reflected, so the hard semaphore cap
+    /// needs to bound concurrency on its own.</para>
     /// </summary>
-    public const int ThumbnailSpriteRefresh = 11;
+    public const int ThumbnailSpriteRefresh = 4;
 }

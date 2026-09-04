@@ -410,7 +410,16 @@ public class BuildStage(
 
                     spriteCommands.Add(
                         new FfmpegCommandBuilder()
-                            .WithGlobalOptions(new(ProgressPipe: false, Overwrite: true))
+                            // Global, not on the output: an output -threads reaches
+                            // the encoder only, leaving the decoder to take every
+                            // core — the same standalone pass the refresher runs.
+                            .WithGlobalOptions(
+                                new(
+                                    ProgressPipe: false,
+                                    Overwrite: true,
+                                    Threads: EncodeThreadBudget.AuxiliaryPass
+                                )
+                            )
                             .AddInput(new(input.InputPath))
                             .AddOutput(
                                 new(
