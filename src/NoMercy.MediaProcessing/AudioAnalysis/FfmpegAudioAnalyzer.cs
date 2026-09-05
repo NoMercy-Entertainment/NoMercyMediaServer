@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -31,7 +31,8 @@ public sealed class FfmpegAudioAnalyzer(
 {
     private static readonly TimeSpan AnalysisTimeout = TimeSpan.FromMinutes(10);
 
-    public int Version => 1;
+    // 2: tempo confidence, derived from running the detector twice.
+    public int Version => 2;
 
     public async Task<AudioAnalysisResult?> AnalyzeAsync(string filePath, CancellationToken ct)
     {
@@ -39,12 +40,27 @@ public sealed class FfmpegAudioAnalyzer(
 
         AudioAnalysisOutputParser parser = new();
 
-        // One pass, every detector. keydetect and silencedetect answer through
-        // ametadata on stdout; loudnorm and beatdetect answer on stderr.
+        // One pass, every detector. keydetect and aspectralstats answer through
+        // ametadata on stdout; silencedetect, loudnorm and beatdetect answer on
+        // stderr.
+        //
+        // The tempo detector runs twice, the second time over the same audio
+        // resampled. Resampling must not change a tempo, so the two answers
+        // disagreeing is the only reliability signal available while the filter
+        // itself emits no confidence.
+        //
+        // Both run FIRST, ahead of every filter that alters the signal. loudnorm
+        // normalizes as well as reporting, and reading tempo downstream of it
+        // measured the normalized copy — the same track moved 99.40 to 106.97.
+        // Everything after runs at 96 kHz, which none of them care about:
+        // keydetect takes its window in milliseconds, a spectral centroid is in
+        // Hz, silence is in seconds and loudness is rate-independent.
         string filterGraph = string.Join(
             ",",
-            "keydetect",
             "beatdetect",
+            "aresample=96000",
+            "beatdetect",
+            "keydetect",
             "aspectralstats=measure=centroid",
             "silencedetect=n=-50dB:d=0.5",
             "loudnorm=print_format=json",

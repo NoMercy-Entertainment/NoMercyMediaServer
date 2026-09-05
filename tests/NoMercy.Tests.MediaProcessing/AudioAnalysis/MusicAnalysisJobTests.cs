@@ -143,8 +143,12 @@ public class MusicAnalysisJobTests : IDisposable
 
         double? energy = ReadRow()?.Energy;
 
+        // A concrete number, not AudioEnergy.Estimate(...) compared to itself —
+        // that form passes for every possible formula. AudioEnergyTests pins the
+        // formula; this pins that the job actually applies it to the values it
+        // stored.
         Assert.NotNull(energy);
-        Assert.Equal(AudioEnergy.Estimate(-9.0, 2400.0), energy);
+        Assert.Equal(0.693778, energy.Value, 6);
     }
 
     /// <summary>

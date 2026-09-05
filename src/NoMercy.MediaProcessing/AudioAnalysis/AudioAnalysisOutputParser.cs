@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------------
 //  Copyright (c) 2024-present NoMercy Entertainment. All rights reserved.
 //
 //  This file is part of NoMercy MediaServer, source-available software (NOT open
@@ -41,13 +41,26 @@ public sealed partial class AudioAnalysisOutputParser
     private const double IntroSilenceToleranceSeconds = 0.05;
     private const double OutroSilenceToleranceSeconds = 0.25;
 
+    /// <summary>
+    /// The disagreement at which a tempo is worth nothing. Measured across a real
+    /// library: dense produced material moves under 2% between sample rates,
+    /// while material the detector cannot hold moves by 19% to 63%.
+    /// </summary>
+    private const double MaxTrustedSpread = 0.10;
+
     [GeneratedRegex(@"^lavfi\.(?<key>[a-z0-9_.]+)=(?<value>.*)$", RegexOptions.IgnoreCase)]
     private static partial Regex MetadataLineRegex();
 
     // beatdetect names its key like frame metadata but only logs it, so it has
     // to be scraped. Deleted when nomercy-ffmpeg#57 A1 lands and the key arrives
     // through ametadata with everything else.
-    [GeneratedRegex(@"lavfi\.beatdetect\.bpm=(?<bpm>[0-9]+(?:\.[0-9]+)?)")]
+    //
+    // Only the tagged av_log form is read. The filter also writes the same value
+    // through a bare fprintf that carries no instance tag, so two instances in
+    // one graph produce four lines of which only two can be told apart.
+    [GeneratedRegex(
+        @"\[Parsed_beatdetect_(?<instance>[0-9]+) @[^]]*\]\s*lavfi\.beatdetect\.bpm=(?<bpm>[0-9]+(?:\.[0-9]+)?)"
+    )]
     private static partial Regex BeatdetectStderrRegex();
 
     [GeneratedRegex(@"silence_start:\s*(?<value>-?[0-9]+(?:\.[0-9]+)?)")]
@@ -65,6 +78,8 @@ public sealed partial class AudioAnalysisOutputParser
     private readonly StringBuilder _loudnormJson = new();
     private readonly List<double> _centroids = [];
     private readonly List<SilenceRegion> _silences = [];
+
+    private readonly Dictionary<int, double> _bpmByInstance = [];
 
     private bool _collectingLoudnorm;
     private double? _bpm;
@@ -125,9 +140,10 @@ public sealed partial class AudioAnalysisOutputParser
         {
             Bpm = _bpm,
 
-            // beatdetect emits neither a confidence nor a downbeat today. Left
-            // null rather than invented; nomercy-ffmpeg#57 A2 and A3 fill them.
-            BpmConfidence = null,
+            BpmConfidence = ResolveBpmConfidence(),
+
+            // beatdetect emits no downbeat, so phase stays unset rather than
+            // invented; nomercy-ffmpeg#57 A2 fills it.
             BeatOffsetMs = null,
             BeatIntervalMs = beatInterval,
 
@@ -156,7 +172,48 @@ public sealed partial class AudioAnalysisOutputParser
 
         // The filter prints 0.00 when it found nothing. That is an absence, not
         // a tempo of zero.
-        _bpm = parsed is > 0 ? parsed : null;
+        if (parsed is not > 0)
+        {
+            return;
+        }
+
+        int instance = int.Parse(match.Groups["instance"].Value, CultureInfo.InvariantCulture);
+        _bpmByInstance[instance] = parsed.Value;
+
+        // The first instance analyses the track as delivered; anything after it
+        // is a perturbed copy used only to judge stability.
+        if (instance == _bpmByInstance.Keys.Min())
+        {
+            _bpm = parsed;
+        }
+    }
+
+    /// <summary>
+    /// How stable the tempo is under a change that must not alter it — the graph
+    /// runs a second detector over the same audio at a different sample rate.
+    /// <para>
+    /// This measures stability, NOT correctness. While the filter's tempo priors
+    /// remain (nomercy-ffmpeg#57 B5), a confidently wrong answer stays confidently
+    /// wrong under resampling and scores high. What it reliably catches is the
+    /// opposite case: material the detector cannot lock onto at all, which moves
+    /// by tens of percent between rates.
+    /// </para>
+    /// <para>Null when the graph ran only one detector, so a caller can tell
+    /// "not measured" from "measured as unreliable".</para>
+    /// </summary>
+    private double? ResolveBpmConfidence()
+    {
+        if (_bpmByInstance.Count < 2 || _bpm is not > 0)
+        {
+            return null;
+        }
+
+        double baseline = _bpm.Value;
+        double worstSpread = _bpmByInstance
+            .Values.Select(value => Math.Abs(value - baseline) / baseline)
+            .Max();
+
+        return Math.Clamp(1.0 - worstSpread / MaxTrustedSpread, 0.0, 1.0);
     }
 
     private void CollectDuration(string line)
