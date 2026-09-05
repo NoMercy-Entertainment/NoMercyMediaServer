@@ -181,6 +181,16 @@ public class LiveTranscodeService(
             playbackDecision = new(PlaybackAction.TranscodeVideo, "Decision engine error", null);
         }
 
+        // Transcoding a file that could have played untouched costs a CPU, a
+        // startup delay and picture quality, and the reason was computed and then
+        // dropped — so the choice was invisible from outside.
+        logger.LogInformation(
+            "Playback decision for video file {VideoFileId}: {Action} ({Reason})",
+            videoFileId,
+            playbackDecision.Action,
+            playbackDecision.Reason ?? "compatible with client capabilities"
+        );
+
         if (playbackDecision.Action == PlaybackAction.DirectPlay)
             return DirectPlayResult(
                 videoFileId,
