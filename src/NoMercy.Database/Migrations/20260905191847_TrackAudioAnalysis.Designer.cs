@@ -11,7 +11,7 @@ using NoMercy.Database;
 namespace NoMercy.Database.Migrations
 {
     [DbContext(typeof(MediaContext))]
-    [Migration("20260905182510_TrackAudioAnalysis")]
+    [Migration("20260905191847_TrackAudioAnalysis")]
     partial class TrackAudioAnalysis
     {
         /// <inheritdoc />
@@ -3081,8 +3081,6 @@ namespace NoMercy.Database.Migrations
                         .HasColumnType("REAL");
 
                     b.HasKey("TrackId");
-
-                    b.HasIndex("AnalyzerVersion", "State");
 
                     b.ToTable("TrackAudioAnalysis");
                 });

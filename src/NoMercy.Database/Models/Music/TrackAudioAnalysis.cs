@@ -29,10 +29,12 @@ namespace NoMercy.Database.Models.Music;
 /// unreliable, and the row is still worth keeping for its key and loudness.
 /// </para>
 /// </summary>
+// No index beyond the key. The sweep asks "does this track have a current
+// verdict" as a correlated EXISTS keyed on TrackId, so the primary key already
+// serves it as a seek — confirmed against EXPLAIN QUERY PLAN, not assumed. An
+// (AnalyzerVersion, State) index was written first and the planner never chose
+// it, leaving only its write cost on every analyzed row.
 [PrimaryKey(nameof(TrackId))]
-// The hot query is "rows this analyzer version has not done yet". Without a
-// covering index that is a full scan of a table with one row per track.
-[Index(nameof(AnalyzerVersion), nameof(State))]
 public class TrackAudioAnalysis
 {
     [JsonProperty("track_id")]

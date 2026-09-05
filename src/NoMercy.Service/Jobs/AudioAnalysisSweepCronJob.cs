@@ -80,20 +80,8 @@ public class AudioAnalysisSweepCronJob : ICronJobExecutor
 
         int version = _analyzer.Version;
 
-        // A track needs work when it has no row, or a row from an older
-        // analyzer, or a row that was claimed and never finished.
-        List<Guid> trackIds = await mediaContext
-            .LibraryTrack.AsNoTracking()
-            .Where(libraryTrack => libraryIds.Contains(libraryTrack.LibraryId))
-            .Select(libraryTrack => libraryTrack.TrackId)
-            .Distinct()
-            .Where(trackId =>
-                !mediaContext.TrackAudioAnalysis.Any(analysis =>
-                    analysis.TrackId == trackId
-                    && analysis.AnalyzerVersion == version
-                    && analysis.State != AudioAnalysisState.Pending
-                )
-            )
+        List<Guid> trackIds = await AudioAnalysisQueries
+            .TracksNeedingAnalysis(mediaContext, libraryIds, version)
             .Take(BatchSize)
             .ToListAsync(cancellationToken);
 

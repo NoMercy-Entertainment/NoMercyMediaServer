@@ -52,11 +52,6 @@ namespace NoMercy.Database.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TrackAudioAnalysis_AnalyzerVersion_State",
-                table: "TrackAudioAnalysis",
-                columns: new[] { "AnalyzerVersion", "State" });
         }
 
         /// <inheritdoc />

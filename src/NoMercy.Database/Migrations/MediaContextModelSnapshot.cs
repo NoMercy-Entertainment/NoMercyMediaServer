@@ -3079,8 +3079,6 @@ namespace NoMercy.Database.Migrations
 
                     b.HasKey("TrackId");
 
-                    b.HasIndex("AnalyzerVersion", "State");
-
                     b.ToTable("TrackAudioAnalysis");
                 });
 
