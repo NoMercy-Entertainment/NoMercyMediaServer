@@ -139,6 +139,48 @@ public sealed class PlaintextToHttpsRedirectorTests
         Assert.Contains("Location: https://10.0.1.1:7626/dashboard", response);
     }
 
+    /// <summary>
+    /// A peer that hangs up before sending its first byte is ordinary traffic — port
+    /// scans, health probes and speculative browser connections all do it — and the
+    /// read is cancelled by ConnectionClosed. That escaped as an unhandled exception
+    /// and Kestrel logged a stack trace per connection, burying real errors under it.
+    /// </summary>
+    [Fact]
+    public async Task APeerThatHangsUpBeforeSendingAnything_IsNotAnError()
+    {
+        FakeConnection connection = new();
+        CancellationTokenSource closed = new();
+        connection.ConnectionClosed = closed.Token;
+        await closed.CancelAsync();
+
+        Exception? thrown = await Record.ExceptionAsync(() =>
+            PlaintextToHttpsRedirector
+                .HandleAsync(connection, _ => Task.CompletedTask, 7626)
+                .WaitAsync(TestTimeout.Token)
+        );
+
+        Assert.Null(thrown);
+    }
+
+    /// <summary>
+    /// The catch above is narrow on purpose: only a cancellation the CONNECTION caused
+    /// is swallowed. A cancellation from anywhere else is a real fault and must still
+    /// surface, or this fix trades a noisy log for a silent one.
+    /// </summary>
+    [Fact]
+    public async Task ACancellationTheConnectionDidNotCause_StillSurfaces()
+    {
+        byte[] clientHello = [0x16, 0x03, 0x01, 0x00, 0x2a];
+        FakeConnection connection = new();
+        await connection.ClientWritesAsync(clientHello);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            PlaintextToHttpsRedirector
+                .HandleAsync(connection, _ => throw new OperationCanceledException(), 7626)
+                .WaitAsync(TestTimeout.Token)
+        );
+    }
+
     private static CancellationTokenSource TestTimeout => new(TimeSpan.FromSeconds(5));
 
     /// <summary>
@@ -155,6 +197,7 @@ public sealed class PlaintextToHttpsRedirectorTests
 
         public override IDuplexPipe Transport { get; set; }
         public override string ConnectionId { get; set; } = "test";
+        public override CancellationToken ConnectionClosed { get; set; }
         public override IFeatureCollection Features { get; } = new FeatureCollection();
         public override IDictionary<object, object?> Items { get; set; } =
             new Dictionary<object, object?>();
