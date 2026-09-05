@@ -447,6 +447,7 @@ public class VideoPlaylistResponseDto
                     .EncodePath()}.{language}.{type}.{ext}",
                     Language = language,
                     Kind = "subtitles",
+                    Ext = ext,
                 }
             );
         }
