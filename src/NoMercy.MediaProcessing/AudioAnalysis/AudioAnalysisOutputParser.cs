@@ -321,8 +321,11 @@ public sealed partial class AudioAnalysisOutputParser
         {
             return JObject.Parse(_loudnormJson.ToString());
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            // Loudness is one of three detectors, so a broken block is not a
+            // failed analysis — but it must not vanish without a trace either.
+            Console.WriteLine($"audio analysis: loudnorm block did not parse: {e.Message}");
             return null;
         }
     }

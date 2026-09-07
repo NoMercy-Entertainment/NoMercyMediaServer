@@ -75,6 +75,11 @@ public class MusicAnalysisJobTests : IDisposable
             .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(result);
 
+        return CreateJobFrom(analyzer);
+    }
+
+    private MusicAnalysisJob CreateJobFrom(Mock<IAudioAnalyzer> analyzer)
+    {
         Mock<IStorageDriver> storageDriver = new();
         storageDriver
             .Setup(s => s.CombinePath(It.IsAny<string>(), It.IsAny<string[]>()))
@@ -165,6 +170,31 @@ public class MusicAnalysisJobTests : IDisposable
         Assert.NotNull(row);
         Assert.Equal(AudioAnalysisState.Failed, row.State);
         Assert.False(string.IsNullOrWhiteSpace(row.FailureReason));
+    }
+
+    /// <summary>
+    /// A file the analyzer cannot even open throws instead of returning null.
+    /// That exception must not leave the job: with no row written, the sweep
+    /// selects the track again every hour and the queue dead-letters it every
+    /// hour, for good.
+    /// </summary>
+    [Fact]
+    public async Task Handle_RecordsAFailureWhenTheAnalyzerThrows()
+    {
+        Mock<IAudioAnalyzer> analyzer = new();
+        analyzer.SetupGet(a => a.Version).Returns(AnalyzerVersion);
+        analyzer
+            .Setup(a => a.AnalyzeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new IOException("file vanished"));
+
+        await CreateJobFrom(analyzer).Handle();
+
+        TrackAudioAnalysis? row = ReadRow();
+
+        Assert.NotNull(row);
+        Assert.Equal(AudioAnalysisState.Failed, row.State);
+        Assert.Equal(AnalyzerVersion, row.AnalyzerVersion);
+        Assert.Contains("file vanished", row.FailureReason);
     }
 
     [Fact]
