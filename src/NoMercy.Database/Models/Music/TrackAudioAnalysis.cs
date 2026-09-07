@@ -25,8 +25,10 @@ namespace NoMercy.Database.Models.Music;
 /// </para>
 /// <para>
 /// Every measurement is nullable on purpose. A partial analysis is the normal
-/// case, not a defect: tempo in particular is withheld while the detector is
-/// unreliable, and the row is still worth keeping for its key and loudness.
+/// case, not a defect: a detector that found nothing leaves its columns null,
+/// and the row is still worth keeping for what the others measured. Tempo is
+/// stored whenever the detector produced one; <see cref="BpmConfidence" />
+/// says how far to trust it, and is null when only one detector ran.
 /// </para>
 /// </summary>
 // No index beyond the key. The sweep asks "does this track have a current

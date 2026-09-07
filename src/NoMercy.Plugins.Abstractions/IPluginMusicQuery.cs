@@ -75,9 +75,18 @@ public record PluginTrack(
 
 /// <summary>
 /// One track's measurements. Every member is nullable because a partial
-/// analysis is normal, not a defect — the detectors are independent, and tempo
-/// in particular is withheld while it cannot be trusted.
+/// analysis is normal, not a defect — the detectors are independent, and one
+/// finding nothing leaves its members null.
 /// </summary>
+/// <param name="Bpm">
+/// Present whenever the tempo detector produced one, however unsure it was.
+/// Read it together with <paramref name="BpmConfidence" />.
+/// </param>
+/// <param name="BpmConfidence">
+/// 0..1, how far to trust <paramref name="Bpm" />; 0 means two detector
+/// passes disagreed outright. Null when only one pass ran, so no comparison
+/// was possible.
+/// </param>
 /// <param name="KeyName">As the detector named it: "C", "F#", "Am".</param>
 /// <param name="KeyCamelot">The same key as a Camelot code: "8A".</param>
 /// <param name="Energy">
