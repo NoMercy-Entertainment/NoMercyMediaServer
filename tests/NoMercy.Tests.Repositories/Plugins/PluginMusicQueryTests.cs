@@ -63,9 +63,15 @@ public class PluginMusicQueryTests : IDisposable
                 Name = "Analyzed",
                 TrackNumber = 3,
                 DiscNumber = 1,
+                Duration = "03:45",
             },
             new Track { Id = _unanalyzedTrackId, Name = "Unanalyzed" },
-            new Track { Id = _failedTrackId, Name = "Failed" }
+            new Track
+            {
+                Id = _failedTrackId,
+                Name = "Failed",
+                Duration = "01:02:03",
+            }
         );
 
         context.LibraryTrack.AddRange(
@@ -126,6 +132,42 @@ public class PluginMusicQueryTests : IDisposable
 
         tracks.Should().HaveCount(3);
         tracks.Select(track => track.Id).Should().Contain(_analyzedTrackId);
+    }
+
+    /// <summary>
+    /// The library stores a duration as the "mm:ss" string ffprobe printed. A
+    /// plugin planning a transition needs seconds, so the conversion is done
+    /// here, once, rather than in every plugin.
+    /// </summary>
+    [Fact]
+    public async Task GetTracksAsync_ConvertsTheStoredDurationToSeconds()
+    {
+        IReadOnlyList<PluginTrack> tracks = await CreateQuery()
+            .GetTracksAsync(_libraryId.ToString());
+
+        tracks.Single(track => track.Id == _analyzedTrackId).DurationSeconds.Should().Be(225.0);
+    }
+
+    /// <summary>
+    /// The leading "00:" is stripped when a track is stored, so anything of an
+    /// hour or more keeps three parts and a shorter track has two.
+    /// </summary>
+    [Fact]
+    public async Task GetTracksAsync_ReadsAnHourLongDurationAsHoursMinutesSeconds()
+    {
+        IReadOnlyList<PluginTrack> tracks = await CreateQuery()
+            .GetTracksAsync(_libraryId.ToString());
+
+        tracks.Single(track => track.Id == _failedTrackId).DurationSeconds.Should().Be(3723.0);
+    }
+
+    [Fact]
+    public async Task GetTracksAsync_LeavesDurationNullWhenTheLibraryHasNone()
+    {
+        IReadOnlyList<PluginTrack> tracks = await CreateQuery()
+            .GetTracksAsync(_libraryId.ToString());
+
+        tracks.Single(track => track.Id == _unanalyzedTrackId).DurationSeconds.Should().BeNull();
     }
 
     [Fact]

@@ -9,6 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using NoMercy.Database;
 using NoMercy.Database.Models.Music;
@@ -50,13 +51,13 @@ public class PluginMusicQuery(IDbContextFactory<MediaContext> contextFactory) : 
             libraryTracks = libraryTracks.Where(libraryTrack => libraryTrack.LibraryId == parsed);
         }
 
-        return await libraryTracks
+        List<TrackRow> rows = await libraryTracks
             // Ordered because a page without one is a page that can repeat or
             // skip rows between calls.
             .OrderBy(libraryTrack => libraryTrack.TrackId)
             .Skip(Math.Max(0, skip))
             .Take(Math.Clamp(take, 1, MaxPageSize))
-            .Select(libraryTrack => new PluginTrack(
+            .Select(libraryTrack => new TrackRow(
                 libraryTrack.Track.Id,
                 libraryTrack.Track.Name,
                 libraryTrack
@@ -67,10 +68,22 @@ public class PluginMusicQuery(IDbContextFactory<MediaContext> contextFactory) : 
                     .FirstOrDefault(),
                 libraryTrack.Track.TrackNumber,
                 libraryTrack.Track.DiscNumber,
-                null,
+                libraryTrack.Track.Duration,
                 libraryTrack.LibraryId.ToString()
             ))
             .ToListAsync(ct);
+
+        return rows.Select(row => new PluginTrack(
+                row.Id,
+                row.Title,
+                row.Album,
+                row.Artist,
+                row.TrackNumber,
+                row.DiscNumber,
+                ParseDurationSeconds(row.Duration),
+                row.LibraryId
+            ))
+            .ToList();
     }
 
     public async Task<IReadOnlyList<PluginTrackAudioAnalysis>> GetAnalysisAsync(
@@ -114,4 +127,60 @@ public class PluginMusicQuery(IDbContextFactory<MediaContext> contextFactory) : 
             ))
             .ToListAsync(ct);
     }
+
+    /// <summary>
+    /// The library stores a duration as ffprobe's "hh:mm:ss" with a leading
+    /// "00:" stripped, so a track under an hour reads "mm:ss". Parsed by hand:
+    /// <see cref="TimeSpan.TryParse(string?, out TimeSpan)" /> takes two parts
+    /// as hours and minutes and would make a 3:45 track last all afternoon.
+    /// </summary>
+    private static double? ParseDurationSeconds(string? duration)
+    {
+        if (string.IsNullOrWhiteSpace(duration))
+        {
+            return null;
+        }
+
+        string[] parts = duration.Split(':');
+
+        if (parts.Length is < 2 or > 3)
+        {
+            return null;
+        }
+
+        double seconds = 0;
+        foreach (string part in parts)
+        {
+            if (
+                !double.TryParse(
+                    part,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out double value
+                )
+            )
+            {
+                return null;
+            }
+
+            seconds = seconds * 60 + value;
+        }
+
+        return seconds;
+    }
+
+    /// <summary>
+    /// The shape one page comes off the database in. Duration stays a string
+    /// here because SQLite cannot run the conversion; it happens in memory.
+    /// </summary>
+    private sealed record TrackRow(
+        Guid Id,
+        string Title,
+        string? Album,
+        string? Artist,
+        int? TrackNumber,
+        int? DiscNumber,
+        string? Duration,
+        string LibraryId
+    );
 }
