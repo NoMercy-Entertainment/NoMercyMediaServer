@@ -274,6 +274,37 @@ public class MusicBroadcastSequencingTests
     }
 
     [Fact]
+    public async Task UpdatePlaybackState_DoesNotCoalesce_WhenDeviceIdDiffers()
+    {
+        // Regression: a device switch usually changes nothing else in the
+        // fingerprint — same track, same play state, same time bucket — so
+        // without DeviceId in the comparison, a ChangeDeviceCommand landing
+        // inside the coalesce window looked like the redundant echo of the
+        // broadcast right before it and was dropped whole. The device being
+        // demoted never heard it and kept playing indefinitely.
+        (MusicPlaybackService service, _, Mock<IClientMessenger> messenger) = MakeService();
+        User user = new() { Id = Guid.NewGuid(), Name = "Test User" };
+        PlaylistTrackDto track = MakeTrack();
+        MusicPlayerState state = new()
+        {
+            CurrentItem = track,
+            CurrentList = new("", UriKind.Relative),
+            PlayState = true,
+            Time = 1_500,
+            DeviceId = "device-a",
+        };
+
+        await service.UpdatePlaybackState(user, state);
+        state.DeviceId = "device-b"; // genuine handoff to a different device
+        await service.UpdatePlaybackState(user, state);
+
+        messenger.Verify(
+            m => m.SendTo("MusicPlayerState", "musicHub", user.Id, It.IsAny<object>()),
+            Times.Exactly(2)
+        );
+    }
+
+    [Fact]
     public async Task UpdatePlaybackState_DoesNotCoalesce_WhenTimeBucketDiffers()
     {
         (MusicPlaybackService service, _, Mock<IClientMessenger> messenger) = MakeService();
