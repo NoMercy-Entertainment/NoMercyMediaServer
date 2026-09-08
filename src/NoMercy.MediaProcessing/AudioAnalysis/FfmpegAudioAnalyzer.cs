@@ -31,8 +31,8 @@ public sealed class FfmpegAudioAnalyzer(
 {
     private static readonly TimeSpan AnalysisTimeout = TimeSpan.FromMinutes(10);
 
-    // 2: tempo confidence, derived from running the detector twice.
-    public int Version => 2;
+    // 3: beat grid and confidence read from beatdetect's own metadata (nomercy-ffmpeg v1.0.40).
+    public int Version => 3;
 
     public async Task<AudioAnalysisResult?> AnalyzeAsync(string filePath, CancellationToken ct)
     {
@@ -40,26 +40,23 @@ public sealed class FfmpegAudioAnalyzer(
 
         AudioAnalysisOutputParser parser = new();
 
-        // One pass, every detector. keydetect and aspectralstats answer through
-        // ametadata on stdout; silencedetect, loudnorm and beatdetect answer on
-        // stderr.
+        // One pass, every detector. beatdetect, keydetect and aspectralstats
+        // answer through ametadata on stdout; silencedetect and loudnorm answer
+        // on stderr.
         //
-        // The tempo detector runs twice, the second time over the same audio
-        // resampled. Resampling must not change a tempo, so the two answers
-        // disagreeing is the only reliability signal available while the filter
-        // itself emits no confidence.
+        // beatdetect runs FIRST, ahead of every filter that alters the signal.
+        // loudnorm normalizes as well as reporting, and reading tempo downstream
+        // of it measured the normalized copy — the same track moved 99.40 to
+        // 106.97.
         //
-        // Both run FIRST, ahead of every filter that alters the signal. loudnorm
-        // normalizes as well as reporting, and reading tempo downstream of it
-        // measured the normalized copy — the same track moved 99.40 to 106.97.
-        // Everything after runs at 96 kHz, which none of them care about:
-        // keydetect takes its window in milliseconds, a spectral centroid is in
-        // Hz, silence is in seconds and loudness is rate-independent.
+        // Its metadata is printed immediately after it rather than by the
+        // ametadata at the end of the chain: the frame carrying final=1 does not
+        // survive loudnorm, which re-frames its output, so the end-of-chain print
+        // shows only the running estimate — half time for most of a pass.
         string filterGraph = string.Join(
             ",",
             "beatdetect",
-            "aresample=96000",
-            "beatdetect",
+            "ametadata=mode=print:file=-",
             "keydetect",
             "aspectralstats=measure=centroid",
             "silencedetect=n=-50dB:d=0.5",
@@ -124,6 +121,17 @@ public sealed class FfmpegAudioAnalyzer(
         }
 
         AudioAnalysisResult analysis = parser.Build();
+
+        // An older ffmpeg still yields a tempo, but no confidence and no phase —
+        // half the automix inputs. Silently degrading there would look like a
+        // library of untrustworthy tracks rather than a stale binary.
+        if (!analysis.BeatGridFromMetadata && analysis.Bpm is not null)
+        {
+            logger.LogWarning(
+                "audio analysis read tempo from the legacy stderr line for {Path}; the ffmpeg build predates v1.0.40",
+                filePath
+            );
+        }
 
         // Every detector coming back empty means the pass produced nothing
         // usable, whatever the exit code said.
