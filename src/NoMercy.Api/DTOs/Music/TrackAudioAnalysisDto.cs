@@ -22,8 +22,9 @@ namespace NoMercy.Api.DTOs.Music;
 /// would grow every list response for every user to carry mostly nulls.
 /// </para>
 /// <para>
-/// Every measurement is nullable. A partial analysis is normal — tempo in
-/// particular is withheld while the detector cannot be trusted.
+/// Every measurement is nullable. A partial analysis is normal: a detector
+/// that found nothing leaves its fields null. Tempo is present whenever the
+/// detector produced one; <c>bpm_confidence</c> says how far to trust it.
 /// </para>
 /// </summary>
 public record TrackAudioAnalysisDto

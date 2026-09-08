@@ -21,7 +21,11 @@ namespace NoMercy.Database.Models.Music;
 /// </summary>
 public enum AudioAnalysisState
 {
-    /// <summary>Queued, or claimed by a run that did not finish.</summary>
+    /// <summary>
+    /// No verdict yet. The job writes its verdict in one step, so today a run
+    /// that dies leaves no row rather than a Pending one; the sweep treats a
+    /// missing row and a Pending row alike, as work still to do.
+    /// </summary>
     Pending = 0,
 
     /// <summary>Analyzed. Individual measurements may still be null.</summary>
@@ -34,8 +38,11 @@ public enum AudioAnalysisState
     Failed = 2,
 
     /// <summary>
-    /// The file is not analyzable at all — no audio stream, or a codec the
-    /// build cannot decode. Never retried by a sweep.
+    /// Reserved: the file is not analyzable at all — no audio stream, or a
+    /// codec the build cannot decode — and would never be retried. The job
+    /// cannot yet tell that apart from a failure a newer analyzer might fix,
+    /// so it records <see cref="Failed" /> for both and nothing assigns this
+    /// state yet.
     /// </summary>
     Unsupported = 3,
 }

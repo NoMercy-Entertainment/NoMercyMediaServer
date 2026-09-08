@@ -105,7 +105,21 @@ public class MusicAnalysisJob : IShouldQueue
 
         string path = _storageDriver.CombinePath(track.HostFolder, track.Filename);
 
-        AudioAnalysisResult? result = await _analyzer.AnalyzeAsync(path, CancellationToken.None);
+        AudioAnalysisResult? result;
+        try
+        {
+            result = await _analyzer.AnalyzeAsync(path, CancellationToken.None);
+        }
+        // Anything the analyzer throws — a file that vanished, a mount that is
+        // gone, a permission it lacks — must still end in a row. Left as an
+        // exception, the queue dead-letters the job and the next sweep, seeing
+        // no verdict, queues the same track again: every hour, for good.
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "audio analysis threw for track {TrackId}", TrackId);
+            await Persist(mediaContext, existing, null, e.Message);
+            return;
+        }
 
         if (result is null)
         {
@@ -116,6 +130,8 @@ public class MusicAnalysisJob : IShouldQueue
 
         await Persist(mediaContext, existing, result, null);
     }
+
+    public void Dispose() { }
 
     /// <summary>
     /// A row already carrying this analyzer's verdict is left alone. Re-running
@@ -180,6 +196,4 @@ public class MusicAnalysisJob : IShouldQueue
 
         await mediaContext.SaveChangesAsync();
     }
-
-    public void Dispose() { }
 }
