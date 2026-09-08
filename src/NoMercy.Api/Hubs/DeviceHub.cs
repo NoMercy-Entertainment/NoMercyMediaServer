@@ -24,6 +24,7 @@ using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Devices;
 using NoMercy.Networking;
 using NoMercy.Networking.Devices;
+using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.Setup.Cast;
@@ -36,6 +37,7 @@ public sealed class DeviceHub : ConnectionHub
     private readonly IDbContextFactory<MediaContext> _contextFactory;
     private readonly DeviceBusRegistry _busRegistry;
     private readonly IDeviceCapabilityRegistry _capabilityRegistry;
+    private readonly ICastMdnsRegistry _castMdnsRegistry;
     private readonly ILogger<DeviceHub> _logger;
     private readonly IServerCastWaker _castWaker;
 
@@ -46,6 +48,7 @@ public sealed class DeviceHub : ConnectionHub
         DeviceBusRegistry busRegistry,
         IActivityLogger activityLogger,
         IDeviceCapabilityRegistry capabilityRegistry,
+        ICastMdnsRegistry castMdnsRegistry,
         IServerCastWaker castWaker,
         ILogger<DeviceHub> logger
     )
@@ -54,6 +57,7 @@ public sealed class DeviceHub : ConnectionHub
         _contextFactory = contextFactory;
         _busRegistry = busRegistry;
         _capabilityRegistry = capabilityRegistry;
+        _castMdnsRegistry = castMdnsRegistry;
         _castWaker = castWaker;
         _logger = logger;
     }
@@ -103,25 +107,12 @@ public sealed class DeviceHub : ConnectionHub
             .Devices.Where(d => d.OwnerUserId == user.Id && d.Fingerprint != null)
             .ToListAsync();
 
-        return
-        [
-            .. rows.Select(d =>
-            {
-                (bool Foreground, bool ScreenOn) s = _busRegistry.GetStatus(d.Id);
-                return new DeviceListItem
-                {
-                    DeviceId = d.Id,
-                    Fingerprint = d.Fingerprint!,
-                    Name = d.CustomName ?? d.Name,
-                    Type = d.Type,
-                    Online = _busRegistry.IsOnline(d.Id),
-                    LanIp = d.LanIp,
-                    LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
-                    Foreground = s.Foreground,
-                    ScreenOn = s.ScreenOn,
-                };
-            }),
-        ];
+        return DeviceListComposer.Compose(
+            rows,
+            _busRegistry.IsOnline,
+            _busRegistry.GetStatus,
+            _castMdnsRegistry
+        );
     }
 
     public async Task<WakeResult> WakeForMusic(string deviceId)

@@ -591,7 +591,7 @@ public class MusicPlaybackService
     /// <summary>
     /// Drops a MusicPlayerState broadcast that is the redundant echo of the one
     /// immediately before it for this user: same track, same play/pause state,
-    /// same second-granularity position, within
+    /// same active device, same second-granularity position, within
     /// <see cref="BroadcastCoalesceWindowMs"/> of the previous emit. Only
     /// volume is reduced here — out-of-order correctness is carried entirely by
     /// <see cref="MusicPlayerState.Seq"/>, so this stays conservative and never
@@ -602,6 +602,7 @@ public class MusicPlaybackService
         BroadcastFingerprint fingerprint = new(
             state.CurrentItem?.Id,
             state.PlayState,
+            state.DeviceId,
             state.Time / BroadcastTimeBucketMs,
             nowMs
         );
@@ -613,6 +614,7 @@ public class MusicPlaybackService
             )
             && previousFingerprint.ItemId == fingerprint.ItemId
             && previousFingerprint.PlayState == fingerprint.PlayState
+            && previousFingerprint.DeviceId == fingerprint.DeviceId
             && previousFingerprint.TimeBucket == fingerprint.TimeBucket
             && nowMs - previousFingerprint.AtMs < BroadcastCoalesceWindowMs
         )
@@ -622,9 +624,20 @@ public class MusicPlaybackService
         return false;
     }
 
+    // DeviceId is part of the fingerprint precisely so a ChangeDeviceCommand
+    // is never mistaken for the echo it otherwise looks identical to: the
+    // track and play state usually don't change on a handoff, only which
+    // device is active does — and that's the one thing a demoted device
+    // needs this broadcast for. Without it, a device switch landing within
+    // BroadcastCoalesceWindowMs of the prior broadcast (a stray position
+    // report, another command) was silently dropped whole, so the device
+    // being demoted never heard it and kept playing indefinitely alongside
+    // the new active one. Stoney, 2026-09-07, reproduced live by picking a
+    // second TV from the device picker: "Only one TV should be playing."
     private readonly record struct BroadcastFingerprint(
         Guid? ItemId,
         bool PlayState,
+        string? DeviceId,
         int TimeBucket,
         long AtMs
     );

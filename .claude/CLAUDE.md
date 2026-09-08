@@ -142,18 +142,10 @@ to avoid racing the master playlist and font manifest.
 
 ## Formatting
 
-Run `dotnet csharpier format` on all changed .cs files before every commit.
+Formatting and naming conventions are in the root `CLAUDE.md` ("The loop", "Naming") —
+not repeated here.
 
 ## Code Style Rules
-
-### Naming Conventions
-- **Interfaces**: PascalCase with `I` prefix — interfaces only (`IMovieRepository`); concrete value objects (e.g. `VideoProfile`) carry no prefix
-- **Private fields**: camelCase with `_` prefix (`_mediaService`)
-- **Private static readonly**: PascalCase
-- **Constants**: PascalCase (`private const int MaximumCardsInCarousel = 36;`)
-- **Methods/Properties**: PascalCase
-- **Local variables**: camelCase
-- **Avoid `var`**: Use explicit types
 
 ### Class Structure Order
 1. Private constants

@@ -345,6 +345,17 @@ public static partial class ServiceConfiguration
             sp.GetRequiredService<DeviceBusRegistry>()
         );
 
+        // Real Google Cast mDNS scanner (_googlecast._tcp) — separate from
+        // the NoMercy-fingerprint scanner above, which only hears a device
+        // while its own app process is alive. This one hears any Chromecast
+        // or Cast-Connect Android TV regardless of foreground app, so a
+        // registered device idle on another app still reports as reachable.
+        services.AddSingleton<GoogleCastDeviceScanner>();
+        services.AddSingleton<ICastMdnsRegistry>(sp =>
+            sp.GetRequiredService<GoogleCastDeviceScanner>()
+        );
+        services.AddHostedService<GoogleCastDeviceScannerHostedService>();
+
         services.AddSingleton<StorageMonitor>();
 
         // Optical-disc detection + scanning + ripping (NoMercy.OpticalMedia)

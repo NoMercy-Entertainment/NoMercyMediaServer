@@ -91,6 +91,7 @@ public sealed class ConnectedClientsAndDeviceListItemTests
         Assert.Null(item.LastSeenAt);
         Assert.False(item.Foreground);
         Assert.False(item.ScreenOn);
+        Assert.False(item.CastReachable);
     }
 
     [Fact]
