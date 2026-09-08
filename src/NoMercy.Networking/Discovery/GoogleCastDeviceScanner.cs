@@ -99,6 +99,23 @@ public sealed class GoogleCastDeviceScanner : ICastMdnsRegistry, IDisposable
         return _seen.Values.Any(v => v.Ip == lanIp && v.SeenAt >= cutoff);
     }
 
+    public IReadOnlyCollection<CastMdnsHit> GetSeen()
+    {
+        DateTime cutoff = DateTime.UtcNow - StalenessWindow;
+        return
+        [
+            .. _seen
+                .Where(kv => kv.Value.SeenAt >= cutoff)
+                .Select(kv => new CastMdnsHit(
+                    kv.Key,
+                    kv.Value.FriendlyName,
+                    kv.Value.Model,
+                    kv.Value.Ip,
+                    kv.Value.SeenAt
+                )),
+        ];
+    }
+
     private void OnInstanceDiscovered(object? sender, ServiceInstanceDiscoveryEventArgs e)
     {
         try

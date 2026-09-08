@@ -162,6 +162,16 @@ public sealed class GoogleCastDeviceScannerParsingTests
     }
 
     [Fact]
+    public void GetSeen_NothingSeenYet_ReturnsEmpty()
+    {
+        GoogleCastDeviceScanner scanner = new(NullLogger<GoogleCastDeviceScanner>.Instance);
+
+        Assert.Empty(scanner.GetSeen());
+
+        scanner.Dispose();
+    }
+
+    [Fact]
     public void Dispose_WithoutStart_DoesNotThrow()
     {
         GoogleCastDeviceScanner scanner = new(NullLogger<GoogleCastDeviceScanner>.Instance);

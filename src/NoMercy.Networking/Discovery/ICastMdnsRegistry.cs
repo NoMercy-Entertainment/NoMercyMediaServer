@@ -24,4 +24,15 @@ public interface ICastMdnsRegistry
     /// staleness window, from an IP equal to <paramref name="lanIp"/>.
     /// </summary>
     bool IsReachable(string? lanIp);
+
+    /// <summary>
+    /// Every `_googlecast._tcp` hit currently within the staleness window —
+    /// every Chromecast, Cast-Connect Android TV, or Cast-enabled speaker
+    /// physically present on the LAN right now, regardless of whether it
+    /// corresponds to any registered NoMercy device. The caller (DeviceHub,
+    /// DeviceBusRegistry) cross-references these against Devices.LanIp to
+    /// tell a real NoMercy client apart from a Chromecast with no NoMercy
+    /// relationship at all.
+    /// </summary>
+    IReadOnlyCollection<CastMdnsHit> GetSeen();
 }
