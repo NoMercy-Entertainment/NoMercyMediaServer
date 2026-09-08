@@ -19,12 +19,14 @@ using NoMercy.Api.Hubs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Devices;
+using NoMercy.Networking.Discovery;
 
 namespace NoMercy.Api.WebSockets;
 
 public sealed class DeviceBusRegistry(
     IDbContextFactory<MediaContext> contextFactory,
-    IHubContext<DeviceHub> hubContext
+    IHubContext<DeviceHub> hubContext,
+    ICastMdnsRegistry castMdnsRegistry
 ) : IDeviceListChangeNotifier
 {
     private readonly ConcurrentDictionary<Ulid, WebSocket> _live = new();
@@ -116,6 +118,7 @@ public sealed class DeviceBusRegistry(
                     LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
                     Foreground = s.Foreground,
                     ScreenOn = s.ScreenOn,
+                    CastReachable = castMdnsRegistry.IsReachable(d.LanIp),
                 };
             }),
         ];

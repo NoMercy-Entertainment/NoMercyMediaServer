@@ -22,6 +22,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Encoder.Devices;
 using NoMercy.Networking.Devices;
+using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Messaging;
 using NoMercy.Tests.Api.Infrastructure;
 using Xunit;
@@ -87,7 +88,11 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
             IDbContextFactory<MediaContext>
         >();
         ConnectedClients connectedClients = _factory.GetConnectedClients();
-        DeviceBusRegistry busRegistry = new(contextFactory, Mock.Of<IHubContext<DeviceHub>>());
+        DeviceBusRegistry busRegistry = new(
+            contextFactory,
+            Mock.Of<IHubContext<DeviceHub>>(),
+            Mock.Of<ICastMdnsRegistry>()
+        );
 
         DefaultHttpContext httpContext = new() { RequestServices = null! };
         httpContext.Request.Path = "/deviceHub";
@@ -99,6 +104,7 @@ public class DeviceHubBroadcastTests : IClassFixture<NoMercyApiFactory>
             busRegistry,
             Mock.Of<Database.Activity.IActivityLogger>(),
             Mock.Of<IDeviceCapabilityRegistry>(),
+            Mock.Of<ICastMdnsRegistry>(),
             Mock.Of<NoMercy.Api.Services.Cast.IServerCastWaker>(),
             NullLogger<DeviceHub>.Instance
         );

@@ -44,4 +44,13 @@ public sealed record DeviceListItem
 
     [JsonProperty("screen_on")]
     public bool ScreenOn { get; init; }
+
+    // True when a real Google Cast mDNS announcement (_googlecast._tcp) was
+    // seen from this device's own LanIp, independent of Online (the
+    // websocket-bus flag). A device can be offline (app not running) and
+    // still CastReachable=true — it is a live Chromecast target on the LAN,
+    // not truly gone, and a wake attempt is worth trying. Additive field:
+    // older clients that don't read it keep working unchanged.
+    [JsonProperty("cast_reachable")]
+    public bool CastReachable { get; init; }
 }
