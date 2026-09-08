@@ -731,6 +731,31 @@ public class VideoPlaylistResponseDtoTests
     }
 
     [Fact]
+    public void Ctor_Episode_EveryVariantOfALanguageKeepsItsOwnContainer()
+    {
+        // One file per format sits on disk — eng.full.ass, .sup, .vtt — and the
+        // payload described them all as the same thing, because ext was used to
+        // build the path and then dropped. A client defaults a missing ext to
+        // vtt, so the menu showed "English (Full) VTT" three times over with no
+        // way to tell them apart (Stoney: "they are all listed as vtt").
+        const string subtitlesJson = """
+            [
+                {"language":"eng","type":"full","ext":"ass"},
+                {"language":"eng","type":"full","ext":"sup"},
+                {"language":"eng","type":"full","ext":"vtt"}
+            ]
+            """;
+        Episode episode = BuildEpisodeWithVideoFile(subtitlesJson: subtitlesJson);
+
+        VideoPlaylistResponseDto dto = new(episode, "tv", 1, "US");
+
+        List<VideoTrack> subtitles = dto.Tracks.Where(t => t.Kind == "subtitles").ToList();
+
+        // The DISTINCTION, not the count: three rows that all say vtt is the bug.
+        subtitles.Select(t => t.Ext).Should().BeEquivalentTo(["ass", "sup", "vtt"]);
+    }
+
+    [Fact]
     public void Ctor_Episode_MalformedSubtitlesJson_TreatedAsNoSubtitleTracks()
     {
         Episode episode = BuildEpisodeWithVideoFile(subtitlesJson: "{not-valid-json");

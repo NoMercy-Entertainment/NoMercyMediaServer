@@ -26,4 +26,15 @@ public class VideoTrack
 
     [JsonProperty("language", NullValueHandling = NullValueHandling.Ignore)]
     public string? Language { get; set; }
+
+    /// <summary>
+    /// The subtitle's container — vtt, ass, sup. Clients default a missing one
+    /// to vtt, so every variant of a language arrived labelled VTT and the menu
+    /// showed the same row two and three times over: one file per format sits on
+    /// disk (…eng.full.ass, .sup, .vtt) and the payload described them all as
+    /// the same thing. Omitted for non-subtitle tracks, which have no container
+    /// to state.
+    /// </summary>
+    [JsonProperty("ext", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Ext { get; set; }
 }

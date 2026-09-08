@@ -43,6 +43,25 @@ internal static class PlaintextToHttpsRedirector
         int httpsPort
     )
     {
+        try
+        {
+            await PeekAndRedirectAsync(connectionContext, next, httpsPort);
+        }
+        catch (OperationCanceledException)
+            when (connectionContext.ConnectionClosed.IsCancellationRequested)
+        {
+            // The peer hung up before we read its first byte, which every port scan,
+            // health probe and speculative browser connection does. There is no
+            // connection left to answer, so ending quietly IS the handling.
+        }
+    }
+
+    private static async Task PeekAndRedirectAsync(
+        ConnectionContext connectionContext,
+        ConnectionDelegate next,
+        int httpsPort
+    )
+    {
         System.IO.Pipelines.PipeReader input = connectionContext.Transport.Input;
         System.IO.Pipelines.ReadResult result = await input.ReadAsync(
             connectionContext.ConnectionClosed
