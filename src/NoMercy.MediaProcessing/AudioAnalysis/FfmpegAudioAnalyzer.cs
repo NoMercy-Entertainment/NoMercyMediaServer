@@ -49,19 +49,24 @@ public sealed class FfmpegAudioAnalyzer(
         // of it measured the normalized copy — the same track moved 99.40 to
         // 106.97.
         //
-        // Its metadata is printed immediately after it rather than by the
-        // ametadata at the end of the chain: the frame carrying final=1 does not
-        // survive loudnorm, which re-frames its output, so the end-of-chain print
+        // Exactly ONE ametadata, and it sits where it does for two reasons.
+        // Two instances printing to file=- hold independent buffers and splice
+        // each other's lines mid-write (measured: "frame:48   pts:921600
+        // pts_tect.final=0"), which can cut a verdict in half. And it has to
+        // come before loudnorm, which re-frames its output: the frame carrying
+        // final=1 does not survive that, so a print at the end of the chain
         // shows only the running estimate — half time for most of a pass.
+        // keydetect and aspectralstats do not re-frame, so putting the writer
+        // after them keeps their keys on the same stdout without costing the
+        // verdict.
         string filterGraph = string.Join(
             ",",
             "beatdetect",
-            "ametadata=mode=print:file=-",
             "keydetect",
             "aspectralstats=measure=centroid",
+            "ametadata=mode=print:file=-",
             "silencedetect=n=-50dB:d=0.5",
-            "loudnorm=print_format=json",
-            "ametadata=mode=print:file=-"
+            "loudnorm=print_format=json"
         );
 
         string[] arguments =
@@ -122,13 +127,15 @@ public sealed class FfmpegAudioAnalyzer(
 
         AudioAnalysisResult analysis = parser.Build();
 
-        // An older ffmpeg still yields a tempo, but no confidence and no phase —
-        // half the automix inputs. Silently degrading there would look like a
-        // library of untrustworthy tracks rather than a stale binary.
+        // No verdict frame means no confidence and no phase — half the automix
+        // inputs. Silently degrading there would look like a library of
+        // untrustworthy tracks rather than something wrong with the pass. The
+        // message reports what was observed; a stale binary is the likeliest
+        // cause but not the only one, so it is not asserted.
         if (!analysis.BeatGridFromMetadata && analysis.Bpm is not null)
         {
             logger.LogWarning(
-                "audio analysis read tempo from the legacy stderr line for {Path}; the ffmpeg build predates v1.0.40",
+                "audio analysis found no beatdetect metadata for {Path} and fell back to the legacy stderr tempo; the ffmpeg build may predate v1.0.40",
                 filePath
             );
         }

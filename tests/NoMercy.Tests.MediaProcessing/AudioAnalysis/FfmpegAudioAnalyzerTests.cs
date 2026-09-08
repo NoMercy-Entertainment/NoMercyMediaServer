@@ -9,7 +9,7 @@
 //  SPDX-License-Identifier: LicenseRef-NoMercy-Proprietary
 // -----------------------------------------------------------------------------
 
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using NoMercy.Encoder.Composition;
 using NoMercy.Encoder.Infrastructure;
@@ -26,16 +26,18 @@ namespace NoMercy.Tests.MediaProcessing.AudioAnalysis;
 public class FfmpegAudioAnalyzerTests
 {
     /// <summary>
-    /// Locked deliberately. The order is load-bearing: beatdetect and its
-    /// ametadata run ahead of loudnorm, which alters the signal and re-frames
-    /// its output.
+    /// Locked deliberately. Both the order and the single ametadata are
+    /// load-bearing: two instances printing to the same stdout splice each
+    /// other's lines, and the print has to sit ahead of loudnorm, which alters
+    /// the signal and re-frames its output.
     /// </summary>
     private const string ExpectedFilterGraph =
-        "beatdetect,ametadata=mode=print:file=-,keydetect,"
-        + "aspectralstats=measure=centroid,silencedetect=n=-50dB:d=0.5,"
-        + "loudnorm=print_format=json,ametadata=mode=print:file=-";
+        "beatdetect,keydetect,aspectralstats=measure=centroid,"
+        + "ametadata=mode=print:file=-,silencedetect=n=-50dB:d=0.5,"
+        + "loudnorm=print_format=json";
 
     private string[] _capturedArguments = [];
+    private readonly Mock<ILogger<FfmpegAudioAnalyzer>> _logger = new();
 
     private FfmpegAudioAnalyzer CreateAnalyzer(string stdOutFixture, string stdErrFixture)
     {
@@ -86,11 +88,21 @@ public class FfmpegAudioAnalyzerTests
                 }
             );
 
-        return new(
-            options,
-            runner.Object,
-            storage.Object,
-            NullLogger<FfmpegAudioAnalyzer>.Instance
+        return new(options, runner.Object, storage.Object, _logger.Object);
+    }
+
+    /// <summary>
+    /// Counts warnings whose rendered message contains <paramref name="fragment" />.
+    /// The message template is the third Log argument; matching on it rather
+    /// than on the exact call shape survives reformatting of the log statement.
+    /// </summary>
+    private int WarningsMentioning(string fragment)
+    {
+        return _logger.Invocations.Count(invocation =>
+            invocation.Method.Name == nameof(ILogger.Log)
+            && invocation.Arguments[0] is LogLevel.Warning
+            && invocation.Arguments[2]?.ToString()?.Contains(fragment, StringComparison.Ordinal)
+                == true
         );
     }
 
@@ -146,5 +158,42 @@ public class FfmpegAudioAnalyzerTests
         result.Bpm.Should().BeApproximately(128.0, 0.5);
         result.BeatOffsetMs.Should().NotBeNull();
         result.KeyName.Should().Be("C");
+    }
+
+    [Fact]
+    public async Task ItSaysNothingAboutTheFallbackWhenTheGridWasMeasured()
+    {
+        FfmpegAudioAnalyzer analyzer = CreateAnalyzer(
+            "v1040-click-128-stdout.txt",
+            "v1040-click-128-stderr.txt"
+        );
+
+        await analyzer.AnalyzeAsync("/music/track.flac", CancellationToken.None);
+
+        WarningsMentioning("legacy stderr tempo").Should().Be(0);
+    }
+
+    /// <summary>
+    /// A server whose ffmpeg publishes no beat metadata still measures a tempo,
+    /// so its rows look merely unconfident rather than unmeasurable. The warning
+    /// is the only place that distinction is visible.
+    /// </summary>
+    [Fact]
+    public async Task ItWarnsWhenTheTempoCameFromTheLegacyStderrLine()
+    {
+        FfmpegAudioAnalyzer analyzer = CreateAnalyzer(
+            "click-100bpm-stdout.txt",
+            "click-100bpm-stderr.txt"
+        );
+
+        AudioAnalysisResult? result = await analyzer.AnalyzeAsync(
+            "/music/track.flac",
+            CancellationToken.None
+        );
+
+        result.Should().NotBeNull();
+        result!.BeatGridFromMetadata.Should().BeFalse();
+        result.Bpm.Should().NotBeNull();
+        WarningsMentioning("legacy stderr tempo").Should().Be(1);
     }
 }

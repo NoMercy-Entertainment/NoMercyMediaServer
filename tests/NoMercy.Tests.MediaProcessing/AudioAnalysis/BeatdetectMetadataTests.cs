@@ -24,10 +24,10 @@ namespace NoMercy.Tests.MediaProcessing.AudioAnalysis;
 /// </para>
 /// <para>
 /// Fixture: a generated 20 s 128 BPM click over a C major triad through the
-/// production filter graph, captured from ffmpeg 9.0-NoMercy-MediaServer
-/// (v1.0.40). Its stderr still carries the legacy bare tempo line and its
-/// pre-final frames still carry 64.06, so reading 128.06 from it proves the
-/// metadata verdict wins over both.
+/// production filter graph — one ametadata writer — captured from ffmpeg
+/// 9.0-NoMercy-MediaServer (v1.0.40). Its stderr still carries the legacy bare
+/// tempo line and its pre-final frames still carry 64.06, so reading 128.06 from
+/// it proves the metadata verdict wins over both.
 /// </para>
 /// </summary>
 public class BeatdetectMetadataTests
@@ -165,6 +165,82 @@ public class BeatdetectMetadataTests
         result.BpmConfidence.Should().BeNull();
         result.BeatIntervalMs.Should().BeNull();
         result.BeatOffsetMs.Should().BeNull();
+        result.BeatGridFromMetadata.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Two ametadata instances writing to the same stdout splice each other's
+    /// lines mid-write — measured, in the fixture the two-writer graph produced:
+    /// <c>frame:48   pts:921600  pts_tect.final=0</c>. One writer is the fix,
+    /// but a verdict must also be self-defending: a group cut after <c>bpm=</c>
+    /// orphans its <c>final=1</c> onto the next frame, whose running estimate
+    /// would otherwise be stored as a measured grid.
+    /// </summary>
+    [Fact]
+    public void ASplicedVerdictIsDiscardedRatherThanAttachedToTheNextFrame()
+    {
+        AudioAnalysisOutputParser parser = new();
+
+        parser.ConsumeStdOut("frame:860  pts:880640  pts_time:19.969161");
+        parser.ConsumeStdOut("lavfi.beatdetect.bpm=");
+        parser.ConsumeStdOut("frame:861  pts:881664  pts_time:19.992381");
+        parser.ConsumeStdOut("lavfi.beatdetect.bpm=64.06");
+        parser.ConsumeStdOut("lavfi.beatdetect.confidence=0.7");
+        parser.ConsumeStdOut("lavfi.beatdetect.final=1");
+        parser.ConsumeStdErr(
+            "[Parsed_beatdetect_0 @ 000001a2b1854000] lavfi.beatdetect.bpm=128.06 "
+        );
+
+        AudioAnalysisResult result = parser.Build();
+
+        result.Bpm.Should().Be(128.06);
+        result.BpmConfidence.Should().BeNull();
+        result.BeatOffsetMs.Should().BeNull();
+        result.BeatGridFromMetadata.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// A grid whose interval does not imply its own tempo was assembled from
+    /// two different frames. 60000 divided by the interval must land on the
+    /// tempo; 3% is far wider than the rounding in the printed values and far
+    /// narrower than the octave a spliced frame would introduce.
+    /// </summary>
+    [Fact]
+    public void AVerdictWhoseIntervalContradictsItsTempoIsDiscarded()
+    {
+        AudioAnalysisOutputParser parser = new();
+
+        parser.ConsumeStdOut("frame:861  pts:881664  pts_time:19.992381");
+        parser.ConsumeStdOut("lavfi.beatdetect.bpm=128.06");
+        parser.ConsumeStdOut("lavfi.beatdetect.confidence=0.891");
+        parser.ConsumeStdOut("lavfi.beatdetect.beat_interval_ms=937.06");
+        parser.ConsumeStdOut("lavfi.beatdetect.beat_offset_ms=467.8");
+        parser.ConsumeStdOut("lavfi.beatdetect.final=1");
+
+        AudioAnalysisResult result = parser.Build();
+
+        result.Bpm.Should().BeNull();
+        result.BeatGridFromMetadata.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// A verdict is the whole grid or nothing. Three of the four keys is a
+    /// truncated group, not a partial measurement worth storing.
+    /// </summary>
+    [Fact]
+    public void AVerdictMissingOneOfTheFourKeysIsDiscarded()
+    {
+        AudioAnalysisOutputParser parser = new();
+
+        parser.ConsumeStdOut("frame:861  pts:881664  pts_time:19.992381");
+        parser.ConsumeStdOut("lavfi.beatdetect.bpm=128.06");
+        parser.ConsumeStdOut("lavfi.beatdetect.confidence=0.891");
+        parser.ConsumeStdOut("lavfi.beatdetect.beat_interval_ms=468.53");
+        parser.ConsumeStdOut("lavfi.beatdetect.final=1");
+
+        AudioAnalysisResult result = parser.Build();
+
+        result.Bpm.Should().BeNull();
         result.BeatGridFromMetadata.Should().BeFalse();
     }
 

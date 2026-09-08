@@ -31,7 +31,9 @@ namespace NoMercy.MediaProcessing.AudioAnalysis;
 /// half time for most of a pass. Builds older than nomercy-ffmpeg v1.0.40 print
 /// no beatdetect metadata at all, so the tagged stderr tempo line stays as a
 /// fallback and <see cref="AudioAnalysisResult.BeatGridFromMetadata" /> says
-/// which route answered.
+/// which route answered. v1.0.40 still logs that line too, so it is not a
+/// version marker: it is consulted only when no verdict frame arrived, whatever
+/// the build.
 /// </para>
 /// <para>
 /// The stderr half logs at info level while the stdout half ignores loglevel
@@ -49,6 +51,12 @@ public sealed partial class AudioAnalysisOutputParser
 {
     private const double IntroSilenceToleranceSeconds = 0.05;
     private const double OutroSilenceToleranceSeconds = 0.25;
+
+    /// <summary>
+    /// How far a verdict's beat interval may sit from the one its tempo implies
+    /// before the pair is treated as coming from two different frames.
+    /// </summary>
+    private const double VerdictTempoTolerance = 0.03;
 
     [GeneratedRegex(@"^lavfi\.(?<key>[a-z0-9_.]+)=(?<value>.*)$", RegexOptions.IgnoreCase)]
     private static partial Regex MetadataLineRegex();
@@ -202,14 +210,22 @@ public sealed partial class AudioAnalysisOutputParser
 
     /// <summary>
     /// Takes the verdict from the frame whose keys just ended, but only when
-    /// beatdetect tagged that frame <c>final=1</c>. Every earlier frame carries
-    /// a running estimate that spends most of a pass an octave low, so taking
-    /// the newest value instead of the final one halves the tempo.
+    /// beatdetect tagged that frame <c>final=1</c> and the frame is whole.
+    /// Every earlier frame carries a running estimate that spends most of a pass
+    /// an octave low, so taking the newest value instead of the final one halves
+    /// the tempo.
     /// <para>
-    /// The last final frame wins. The graph prints metadata twice and the final
-    /// frame measurably does not survive loudnorm today, but a build that let it
-    /// through must not turn one verdict into two.
+    /// Whole means all four values, agreeing with each other. A frame is a text
+    /// block that another writer on the same stream can cut in half: two
+    /// <c>ametadata</c> instances printing to <c>file=-</c> were measured
+    /// splicing each other mid-line, and a cut after <c>bpm=</c> orphans the
+    /// <c>final=1</c> onto the following frame — whose running estimate would
+    /// then be stored as a measured grid. The graph runs one writer now; this
+    /// rejects the damage anyway, because a verdict that cannot be checked is
+    /// worth less than the legacy tempo it falls back to.
     /// </para>
+    /// <para>The last whole final frame wins, so a build that lets the verdict
+    /// through more than one print cannot turn it into two.</para>
     /// </summary>
     private void FlushBeatdetectFrame()
     {
@@ -220,21 +236,39 @@ public sealed partial class AudioAnalysisOutputParser
 
         bool isFinal = _beatdetectFrame.GetValueOrDefault("final") is "1";
         double? bpm = ParseDouble(_beatdetectFrame.GetValueOrDefault("bpm"));
+        double? confidence = ParseDouble(_beatdetectFrame.GetValueOrDefault("confidence"));
+        double? interval = ParseDouble(_beatdetectFrame.GetValueOrDefault("beat_interval_ms"));
+        double? offset = ParseDouble(_beatdetectFrame.GetValueOrDefault("beat_offset_ms"));
+
+        _beatdetectFrame.Clear();
 
         // The filter reports 0.00 when it locked onto nothing. That is an
         // absence, not a tempo of zero and not a grid worth recording.
-        if (isFinal && bpm is > 0)
+        if (
+            !isFinal
+            || bpm is not > 0
+            || confidence is null
+            || interval is not > 0
+            || offset is null
+        )
         {
-            _bpm = bpm;
-            _bpmConfidence = ParseDouble(_beatdetectFrame.GetValueOrDefault("confidence"));
-            _beatIntervalMs = ParseDouble(_beatdetectFrame.GetValueOrDefault("beat_interval_ms"));
-            _beatOffsetMs = ToWholeMilliseconds(
-                ParseDouble(_beatdetectFrame.GetValueOrDefault("beat_offset_ms"))
-            );
-            _beatGridFromMetadata = true;
+            return;
         }
 
-        _beatdetectFrame.Clear();
+        // The two survivors of a splice come from different frames, so the
+        // interval stops implying the tempo — an octave apart, not a rounding
+        // apart. The tolerance is far wider than the two decimals the filter
+        // prints and far narrower than anything a mixed pair produces.
+        if (Math.Abs(60000.0 / interval.Value - bpm.Value) > VerdictTempoTolerance * bpm.Value)
+        {
+            return;
+        }
+
+        _bpm = bpm;
+        _bpmConfidence = confidence;
+        _beatIntervalMs = interval;
+        _beatOffsetMs = ToWholeMilliseconds(offset);
+        _beatGridFromMetadata = true;
     }
 
     /// <summary>
@@ -255,7 +289,9 @@ public sealed partial class AudioAnalysisOutputParser
     /// <summary>
     /// The tempo an older ffmpeg logged instead of publishing it as metadata.
     /// Only the lowest instance counts: it is the detector that saw the audio as
-    /// delivered.
+    /// delivered. Within that instance the first line wins, because the filter
+    /// logs its tempo once and a repeat is an echo of the same measurement, not
+    /// a second one.
     /// </summary>
     private void CollectBpm(string line)
     {
