@@ -90,6 +90,13 @@ jobs:
             exit 1
           fi
 
+          # The runner is self-hosted and its /tmp survives between jobs, so a
+          # tarball from a previous version can still be sitting here. Two
+          # matches on the glob below turns `tar -xzf a.tar.gz b.tar.gz` into
+          # "extract member b.tar.gz from archive a.tar.gz", which fails.
+          rm -rf /tmp/nmff
+          mkdir -p /tmp/nmff
+
           downloaded=""
           for attempt in 1 2 3 4 5; do
             if gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber; then
@@ -168,6 +175,13 @@ jobs:
             echo "::error::Could not resolve the latest nomercy-ffmpeg release tag after 5 attempts (GitHub API degraded?)."
             exit 1
           fi
+
+          # The runner is self-hosted and its /tmp survives between jobs, so a
+          # tarball from a previous version can still be sitting here. Two
+          # matches on the glob below turns `tar -xzf a.tar.gz b.tar.gz` into
+          # "extract member b.tar.gz from archive a.tar.gz", which fails.
+          rm -rf /tmp/nmff
+          mkdir -p /tmp/nmff
 
           downloaded=""
           for attempt in 1 2 3 4 5; do
