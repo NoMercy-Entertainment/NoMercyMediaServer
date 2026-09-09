@@ -90,6 +90,12 @@ jobs:
             exit 1
           fi
 
+          # /tmp/nmff survives between runs on a self-hosted runner, so an older
+          # release's tarball would otherwise sit next to the new one and the
+          # extraction glob below would match both.
+          rm -rf /tmp/nmff
+          mkdir -p /tmp/nmff
+
           downloaded=""
           for attempt in 1 2 3 4 5; do
             if gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber; then
@@ -105,7 +111,7 @@ jobs:
             exit 1
           fi
 
-          tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
+          tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-"$tag".tar.gz -C "$dest"
           chmod +x "$dest/ffmpeg" "$dest/ffprobe"
           echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
           echo "Fetched nomercy-ffmpeg $tag -> $dest"
@@ -169,6 +175,12 @@ jobs:
             exit 1
           fi
 
+          # /tmp/nmff survives between runs on a self-hosted runner, so an older
+          # release's tarball would otherwise sit next to the new one and the
+          # extraction glob below would match both.
+          rm -rf /tmp/nmff
+          mkdir -p /tmp/nmff
+
           downloaded=""
           for attempt in 1 2 3 4 5; do
             if gh release download "$tag" --repo NoMercy-Entertainment/nomercy-ffmpeg --pattern 'ffmpeg-*-linux-x86_64-*.tar.gz' --dir /tmp/nmff --clobber; then
@@ -184,7 +196,7 @@ jobs:
             exit 1
           fi
 
-          tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-*.tar.gz -C "$dest"
+          tar -xzf /tmp/nmff/ffmpeg-*-linux-x86_64-"$tag".tar.gz -C "$dest"
           chmod +x "$dest/ffmpeg" "$dest/ffprobe"
           echo "NOMERCY_FFMPEG_PATH=$dest/ffmpeg" >> "$GITHUB_ENV"
           echo "Fetched nomercy-ffmpeg $tag -> $dest"
