@@ -27,6 +27,7 @@ using NoMercy.Database;
 using NoMercy.Database.Models.Music;
 using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Cast;
+using NoMercy.Networking.Discovery;
 using NoMercy.Networking.Http;
 using NoMercy.Networking.Messaging;
 using NoMercy.NmSystem.Auth;
@@ -102,11 +103,12 @@ public class MusicHubItemTaggedPositionTests : IClassFixture<NoMercyApiFactory>
         AuthManager authManager = _factory.Services.GetRequiredService<AuthManager>();
 
         MusicDeviceManager musicDeviceManager = new(new());
-        MusicPlaylistManager musicPlaylistManager = new(
-            new MusicRepository(contextFactory),
-            new()
+        MusicPlaylistManager musicPlaylistManager = new(new MusicRepository(contextFactory), new());
+        DeviceBusRegistry busRegistry = new(
+            contextFactory,
+            Mock.Of<IHubContext<DeviceHub>>(),
+            Mock.Of<ICastMdnsRegistry>()
         );
-        DeviceBusRegistry busRegistry = new(contextFactory, Mock.Of<IHubContext<DeviceHub>>());
         CastSessionTokenService castTokenService = new(authManager, new AuthTokenStore());
 
         DefaultHttpContext httpContext = new() { RequestServices = null! };

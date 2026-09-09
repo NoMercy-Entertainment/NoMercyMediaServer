@@ -19,6 +19,7 @@ using NoMercy.Api.WebSockets;
 using NoMercy.Data.Repositories;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
+using NoMercy.Networking.Discovery;
 
 namespace NoMercy.Tests.Repositories;
 
@@ -224,7 +225,11 @@ public class DeviceRepositoryTests : IDisposable
         clientsMock.Setup(c => c.User(It.IsAny<string>())).Returns(proxyMock.Object);
         hubMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
-        DeviceBusRegistry registry = new(factoryMock.Object, hubMock.Object);
+        DeviceBusRegistry registry = new(
+            factoryMock.Object,
+            hubMock.Object,
+            Mock.Of<ICastMdnsRegistry>()
+        );
 
         await registry.Register(onlineDevice.Id, null!);
 
@@ -262,7 +267,11 @@ public class DeviceRepositoryTests : IDisposable
         clientsMock.Setup(c => c.User(OwnerId.ToString())).Returns(proxyMock.Object);
         hubMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
-        DeviceBusRegistry registry = new(factoryMock.Object, hubMock.Object);
+        DeviceBusRegistry registry = new(
+            factoryMock.Object,
+            hubMock.Object,
+            Mock.Of<ICastMdnsRegistry>()
+        );
 
         await using MediaContext deleteCtx = OpenContext();
         DeviceRepository repo = BuildRepo(deleteCtx);

@@ -19,12 +19,14 @@ using NoMercy.Api.Hubs;
 using NoMercy.Database;
 using NoMercy.Database.Models.Users;
 using NoMercy.Networking.Devices;
+using NoMercy.Networking.Discovery;
 
 namespace NoMercy.Api.WebSockets;
 
 public sealed class DeviceBusRegistry(
     IDbContextFactory<MediaContext> contextFactory,
-    IHubContext<DeviceHub> hubContext
+    IHubContext<DeviceHub> hubContext,
+    ICastMdnsRegistry castMdnsRegistry
 ) : IDeviceListChangeNotifier
 {
     private readonly ConcurrentDictionary<Ulid, WebSocket> _live = new();
@@ -100,25 +102,12 @@ public sealed class DeviceBusRegistry(
             .Devices.Where(d => d.OwnerUserId == ownerUserId && d.Fingerprint != null)
             .ToListAsync();
 
-        List<DeviceListItem> items =
-        [
-            .. rows.Select(d =>
-            {
-                (bool Foreground, bool ScreenOn) s = GetStatus(d.Id);
-                return new DeviceListItem
-                {
-                    DeviceId = d.Id,
-                    Fingerprint = d.Fingerprint!,
-                    Name = d.CustomName ?? d.Name,
-                    Type = d.Type,
-                    Online = IsOnline(d.Id),
-                    LanIp = d.LanIp,
-                    LastSeenAt = d.WsConnectedAt > d.MdnsSeenAt ? d.WsConnectedAt : d.MdnsSeenAt,
-                    Foreground = s.Foreground,
-                    ScreenOn = s.ScreenOn,
-                };
-            }),
-        ];
+        List<DeviceListItem> items = DeviceListComposer.Compose(
+            rows,
+            IsOnline,
+            GetStatus,
+            castMdnsRegistry
+        );
 
         await hubContext.Clients.User(ownerUserId.ToString()).SendAsync("DeviceListChanged", items);
     }
