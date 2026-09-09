@@ -19,17 +19,28 @@ namespace NoMercy.MediaProcessing.AudioAnalysis;
 /// <summary>
 /// Reads one analysis pass line by line and assembles the result.
 /// <para>
-/// The detectors answer on three different routes. <c>keydetect</c> and
-/// <c>aspectralstats</c> set real frame metadata that <c>ametadata</c> prints to
-/// stdout. <c>silencedetect</c>, <c>loudnorm</c> and the input header write to
-/// the log on stderr. <c>beatdetect</c> writes a bare stderr line because it
-/// sets no metadata at all.
+/// The detectors answer on two routes. <c>beatdetect</c>, <c>keydetect</c> and
+/// <c>aspectralstats</c> set frame metadata that <c>ametadata</c> prints to
+/// stdout as a <c>frame:N pts:... pts_time:...</c> header followed by
+/// <c>key=value</c> lines. <c>silencedetect</c>, <c>loudnorm</c> and the input
+/// header write to the log on stderr.
 /// </para>
 /// <para>
-/// Everything except beatdetect logs at info level, so the pass must not be run
-/// with a quieter loglevel or the silence, loudness and duration all vanish
-/// while the tempo still appears — a failure that looks like partial detection
-/// rather than a misconfigured command.
+/// Only the beatdetect frame tagged <c>final=1</c> holds the tempo verdict and
+/// the beat grid; every earlier frame carries a running estimate that sits at
+/// half time for most of a pass. Builds older than nomercy-ffmpeg v1.0.40 print
+/// no beatdetect metadata at all, so the tagged stderr tempo line stays as a
+/// fallback and <see cref="AudioAnalysisResult.BeatGridFromMetadata" /> says
+/// which route answered. v1.0.40 still logs that line too, so it is not a
+/// version marker: it is consulted only when no verdict frame arrived, whatever
+/// the build.
+/// </para>
+/// <para>
+/// The stderr half logs at info level while the stdout half ignores loglevel
+/// entirely, so the pass must not be run with a quieter loglevel or the silence,
+/// loudness and duration all vanish while the tempo and key still appear — a
+/// failure that looks like partial detection rather than a misconfigured
+/// command.
 /// </para>
 /// <para>
 /// Consuming line by line rather than buffering matters: metadata is printed on
@@ -42,22 +53,25 @@ public sealed partial class AudioAnalysisOutputParser
     private const double OutroSilenceToleranceSeconds = 0.25;
 
     /// <summary>
-    /// The disagreement at which a tempo is worth nothing. Measured across a real
-    /// library: dense produced material moves under 2% between sample rates,
-    /// while material the detector cannot hold moves by 19% to 63%.
+    /// How far a verdict's beat interval may sit from the one its tempo implies
+    /// before the pair is treated as coming from two different frames.
     /// </summary>
-    private const double MaxTrustedSpread = 0.10;
+    private const double VerdictTempoTolerance = 0.03;
 
     [GeneratedRegex(@"^lavfi\.(?<key>[a-z0-9_.]+)=(?<value>.*)$", RegexOptions.IgnoreCase)]
     private static partial Regex MetadataLineRegex();
 
-    // beatdetect names its key like frame metadata but only logs it, so it has
-    // to be scraped. Deleted when nomercy-ffmpeg#57 A1 lands and the key arrives
-    // through ametadata with everything else.
-    //
-    // Only the tagged av_log form is read. The filter also writes the same value
-    // through a bare fprintf that carries no instance tag, so two instances in
-    // one graph produce four lines of which only two can be told apart.
+    /// <summary>
+    /// The header <c>ametadata</c> writes before each frame's keys. It is the
+    /// only marker of where one frame's metadata ends and the next begins.
+    /// </summary>
+    [GeneratedRegex(@"^frame:\s*[0-9]+\b")]
+    private static partial Regex FrameHeaderRegex();
+
+    // The fallback for builds older than nomercy-ffmpeg v1.0.40, which publish
+    // no beatdetect metadata. Only the tagged av_log form is read: the filter
+    // also writes the same value through a bare fprintf carrying no instance
+    // tag, which cannot be attributed to a detector.
     [GeneratedRegex(
         @"\[Parsed_beatdetect_(?<instance>[0-9]+) @[^]]*\]\s*lavfi\.beatdetect\.bpm=(?<bpm>[0-9]+(?:\.[0-9]+)?)"
     )]
@@ -79,10 +93,16 @@ public sealed partial class AudioAnalysisOutputParser
     private readonly List<double> _centroids = [];
     private readonly List<SilenceRegion> _silences = [];
 
-    private readonly Dictionary<int, double> _bpmByInstance = [];
+    private readonly Dictionary<string, string> _beatdetectFrame = [];
 
     private bool _collectingLoudnorm;
+    private bool _beatGridFromMetadata;
     private double? _bpm;
+    private double? _bpmConfidence;
+    private double? _beatIntervalMs;
+    private int? _beatOffsetMs;
+    private double? _legacyBpm;
+    private int? _legacyBpmInstance;
     private string? _keyName;
     private double? _keyConfidence;
     private double? _durationSeconds;
@@ -94,7 +114,15 @@ public sealed partial class AudioAnalysisOutputParser
             return;
         }
 
-        Match match = MetadataLineRegex().Match(line.Trim());
+        string trimmed = line.Trim();
+
+        if (FrameHeaderRegex().IsMatch(trimmed))
+        {
+            FlushBeatdetectFrame();
+            return;
+        }
+
+        Match match = MetadataLineRegex().Match(trimmed);
         if (!match.Success)
         {
             return;
@@ -112,6 +140,7 @@ public sealed partial class AudioAnalysisOutputParser
                 _keyConfidence = ParseDouble(value);
                 break;
             default:
+                CollectBeatdetectKey(key, value);
                 CollectCentroid(key, value);
                 break;
         }
@@ -132,20 +161,27 @@ public sealed partial class AudioAnalysisOutputParser
 
     public AudioAnalysisResult Build()
     {
+        // The final frame is the last thing beatdetect publishes, so no frame
+        // header follows it to trigger the flush that every other frame gets.
+        FlushBeatdetectFrame();
+
         JObject? loudness = ParseLoudnormJson();
         double? centroid = _centroids.Count > 0 ? _centroids.Average() : null;
-        double? beatInterval = _bpm is > 0 ? 60000.0 / _bpm : null;
+
+        double? bpm = _beatGridFromMetadata ? _bpm : _legacyBpm;
 
         return new AudioAnalysisResult
         {
-            Bpm = _bpm,
+            Bpm = bpm,
 
-            BpmConfidence = ResolveBpmConfidence(),
+            BpmConfidence = _beatGridFromMetadata ? _bpmConfidence : null,
 
-            // beatdetect emits no downbeat, so phase stays unset rather than
-            // invented; nomercy-ffmpeg#57 A2 fills it.
-            BeatOffsetMs = null,
-            BeatIntervalMs = beatInterval,
+            // An older build reports a tempo and nothing else, so phase stays
+            // unset rather than invented and the interval is derived from the
+            // tempo alone.
+            BeatOffsetMs = _beatGridFromMetadata ? _beatOffsetMs : null,
+            BeatIntervalMs = ResolveBeatIntervalMs(bpm),
+            BeatGridFromMetadata = _beatGridFromMetadata,
 
             KeyName = string.IsNullOrWhiteSpace(_keyName) ? null : _keyName,
             KeyConfidence = _keyConfidence,
@@ -160,6 +196,103 @@ public sealed partial class AudioAnalysisOutputParser
         };
     }
 
+    private void CollectBeatdetectKey(string key, string value)
+    {
+        const string prefix = "beatdetect.";
+
+        if (!key.StartsWith(prefix, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _beatdetectFrame[key[prefix.Length..]] = value;
+    }
+
+    /// <summary>
+    /// Takes the verdict from the frame whose keys just ended, but only when
+    /// beatdetect tagged that frame <c>final=1</c> and the frame is whole.
+    /// Every earlier frame carries a running estimate that spends most of a pass
+    /// an octave low, so taking the newest value instead of the final one halves
+    /// the tempo.
+    /// <para>
+    /// Whole means all four values, agreeing with each other. A frame is a text
+    /// block that another writer on the same stream can cut in half: two
+    /// <c>ametadata</c> instances printing to <c>file=-</c> were measured
+    /// splicing each other mid-line, and a cut after <c>bpm=</c> orphans the
+    /// <c>final=1</c> onto the following frame — whose running estimate would
+    /// then be stored as a measured grid. The graph runs one writer now; this
+    /// rejects the damage anyway, because a verdict that cannot be checked is
+    /// worth less than the legacy tempo it falls back to.
+    /// </para>
+    /// <para>The last whole final frame wins, so a build that lets the verdict
+    /// through more than one print cannot turn it into two.</para>
+    /// </summary>
+    private void FlushBeatdetectFrame()
+    {
+        if (_beatdetectFrame.Count == 0)
+        {
+            return;
+        }
+
+        bool isFinal = _beatdetectFrame.GetValueOrDefault("final") is "1";
+        double? bpm = ParseDouble(_beatdetectFrame.GetValueOrDefault("bpm"));
+        double? confidence = ParseDouble(_beatdetectFrame.GetValueOrDefault("confidence"));
+        double? interval = ParseDouble(_beatdetectFrame.GetValueOrDefault("beat_interval_ms"));
+        double? offset = ParseDouble(_beatdetectFrame.GetValueOrDefault("beat_offset_ms"));
+
+        _beatdetectFrame.Clear();
+
+        // The filter reports 0.00 when it locked onto nothing. That is an
+        // absence, not a tempo of zero and not a grid worth recording.
+        if (
+            !isFinal
+            || bpm is not > 0
+            || confidence is null
+            || interval is not > 0
+            || offset is null
+        )
+        {
+            return;
+        }
+
+        // The two survivors of a splice come from different frames, so the
+        // interval stops implying the tempo — an octave apart, not a rounding
+        // apart. The tolerance is far wider than the two decimals the filter
+        // prints and far narrower than anything a mixed pair produces.
+        if (Math.Abs(60000.0 / interval.Value - bpm.Value) > VerdictTempoTolerance * bpm.Value)
+        {
+            return;
+        }
+
+        _bpm = bpm;
+        _bpmConfidence = confidence;
+        _beatIntervalMs = interval;
+        _beatOffsetMs = ToWholeMilliseconds(offset);
+        _beatGridFromMetadata = true;
+    }
+
+    /// <summary>
+    /// The measured interval when there is one, otherwise the one the tempo
+    /// implies. They differ: a measured grid is the average spacing of the
+    /// detected beats, not 60000 divided by a rounded tempo.
+    /// </summary>
+    private double? ResolveBeatIntervalMs(double? bpm)
+    {
+        if (_beatGridFromMetadata && _beatIntervalMs is > 0)
+        {
+            return _beatIntervalMs;
+        }
+
+        return bpm is > 0 ? 60000.0 / bpm : null;
+    }
+
+    /// <summary>
+    /// The tempo an older ffmpeg logged instead of publishing it as metadata.
+    /// Only the lowest instance counts: it is the detector that saw the audio as
+    /// delivered. Within that instance the first line wins, because the filter
+    /// logs its tempo once and a repeat is an echo of the same measurement, not
+    /// a second one.
+    /// </summary>
     private void CollectBpm(string line)
     {
         Match match = BeatdetectStderrRegex().Match(line);
@@ -178,42 +311,14 @@ public sealed partial class AudioAnalysisOutputParser
         }
 
         int instance = int.Parse(match.Groups["instance"].Value, CultureInfo.InvariantCulture);
-        _bpmByInstance[instance] = parsed.Value;
 
-        // The first instance analyses the track as delivered; anything after it
-        // is a perturbed copy used only to judge stability.
-        if (instance == _bpmByInstance.Keys.Min())
+        if (_legacyBpmInstance is not null && instance >= _legacyBpmInstance)
         {
-            _bpm = parsed;
-        }
-    }
-
-    /// <summary>
-    /// How stable the tempo is under a change that must not alter it — the graph
-    /// runs a second detector over the same audio at a different sample rate.
-    /// <para>
-    /// This measures stability, NOT correctness. While the filter's tempo priors
-    /// remain (nomercy-ffmpeg#57 B5), a confidently wrong answer stays confidently
-    /// wrong under resampling and scores high. What it reliably catches is the
-    /// opposite case: material the detector cannot lock onto at all, which moves
-    /// by tens of percent between rates.
-    /// </para>
-    /// <para>Null when the graph ran only one detector, so a caller can tell
-    /// "not measured" from "measured as unreliable".</para>
-    /// </summary>
-    private double? ResolveBpmConfidence()
-    {
-        if (_bpmByInstance.Count < 2 || _bpm is not > 0)
-        {
-            return null;
+            return;
         }
 
-        double baseline = _bpm.Value;
-        double worstSpread = _bpmByInstance
-            .Values.Select(value => Math.Abs(value - baseline) / baseline)
-            .Max();
-
-        return Math.Clamp(1.0 - worstSpread / MaxTrustedSpread, 0.0, 1.0);
+        _legacyBpmInstance = instance;
+        _legacyBpm = parsed;
     }
 
     private void CollectDuration(string line)
@@ -378,6 +483,16 @@ public sealed partial class AudioAnalysisOutputParser
     private static int ToMilliseconds(double seconds)
     {
         return (int)Math.Round(seconds * 1000.0, MidpointRounding.AwayFromZero);
+    }
+
+    private static int? ToWholeMilliseconds(double? milliseconds)
+    {
+        if (milliseconds is null)
+        {
+            return null;
+        }
+
+        return (int)Math.Round(milliseconds.Value, MidpointRounding.AwayFromZero);
     }
 
     private static double? ReadLoudnessValue(JObject? loudness, string property)

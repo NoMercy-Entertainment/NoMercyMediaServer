@@ -28,7 +28,8 @@ namespace NoMercy.Database.Models.Music;
 /// case, not a defect: a detector that found nothing leaves its columns null,
 /// and the row is still worth keeping for what the others measured. Tempo is
 /// stored whenever the detector produced one; <see cref="BpmConfidence" />
-/// says how far to trust it, and is null when only one detector ran.
+/// says how far to trust it, and is null when the ffmpeg build published no
+/// beat-grid metadata to read it from.
 /// </para>
 /// </summary>
 // No index beyond the key. The sweep asks "does this track have a current

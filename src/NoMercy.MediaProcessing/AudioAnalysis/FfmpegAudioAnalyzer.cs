@@ -31,8 +31,8 @@ public sealed class FfmpegAudioAnalyzer(
 {
     private static readonly TimeSpan AnalysisTimeout = TimeSpan.FromMinutes(10);
 
-    // 2: tempo confidence, derived from running the detector twice.
-    public int Version => 2;
+    // 3: beat grid and confidence read from beatdetect's own metadata (nomercy-ffmpeg v1.0.40).
+    public int Version => 3;
 
     public async Task<AudioAnalysisResult?> AnalyzeAsync(string filePath, CancellationToken ct)
     {
@@ -40,31 +40,33 @@ public sealed class FfmpegAudioAnalyzer(
 
         AudioAnalysisOutputParser parser = new();
 
-        // One pass, every detector. keydetect and aspectralstats answer through
-        // ametadata on stdout; silencedetect, loudnorm and beatdetect answer on
-        // stderr.
+        // One pass, every detector. beatdetect, keydetect and aspectralstats
+        // answer through ametadata on stdout; silencedetect and loudnorm answer
+        // on stderr.
         //
-        // The tempo detector runs twice, the second time over the same audio
-        // resampled. Resampling must not change a tempo, so the two answers
-        // disagreeing is the only reliability signal available while the filter
-        // itself emits no confidence.
+        // beatdetect runs FIRST, ahead of every filter that alters the signal.
+        // loudnorm normalizes as well as reporting, and reading tempo downstream
+        // of it measured the normalized copy — the same track moved 99.40 to
+        // 106.97.
         //
-        // Both run FIRST, ahead of every filter that alters the signal. loudnorm
-        // normalizes as well as reporting, and reading tempo downstream of it
-        // measured the normalized copy — the same track moved 99.40 to 106.97.
-        // Everything after runs at 96 kHz, which none of them care about:
-        // keydetect takes its window in milliseconds, a spectral centroid is in
-        // Hz, silence is in seconds and loudness is rate-independent.
+        // Exactly ONE ametadata, and it sits where it does for two reasons.
+        // Two instances printing to file=- hold independent buffers and splice
+        // each other's lines mid-write (measured: "frame:48   pts:921600
+        // pts_tect.final=0"), which can cut a verdict in half. And it has to
+        // come before loudnorm, which re-frames its output: the frame carrying
+        // final=1 does not survive that, so a print at the end of the chain
+        // shows only the running estimate — half time for most of a pass.
+        // keydetect and aspectralstats do not re-frame, so putting the writer
+        // after them keeps their keys on the same stdout without costing the
+        // verdict.
         string filterGraph = string.Join(
             ",",
             "beatdetect",
-            "aresample=96000",
-            "beatdetect",
             "keydetect",
             "aspectralstats=measure=centroid",
+            "ametadata=mode=print:file=-",
             "silencedetect=n=-50dB:d=0.5",
-            "loudnorm=print_format=json",
-            "ametadata=mode=print:file=-"
+            "loudnorm=print_format=json"
         );
 
         string[] arguments =
@@ -124,6 +126,19 @@ public sealed class FfmpegAudioAnalyzer(
         }
 
         AudioAnalysisResult analysis = parser.Build();
+
+        // No verdict frame means no confidence and no phase — half the automix
+        // inputs. Silently degrading there would look like a library of
+        // untrustworthy tracks rather than something wrong with the pass. The
+        // message reports what was observed; a stale binary is the likeliest
+        // cause but not the only one, so it is not asserted.
+        if (!analysis.BeatGridFromMetadata && analysis.Bpm is not null)
+        {
+            logger.LogWarning(
+                "audio analysis found no beatdetect metadata for {Path} and fell back to the legacy stderr tempo; the ffmpeg build may predate v1.0.40",
+                filePath
+            );
+        }
 
         // Every detector coming back empty means the pass produced nothing
         // usable, whatever the exit code said.
