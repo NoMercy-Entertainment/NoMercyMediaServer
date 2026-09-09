@@ -23,6 +23,13 @@ public sealed record AudioAnalysisResult
     public int? BeatOffsetMs { get; init; }
     public double? BeatIntervalMs { get; init; }
 
+    /// <summary>
+    /// True when the four grid values above came from beatdetect's own
+    /// <c>final=1</c> metadata frame, false when only the legacy stderr tempo
+    /// line was available and the interval had to be derived from it.
+    /// </summary>
+    public bool BeatGridFromMetadata { get; init; }
+
     /// <summary>As the detector named it: "C", "F#", "Am".</summary>
     public string? KeyName { get; init; }
     public double? KeyConfidence { get; init; }

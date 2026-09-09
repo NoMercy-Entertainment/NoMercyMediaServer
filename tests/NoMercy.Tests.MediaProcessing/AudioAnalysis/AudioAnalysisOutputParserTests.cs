@@ -22,6 +22,13 @@ namespace NoMercy.Tests.MediaProcessing.AudioAnalysis;
 /// Source: a 43.5 s mono 44.1 kHz file with a 100 BPM click, 1.5 s of leading
 /// silence and 2.1 s of trailing silence.
 /// </para>
+/// <para>
+/// Captured before nomercy-ffmpeg v1.0.40, so there is no beatdetect metadata
+/// on stdout and the tempo arrives on the stderr line. That makes this class the
+/// standing proof that an older binary still yields a tempo, a key, loudness and
+/// cue points — the metadata path is covered by
+/// <see cref="BeatdetectMetadataTests" />.
+/// </para>
 /// </summary>
 public class AudioAnalysisOutputParserTests
 {
@@ -64,13 +71,19 @@ public class AudioAnalysisOutputParserTests
         result.BeatIntervalMs.Should().BeApproximately(601.503, 0.001);
     }
 
+    /// <summary>
+    /// Without metadata there is a tempo and nothing else. Confidence and phase
+    /// stay null rather than guessed, and the flag says the grid was not
+    /// measured.
+    /// </summary>
     [Fact]
-    public void Parse_LeavesConfidenceAndDownbeatNullWhileTheFilterEmitsNeither()
+    public void Parse_LeavesTheRestOfTheGridUnsetOnAnOlderBuild()
     {
         AudioAnalysisResult result = ParseFixture();
 
         result.BpmConfidence.Should().BeNull();
         result.BeatOffsetMs.Should().BeNull();
+        result.BeatGridFromMetadata.Should().BeFalse();
     }
 
     [Fact]

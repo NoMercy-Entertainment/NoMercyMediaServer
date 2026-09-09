@@ -27,6 +27,12 @@ namespace NoMercy.Tests.MediaProcessing.AudioAnalysis;
 /// production filter graph. The stdout fixture keeps every key line and every
 /// fourth centroid frame; the stderr fixture is whole.
 /// </para>
+/// <para>
+/// Captured before nomercy-ffmpeg v1.0.40, so there is no beatdetect metadata on
+/// stdout and the tempo arrives on the stderr line — this is the legacy fallback
+/// against real material. The metadata path is covered by
+/// <see cref="BeatdetectMetadataTests" />.
+/// </para>
 /// </summary>
 public class RealTrackAnalysisParserTests
 {
@@ -116,8 +122,9 @@ public class RealTrackAnalysisParserTests
     }
 
     /// <summary>
-    /// The detector emits neither, so a real track must not invent them. This
-    /// is what keeps the tempo columns honest until nomercy-ffmpeg#57 lands.
+    /// An older build publishes neither, so a real track must not invent them.
+    /// This is what keeps the tempo columns honest on a server that has not
+    /// picked up nomercy-ffmpeg v1.0.40 yet.
     /// </summary>
     [Fact]
     public void RealTrack_LeavesTempoConfidenceAndDownbeatUnset()
@@ -126,6 +133,7 @@ public class RealTrackAnalysisParserTests
 
         result.BpmConfidence.Should().BeNull();
         result.BeatOffsetMs.Should().BeNull();
+        result.BeatGridFromMetadata.Should().BeFalse();
     }
 
     [Fact]
